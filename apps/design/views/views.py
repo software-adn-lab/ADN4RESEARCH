@@ -2,7 +2,7 @@ import json
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
-from design.services.question_services import ResearchQuestionService
+from apps.design.services.question_services import ResearchQuestionService
 
 # Create your views here.
 

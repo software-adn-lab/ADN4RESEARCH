@@ -27,11 +27,11 @@ urlpatterns = [
     path("__reload__/", include("django_browser_reload.urls")),
 
     # SLR Module URLs
-    path('design/', include('design.urls')),
-    path('interpretation/', include('interpretation.urls')),
-    path('extraction/', include('extraction.urls')),
-    path('selection/', include('selection.urls')),
-    path('acquisition/', include('acquisition.urls')),
+    path('design/', include('apps.design.urls')),
+    path('interpretation/', include('apps.interpretation.urls')),
+    path('extraction/', include('apps.extraction.urls')),
+    path('selection/', include('apps.selection.urls')),
+    path('acquisition/', include('apps.acquisition.urls')),
 ]
 
 # Serve media files in development

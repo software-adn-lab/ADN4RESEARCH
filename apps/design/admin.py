@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from design.models.research_question_models import ResearchQuestion, ResearchFramework
+from apps.design.models.research_question_models import ResearchQuestion, ResearchFramework
 
 # Register your models here.
 admin.site.register(ResearchQuestion)

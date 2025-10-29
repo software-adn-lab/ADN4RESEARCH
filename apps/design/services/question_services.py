@@ -1,10 +1,10 @@
 
-from design.models.research_question_models import ResearchFramework, ResearchQuestion
+from apps.design.models.research_question_models import ResearchFramework, ResearchQuestion
 from config.events import bus
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from design.exceptions.research_question_exceptions import QuestionSubmissionError, QuestionNotFoundError
+from apps.design.exceptions.research_question_exceptions import QuestionSubmissionError, QuestionNotFoundError
 
 # Obtén el modelo de Usuario activo en tu proyecto
 User = get_user_model()

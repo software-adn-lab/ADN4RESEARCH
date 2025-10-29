@@ -1,6 +1,6 @@
 from django.urls import path
 
-from design.views import views
+from apps.design.views import views
 
 app_name = 'design' 
 

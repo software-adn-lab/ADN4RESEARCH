@@ -54,8 +54,9 @@ class ResearchQuestion(models.Model):
     research_framework = models.ForeignKey(ResearchFramework, on_delete=models.CASCADE, related_name='research_questions')
     suggested_question = models.TextField(blank=True)
     motivation = models.TextField(blank=True)
-    '''project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions')
-    stage = models.ForeignKey('project.Stage', on_delete=models.CASCADE, related_name='research_questions')'''
+    # NOTE: If uncommenting these fields, update references to 'apps.project.Project' and 'apps.project.Stage'
+    '''project = models.ForeignKey('apps.project.Project', on_delete=models.CASCADE, related_name='research_questions')
+    stage = models.ForeignKey('apps.project.Stage', on_delete=models.CASCADE, related_name='research_questions')'''
     researcher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

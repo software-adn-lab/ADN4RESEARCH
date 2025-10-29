@@ -49,13 +49,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Project apps
-    'design.apps.DesignConfig',
-    'interpretation.apps.InterpretationConfig',
-    'extraction.apps.ExtractionConfig',
-    'selection.apps.SelectionConfig',
-    'acquisition.apps.AcquisitionConfig',
-    'project.apps.ProjectConfig',
-    'notification.apps.NotificationConfig',
+    'apps.design.apps.DesignConfig',
+    'apps.interpretation.apps.InterpretationConfig',
+    'apps.extraction.apps.ExtractionConfig',
+    'apps.selection.apps.SelectionConfig',
+    'apps.acquisition.apps.AcquisitionConfig',
+    'apps.project.apps.ProjectConfig',
+    'apps.notification.apps.NotificationConfig',
     # Third party apps
     'behave_django',
     # Frontend (Tailwind)

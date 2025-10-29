@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from project.models import Membership, Project, Stage
+from apps.project.models import Membership, Project, Stage
 
 # Register your models here.
 admin.site.register(Project)
