@@ -8,5 +8,44 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+env/
+ENV/
 */instructions
 .idea
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.pot
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Frontend (Node.js / Tailwind)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# BDD Test results
+tests/TESTS-*.xml
