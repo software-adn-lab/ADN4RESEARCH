@@ -1,0 +1,6 @@
+# Development dependencies for linting and type checking
+mypy
+pylint
+flake8
+flake8-docstrings
+flake8-bugbear

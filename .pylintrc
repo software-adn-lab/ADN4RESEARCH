@@ -1,0 +1,21 @@
+[MASTER]
+# Files or directories to be ignored. Add more if you use a different layout.
+ignore=venv,.venv,env,build,dist
+
+[MESSAGES CONTROL]
+# Common noisy messages disabled to match project preference
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    C0301,  # line-too-long
+    R0201,  # no-self-use
+    R0903,  # too-few-public-methods
+
+[FORMAT]
+# Keep a reasonable line length to play nice with tools/formatters
+max-line-length=100
+
+[REPORTS]
+output-format=text
+score=no
