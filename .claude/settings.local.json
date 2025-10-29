@@ -1,0 +1,15 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "puppeteer",
+    "filesystem",
+    "sequential-thinking",
+    "memory"
+  ],
+  "disabledMcpjsonServers": [
+    "puppeteer",
+    "filesystem",
+    "sequential-thinking",
+    "memory"
+  ]
+}
