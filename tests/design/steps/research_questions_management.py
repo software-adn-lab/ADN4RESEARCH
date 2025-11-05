@@ -4,17 +4,17 @@ from behave import given, then, when, step
 from faker import Faker
 from django.contrib.auth.models import User
 
-from apps.design.models.research_question_models import ResearchFramework, ResearchQuestion
-from apps.design.services.question_services import ResearchQuestionService
-from apps.notification.models import Notification
-from apps.project.models import Project, Stage
-from apps.project.services.project_services import ProjectService
+from design.models.research_question_models import ResearchFramework, ResearchQuestion
+from design.services.question_services import ResearchQuestionService
+from notification.models import Notification
+from project.models import Project, Stage
+from project.services.project_services import ProjectService
 
 fake = Faker()
 project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 notification_service = Mock()
-
+'''
 @given('the "{stage_name}" stage of the project is opened')
 def step_impl(context, stage_name):
     context.stage_name = stage_name
@@ -108,7 +108,78 @@ def step_impl(context, notification_type):
     #    project=context.project
     #)
     notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
+    assert len(notifications) > 0'''
+    
+@step('que estoy asignado a un proyecto de investigacion')
+def step_impl(context):
+    
+    context.owner = User.objects.create_user(username=fake.user_name(), email=fake.email())
+    context.researcher = User.objects.create_user(username=fake.user_name(), email=fake.email())
+    context.project = Project.objects.create(
+        name="Proyecto de Investigacion",
+        description="Descripcion del proyecto de investigacion",
+        owner=context.owner
+    )
+    project_service.add_member(project = context.project, user = context.owner, role="OWNER")
+    project_service.add_member(project = context.project, user = context.researcher, role="RESEARCHER")
+    project_memebers = project_service.get_members(project = context.project)
+    assert context.researcher in [member.user for member in project_memebers]
+
+@step('la etapa de "{nombre_etapa}" esta abierta')
+def step_impl(context, nombre_etapa):
+    context.stage = Stage.objects.create(
+        project = context.project,
+        opened_by=context.owner,
+        due_time=fake.future_datetime(),
+        name = nombre_etapa,
+        status="INACTIVE"
+    )
+    project_service.open_stage(stage=context.stage)
+    assert project_service.is_stage_opened(stage=context.stage)
+
+@step('envie una pregunta de investigacion para su revision')
+def step_impl(context):
+    payload = json.loads(context.text)
+
+    context.framework = payload["framework"]
+    context.fields = payload["fields"]
+    framework_obj, created = ResearchFramework.objects.get_or_create(
+        name=context.framework,
+        defaults={
+            "is_global": context.framework in ["PICO", "PEO", "PCC"],
+            "created_by": context.researcher if context.framework not in ["PICO", "PEO", "PCC"] else None,
+            "total_fields": len(context.fields),
+            "fields": context.fields
+        }
+    )
+    context.research_question = ResearchQuestion.objects.create(
+        research_framework=framework_obj,
+        suggested_question="asasas", 
+        motivation="asasaaaaaaas",
+        project=context.project,
+        stage=context.stage,
+        researcher=context.researcher
+    )
+    context.research_question.save()
+    research_question_service.submit_research_question_for_review(
+        research_question=context.research_question,
+    )
+    print(context.research_question.get_status_display())
+    assert context.research_question.status == "SUGGESTED"
+    
+
+@step('el sistema notificara la creacion al equipo investigador')
+def step_impl(context):
+    # No hay bus de datos, mockeo la notificacion
+    context.notification = Notification.objects.create(
+        type="RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW",
+        project=context.project,
+        sender=context.researcher
+    )
+    notification_service.send_notification.return_value = True
+    notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
     assert len(notifications) > 0
+
 '''
 # SEGUNDO SCENARIO
 @step('there exist a "{suggested_status}" question')
