@@ -1,3 +1,15 @@
-from django.db import models
+from .models.interpretation_models import (
+    Theme,
+    SubTheme,
+    InterpretationContext,
+    ConversationTrace,
+    InterpretativeProposition
+)
 
-# Create your models here.
+__all__ = [
+    'Theme',
+    'SubTheme',
+    'InterpretationContext',
+    'ConversationTrace',
+    'InterpretativeProposition',
+]
