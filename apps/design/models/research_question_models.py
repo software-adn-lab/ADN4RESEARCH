@@ -90,6 +90,7 @@ class ResearchQuestion(models.Model):
     @property
     def is_framework_complete(self):
         required_field_names = self.research_framework.fields.keys()
+        print("what", required_field_names)
         
         if not required_field_names:
             return True # If the framework has no required fields, it's complete.

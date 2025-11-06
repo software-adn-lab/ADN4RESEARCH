@@ -1,30 +1,33 @@
 {% extends 'base_tabs.html'%}
 {% load static tailwind_tags %}
-{% block tab_content %}
-<form id="question-form" action="" class="form p-6 space-y-6">
+{% block questions_history_content %}
+<form id="question-form" method="POST"
+    action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
+    class="form p-6 space-y-6">
     {% csrf_token %}
     <input type="hidden" id="research-question-id" name="id" value="{{ question.id|default:'' }}">
     <select id="framework-select" name="research_framework" class="select ">
         <option disabled {% if not question %}selected{% endif %}>Pick a framework</option>
         {% for framework in frameworks %}
-            <option value="{{ framework.id }}" {% if framework.id == question.research_framework.id %}selected{% endif %}>
-                {{ framework.name }}
-            </option>
+        <option value="{{ framework.id }}" {% if framework.id == question.research_framework.id %}selected{% endif %}>
+            {{ framework.name }}
+        </option>
         {% endfor %}
     </select>
     <hr class="my-4">
     <div id="fields-container" class="space-y-4">
     </div>
-    <div class="flex items-center mt-4 h-6"> {# h-6 para evitar que el layout salte #}
+    <div class="flex items-center mt-4 h-6">
         <div id="autosave-status"></div>
     </div>
 
 </form>
 <script>
-    // ⚙️ NUEVA SECCIÓN: Pasar datos de Django a JavaScript
-    const QUESTION_DATA = {{ question_json|safe|default:"null" }};
-    
-    document.addEventListener('DOMContentLoaded', function() {
+    let QUESTION_DATA = {{ question_json|safe|default:"null" }};
+    // URL base para la acción de submit. Usamos 9999 como un marcador de posición seguro.
+    const submitUrlTemplate = "{% url 'design:send_research_question_for_review' 9999 %}";
+
+    document.addEventListener('DOMContentLoaded', function () {
         const frameworkSelect = document.getElementById('framework-select');
         const fieldsContainer = document.getElementById('fields-container');
         const form = document.getElementById('question-form');
@@ -33,10 +36,9 @@
         let lastSavedData = '';
         let saveStatusTimeout;
 
-        // ...existing code (debounce, triggerAutosave)...
         function debounce(func, delay) {
             let timeout;
-            return function(...args) {
+            return function (...args) {
                 clearTimeout(timeout);
                 timeout = setTimeout(() => func.apply(this, args), delay);
             };
@@ -68,34 +70,53 @@
                     'X-CSRFToken': formData.get('csrfmiddlewaretoken')
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.id) {
-                    autosaveStatus.innerHTML = `
+                .then(response => response.json())
+                .then(data => {
+                    if (data.id) {
+                        autosaveStatus.innerHTML = `
                         <div class="flex items-center text-green-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 size-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                             </svg>
-                            Saved
+                            Question Saved Successfully
                         </div>
                     `;
-                    saveStatusTimeout = setTimeout(() => {
-                        autosaveStatus.innerHTML = '';
-                    }, 1500);
-                    questionIdInput.value = data.id;
-                    lastSavedData = currentDataString;
-                } else {
-                    console.error('Autosave failed:', data.error);
-                    autosaveStatus.innerHTML = `<span class="text-red-500">Autosave failed.</span>`;
-                }
-            })
-            .catch(error => console.error('Autosave request failed:', error));
+                        saveStatusTimeout = setTimeout(() => {
+                            autosaveStatus.innerHTML = '';
+                        }, 1500);
+                        questionIdInput.value = data.id;
+                        lastSavedData = currentDataString;
+
+                        // Actualiza la URL de acción del formulario con el ID de la pregunta
+                        form.action = submitUrlTemplate.replace('9999', data.id);
+
+                        // Actualizar el estado global y el botón
+                        if (QUESTION_DATA) {
+                            QUESTION_DATA.status = data.status;
+                        } else {
+                            QUESTION_DATA = { status: data.status };
+                        }
+
+                        const submitContainer = document.getElementById('submit-container');
+                        if (submitContainer) {
+                            if (data.status === 'READY_TO_SEND') {
+                                submitContainer.innerHTML = '<button type="submit" class="btn btn-primary mt-4">Submit Question</button>';
+                            } else {
+                                submitContainer.innerHTML = '<p class="text-gray-500 mt-4">Complete all fields to enable submission</p>';
+                            }
+                        }
+
+                    } else {
+                        console.error('Autosave failed:', data.error);
+                        autosaveStatus.innerHTML = `<span class="text-red-500">Autosave failed.</span>`;
+                    }
+                })
+                .catch(error => console.error('Autosave request failed:', error));
         }
 
         const debouncedAutosave = debounce(triggerAutosave, 3000);
         fieldsContainer.addEventListener('input', debouncedAutosave);
 
-        // 🔧 FUNCIÓN MEJORADA: Cargar campos dinámicos y rellenarlos si hay datos
         function loadFrameworkFields(frameworkId) {
             const url = `/design/framework-fields/${frameworkId}/`;
 
@@ -112,10 +133,10 @@
                         data.fields.forEach(fieldName => {
                             const fieldset = document.createElement('fieldset');
                             fieldset.className = 'form-control w-full max-w-xs';
-                            
+
                             // ✅ CLAVE: Obtener valor guardado si existe
                             const savedValue = QUESTION_DATA?.framework_fields?.[fieldName] || '';
-                            
+
                             fieldset.innerHTML = `
                                 <label class="label">
                                     <span class="label-text">${fieldName}</span>
@@ -130,7 +151,6 @@
                         });
                     }
 
-                    // 2. Añadir campos estáticos (suggested_question, motivation)
                     const suggestedValue = QUESTION_DATA?.suggested_question || '';
                     const motivationValue = QUESTION_DATA?.motivation || '';
 
@@ -147,8 +167,11 @@
                                       class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
                                       placeholder="Write the motivation...">${motivationValue}</textarea>
                         </div>
-                        <div>
-                            <button type="submit" class="btn btn-primary mt-4">Submit Question</button>
+                        <div id="submit-container">
+                            ${(QUESTION_DATA?.status || '') === 'READY_TO_SEND' ?
+                            '<button type="submit" class="btn btn-primary mt-4">Submit Question</button>' :
+                            '<p class="text-gray-500 mt-4">Complete all fields to enable submission</p>'
+                        }
                         </div>
                     `;
                     fieldsContainer.insertAdjacentHTML('beforeend', staticFieldsHTML);
@@ -159,8 +182,7 @@
                 });
         }
 
-        // ✅ Evento para cambio manual de framework
-        frameworkSelect.addEventListener('change', function() {
+        frameworkSelect.addEventListener('change', function () {
             const frameworkId = this.value;
             if (!frameworkId) {
                 fieldsContainer.innerHTML = '';
@@ -169,10 +191,9 @@
             loadFrameworkFields(frameworkId);
         });
 
-        // ✅ NUEVO: Auto-cargar campos si estamos editando
         if (QUESTION_DATA && QUESTION_DATA.research_framework_id) {
             loadFrameworkFields(QUESTION_DATA.research_framework_id);
         }
     });
 </script>
-{% endblock tab_content %}
+{% endblock questions_history_content %}

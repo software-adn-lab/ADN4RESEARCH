@@ -76,7 +76,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_browser_reload.middleware.BrowserReloadMiddleware',
-
+    'config.middleware.dev_middleware.DevUserMiddleware',
 ]
 MIDDLEWARE += [
         "django_browser_reload.middleware.BrowserReloadMiddleware",
@@ -114,7 +114,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DB_PASSWORD=yourpassword
 # DB_HOST=localhost
 # DB_PORT=5432
-
+'''
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -124,15 +124,15 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
-}
+}'''
 
 # Uncomment to use SQLite for development
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+DATABASES = {
+     'default': {
+         'ENGINE': 'django.db.backends.sqlite3',
+         'NAME': BASE_DIR / 'db.sqlite3',
+     }
+ }
 
 
 # Password validation
