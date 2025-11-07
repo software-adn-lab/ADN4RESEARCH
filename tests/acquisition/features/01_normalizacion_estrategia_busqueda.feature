@@ -49,9 +49,14 @@ Característica: Traducción automática de estrategias de búsqueda según la b
     Y se registra la trazabilidad de la traducción
     Y <advertencias>
 
-    Ejemplos:
+    @scopus
+    Ejemplos: Scopus
       | base_datos   | consulta_traducida                                                                                                                                                                                                                                                                                                  | advertencias                                                                                   |
       | Scopus       | TITLE-ABS-KEY((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) AND NOT ("hardware testing" OR "gaming" OR "mobile applications")) AND PUBYEAR > 2019 AND PUBYEAR < 2025 | no se emiten advertencias                                                                      |
+
+    @ieee
+    Ejemplos: IEEE Xplore
+      | base_datos   | consulta_traducida                                                                                                                                                                                                                                                                                                  | advertencias                                                                                   |
       | IEEE Xplore  | ((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) NOT ("hardware testing" OR "gaming" OR "mobile applications"))                    | se emite una advertencia indicando aplicar el filtro de año 2020-2024 manualmente en la interfaz |
 
 

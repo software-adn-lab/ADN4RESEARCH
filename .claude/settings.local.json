@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python manage.py startapp:*)"
+      "Bash(python manage.py startapp:*)",
+      "Bash(python -m behave:*)"
     ],
     "deny": [],
     "ask": []

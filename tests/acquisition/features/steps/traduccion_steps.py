@@ -61,7 +61,7 @@ def step_given_estrategia_normalizada(context):
     assert len(strategy_json["main_terms"]) > 0, "main_terms no puede estar vacío"
 
     # WISHFUL THINKING: crear entidad de dominio que NO existe aún
-    from acquisition.domain.models import NormalizedStrategy
+    from apps.acquisition.domain.models import NormalizedStrategy
 
     context.strategy = NormalizedStrategy.from_dict(strategy_json)
     context.strategy_original = NormalizedStrategy.from_dict(strategy_json)
@@ -93,7 +93,7 @@ def step_when_solicito_traducir(context, base_datos):
     context.base_datos = base_datos
 
     # WISHFUL THINKING: invocar servicio que NO existe aún
-    from acquisition.application.services import TranslationService
+    from apps.acquisition.application.services import TranslationService
 
     service = TranslationService()
 
@@ -138,7 +138,7 @@ def step_then_consulta_compatible_sintaxis(context, base_datos):
     - Barra clara de "compatible con dialecto" por base
     """
     # WISHFUL THINKING: usar módulo de aserciones que NO existe aún
-    from acquisition.testing.assertions import SyntaxValidator
+    from apps.acquisition.testing.assertions import SyntaxValidator
 
     validator = SyntaxValidator()
 
@@ -198,7 +198,7 @@ def step_then_preserva_logica(context):
     - Blinda el significado de la estrategia en la traducción
     """
     # WISHFUL THINKING: usar verificador semántico que NO existe aún
-    from acquisition.testing.assertions import LogicPreservationChecker
+    from apps.acquisition.testing.assertions import LogicPreservationChecker
 
     checker = LogicPreservationChecker()
 
@@ -286,7 +286,7 @@ def step_then_trazabilidad(context):
     - Explicabilidad y reproducibilidad sin tocar infraestructura
     """
     # WISHFUL THINKING: usar módulo de aserciones de traza que NO existe aún
-    from acquisition.testing.assertions import TraceValidator
+    from apps.acquisition.testing.assertions import TraceValidator
 
     validator = TraceValidator()
 
@@ -329,7 +329,7 @@ def step_then_advertencias(context, advertencias):
     - Cubre diferencia de capacidades entre targets (año en UI vs query)
     """
     # WISHFUL THINKING: usar módulo de validación de warnings que NO existe aún
-    from acquisition.testing.assertions import WarningValidator
+    from apps.acquisition.testing.assertions import WarningValidator
 
     validator = WarningValidator()
 
@@ -361,20 +361,20 @@ def step_then_advertencias(context, advertencias):
 """
 INVENTARIO DE PIEZAS A CREAR (nacidas del rojo):
 
-1. acquisition.domain.models.NormalizedStrategy
+1. apps.acquisition.domain.models.NormalizedStrategy ✅ CREADO
    - Entidad inmutable
    - from_dict(data: dict) -> NormalizedStrategy
    - __eq__ para comparar inmutabilidad
 
-2. acquisition.application.services.TranslationService
+2. apps.acquisition.application.services.TranslationService
    - translate(strategy, target) -> dict con contrato definido
    - Retorna: {query, status, warnings, trace, target, metadata}
 
-3. acquisition.testing.assertions.SyntaxValidator
+3. apps.acquisition.testing.assertions.SyntaxValidator
    - assert_scopus_syntax(query, ...)
    - assert_ieee_syntax(query, ...)
 
-4. acquisition.testing.assertions.LogicPreservationChecker
+4. apps.acquisition.testing.assertions.LogicPreservationChecker
    - assert_all_main_terms_present(strategy, query)
    - assert_synonyms_grouped_with_or(strategy, query)
    - assert_term_groups_joined_with_and(strategy, query)
@@ -382,10 +382,10 @@ INVENTARIO DE PIEZAS A CREAR (nacidas del rojo):
    - assert_year_filter_placement(strategy, query, target)
    - assert_operator_precedence(query, target)
 
-5. acquisition.testing.assertions.TraceValidator
+5. apps.acquisition.testing.assertions.TraceValidator
    - assert_trace_complete(trace, expected_target, ...)
 
-6. acquisition.testing.assertions.WarningValidator
+6. apps.acquisition.testing.assertions.WarningValidator
    - assert_no_warnings(warnings)
    - assert_year_manual_warning_present(warnings, year_from, year_to)
 

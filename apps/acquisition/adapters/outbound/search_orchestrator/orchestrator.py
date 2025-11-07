@@ -1,6 +1,6 @@
 from typing import List
 from apps.acquisition.domain.entities.search_strategy import SearchStrategy
-from apps.acquisition.components.messaging.event_bus import EventBus
+from apps.acquisition.adapters.outbound.messaging.event_bus import EventBus
 
 
 class SearchOrchestrator:

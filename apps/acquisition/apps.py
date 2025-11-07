@@ -1,12 +1,13 @@
+"""
+Django app configuration for Acquisition module.
+"""
+
 from django.apps import AppConfig
 
 
 class AcquisitionConfig(AppConfig):
-    name = "apps.acquisition"
-    verbose_name = "Acquisition (papers management)"
-from django.apps import AppConfig
+    """Configuration for the Acquisition app."""
 
-
-class AcquisitionConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.acquisition"
+    verbose_name = "Acquisition (Papers Management)"
