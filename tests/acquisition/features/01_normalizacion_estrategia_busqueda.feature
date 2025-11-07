@@ -9,46 +9,52 @@ Característica: Traducción automática de estrategias de búsqueda según la b
     Dada una estrategia de búsqueda normalizada estructurada
     """json
     {
-      "id_estrategia": "slr_ml_software_2024",
-      "terminos_principales": [
-        {
-          "termino": "machine learning",
-          "sinonimos": ["deep learning", "ML", "artificial intelligence"]
-        },
-        {
-          "termino": "software engineering",
-          "sinonimos": ["software development", "software quality"]
-        },
-        {
-          "termino": "bug prediction",
-          "sinonimos": ["defect prediction", "fault prediction"]
-        }
+      "strategy_id": "slr_ml_software_2024",
+      "main_terms": [
+      {
+        "term": "machine learning",
+        "synonyms": ["deep learning", "ML", "artificial intelligence"]
+      },
+      {
+        "term": "software engineering",
+        "synonyms": ["software development", "software quality"]
+      },
+      {
+        "term": "bug prediction",
+        "synonyms": ["defect prediction", "fault prediction"]
+      }
       ],
-      "exclusiones": [
-        "hardware testing",
-        "gaming",
-        "mobile applications"
+      "exclusions": [
+      "hardware testing",
+      "gaming",
+      "mobile applications"
       ],
-      "filtros": {
-        "año": {
-          "desde": 2020,
-          "hasta": 2024
-        }
+      "filters": {
+      "year": {
+        "from": 2020,
+        "to": 2024
+      }
       }
     }
     """
 
-  Escenario: Traducción para Scopus 
-    Cuando solicito traducir mi estrategia de búsqueda para "Scopus"
-    Entonces obtengo una consulta traducida compatible con la sintaxis de Scopus
+  Esquema del escenario: Traducción de estrategia para diferentes bases de datos académicas
+    Cuando solicito traducir mi estrategia de búsqueda para "<base_datos>"
+    Entonces obtengo una consulta traducida compatible con la sintaxis de <base_datos>
+    """
+    <consulta_traducida>
+    """
     Y la consulta traducida preserva la lógica de mi estrategia original
-    Y el estado de la traducción es "lista"
+    Y el estado de la traducción es "Done"
     Y se registra la trazabilidad de la traducción
+    Y <advertencias>
 
-  Escenario: Traducción para IEEE Xplore 
-    Cuando solicito traducir mi estrategia de búsqueda para "IEEE Xplore"
-    Entonces obtengo una consulta traducida compatible con la sintaxis de IEEE Xplore
-    Y la consulta traducida preserva la lógica de mi estrategia original
-    Y el estado de la traducción es "lista"
-    Y se registra la trazabilidad de la traducción
+    Ejemplos:
+      | base_datos   | consulta_traducida                                                                                                                                                                                                                                                                                                  | advertencias                                                                                   |
+      | Scopus       | TITLE-ABS-KEY((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) AND NOT ("hardware testing" OR "gaming" OR "mobile applications")) AND PUBYEAR > 2019 AND PUBYEAR < 2025 | no se emiten advertencias                                                                      |
+      | IEEE Xplore  | ((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) NOT ("hardware testing" OR "gaming" OR "mobile applications"))                    | se emite una advertencia indicando aplicar el filtro de año 2020-2024 manualmente en la interfaz |
+
+
+
+
 

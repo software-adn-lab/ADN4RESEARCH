@@ -35,21 +35,7 @@ python -m compileall apps/acquisition
 python manage.py behave tests/acquisition
 ```
 
-## 🚀 Fases de desarrollo
 
-**FASE 1 (actual):** Lógica de negocio con mocks
-- ✅ Interfaces definidas
-- ✅ Componentes scaffolded
-- 🔄 Tests unitarios con mocks
-
-**FASE 2:** Implementaciones reales
-- Scrapers de Scopus e IEEE Xplore
-- Tests de integración
-
-**FASE 3:** Infraestructura completa
-- PostgreSQL (metadatos)
-- MinIO (PDFs)
-- RabbitMQ (eventos)
 
 ## 📋 Features implementados
 

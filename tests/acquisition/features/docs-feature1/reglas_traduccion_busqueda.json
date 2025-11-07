@@ -1,0 +1,494 @@
+[
+  {
+    "bd": "scopus",
+    "tema": "fraseologia",
+    "regla": "Scopus soporta dos tipos de búsquedas de frases: aproximada (loose) con comillas dobles y exacta con llaves",
+    "sintaxis": [
+      "\"heart attack\"  # Búsqueda aproximada/laxa",
+      "{heart-attack}  # Búsqueda exacta"
+    ],
+    "ejemplo_valido": "TITLE-ABS-KEY(\"machine learning\")",
+    "contraejemplo": "TITLE-ABS-KEY(machine learning)  # Busca palabras sueltas, no frase",
+    "limitaciones": [
+      "Comillas dobles: busca singular y plural, ignora símbolos, permite wildcards",
+      "Llaves: búsqueda exacta, incluye símbolos y espacios exactos, no permite wildcards como caracteres literales"
+    ],
+    "notas": "La diferencia crítica es que {heart-attack} y {heart attack} devuelven resultados diferentes porque el guión se incluye",
+    "fuentes": [
+      {
+        "url": "https://legacyfileshare.elsevier.com/assets/pdf_file/0008/207935/RD-Solutions-Scopus-Quick-Reference-Guide.pdf",
+        "editor": "Elsevier",
+        "titulo": "Scopus Quick Reference Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2017-04",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://www.swinburne.edu.my/wp-content/uploads/2021/02/Finalv2_Quick-Guide-How-to-Scopus.pdf",
+        "editor": "Swinburne University of Technology Sarawak Campus",
+        "titulo": "Quick Guide - How to Use Scopus",
+        "fecha_publicacion_o_ultima_actualizacion": "2020-12",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "proximidad",
+    "regla": "Scopus usa W/n para proximidad sin orden y PRE/n para proximidad con orden especificado",
+    "sintaxis": [
+      "term1 W/n term2  # n puede ser 0-255",
+      "term1 PRE/n term2  # n puede ser 0-255"
+    ],
+    "ejemplo_valido": "Pain W/5 morphine",
+    "contraejemplo": "Pain W/300 morphine  # Excede límite de 255",
+    "limitaciones": [
+      "Valor n: 0 a 255",
+      "W/0 equivale a frase adyacente",
+      "Recomendaciones: n=3-5 para frase, n=15 para oración, n=50 para párrafo"
+    ],
+    "notas": "W/n permite palabras en cualquier orden; PRE/n requiere que term1 aparezca antes de term2",
+    "fuentes": [
+      {
+        "url": "https://legacyfileshare.elsevier.com/assets/pdf_file/0008/207935/RD-Solutions-Scopus-Quick-Reference-Guide.pdf",
+        "editor": "Elsevier",
+        "titulo": "Scopus Quick Reference Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2017-04",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://conchra.com.au/2021/03/09/searching-scopus-ovid-ebsco-and-informit/",
+        "editor": "Conchra",
+        "titulo": "Searching Scopus, Ovid, EBSCO, and Informit",
+        "fecha_publicacion_o_ultima_actualizacion": "2021-03-09",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "precedencia",
+    "regla": "Scopus procesa operadores booleanos en este orden de precedencia: 1. OR, 2. W/n o PRE/n, 3. AND, 4. AND NOT",
+    "sintaxis": [
+      "term1 AND term2",
+      "term1 OR term2",
+      "term1 AND NOT term2",
+      "(term1 OR term2) AND term3  # Usar paréntesis para cambiar precedencia"
+    ],
+    "ejemplo_valido": "(artificial intelligence OR machine learning) AND ethics",
+    "contraejemplo": "artificial intelligence OR machine learning AND ethics  # Sin paréntesis, comportamiento inesperado",
+    "limitaciones": [
+      "Operadores deben escribirse en MAYÚSCULAS",
+      "Cambio futuro: a finales de 2025/inicio 2026, Scopus actualizará la precedencia a estándar industrial: 1. ONEAR/NEAR, 2. NOT, 3. AND, 4. OR"
+    ],
+    "notas": "CRÍTICO: La precedencia actual difiere del estándar. Se recomienda usar paréntesis explícitos para evitar ambigüedad",
+    "fuentes": [
+      {
+        "url": "https://legacyfileshare.elsevier.com/assets/pdf_file/0008/207935/RD-Solutions-Scopus-Quick-Reference-Guide.pdf",
+        "editor": "Elsevier",
+        "titulo": "Scopus Quick Reference Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2017-04",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://blog.scopus.com/posts/boolean-searches-in-scopus-understanding-operator-precedence-best-practices",
+        "editor": "Elsevier/Scopus",
+        "titulo": "Boolean searches in Scopus: understanding operator precedence & best practices",
+        "fecha_publicacion_o_ultima_actualizacion": "2024-05-28",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "campos",
+    "regla": "TITLE-ABS-KEY es el campo compuesto más usado; busca simultáneamente en título, resumen y palabras clave",
+    "sintaxis": [
+      "TITLE-ABS-KEY(término)",
+      "TITLE(término)  # Solo título",
+      "ABS(término)  # Solo resumen",
+      "KEY(término)  # Solo palabras clave",
+      "AUTHKEY(término)  # Solo keywords de autor",
+      "AFFIL(institución)  # Afiliación",
+      "PUBYEAR IS 2024  # Año de publicación"
+    ],
+    "ejemplo_valido": "TITLE-ABS-KEY(\"deep learning\" AND \"software engineering\")",
+    "contraejemplo": "TITLE-ABS-KEY deep learning  # Faltan paréntesis",
+    "limitaciones": [
+      "TITLE-ABS-KEY trata los 3 campos como uno solo (no como OR separado)",
+      "Cada campo requiere paréntesis: CAMPO(término)",
+      "Más de 60 field codes disponibles"
+    ],
+    "notas": "TITLE-ABS-KEY busca como campo unificado, diferente a TITLE(...) OR ABS(...) OR KEY(...) que busca campos separados",
+    "fuentes": [
+      {
+        "url": "https://stackoverflow.com/questions/35526682/scopus-search-title-abs-key",
+        "editor": "Stack Overflow / Elsevier Customer Service",
+        "titulo": "Scopus search: TITLE-ABS-KEY",
+        "fecha_publicacion_o_ultima_actualizacion": "2017-02-11",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://www.swinburne.edu.my/wp-content/uploads/2021/02/Finalv2_Quick-Guide-How-to-Scopus.pdf",
+        "editor": "Swinburne University of Technology Sarawak Campus",
+        "titulo": "Quick Guide - How to Use Scopus",
+        "fecha_publicacion_o_ultima_actualizacion": "2020-12",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "comodines",
+    "regla": "Scopus soporta * (cualquier número de caracteres) y ? (un solo carácter)",
+    "sintaxis": [
+      "toxi*  # Encuentra toxin, toxic, toxicity, toxicology",
+      "sawt??th  # Encuentra sawtooth, sawteeth"
+    ],
+    "ejemplo_valido": "TITLE-ABS-KEY(comput* AND networ?)",
+    "contraejemplo": null,
+    "limitaciones": [
+      "No hay límite documentado de comodines en Scopus",
+      "Funcionan dentro de comillas dobles pero no dentro de llaves",
+      "Ejemplo: {health care?} busca el signo de interrogación literal"
+    ],
+    "notas": "Los comodines pueden usarse en búsquedas de frase laxa pero no en frase exacta",
+    "fuentes": [
+      {
+        "url": "https://legacyfileshare.elsevier.com/assets/pdf_file/0008/207935/RD-Solutions-Scopus-Quick-Reference-Guide.pdf",
+        "editor": "Elsevier",
+        "titulo": "Scopus Quick Reference Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2017-04",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://www.swinburne.edu.my/wp-content/uploads/2021/02/Finalv2_Quick-Guide-How-to-Scopus.pdf",
+        "editor": "Swinburne University of Technology Sarawak Campus",
+        "titulo": "Quick Guide - How to Use Scopus",
+        "fecha_publicacion_o_ultima_actualizacion": "2020-12",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "longitud_maxima_query",
+    "regla": "Cada línea de búsqueda en Scopus está limitada a 256 caracteres; búsquedas más largas deben dividirse usando Search History",
+    "sintaxis": [
+      "# Si excede 256 caracteres, usar Search History:",
+      "# Búsqueda 1: (concepto1) OR (concepto2) OR ...",
+      "# Búsqueda 2: (concepto10) OR (concepto11) OR ...",
+      "# Combinar: #1 AND #2"
+    ],
+    "ejemplo_valido": "Dividir consulta larga en múltiples búsquedas < 256 caracteres cada una",
+    "contraejemplo": "Una sola línea con 300+ caracteres (será rechazada)",
+    "limitaciones": [
+      "Límite: 256 caracteres por línea de búsqueda",
+      "Solución: usar función Search History para combinar búsquedas"
+    ],
+    "notas": "Este límite afecta principalmente revisiones sistemáticas con múltiples sinónimos. La API tiene límite de 5000 resultados sin cursor pagination",
+    "fuentes": [
+      {
+        "url": "https://www.library.sydney.edu.au/content/dam/library/documents/support/scopus_searchingguide.pdf",
+        "editor": "University of Sydney Library",
+        "titulo": "Scopus Searching Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://library.rush.edu/c.php?g=595495&p=8369869",
+        "editor": "Rush University Library",
+        "titulo": "Systematic Reviews: Translate a PubMed Search into Other Databases",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-11-28",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "scopus",
+    "tema": "filtros_anio",
+    "regla": "Scopus permite filtrar por año usando PUBYEAR en la query o usando facets/UI en la página de resultados",
+    "sintaxis": [
+      "PUBYEAR IS 2024",
+      "PUBYEAR > 2020",
+      "PUBYEAR AFT 2020  # After (después de)",
+      "PUBYEAR BEF 2024  # Before (antes de)",
+      "# Alternativa: usar límites de fecha en UI"
+    ],
+    "ejemplo_valido": "TITLE-ABS-KEY(\"climate change\") AND PUBYEAR > 2019",
+    "contraejemplo": "LIMIT-TO(PUBYEAR, 2024)  # Solo funciona en UI, no en query de API",
+    "limitaciones": [
+      "PUBYEAR trabaja a nivel de año completo, no mes/día",
+      "LIMIT-TO() solo funciona para refinar en UI, no en búsqueda programática",
+      "Para meses específicos usar filtros de UI después de ejecutar búsqueda"
+    ],
+    "notas": "PUBYEAR IS/AFT/BEF son las formas correctas en query. Los filtros de fecha en la UI son facets que se aplican post-búsqueda",
+    "fuentes": [
+      {
+        "url": "https://github.com/pybliometrics-dev/pybliometrics/issues/171",
+        "editor": "GitHub - pybliometrics",
+        "titulo": "LIMIT-TO(PUBYEAR, YYYY) not working with ScopusSearch()",
+        "fecha_publicacion_o_ultima_actualizacion": "2020-10-14",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://lib.unb.ca/sites/default/files/media/documents/Scopus.pdf",
+        "editor": "University of New Brunswick Libraries",
+        "titulo": "Tip Sheet: Scopus",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "fraseologia",
+    "regla": "IEEE Xplore usa comillas dobles para búsquedas de frase exacta; desactiva stemming automático",
+    "sintaxis": [
+      "\"exact phrase\"  # Búsqueda de frase exacta",
+      "word1 word2  # Búsqueda con AND implícito, permite stemming"
+    ],
+    "ejemplo_valido": "\"machine learning\" AND algorithms",
+    "contraejemplo": "machine learning  # Sin comillas, busca palabras sueltas con AND",
+    "limitaciones": [
+      "Solo comillas dobles; no hay equivalente a llaves de Scopus",
+      "Comillas desactivan stemming automático",
+      "Wildcards (*) funcionan dentro de comillas"
+    ],
+    "notas": "Sin comillas, IEEE aplica stemming automático (plurales, tiempos verbales, variantes UK/US)",
+    "fuentes": [
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/searching-ieee-xplore/search-engine",
+        "editor": "IEEE",
+        "titulo": "Search Engine - IEEE Xplore Help",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-12-31",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/downloads/user-guides/IEEE_Xplore_Advanced_Search_Tips.pdf",
+        "editor": "IEEE",
+        "titulo": "IEEE Xplore Advanced Search Tips",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "proximidad",
+    "regla": "IEEE Xplore usa NEAR/n para proximidad sin orden y ONEAR/n para proximidad con orden",
+    "sintaxis": [
+      "term1 NEAR/n term2  # Cualquier orden",
+      "term1 ONEAR/n term2  # term1 debe preceder a term2"
+    ],
+    "ejemplo_valido": "haptic NEAR/5 touchscreen",
+    "contraejemplo": "haptic near/5 touchscreen  # Operadores deben estar en MAYÚSCULAS",
+    "limitaciones": [
+      "Operadores deben escribirse en MAYÚSCULAS",
+      "No funcionan en Advanced Search (solo en Command Search y Global Search)",
+      "Búsquedas con NEAR/ONEAR no se pueden combinar en Search History"
+    ],
+    "notas": "NEAR/ONEAR solo disponibles en Basic Search y Command Search, no en Advanced Search",
+    "fuentes": [
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/searching-ieee-xplore/search-engine",
+        "editor": "IEEE",
+        "titulo": "Search Engine - IEEE Xplore Help",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-12-31",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/downloads/user-guides/IEEE_Xplore_Searching_and_Saving_Searches.pdf",
+        "editor": "IEEE",
+        "titulo": "IEEE Xplore Searching and Saving Searches",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "precedencia",
+    "regla": "IEEE Xplore procesa operadores en orden: 1. ONEAR/NEAR, 2. NOT, 3. AND, 4. OR",
+    "sintaxis": [
+      "term1 AND term2",
+      "term1 OR term2",
+      "term1 NOT term2",
+      "(term1 OR term2) AND term3  # Usar paréntesis para cambiar orden"
+    ],
+    "ejemplo_valido": "(\"artificial intelligence\" OR \"machine learning\") AND diseases",
+    "contraejemplo": "\"artificial intelligence\" OR \"machine learning\" AND diseases  # Sin paréntesis, resultado inesperado",
+    "limitaciones": [
+      "Operadores deben estar en MAYÚSCULAS",
+      "Usar paréntesis para forzar precedencia deseada"
+    ],
+    "notas": "La precedencia difiere de Scopus. Recomendado siempre usar paréntesis para claridad",
+    "fuentes": [
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/searching-ieee-xplore/search-engine",
+        "editor": "IEEE",
+        "titulo": "Search Engine - IEEE Xplore Help",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-12-31",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://library.indwes.edu/c.php?g=1186278&p=8677448",
+        "editor": "Jackson Library - Indiana Wesleyan University",
+        "titulo": "Research Guides: IEEE Xplore: Search Tips",
+        "fecha_publicacion_o_ultima_actualizacion": "2021-10-07",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "comodines",
+    "regla": "IEEE Xplore soporta * (múltiples/ningún carácter) y ? (un carácter); máximo 10 wildcards por búsqueda",
+    "sintaxis": [
+      "secur*  # Encuentra secure, secures, security, securing",
+      "wom?n  # Encuentra woman, women",
+      "*surg*  # Wildcards pueden ir al inicio, medio o final"
+    ],
+    "ejemplo_valido": "comput* AND networ?",
+    "contraejemplo": "a* b* c* d* e* f* g* h* i* j* k*  # Excede límite de 10 wildcards",
+    "limitaciones": [
+      "Máximo 10 wildcards por búsqueda",
+      "Mínimo 3 caracteres requeridos (excepción: Author Facet permite 2)",
+      "Wildcards funcionan con operadores de proximidad",
+      "Funcionan dentro de comillas",
+      "Search Within Results permite 1 wildcard adicional"
+    ],
+    "notas": "El límite de wildcards puede ser restrictivo en búsquedas sistemáticas complejas",
+    "fuentes": [
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/searching-ieee-xplore/search-engine",
+        "editor": "IEEE",
+        "titulo": "Search Engine - IEEE Xplore Help",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-12-31",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/downloads/user-guides/IEEE_Xplore_Advanced_Search_Tips.pdf",
+        "editor": "IEEE",
+        "titulo": "IEEE Xplore Advanced Search Tips",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "longitud_maxima_query",
+    "regla": "IEEE Xplore permite máximo 40 términos por query (15 términos por search clause en algunos contextos); los operadores de campo no cuentan",
+    "sintaxis": [
+      "# Command Search: máximo 20 términos por search clause",
+      "# Advanced Search: máximo 40 términos totales",
+      "# Palabras dentro de frases cuentan por separado"
+    ],
+    "ejemplo_valido": "Búsqueda con 35 términos distribuidos en múltiples cláusulas",
+    "contraejemplo": "Búsqueda con 50 términos individuales (rechazada)",
+    "limitaciones": [
+      "Máximo 40 términos por query en general",
+      "Command Search: 20 términos por search clause",
+      "Advanced Search: 15 términos por campo en algunos contextos",
+      "Palabras en frases (\"cloud computing\") cuentan como 2 términos",
+      "Field names y operadores NO cuentan hacia el límite"
+    ],
+    "notas": "Existe discrepancia entre documentación (algunos dicen 25, otros 40). Usar 20-25 como límite seguro por cláusula",
+    "fuentes": [
+      {
+        "url": "https://pg.edu.pl/documents/611754/16957348/ieeePolandNov2018.pdf",
+        "editor": "IEEE",
+        "titulo": "What's New with IEEE Xplore",
+        "fecha_publicacion_o_ultima_actualizacion": "2018-11",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://lib.unb.ca/sites/default/files/media/documents/IEEE_1.pdf",
+        "editor": "University of New Brunswick Libraries",
+        "titulo": "Tip Sheet: IEEE Xplore Digital Library",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://library.indwes.edu/c.php?g=1186278&p=8681563",
+        "editor": "Jackson Library - Indiana Wesleyan University",
+        "titulo": "IEEE Xplore: Command Search",
+        "fecha_publicacion_o_ultima_actualizacion": "2021-10-07",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "campos",
+    "regla": "IEEE Xplore permite búsqueda en metadata (default), Full Text & Metadata, o Full Text Only",
+    "sintaxis": [
+      "\"Document Title\":term",
+      "\"Abstract\":term",
+      "\"Author Keywords\":term",
+      "\"IEEE Terms\":term",
+      "\"Index Terms\":term  # Combina Author Keywords, IEEE Terms, INSPEC Terms",
+      "\"Author Affiliation\":institution"
+    ],
+    "ejemplo_valido": "\"Document Title\":\"neural networks\" AND \"Abstract\":optimization",
+    "contraejemplo": "Document Title:neural  # Falta comillas alrededor del nombre del campo",
+    "limitaciones": [
+      "En Command Search: field names entre comillas, separados por dos puntos",
+      "En Advanced Search: usar menús desplegables",
+      "Metadata incluye: título, resumen, index terms, autor, etc.",
+      "Full Text incluye todo el texto del documento"
+    ],
+    "notas": "Metadata es default. Para texto completo, seleccionar explícitamente en preferencias o Advanced Search",
+    "fuentes": [
+      {
+        "url": "https://ieeexplore.ieee.org/Xplorehelp/searching-ieee-xplore/search-engine",
+        "editor": "IEEE",
+        "titulo": "Search Engine - IEEE Xplore Help",
+        "fecha_publicacion_o_ultima_actualizacion": "2016-12-31",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://library.indwes.edu/c.php?g=1186278&p=8681563",
+        "editor": "Jackson Library - Indiana Wesleyan University",
+        "titulo": "IEEE Xplore: Command Search",
+        "fecha_publicacion_o_ultima_actualizacion": "2021-10-07",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  },
+  {
+    "bd": "ieee_xplore",
+    "tema": "filtros_anio",
+    "regla": "IEEE Xplore filtra años principalmente mediante UI/facets; no hay sintaxis de año en query text",
+    "sintaxis": [
+      "# En Advanced Search: usar selector de rango de fechas",
+      "# En Results: usar facet de año",
+      "# En Command Search: no hay sintaxis de año en texto"
+    ],
+    "ejemplo_valido": "Usar slider/facet de año en la interfaz después de búsqueda",
+    "contraejemplo": "PUBYEAR IS 2024  # Sintaxis no válida en IEEE",
+    "limitaciones": [
+      "No hay field code para año en query text",
+      "Filtrado de año solo mediante UI/facets",
+      "En Advanced Search: seleccionar rango antes de búsqueda",
+      "En Results page: usar facet Year después de búsqueda"
+    ],
+    "notas": "Diferencia crítica con Scopus: IEEE no permite año como parte de query string programática",
+    "fuentes": [
+      {
+        "url": "https://library.ait.ac.th/wp-content/uploads/sites/45/2019/04/ieee-user-guide.pdf",
+        "editor": "IEEE",
+        "titulo": "IEEE Xplore 2.0 User Guide",
+        "fecha_publicacion_o_ultima_actualizacion": "2019",
+        "fecha_acceso": "2025-11-05"
+      },
+      {
+        "url": "https://lib.unb.ca/sites/default/files/media/documents/IEEE.pdf",
+        "editor": "University of New Brunswick Libraries",
+        "titulo": "Tip Sheet: IEEE Xplore Digital Library",
+        "fecha_publicacion_o_ultima_actualizacion": "2024",
+        "fecha_acceso": "2025-11-05"
+      }
+    ]
+  }
+]
