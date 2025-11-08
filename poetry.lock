@@ -423,6 +423,21 @@ honcho = ["honcho (>=2.0.0,<3)"]
 reload = ["django-browser-reload (>=1.21.0,<2)"]
 
 [[package]]
+name = "faker"
+version = "37.12.0"
+description = "Faker is a Python package that generates fake data for you."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "faker-37.12.0-py3-none-any.whl", hash = "sha256:afe7ccc038da92f2fbae30d8e16d19d91e92e242f8401ce9caf44de892bab4c4"},
+    {file = "faker-37.12.0.tar.gz", hash = "sha256:7505e59a7e02fa9010f06c3e1e92f8250d4cfbb30632296140c2d6dbef09b0fa"},
+]
+
+[package.dependencies]
+tzdata = "*"
+
+[[package]]
 name = "flake8"
 version = "7.3.0"
 description = "the modular source code checker: pep8 pyflakes and co"
@@ -1159,4 +1174,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "f0496bfa2b8a6dbbe78403c4cac04b2d22b6bbadaa91df9b62d29d88c2e32e05"
+content-hash = "0e7c3aa8653c4b6ca14fb2e491e24d124a68e2b518b3d87a94944b3115617311"
