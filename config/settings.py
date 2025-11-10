@@ -13,12 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from shutil import which
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Configuración automática para cualquier SO
-NPM_BIN_PATH = which('npm') or which('npm.cmd') or which('nodeenv')
+NPM_BIN_PATH = which("npm") or which("npm.cmd") or which("nodeenv")
 
 # Verificación obligatoria
 if not NPM_BIN_PATH:
@@ -26,12 +27,12 @@ if not NPM_BIN_PATH:
         "Node.js/npm no está instalado o no está en el PATH. "
         "Descarga Node.js desde https://nodejs.org/es/"
     )
-    
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-oxq-k)&z4v0ip6rtm)3c%44(-7q1@_ddfsk41+_)yg6zo9zo3i'
+SECRET_KEY = "django-insecure-oxq-k)&z4v0ip6rtm)3c%44(-7q1@_ddfsk41+_)yg6zo9zo3i"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -42,29 +43,29 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
     # Project apps
-    'apps.design.apps.DesignConfig',
-    'apps.interpretation.apps.InterpretationConfig',
-    'apps.extraction.apps.ExtractionConfig',
-    'apps.selection.apps.SelectionConfig',
-    'apps.acquisition.apps.AcquisitionConfig',
-    'apps.project.apps.ProjectConfig',
-    'apps.notification.apps.NotificationConfig',
+    "apps.design.apps.DesignConfig",
+    "apps.interpretation.apps.InterpretationConfig",
+    "apps.extraction.apps.ExtractionConfig",
+    "apps.selection.apps.SelectionConfig",
+    "apps.acquisition.apps.AcquisitionConfig",
+    "apps.project.apps.ProjectConfig",
+    "apps.notification.apps.NotificationConfig",
     # Third party apps
-    'behave_django',
+    "behave_django",
     # Frontend (Tailwind)
-    'tailwind',
-    'theme',
+    "tailwind",
+    "theme",
 ]
-INSTALLED_APPS += ['django_browser_reload']
+INSTALLED_APPS += ["django_browser_reload"]
 
-TAILWIND_APP_NAME = 'theme'
+TAILWIND_APP_NAME = "theme"
 
 
 MIDDLEWARE = [
@@ -79,60 +80,100 @@ MIDDLEWARE = [
     'config.middleware.dev_middleware.DevUserMiddleware',
 ]
 MIDDLEWARE += [
-        "django_browser_reload.middleware.BrowserReloadMiddleware",
-    ]
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
+]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            BASE_DIR / 'shared' / 'templates',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [
+            BASE_DIR / "shared" / "templates",
         ],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# The settings below prefer a DATABASE_URL environment variable (12-factor style)
+# Examples:
+#   postgres://USER:PASS@HOST:PORT/NAME
+#   sqlite:////absolute/path/to/db.sqlite3
+# If DATABASE_URL is not set, fall back to a local SQLite file (good for dev).
+# If you prefer, install `dj-database-url` and the code will use it when present.
 
-# PostgreSQL configuration
-# Create a .env file with these variables or set them in your environment:
-# DB_NAME=adn4research
-# DB_USER=postgres
-# DB_PASSWORD=yourpassword
-# DB_HOST=localhost
-# DB_PORT=5432
-'''
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'adn4research'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-}'''
+}
 
-# Uncomment to use SQLite for development
-DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.sqlite3',
-         'NAME': BASE_DIR / 'db.sqlite3',
-     }
- }
+# Read DATABASE_URL (used by CI and 12-factor deployments). If present,
+# try to parse it with dj_database_url (if installed). Otherwise do a
+# minimal parse for common Postgres URLs and configure Django accordingly.
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    try:
+        # Prefer dj-database-url when available (handles many edge cases)
+
+        DATABASES["default"] = dj_database_url.parse(DATABASE_URL, conn_max_age=600)  # type: ignore
+    except ImportError:
+        # Minimal fallback parser (handles postgres://... and sqlite:///...)
+        from urllib.parse import urlparse
+
+        url = urlparse(DATABASE_URL)
+
+        # sqlite special case: sqlite:///relative or sqlite:////absolute
+        if url.scheme.startswith("sqlite"):
+            # For sqlite paths, url.path is the file path
+            sqlite_path = url.path
+            if sqlite_path.startswith("/") and len(sqlite_path) > 1:
+                # use absolute path
+                db_name = sqlite_path
+            else:
+                # relative path -> place inside BASE_DIR
+                db_name = str(BASE_DIR / sqlite_path.lstrip("/"))
+
+            DATABASES["default"] = {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": db_name,
+            }
+        else:
+            # assume postgres-like
+            db_name = (
+                url.path[1:] if url.path and url.path.startswith("/") else url.path
+            )
+            DATABASES["default"] = {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": db_name or os.environ.get("DB_NAME", "adn4research"),
+                "USER": url.username or os.environ.get("DB_USER", "postgres"),
+                "PASSWORD": url.password or os.environ.get("DB_PASSWORD", ""),
+                "HOST": url.hostname or os.environ.get("DB_HOST", "localhost"),
+                "PORT": url.port or os.environ.get("DB_PORT", "5432"),
+            }
+
+# Backwards-compat: if no DATABASE_URL but DB_* env vars are set, prefer them
+if not DATABASE_URL and os.environ.get("DB_NAME"):
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "adn4research"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
+    }
 
 
 # Password validation
@@ -140,16 +181,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -157,9 +198,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -169,77 +210,77 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media files (User uploaded files)
 # https://docs.djangoproject.com/en/5.2/ref/settings/#media-root
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Storage configuration
 # S3-compatible storage (AWS S3, MinIO, etc.)
-USE_S3 = os.environ.get('USE_S3', 'False') == 'True'
+USE_S3 = os.environ.get("USE_S3", "False") == "True"
 
 if USE_S3:
     # S3 Storage Settings
-    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')  # For MinIO
-    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')
-    AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")  # For MinIO
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "us-east-1")
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get("AWS_S3_CUSTOM_DOMAIN")
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = None
-    AWS_S3_VERIFY = os.environ.get('AWS_S3_VERIFY', 'True') == 'True'
+    AWS_S3_VERIFY = os.environ.get("AWS_S3_VERIFY", "True") == "True"
 
     # Use S3 for media files
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
     if AWS_S3_CUSTOM_DOMAIN:
-        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
     elif AWS_S3_ENDPOINT_URL:
-        MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+        MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 
 # Redis Configuration
 # https://redis.io/
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
-REDIS_DB = os.environ.get('REDIS_DB', '0')
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
+REDIS_DB = os.environ.get("REDIS_DB", "0")
 
 # Build Redis URL
 if REDIS_PASSWORD:
-    REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 else:
-    REDIS_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Cache Configuration with Redis
 # https://docs.djangoproject.com/en/5.2/topics/cache/
 CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
-        'KEY_PREFIX': 'adn4research',
-        'TIMEOUT': 300,  # 5 minutes default
+        "KEY_PREFIX": "adn4research",
+        "TIMEOUT": 300,  # 5 minutes default
     }
 }
 
 # Session backend using Redis
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 # Celery Configuration
 # https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
@@ -249,4 +290,4 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
