@@ -93,7 +93,7 @@ def step_when_solicito_traducir(context, base_datos):
     context.base_datos = base_datos
 
     # WISHFUL THINKING: invocar servicio que NO existe aún
-    from apps.acquisition.application.services import TranslationService
+    from apps.acquisition.application.translation_service import TranslationService
 
     service = TranslationService()
 
@@ -366,7 +366,7 @@ INVENTARIO DE PIEZAS A CREAR (nacidas del rojo):
    - from_dict(data: dict) -> NormalizedStrategy
    - __eq__ para comparar inmutabilidad
 
-2. apps.acquisition.application.services.TranslationService
+2. apps.acquisition.application.translation_service.TranslationService
    - translate(strategy, target) -> dict con contrato definido
    - Retorna: {query, status, warnings, trace, target, metadata}
 
