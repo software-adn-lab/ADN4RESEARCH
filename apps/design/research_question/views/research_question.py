@@ -2,7 +2,8 @@ import json
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth import get_user_model
-from apps.design.services.question_services import ResearchQuestionService
+from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.project.models import Project
 from apps.project.services.project_services import ProjectService
 
@@ -23,53 +24,50 @@ def hello(request):
 
 def create_research_question(request, project_id):
     project = get_object_or_404(Project, id=project_id)
-    project_framework = project_service.get_project_framework(request)
+    
     context = {
-        'project': project, # Pasar el proyecto al contexto
-        'framework': project_framework,
+        'project': project,
         'active_tab': 'questions_history',
     }
     return render(request, 'create_research_question.html', context)
- 
+
 def send_research_question_for_review(request, question_id):
     try:
         question = research_question_service.get_research_question_by_id(question_id, request.user)
         research_question_service.submit_research_question_for_review(question)
-    except question.DoesNotExist:
+        # Obtener el project_id de la pregunta y pasarlo al redirect
+        project_id = question.project.id
+        return redirect('design:questions_history', project_id=project_id)
+    except ResearchQuestion.DoesNotExist:  # Cambiado de question.DoesNotExist
         raise Http404("Research question not found")
-    return redirect('design:questions_history')
     
 def edit_research_question(request, question_id):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-        project_framework = project_service.get_project_framework(request)
-        
-        # Convertimos los datos de la pregunta a JSON para pasarlos al script
-        question_data = {
-            "id": question.id,
-            "research_framework_id": question.research_framework.id,
-            "suggested_question": question.suggested_question,
-            "motivation": question.motivation,
-            "framework_fields": question.framework_fields,
-            "status": question.status,
-            "can_submit": research_question_service.can_submit_question(question) 
-        }
+    question = get_object_or_404(ResearchQuestion, id=question_id)
+    project = question.project  # El proyecto de la pregunta
+    
+    question_data = {
+        "id": question.id,
+        "suggested_question": question.suggested_question,
+        "motivation": question.motivation,
+        "framework_fields": question.framework_fields,
+        "status": question.status,
+    }
 
-        return render(request, 'create_research_question.html', {
-            'framework': project_framework,
-            'question': question, # Pasamos el objeto completo
-            'question_json': json.dumps(question_data), # Y también en formato JSON
-            'active_tab': 'questions_history',
-        })
-    except question.DoesNotExist:
-        raise Http404("Research question not found") 
+    context = {
+        'question': question,
+        'project': project,  # Siempre pasamos el proyecto
+        'question_json': json.dumps(question_data),
+        'active_tab': 'questions_history',
+    }
+    return render(request, 'create_research_question.html', context)
 
 def delete_research_question(request, question_id):
     try:
         question = research_question_service.get_research_question_by_id(question_id, request.user)
+        project_id = question.project.id  # Obtener el project_id antes de eliminar
         question.delete()
-        return redirect('design:questions_history')
-    except question.DoesNotExist:
+        return redirect('design:questions_history', project_id=project_id)
+    except ResearchQuestion.DoesNotExist:  # Cambiado de question.DoesNotExist
         raise Http404("Research question not found")
     
 def questions_history_view(request, project_id):

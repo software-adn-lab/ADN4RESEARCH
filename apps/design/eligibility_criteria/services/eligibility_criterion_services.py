@@ -1,6 +1,6 @@
 from typing import List
 from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, NotFoundError, UpdateError
-from apps.design.models.eligibility_criteria import EligibilityCriterion
+from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DatabaseError
 

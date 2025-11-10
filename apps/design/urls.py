@@ -1,6 +1,7 @@
 from django.urls import path
 
-from apps.design.views import eligibility_criterion, research_question
+from apps.design.eligibility_criteria.views import eligibility_criterion
+from apps.design.research_question.views import research_question
 
 app_name = 'design' 
 

@@ -3,8 +3,8 @@ from faker import Faker
 from django.contrib.auth.models import User
 from apps.project.models import Stage
 from apps.project.services.project_services import ProjectService
-from apps.design.services.question_services import ResearchQuestionService
-from apps.design.models.research_question import ResearchFramework, ResearchQuestion
+from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.research_question.models.research_question import ResearchFramework, ResearchQuestion
 
 project_service = ProjectService()
 research_question_service = ResearchQuestionService()

@@ -4,8 +4,8 @@ from behave import given, then, when, step
 from faker import Faker
 from django.contrib.auth.models import User
 
-from apps.design.models.research_question import ResearchFramework, ResearchQuestion
-from apps.design.services.question_services import ResearchQuestionService
+from apps.design.research_question.models.research_question import ResearchFramework, ResearchQuestion
+from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.notification.models import Notification
 from apps.project.models import Stage
 from apps.project.services.project_services import ProjectService

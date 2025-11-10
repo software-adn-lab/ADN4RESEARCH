@@ -1,4 +1,4 @@
-from apps.design.models.research_question import ResearchFramework, ResearchQuestion
+from apps.design.research_question.models.research_question import ResearchFramework, ResearchQuestion
 from config.events import bus
 from django.db.models import Q
 from django.contrib.auth import get_user_model

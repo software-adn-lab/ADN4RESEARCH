@@ -1,7 +1,6 @@
 {% extends 'base_tabs.html'%}
 {% load static tailwind_tags %}
 {% block questions_history_content %}
-{% with question.research_framework|default:framework as current_framework %}
 
 <form id="question-form" method="POST"
     action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
@@ -10,15 +9,15 @@
     <input type="hidden" id="research-question-id" name="id" value="{{ question.id|default:'' }}">
     <input type="hidden" id="project-id" name="project_id" value="{{ project.id }}">
     
-    {% if current_framework %}
-        {# Pasamos el ID del framework como un campo oculto para el autosave #}
-        <input type="hidden" name="research_framework" value="{{ current_framework.id }}">
+    {% if project.research_framework %}
+        {# Siempre usa el framework del proyecto #}
+        <input type="hidden" name="research_framework" value="{{ project.research_framework.id }}">
 
-        <h2 class="text-xl font-semibold">Framework: {{ current_framework.name }}</h2>
+        <h2 class="text-xl font-semibold">Framework: {{ project.research_framework.name }}</h2>
         <hr class="my-4">
 
         <div id="fields-container" class="space-y-4">
-            {% for field_name in current_framework.fields.keys %}
+            {% for field_name in project.research_framework.fields.keys %}
             <fieldset class="form-control w-full max-w-xs">
                 <label class="label">
                     <span class="label-text">{{ field_name }}</span>
@@ -59,15 +58,12 @@
     </div>
 
 </form>
-{% endwith %}
 
 <script>
-    // La data inicial de la pregunta sigue siendo útil para el estado del botón
     let QUESTION_DATA = {{ question_json|safe|default:"null" }};
     const submitUrlTemplate = "{% url 'design:send_research_question_for_review' 9999 %}";
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Ya no necesitamos el 'frameworkSelect'
         const fieldsContainer = document.getElementById('fields-container');
         const form = document.getElementById('question-form');
         const questionIdInput = document.getElementById('research-question-id');

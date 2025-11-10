@@ -3,7 +3,7 @@ from faker import Faker
 from django.contrib.auth.models import User
 from apps.project.models import Project
 from apps.project.services.project_services import ProjectService
-from apps.design.services.question_services import ResearchQuestionService
+from apps.design.research_question.services.question_services import ResearchQuestionService
 
 fake = Faker()
 

@@ -1,7 +1,7 @@
 
 from apps.design.exceptions.eligibility_criteria_exceptions import CreationError
-from apps.design.models.eligibility_criteria import EligibilityCriterion
-from apps.design.services.eligibility_criterion_services import EligibilityCriterionService
+from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
+from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.project.models import Project
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
