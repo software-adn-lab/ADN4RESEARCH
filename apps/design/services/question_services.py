@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import QuestionSubmissionError, QuestionNotFoundError
+from apps.project.models import Project
 
 # Obtén el modelo de Usuario activo en tu proyecto
 User = get_user_model()
@@ -26,9 +27,9 @@ class ResearchQuestionService:
         
         return calculated_status
     
-    def get_research_question_by_id(self, research_question_id):
+    def get_research_question_by_id(self, research_question_id, user):
         try:
-            return ResearchQuestion.objects.get(id=research_question_id)
+            return ResearchQuestion.objects.get(id=research_question_id, researcher=user)
         except ResearchQuestion.DoesNotExist:
             raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
     
@@ -36,8 +37,8 @@ class ResearchQuestionService:
         return ResearchFramework.objects.get(id=framework_id)
     
     @transaction.atomic
-    def submit_research_question_for_review(self, research_question):
-        if not research_question.can_submit_for_review():
+    def submit_research_question_for_review(self, research_question: ResearchQuestion):
+        if not self.can_submit_question(research_question):
             raise QuestionSubmissionError(
                 f"Question {research_question.id} cannot be submitted. "
                 f"Current status: {research_question.get_status_display()}"
@@ -63,9 +64,7 @@ class ResearchQuestionService:
     def autosave_question(self, data, user):
         question_id = data.get('id') or None
         framework_id = data.get('research_framework')
-        # TODO: QUITAR EL HARCODE
-        hardcoded_user = User.objects.get(id=1)
-        researcher_instance = hardcoded_user
+        researcher_instance = user
         
         framework = self.get_framework_by_id(framework_id)
         
@@ -74,7 +73,7 @@ class ResearchQuestionService:
             for key, value in data.items() if key.startswith('framework_fields[')
         }
         if question_id:
-            question = self.get_research_question_by_id(question_id)
+            question = self.get_research_question_by_id(question_id, user=researcher_instance)
             question.research_framework = framework
             question.researcher = researcher_instance
             question.motivation = data.get('motivation', '')
@@ -94,6 +93,21 @@ class ResearchQuestionService:
     
     def get_all_questions_by_user(self, user):
         return ResearchQuestion.objects.filter(researcher=user).order_by('-modified_at')
+    
+    def get_research_questions_by_status(self, project, status):
+        return ResearchQuestion.objects.filter(
+            project=project,
+            status=status
+        ).order_by('-modified_at')
+    
+    def add_research_question(self, project: Project, suggested_question, suggester, status):
+        # Implementation to add a research question to the project
+        ResearchQuestion.objects.create(
+            project=project,
+            suggested_question=suggested_question,
+            suggester=suggester,
+            status=status
+        )
     
     def get_frameworks(self, request):
         frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(created_by=request.user))

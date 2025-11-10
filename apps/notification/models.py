@@ -15,7 +15,10 @@ class Notification(models.Model):
     project = models.ForeignKey(
         'project.Project',
         on_delete=models.CASCADE,
-        related_name='notifications'
+        related_name='notifications',
+        default=None,
+        null=True,
+        blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
     sender = models.ForeignKey(

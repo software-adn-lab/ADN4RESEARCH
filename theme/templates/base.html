@@ -3,164 +3,18 @@
 <html lang="en">
 
 <head>
-    <title>Django Tailwind</title>
+    <title>ADN4Research</title>
     <meta charset="UTF-8">
-    <!--   Importar estilos eprsonalizados-->
     {% tailwind_css %}
-    <link rel="stylesheet" href="{% static 'css/dist/custom.css' %}">
 </head>
 
 <body>
-    <div class="parent">
-        <div class="div1 bg-principal-bg h-full">
-            <div class="w-full h-full bg-secondary-bg border-r border-gray-200 flex flex-col">
-                <div class="p-3 border-b border-gray-200">
-                    <div class="flex items-center gap-2">
-                        <div
-                            class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
-                            C
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <span class="text-sm font-semibold text-secondary-font">ADN4Research</span>
-                            <i class="fas fa-chevron-down text-xs text-principal-font"></i>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Navigation -->
-                <div class="flex-1 overflow-y-auto">
-                    <!-- Home and Inbox -->
-                    <div class="p-2">
-                        <button
-                            class="w-full flex items-center gap-2 px-3 py-2 rounded-md text-principal-font hover:bg-gray-100 transition-colors mt-1">
-                            <i class="fas fa-home text-sm"></i>
-                            <span class="text-sm font-medium">Home</span>
-                        </button>
-                        <button
-                            class="w-full flex items-center gap-2 px-3 py-2 rounded-md text-principal-font hover:bg-gray-100 transition-colors mt-1">
-                            <i class="fas fa-inbox text-sm"></i>
-                            <span class="text-sm font-medium">Inbox</span>
-                        </button>
-                    </div>
+    <div class="body-content content-grid">
+        {% block content %}
 
-                    <!-- Workspace Section -->
-                    <div class="px-2 py-3 border-t border-gray-100">
-                        <button
-                            class="w-full flex items-center justify-between px-2 py-1 text-xs font-semibold text-principal-font hover:text-secondary-font">
-                            <span>Workspace</span>
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div class="mt-2 space-y-1">
-                            <button
-                                class="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-tasks text-xs"></i>
-                                <span class="text-sm">My tasks</span>
-                            </button>
-                            <button
-                                class="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-chart-bar text-xs"></i>
-                                <span class="text-sm">General Stats</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Research Projects Section -->
-                    <div class="px-2 py-3 border-t border-gray-100">
-                        <button
-                            class="w-full flex items-center justify-between px-2 py-1 text-xs font-semibold text-principal-font hover:text-secondary-font">
-                            <span>Research Projects</span>
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-
-                        <!-- Anti Patterns Project -->
-                        <div class="mt-2">
-                            <button
-                                class="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-400">#</span>
-                                    <span class="text-sm">Anti Patterns Project</span>
-                                </div>
-                                <i class="fas fa-chevron-down text-xs"></i>
-                            </button>
-                            <div class="ml-6 mt-1 space-y-1">
-                                <button
-                                    class="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-white hover:bg-opacity-90 transition-colors">
-                                    
-                                    <span class="text-xs font-bold">Design</span>
-                                </button>
-                                <button
-                                    class="w-full flex items-center gap-2 px-2 py-1 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                    <i class="fas fa-mouse-pointer text-xs"></i>
-                                    <span class="text-xs">Selection</span>
-                                </button>
-                                <button
-                                    class="w-full flex items-center gap-2 px-2 py-1 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                    <i class="fas fa-file-alt text-xs"></i>
-                                    <span class="text-xs">Extraction</span>
-                                </button>
-                                <button
-                                    class="w-full flex items-center gap-2 px-2 py-1 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                                    <i class="fas fa-chart-line text-xs"></i>
-                                    <span class="text-xs">Stats</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Research Project 2 -->
-                        <button
-                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-principal-font hover:bg-gray-100 transition-colors mt-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400">#</span>
-                                <span class="text-sm">Research Project 2</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-xs"></i>
-                        </button>
-
-                        <!-- Research Project 3 -->
-                        <button
-                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-principal-font hover:bg-gray-100 transition-colors mt-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400">#</span>
-                                <span class="text-sm">Research Project 3</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="border-t border-gray-200 p-2">
-                    <button
-                        class="w-full flex items-center gap-2 px-3 py-2 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-cog text-sm"></i>
-                        <span class="text-sm">Settings</span>
-                    </button>
-                    <button
-                        class="w-full flex items-center gap-2 px-3 py-2 rounded-md text-principal-font hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-question-circle text-sm"></i>
-                        <span class="text-sm">Help & support</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="div2 ">
-            <label class="input w-4xl">
-                <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
-                        stroke="currentColor">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                    </g>
-                </svg>
-                <input type="search" required placeholder="Search" />
-            </label>
-
-        </div>
-        <div class="div3 content-grid">
-            {% block content %}
-
-            {% endblock %}
-        </div>
+        {% endblock %}
+    </div>
     </div>
 </body>
 

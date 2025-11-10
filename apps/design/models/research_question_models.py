@@ -54,9 +54,8 @@ class ResearchQuestion(models.Model):
     research_framework = models.ForeignKey(ResearchFramework, on_delete=models.CASCADE, related_name='research_questions')
     suggested_question = models.TextField(blank=True)
     motivation = models.TextField(blank=True)
-    # NOTE: If uncommenting these fields, update references to 'apps.project.Project' and 'apps.project.Stage'
-    '''project = models.ForeignKey('apps.project.Project', on_delete=models.CASCADE, related_name='research_questions')
-    stage = models.ForeignKey('apps.project.Stage', on_delete=models.CASCADE, related_name='research_questions')'''
+    project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
+    stage = models.ForeignKey('project.Stage', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
     researcher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -91,6 +90,7 @@ class ResearchQuestion(models.Model):
     @property
     def is_framework_complete(self):
         required_field_names = self.research_framework.fields.keys()
+        print("what", required_field_names)
         
         if not required_field_names:
             return True # If the framework has no required fields, it's complete.
@@ -113,6 +113,9 @@ class ResearchQuestion(models.Model):
     def save(self, *args, **kwargs):
         if self.status != self.Status.SUGGESTED: self.status = self.calculate_status()
         super().save(*args, **kwargs)
+        
+    def get_status_display(self):
+        return self.Status(self.status).label
 
     def __str__(self):
         return f"RQ-{self.id} ({self.status}) - {self.research_framework.name}"

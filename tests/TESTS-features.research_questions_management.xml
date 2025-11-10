@@ -1,39 +1,10 @@
-<testsuite name="features.research_questions_management.Managing the lifecycle of research questions" tests="3" errors="3" failures="0" skipped="0" time="0.026438" timestamp="2025-10-28T22:38:23.037790" hostname="Cristian-Zambrano"><testcase classname="features.research_questions_management.Managing the lifecycle of research questions" name="Submit a suggested research question for review -- @1.1 " status="error" time="0.012053"><error type="TypeError" message="ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'">
-<![CDATA[
-Failing step: And I have written a question with the following content: ... error in 0.007s
-  """
-  {
-      "framework": "PICO",
-      "fields": {"Population": "Students", "Intervention": "Gamification", "Context": "Online courses", "Outcome": "Motivation"},
-      "suggested_question": "How does ...?",
-      "motivation": "To understand ..."
-  }
-  """
-Location: tests/design/features/research_questions_management.feature:8
-Traceback (most recent call last):
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\model.py", line 1909, in run
-    match.run(runner.context)
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\matchers.py", line 104, in run
-    self.func(context, *args, **kwargs)
-  File "tests\design\steps\research_questions_management.py", line 64, in step_impl
-    context.research_question = ResearchQuestion.objects.create(
-                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
-    return getattr(self.get_queryset(), name)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\query.py", line 661, in create
-    obj = self.model(**kwargs)
-          ^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\base.py", line 569, in __init__
-    raise TypeError(
-TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'
-]]>
-</error><system-out>
+<testsuite name="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" tests="3" errors="0" failures="0" skipped="0" time="0.029691" timestamp="2025-11-06T15:05:08.030073" hostname="Cristian"><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.1 " status="passed" time="0.019148"><system-out>
 <![CDATA[
 @scenario.begin
-  Scenario Outline: Submit a suggested research question for review -- @1.1 
-    Given the "Suggest Research Question" stage of the project is opened ... passed in 0.006s
-    And I have written a question with the following content: ... error in 0.007s
+  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.1 
+    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.002s
+    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.012s
+    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.004s
       """
       {
           "framework": "PICO",
@@ -42,50 +13,31 @@ TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stag
           "motivation": "To understand ..."
       }
       """
-    And the question is on a "READY_TO_SEND" status ... skipped in 0.000s
-    When I submit the question for review ... skipped in 0.000s
-    Then the question should change its status to "SUGGESTED" ... skipped in 0.000s
-    And a "RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW" notification should be sent to the research project team ... skipped in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.001s
+    Y la etapa se cerrará ... passed in 0.000s
 
 @scenario.end
 --------------------------------------------------------------------------------
+
+Captured stdout:
+what dict_keys(['Population', 'Intervention', 'Context', 'Outcome'])
+what dict_keys(['Population', 'Intervention', 'Context', 'Outcome'])
+
 ]]>
-</system-out></testcase><testcase classname="features.research_questions_management.Managing the lifecycle of research questions" name="Submit a suggested research question for review -- @1.2 " status="error" time="0.007024"><error type="TypeError" message="ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'">
+</system-out><system-err>
 <![CDATA[
-Failing step: And I have written a question with the following content: ... error in 0.003s
-  """
-  {
-      "framework": "PEO",
-      "fields": {"Population": "Nurses", "Exposure": "Night shifts", "Outcome": "Burnout levels"},
-      "suggested_question": "What is ...?",
-      "motivation": "To improve ..."
-  }
-  """
-Location: tests/design/features/research_questions_management.feature:8
-Traceback (most recent call last):
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\model.py", line 1909, in run
-    match.run(runner.context)
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\matchers.py", line 104, in run
-    self.func(context, *args, **kwargs)
-  File "tests\design\steps\research_questions_management.py", line 64, in step_impl
-    context.research_question = ResearchQuestion.objects.create(
-                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
-    return getattr(self.get_queryset(), name)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\query.py", line 661, in create
-    obj = self.model(**kwargs)
-          ^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\base.py", line 569, in __init__
-    raise TypeError(
-TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'
+Captured stderr:
+C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-18 18:34:27) while time zone support is active.
+  warnings.warn(
+
 ]]>
-</error><system-out>
+</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.2 " status="passed" time="0.005297"><system-out>
 <![CDATA[
 @scenario.begin
-  Scenario Outline: Submit a suggested research question for review -- @1.2 
-    Given the "Suggest Research Question" stage of the project is opened ... passed in 0.004s
-    And I have written a question with the following content: ... error in 0.003s
+  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.2 
+    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.001s
+    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.001s
+    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.002s
       """
       {
           "framework": "PEO",
@@ -94,50 +46,31 @@ TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stag
           "motivation": "To improve ..."
       }
       """
-    And the question is on a "READY_TO_SEND" status ... skipped in 0.000s
-    When I submit the question for review ... skipped in 0.000s
-    Then the question should change its status to "SUGGESTED" ... skipped in 0.000s
-    And a "RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW" notification should be sent to the research project team ... skipped in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.000s
+    Y la etapa se cerrará ... passed in 0.000s
 
 @scenario.end
 --------------------------------------------------------------------------------
+
+Captured stdout:
+what dict_keys(['Population', 'Exposure', 'Outcome'])
+what dict_keys(['Population', 'Exposure', 'Outcome'])
+
 ]]>
-</system-out></testcase><testcase classname="features.research_questions_management.Managing the lifecycle of research questions" name="Submit a suggested research question for review -- @1.3 " status="error" time="0.007361"><error type="TypeError" message="ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'">
+</system-out><system-err>
 <![CDATA[
-Failing step: And I have written a question with the following content: ... error in 0.003s
-  """
-  {
-      "framework": "PCC",
-      "fields": {"Population": "Remote workers", "Concept": "Digital nomadism", "Context": "Post-pandemic"},
-      "suggested_question": "What are the ...?",
-      "motivation": "Exploring new ..."
-  }
-  """
-Location: tests/design/features/research_questions_management.feature:8
-Traceback (most recent call last):
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\model.py", line 1909, in run
-    match.run(runner.context)
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\behave\matchers.py", line 104, in run
-    self.func(context, *args, **kwargs)
-  File "tests\design\steps\research_questions_management.py", line 64, in step_impl
-    context.research_question = ResearchQuestion.objects.create(
-                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
-    return getattr(self.get_queryset(), name)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\query.py", line 661, in create
-    obj = self.model(**kwargs)
-          ^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\base.py", line 569, in __init__
-    raise TypeError(
-TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stage'
+Captured stderr:
+C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-09 03:34:15) while time zone support is active.
+  warnings.warn(
+
 ]]>
-</error><system-out>
+</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.3 " status="passed" time="0.005245"><system-out>
 <![CDATA[
 @scenario.begin
-  Scenario Outline: Submit a suggested research question for review -- @1.3 
-    Given the "Suggest Research Question" stage of the project is opened ... passed in 0.005s
-    And I have written a question with the following content: ... error in 0.003s
+  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.3 
+    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.001s
+    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.001s
+    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.002s
       """
       {
           "framework": "PCC",
@@ -146,12 +79,22 @@ TypeError: ResearchQuestion() got unexpected keyword arguments: 'project', 'stag
           "motivation": "Exploring new ..."
       }
       """
-    And the question is on a "READY_TO_SEND" status ... skipped in 0.000s
-    When I submit the question for review ... skipped in 0.000s
-    Then the question should change its status to "SUGGESTED" ... skipped in 0.000s
-    And a "RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW" notification should be sent to the research project team ... skipped in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.000s
+    Y la etapa se cerrará ... passed in 0.000s
 
 @scenario.end
 --------------------------------------------------------------------------------
+
+Captured stdout:
+what dict_keys(['Population', 'Concept', 'Context'])
+what dict_keys(['Population', 'Concept', 'Context'])
+
 ]]>
-</system-out></testcase></testsuite>
+</system-out><system-err>
+<![CDATA[
+Captured stderr:
+C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-16 00:14:52) while time zone support is active.
+  warnings.warn(
+
+]]>
+</system-err></testcase></testsuite>

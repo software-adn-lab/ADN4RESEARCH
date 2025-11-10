@@ -20,13 +20,23 @@ def hello(request):
 
 def create_research_question(request):
     frameworks = research_question_service.get_frameworks(request)
-    return render(request, 'create_research_question.html', {
-        'frameworks': frameworks
-    })
+    context = {
+        'frameworks': frameworks,
+        'active_tab': 'questions_history',  # Agregar esto
+    }
+    return render(request, 'create_research_question.html', context)
+ 
+def send_research_question_for_review(request, question_id):
+    try:
+        question = research_question_service.get_research_question_by_id(question_id, request.user)
+        research_question_service.submit_research_question_for_review(question)
+    except question.DoesNotExist:
+        raise Http404("Research question not found")
+    return redirect('design:questions_history')
     
 def edit_research_question(request, question_id):
     try:
-        question = research_question_service.get_research_question_by_id(question_id)
+        question = research_question_service.get_research_question_by_id(question_id, request.user)
         frameworks = research_question_service.get_frameworks(request)
         
         # Convertimos los datos de la pregunta a JSON para pasarlos al script
@@ -43,26 +53,27 @@ def edit_research_question(request, question_id):
         return render(request, 'create_research_question.html', {
             'frameworks': frameworks,
             'question': question, # Pasamos el objeto completo
-            'question_json': json.dumps(question_data) # Y también en formato JSON
+            'question_json': json.dumps(question_data), # Y también en formato JSON
+            'active_tab': 'questions_history',
         })
     except question.DoesNotExist:
         raise Http404("Research question not found") 
 
 def delete_research_question(request, question_id):
     try:
-        question = research_question_service.get_research_question_by_id(question_id)
+        question = research_question_service.get_research_question_by_id(question_id, request.user)
         question.delete()
         return redirect('design:questions_history')
     except question.DoesNotExist:
         raise Http404("Research question not found")
     
-def load_questions_history(request):
-    hardcoded_user = User.objects.get(id=1)
-    # TODO: asi se hace: request.user 
-    questions = research_question_service.get_all_questions_by_user(user=hardcoded_user)
-    return render(request, 'question_history.html', {
-        'questions': questions
-    })
+def questions_history_view(request):
+    questions = research_question_service.get_all_questions_by_user(user=request.user)
+    context = {
+        'questions': questions,
+        'active_tab': 'questions_history', 
+    }
+    return render(request, 'question_history.html', context)
     
 def autosave_research_question(request):
     if request.method == 'POST':
@@ -76,7 +87,6 @@ def autosave_research_question(request):
         except Exception as e:
             # Catch any other potential errors during save
             return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
-    
     return JsonResponse({'error': 'Invalid request method.'}, status=405) # Method Not Allowed
 
 def get_framework_fields(request, framework_id):

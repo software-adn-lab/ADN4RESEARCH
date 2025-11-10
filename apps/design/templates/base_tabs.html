@@ -1,23 +1,32 @@
 {% extends 'base.html'%}
 {% block content %}
-<div class="bg-secondary-bg  flex rounded-t-lg border-b border-gray-200">
-    <div class="gap-1 px-4">
-        <a href="{% url 'design:questions_history' %}">Research Question History</a>
-    </div>
-    |
-    <div class="gap-1 px-4">
-        <a href="">Inclusion Criteria</a>
-    </div>
-    |
-    <div class="gap-1 px-4">
-        <a href="">Search String Builder</a>
-    </div>
-</div>
 
-<div>
-    {% block tab_content %}
-    {# El contenido de question_history.html irá aquí #}
-    {% endblock tab_content %}
-</div>
+<div class="tabs tabs-lift">
+  <a href="{% url 'design:questions_history' %}" 
+     class="tab {% if active_tab == 'questions_history' %}tab-active{% endif %}">
+    Research Question History
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block questions_history_content %}
+    {% endblock questions_history_content %}
+  </div>
 
-    {% endblock %}
+  <a href="#" 
+     class="tab {% if active_tab == 'inclusion_criteria' %}tab-active{% endif %}">
+    Inclusion Criteria
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block inclusion_criteria_content %}
+    {% endblock inclusion_criteria_content %}
+  </div>
+
+  <a href="#" 
+     class="tab {% if active_tab == 'search_string' %}tab-active{% endif %}">
+    Search String Builder
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block search_string_content %}
+    {% endblock search_string_content %}
+  </div>
+</div>
+{% endblock %}

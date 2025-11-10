@@ -10,11 +10,12 @@ from apps.notification.models import Notification
 from apps.project.models import Project, Stage
 from apps.project.services.project_services import ProjectService
 
+
 fake = Faker()
 project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 notification_service = Mock()
-
+'''
 @given('the "{stage_name}" stage of the project is opened')
 def step_impl(context, stage_name):
     context.stage_name = stage_name
@@ -108,7 +109,70 @@ def step_impl(context, notification_type):
     #    project=context.project
     #)
     notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
+    assert len(notifications) > 0'''
+
+
+@step('que estoy asignado a un proyecto de investigacion')
+def step_impl(context):
+    project_memebers = project_service.get_members(project=context.project)
+    assert context.researcher in [member.user for member in project_memebers]
+
+
+@step('la etapa de "{nombre_etapa}" esta abierta')
+def step_impl(context, nombre_etapa):
+    context.stage = Stage.objects.create(
+        project=context.project,
+        name=nombre_etapa,
+        status="INACTIVE"
+    )
+    project_service.open_stage(stage=context.stage, opened_by=context.owner, due_time=fake.future_datetime())
+    assert project_service.is_stage_opened(stage=context.stage)
+
+
+@step('envie una pregunta de investigacion para su revision:')
+def step_impl(context):
+    payload = json.loads(context.text)
+    context.framework = payload["framework"]
+    context.fields = payload["fields"]
+    context.suggested_question = payload["suggested_question"]
+    context.motivation = payload["motivation"]
+    framework_obj, created = ResearchFramework.objects.get_or_create(
+        name=context.framework,
+        defaults={
+            "is_global": context.framework in ["PICO", "PEO", "PCC"],
+            "created_by": context.researcher if context.framework not in ["PICO", "PEO", "PCC"] else None,
+            "total_fields": len(context.fields),
+            "fields": context.fields
+        })
+    context.research_question = ResearchQuestion.objects.create(
+        research_framework=framework_obj,
+        suggested_question=context.suggested_question,
+        motivation=context.motivation,
+        project=context.project,
+        stage=context.stage,
+        researcher=context.researcher,
+        framework_fields = context.fields)
+    context.research_question.save()
+    research_question_service.submit_research_question_for_review(research_question=context.research_question)
+    assert context.research_question.status == context.research_question.Status.SUGGESTED
+
+
+@step('el sistema notificara la creacion al equipo investigador')
+def step_impl(context):
+    context.notification = Notification.objects.create(
+        type="RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW",
+        project=context.project,
+        sender=context.researcher
+    )
+    notification_service.send_notification.return_value = True
+    notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
     assert len(notifications) > 0
+
+@step('la etapa se cerrará')
+def step_impl(context):
+    project_service.close_stage(stage=context.stage, closed_by=context.owner)
+    assert not project_service.is_stage_opened(stage=context.stage)
+
 '''
 # SEGUNDO SCENARIO
 @step('there exist a "{suggested_status}" question')
