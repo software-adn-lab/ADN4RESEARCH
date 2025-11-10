@@ -13,7 +13,7 @@ class ResearchFramework(models.Model):
 
     name = models.CharField(max_length=50)
     is_global = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
+    assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='custom_frameworks',
@@ -24,7 +24,7 @@ class ResearchFramework(models.Model):
     fields = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        unique_together = ('name', 'created_by')  
+        unique_together = ('name', 'assigned_by')  
 
     @property
     def fields_completed(self):

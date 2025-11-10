@@ -1,28 +1,33 @@
 import json
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
-
+from django.shortcuts import redirect, render, get_object_or_404
+from django.contrib.auth import get_user_model
 from apps.design.services.question_services import ResearchQuestionService
+from apps.project.models import Project
+from apps.project.services.project_services import ProjectService
 
 # Create your views here.
 
 research_question_service = ResearchQuestionService()
-from django.contrib.auth import get_user_model
+project_service = ProjectService()
+
 
 # Obtén el modelo de Usuario activo en tu proyecto
 User = get_user_model()
 
 def hello(request):
-    ejemplo_parametro = "valor"
+    project = get_object_or_404(Project, pk =1)  # Reemplaza '1' con el ID del proyecto que deseas obtener
     return render(request, 'base_tabs.html', {
-        'parametro': ejemplo_parametro
+        'project': project
     })
 
-def create_research_question(request):
-    frameworks = research_question_service.get_frameworks(request)
+def create_research_question(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    project_framework = project_service.get_project_framework(request)
     context = {
-        'frameworks': frameworks,
-        'active_tab': 'questions_history',  # Agregar esto
+        'project': project, # Pasar el proyecto al contexto
+        'framework': project_framework,
+        'active_tab': 'questions_history',
     }
     return render(request, 'create_research_question.html', context)
  
@@ -37,7 +42,7 @@ def send_research_question_for_review(request, question_id):
 def edit_research_question(request, question_id):
     try:
         question = research_question_service.get_research_question_by_id(question_id, request.user)
-        frameworks = research_question_service.get_frameworks(request)
+        project_framework = project_service.get_project_framework(request)
         
         # Convertimos los datos de la pregunta a JSON para pasarlos al script
         question_data = {
@@ -51,7 +56,7 @@ def edit_research_question(request, question_id):
         }
 
         return render(request, 'create_research_question.html', {
-            'frameworks': frameworks,
+            'framework': project_framework,
             'question': question, # Pasamos el objeto completo
             'question_json': json.dumps(question_data), # Y también en formato JSON
             'active_tab': 'questions_history',
@@ -67,9 +72,13 @@ def delete_research_question(request, question_id):
     except question.DoesNotExist:
         raise Http404("Research question not found")
     
-def questions_history_view(request):
-    questions = research_question_service.get_all_questions_by_user(user=request.user)
+def questions_history_view(request, project_id):
+    project = get_object_or_404(Project, id=1)
+    # Asumiendo que tus preguntas están relacionadas con un proyecto
+    questions = research_question_service.get_all_questions_by_user_and_project(user=request.user, project_id=project_id)
+    print(questions, "QUESTIONS")
     context = {
+        'project': project, # Añadir el proyecto al contexto
         'questions': questions,
         'active_tab': 'questions_history', 
     }
@@ -78,7 +87,11 @@ def questions_history_view(request):
 def autosave_research_question(request):
     if request.method == 'POST':
         try:
-            question = research_question_service.autosave_question(request.POST, request.user)
+            project_id = request.POST.get('project_id')
+            if not project_id:
+                raise ValueError("Project ID is missing.")
+            
+            question = research_question_service.autosave_question(request.POST, request.user, project_id)
             current_status = research_question_service.define_status(question)
             # Return the new ID and status, as expected by the frontend script
             return JsonResponse({'id': question.id, 'status': question.status, 'can_submit': research_question_service.can_submit_question(question)})

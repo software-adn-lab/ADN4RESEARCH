@@ -11,6 +11,18 @@ class ProjectService:
     def get_members(self, project: Project):
         return project.get_members()
     
+    def get_project_framework(self, request):
+        # Implementation to get the research framework associated with the project
+        user = request.user
+        project = Project.objects.filter(memberships__user=user).first()
+        if project:
+            return project.research_framework
+        return None
+    
+    def asign_research_framework_to_project(self, project: Project, framework):
+        project.research_framework = framework
+        project.save()
+    
     def open_stage(self, stage: Stage, opened_by, due_time):
         # Implementation to open a stage of the project
         stage.opened_by = opened_by

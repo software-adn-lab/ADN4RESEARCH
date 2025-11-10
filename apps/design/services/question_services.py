@@ -1,5 +1,4 @@
-
-from apps.design.models.research_question_models import ResearchFramework, ResearchQuestion
+from apps.design.models.research_question import ResearchFramework, ResearchQuestion
 from config.events import bus
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -61,12 +60,13 @@ class ResearchQuestionService:
         return research_question.can_submit_for_review()
     
     @transaction.atomic
-    def autosave_question(self, data, user):
+    def autosave_question(self, data, user, project_id):
         question_id = data.get('id') or None
         framework_id = data.get('research_framework')
         researcher_instance = user
         
         framework = self.get_framework_by_id(framework_id)
+        project = Project.objects.get(id=project_id) # Obtener el proyecto
         
         framework_fields_data = {
             key.replace('framework_fields[', '').replace(']', ''): value
@@ -79,9 +79,11 @@ class ResearchQuestionService:
             question.motivation = data.get('motivation', '')
             question.framework_fields = framework_fields_data
             question.suggested_question = data.get('suggested_question', '')
+            question.project = project # Asegurarse de que el proyecto esté asignado
             question.save()
         else: 
             question = ResearchQuestion.objects.create(
+                project=project, # Asignar el proyecto en la creación
                 research_framework=framework,
                 suggested_question=data.get('suggested_question', ''),
                 motivation=data.get('motivation', ''),
@@ -91,8 +93,11 @@ class ResearchQuestionService:
             )
         return question
     
-    def get_all_questions_by_user(self, user):
-        return ResearchQuestion.objects.filter(researcher=user).order_by('-modified_at')
+    def get_all_questions_by_user_and_project(self, user, project_id: int):
+        return ResearchQuestion.objects.filter(
+            researcher=user,
+            project__id=project_id
+        ).order_by('-modified_at')
     
     def get_research_questions_by_status(self, project, status):
         return ResearchQuestion.objects.filter(
@@ -110,5 +115,5 @@ class ResearchQuestionService:
         )
     
     def get_frameworks(self, request):
-        frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(created_by=request.user))
+        frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=request.user))
         return frameworks
