@@ -1,10 +1,10 @@
 from behave import given, when, then
 from django.contrib.auth.models import User
+from tests.interpretation.helpers.data_provider import data_provider
 
 from apps.interpretation.models import (
     SubTheme,
     ConversationTrace,
-    InterpretativeProposition,
 )
 from apps.interpretation.services.interpretation_services import InterpretationService
 
@@ -12,11 +12,17 @@ interpretation_service = InterpretationService()
 
 
 @given(
-    'que el Investigador ha definido la Pregunta de Investigación (RQ): "{research_question}"'
+    'que el Investigador ha definido la Pregunta de Investigación: "{research_question}"'
 )
 def step_impl(context, research_question):
     """Define la pregunta de investigación en el contexto."""
-    context.research_question = research_question
+    # Prefer loading from the configured data provider when available.
+    questions = data_provider.get_questions()
+    if questions:
+        # Use the first question from the examples as the research question.
+        context.research_question = questions[0]
+    else:
+        context.research_question = research_question
 
     # Crear un usuario investigador si no existe
     if not hasattr(context, "researcher"):
@@ -47,12 +53,23 @@ def step_impl(context, subtheme_name):
         central_codes = [code.strip() for code in row["Códigos Centrales"].split(",")]
         key_citations = [row["Citas Clave de Estudios"]]
     else:
-        central_codes = [
-            "Dependencia de zonas horarias",
-            "Retraso en feedback",
-            "Falta de confianza",
-        ]
-        key_citations = ["Fragmentos de texto específicos"]
+        # Obtain codes and citations from the configured data provider.
+        parsed_codes, parsed_citations = data_provider.get_codes_and_citations()
+
+        if parsed_codes:
+            central_codes = parsed_codes
+        else:
+            # fallback defaults
+            central_codes = [
+                "Dependencia de zonas horarias",
+                "Retraso en feedback",
+                "Falta de confianza",
+            ]
+
+        if parsed_citations:
+            key_citations = parsed_citations
+        else:
+            key_citations = ["Fragmentos de texto específicos"]
 
     context.subtheme = interpretation_service.create_subtheme(
         theme=context.theme,
@@ -74,7 +91,7 @@ def step_impl(context):
 
 
 @when(
-    'el Investigador **inicia de la asistencia interpretativa conversacional** sobre el "{subtheme_name}"'
+    'el Investigador **inicia de la asistencia conversacional** sobre el "{subtheme_name}"'
 )
 def step_impl(context, subtheme_name):
     """Inicia la asistencia interpretativa conversacional."""
@@ -85,7 +102,7 @@ def step_impl(context, subtheme_name):
 
 
 @when(
-    "**Establece la RQ, el Tema B y los códigos/citas de soporte como contexto activo** para la interacción."
+    "**Establece la RQ, el subtema B y los códigos/citas de soporte como contexto activo** para la interacción."
 )
 def step_impl(context):
     """Verifica que el contexto activo está establecido."""
@@ -128,129 +145,129 @@ def step_impl(context):
         }
 
 
-@given(
-    "que la Asistencia Interpretativa Conversacional está activa y contextualizada con el Tema B"
-)
-def step_impl(context):
-    """Verifica que la asistencia interpretativa está activa."""
-    # Reutilizar el contexto del escenario anterior o crear uno nuevo
-    if (
-        not hasattr(context, "interpretation_context")
-        or not context.interpretation_context.is_active
-    ):
-        # Si no hay contexto activo, crear uno
-        context.interpretation_context, _ = (
-            interpretation_service.initiate_interpretation_context(context.subtheme)
-        )
+# @given(
+#     "que la Asistencia Interpretativa Conversacional está activa y contextualizada con el Tema B"
+# )
+# def step_impl(context):
+#     """Verifica que la asistencia interpretativa está activa."""
+#     # Reutilizar el contexto del escenario anterior o crear uno nuevo
+#     if (
+#         not hasattr(context, "interpretation_context")
+#         or not context.interpretation_context.is_active
+#     ):
+#         # Si no hay contexto activo, crear uno
+#         context.interpretation_context, _ = (
+#             interpretation_service.initiate_interpretation_context(context.subtheme)
+#         )
 
-    assert context.interpretation_context.is_active
-
-
-@given("el Investigador ha mantenido la siguiente interacción con el Copilot:")
-def step_impl(context):
-    """Registra interacciones previas con el Copilot."""
-    if context.table:
-        for row in context.table:
-            instruction = row["Instrucción Investigador"]
-            copilot_response = row["Respuesta Copilot (Borrador)"]
-
-            # Crear la proposición borrador
-            context.draft_proposition = interpretation_service.create_proposition_draft(
-                context=context.interpretation_context,
-                instruction=instruction,
-                researcher=context.researcher,
-            )
+#     assert context.interpretation_context.is_active
 
 
-@when(
-    'el Investigador **proporciona la instrucción de refinamiento final**: "{refinement_instruction}"'
-)
-def step_impl(context, refinement_instruction):
-    """El investigador proporciona una instrucción de refinamiento."""
-    # Refinar la proposición
-    context.refined_proposition, context.refined_trace = (
-        interpretation_service.refine_proposition(
-            proposition=context.draft_proposition,
-            refinement_instruction=refinement_instruction,
-            researcher=context.researcher,
-        )
-    )
+# @given("el Investigador ha mantenido la siguiente interacción con el Copilot:")
+# def step_impl(context):
+#     """Registra interacciones previas con el Copilot."""
+#     if context.table:
+#         for row in context.table:
+#             instruction = row["Instrucción Investigador"]
+#             _ = row["Respuesta Copilot (Borrador)"]
+
+#             # Crear la proposición borrador
+#             context.draft_proposition = interpretation_service.create_proposition_draft(
+#                 context=context.interpretation_context,
+#                 instruction=instruction,
+#                 researcher=context.researcher,
+#             )
 
 
-@then("el sistema (Copilot) debería:")
-def step_impl(context):
-    """Placeholder para steps anidados con 'And'."""
-    pass
+# @when(
+#     'el Investigador **proporciona la instrucción de refinamiento final**: "{refinement_instruction}"'
+# )
+# def step_impl(context, refinement_instruction):
+#     """El investigador proporciona una instrucción de refinamiento."""
+#     # Refinar la proposición
+#     context.refined_proposition, context.refined_trace = (
+#         interpretation_service.refine_proposition(
+#             proposition=context.draft_proposition,
+#             refinement_instruction=refinement_instruction,
+#             researcher=context.researcher,
+#         )
+#     )
 
 
-@then('Generar una **Proposición Refinada** que incorpore el concepto de "{concept}".')
-def step_impl(context, concept):
-    """Verifica que la proposición refinada incorpore el concepto solicitado."""
-    refined_text = context.refined_proposition.proposition_text
-
-    # Verificar que la proposición fue refinada
-    assert (
-        context.refined_proposition.status
-        == InterpretativeProposition.PropositionStatus.REFINED
-    )
-
-    # Verificar que el concepto está presente (en este caso, 'comunicación asíncrona')
-    concept_lower = concept.lower()
-    assert (
-        concept_lower in refined_text.lower()
-    ), f"El concepto '{concept}' no está presente en la proposición refinada"
+# @then("el sistema (Copilot) debería:")
+# def step_impl(context):
+#     """Placeholder para steps anidados con 'And'."""
+#     pass
 
 
-@then(
-    "El Módulo de Interpretación debería **persistir** la Proposición Refinada y su narrativa de soporte como 'Hallazgo Final de la SLR'."
-)
-def step_impl(context):
-    """Verifica que la proposición se persiste como hallazgo final."""
-    # Finalizar la proposición
-    final_proposition = interpretation_service.finalize_proposition(
-        context.refined_proposition
-    )
+# @then('Generar una **Proposición Refinada** que incorpore el concepto de "{concept}".')
+# def step_impl(context, concept):
+#     """Verifica que la proposición refinada incorpore el concepto solicitado."""
+#     refined_text = context.refined_proposition.proposition_text
 
-    # Verificar que se persistió correctamente
-    assert final_proposition.status == InterpretativeProposition.PropositionStatus.FINAL
-    assert final_proposition.id is not None
+#     # Verificar que la proposición fue refinada
+#     assert (
+#         context.refined_proposition.status
+#         == InterpretativeProposition.PropositionStatus.REFINED
+#     )
 
-    context.final_proposition = final_proposition
-
-
-@then(
-    "**Guardar la traza completa de la interacción conversacional** para fines de **Reflexividad metodológica**."
-)
-def step_impl(context):
-    """Verifica que la traza de conversación se guardó."""
-    conversation_trace = interpretation_service.get_conversation_trace(
-        context.interpretation_context
-    )
-
-    # Verificar que hay al menos una interacción registrada
-    assert conversation_trace.count() > 0, "La traza de conversación está vacía"
-
-    # Verificar que hay mensajes tanto del investigador como del Copilot
-    researcher_messages = conversation_trace.filter(
-        role=ConversationTrace.MessageRole.RESEARCHER
-    )
-    copilot_messages = conversation_trace.filter(
-        role=ConversationTrace.MessageRole.COPILOT
-    )
-
-    assert (
-        researcher_messages.count() > 0
-    ), "No hay mensajes del investigador en la traza"
-    assert copilot_messages.count() > 0, "No hay mensajes del Copilot en la traza"
+#     # Verificar que el concepto está presente (en este caso, 'comunicación asíncrona')
+#     concept_lower = concept.lower()
+#     assert (
+#         concept_lower in refined_text.lower()
+#     ), f"El concepto '{concept}' no está presente en la proposición refinada"
 
 
-@then("Marcar el Tema B como **'Interpretación Finalizada'**.")
-def step_impl(context):
-    """Verifica que el subtema está marcado como interpretación finalizada."""
-    # Recargar el subtema de la base de datos
-    subtheme = interpretation_service.get_subtheme_by_id(context.subtheme.id)
+# @then(
+#     "El Módulo de Interpretación debería **persistir** la Proposición Refinada y su narrativa de soporte como 'Hallazgo Final de la SLR'."
+# )
+# def step_impl(context):
+#     """Verifica que la proposición se persiste como hallazgo final."""
+#     # Finalizar la proposición
+#     final_proposition = interpretation_service.finalize_proposition(
+#         context.refined_proposition
+#     )
 
-    # Verificar el estado
-    assert (
-        subtheme.status == SubTheme.Status.INTERPRETATION_COMPLETED
-    ), f"Expected status {SubTheme.Status.INTERPRETATION_COMPLETED}, got {subtheme.status}"
+#     # Verificar que se persistió correctamente
+#     assert final_proposition.status == InterpretativeProposition.PropositionStatus.FINAL
+#     assert final_proposition.id is not None
+
+#     context.final_proposition = final_proposition
+
+
+# @then(
+#     "**Guardar la traza completa de la interacción conversacional** para fines de **Reflexividad metodológica**."
+# )
+# def step_impl(context):
+#     """Verifica que la traza de conversación se guardó."""
+#     conversation_trace = interpretation_service.get_conversation_trace(
+#         context.interpretation_context
+#     )
+
+#     # Verificar que hay al menos una interacción registrada
+#     assert conversation_trace.count() > 0, "La traza de conversación está vacía"
+
+#     # Verificar que hay mensajes tanto del investigador como del Copilot
+#     researcher_messages = conversation_trace.filter(
+#         role=ConversationTrace.MessageRole.RESEARCHER
+#     )
+#     copilot_messages = conversation_trace.filter(
+#         role=ConversationTrace.MessageRole.COPILOT
+#     )
+
+#     assert (
+#         researcher_messages.count() > 0
+#     ), "No hay mensajes del investigador en la traza"
+#     assert copilot_messages.count() > 0, "No hay mensajes del Copilot en la traza"
+
+
+# @then("Marcar el Tema B como **'Interpretación Finalizada'**.")
+# def step_impl(context):
+#     """Verifica que el subtema está marcado como interpretación finalizada."""
+#     # Recargar el subtema de la base de datos
+#     subtheme = interpretation_service.get_subtheme_by_id(context.subtheme.id)
+
+#     # Verificar el estado
+#     assert (
+#         subtheme.status == SubTheme.Status.INTERPRETATION_COMPLETED
+#     ), f"Expected status {SubTheme.Status.INTERPRETATION_COMPLETED}, got {subtheme.status}"

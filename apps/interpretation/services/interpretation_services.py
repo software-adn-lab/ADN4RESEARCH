@@ -4,7 +4,7 @@ from apps.interpretation.models import (
     SubTheme,
     InterpretationContext,
     ConversationTrace,
-    InterpretativeProposition
+    InterpretativeProposition,
 )
 
 
@@ -13,13 +13,23 @@ class InterpretationService:
     Servicio para manejar la lógica de negocio del módulo de interpretación.
     """
 
+    def __init__(self, llm_client=None):
+        """Create a service instance.
+
+        llm_client: optional object implementing the LLMClient interface.
+        If None, a DefaultLLMClient (placeholder responses) is used.
+        """
+        from . import llm_clients as _llm_mod
+
+        self.llm_client = llm_client or _llm_mod.DefaultLLMClient()
+
     def create_theme(self, name, research_question, description="", created_by=None):
         """Crea un nuevo tema de investigación."""
         theme = Theme.objects.create(
             name=name,
             description=description,
             research_question=research_question,
-            created_by=created_by
+            created_by=created_by,
         )
         return theme
 
@@ -29,7 +39,7 @@ class InterpretationService:
             theme=theme,
             name=name,
             central_codes=central_codes or [],
-            key_citations=key_citations or []
+            key_citations=key_citations or [],
         )
         return subtheme
 
@@ -40,42 +50,41 @@ class InterpretationService:
         Establece el contexto activo y genera la apertura conversacional.
         """
         # Crear o actualizar el contexto de interpretación
-        context, created = InterpretationContext.objects.update_or_create(
+        context, _ = InterpretationContext.objects.update_or_create(
             subtheme=subtheme,
             defaults={
-                'research_question': subtheme.theme.research_question,
-                'theme_name': subtheme.theme.name,
-                'extractions_context': {
-                    'central_codes': subtheme.central_codes,
-                    'key_citations': subtheme.key_citations
+                "research_question": subtheme.theme.research_question,
+                "theme_name": subtheme.theme.name,
+                "extractions_context": {
+                    "central_codes": subtheme.central_codes,
+                    "key_citations": subtheme.key_citations,
                 },
-                'is_active': True
-            }
+                "is_active": True,
+            },
         )
+        # Generar apertura conversacional delegando al cliente LLM
+        opening_message = self.llm_client.generate_opening_message(subtheme)
 
-        # Generar apertura conversacional
-        opening_message = self._generate_opening_message(subtheme)
-        
         # Registrar la apertura en la traza de conversación
         trace = ConversationTrace.objects.create(
             context=context,
             role=ConversationTrace.MessageRole.COPILOT,
-            message=opening_message['body'],
-            title=opening_message['title'],
-            body=opening_message['body'],
-            tags=opening_message['tags']
+            message=opening_message["body"],
+            title=opening_message["title"],
+            body=opening_message["body"],
+            tags=opening_message["tags"],
         )
 
         # Actualizar estado del subtema
         subtheme.status = SubTheme.Status.IN_PROGRESS
-        subtheme.save(update_fields=['status', 'modified_at'])
+        subtheme.save(update_fields=["status", "modified_at"])
 
         return context, trace
 
     def _generate_opening_message(self, subtheme):
-        """Genera el mensaje de apertura conversacional."""
+        # Deprecated: kept for backward compatibility but prefer LLM client.
         tags = self._generate_tags(subtheme)
-        
+
         body = (
             f"Asistiendo en la interpretación del Subtema: {subtheme.name}. "
             f"Este subtema está relacionado con el tema principal '{subtheme.theme.name}'. "
@@ -84,22 +93,24 @@ class InterpretationService:
         )
 
         return {
-            'title': 'Apertura conversacional del Copilot',
-            'body': body,
-            'tags': tags
+            "title": "Apertura conversacional del Copilot",
+            "body": body,
+            "tags": tags,
         }
 
     def _generate_tags(self, subtheme):
         """Genera tags basados en el subtema."""
         # Convertir nombre del tema a snake_case para tags
-        theme_tag = subtheme.theme.name.lower().replace(' ', '_')
-        subtheme_tag = subtheme.name.lower().replace(' ', '_')
-        
+        theme_tag = subtheme.theme.name.lower().replace(" ", "_")
+        subtheme_tag = subtheme.name.lower().replace(" ", "_")
+
         # Agregar algunos códigos centrales como tags
-        code_tags = [code.lower().replace(' ', '_') for code in subtheme.central_codes[:2]]
-        
+        code_tags = [
+            code.lower().replace(" ", "_") for code in subtheme.central_codes[:2]
+        ]
+
         all_tags = [theme_tag, subtheme_tag] + code_tags
-        return ', '.join(all_tags)
+        return ", ".join(all_tags)
 
     @transaction.atomic
     def create_proposition_draft(self, context, instruction, researcher=None):
@@ -111,20 +122,20 @@ class InterpretationService:
             context=context,
             role=ConversationTrace.MessageRole.RESEARCHER,
             message=instruction,
-            title='Instrucción de síntesis',
+            title="Instrucción de síntesis",
             body=instruction,
-            tags=''
+            tags="",
         )
 
-        # Generar proposición borrador (aquí se integraría con la IA)
-        draft_text = self._generate_draft_proposition(context, instruction)
-        
+        # Generar proposición borrador delegando a LLM client
+        draft_text = self.llm_client.generate_draft_proposition(context, instruction)
+
         # Crear la proposición
         proposition = InterpretativeProposition.objects.create(
             subtheme=context.subtheme,
             proposition_text=draft_text,
             status=InterpretativeProposition.PropositionStatus.DRAFT,
-            researcher=researcher
+            researcher=researcher,
         )
 
         # Registrar la respuesta del Copilot
@@ -132,9 +143,9 @@ class InterpretationService:
             context=context,
             role=ConversationTrace.MessageRole.COPILOT,
             message=draft_text,
-            title='Proposición Interpretativa Borrador',
+            title="Proposición Interpretativa Borrador",
             body=draft_text,
-            tags='borrador, proposicion'
+            tags="borrador, proposicion",
         )
 
         return proposition
@@ -144,15 +155,11 @@ class InterpretationService:
         Genera un borrador de proposición.
         En producción, esto se conectaría con un servicio de IA.
         """
-        # Placeholder para demostración
-        return (
-            f"La principal barrera organizacional es la disrupción de la colaboración "
-            f"sincrónica causada por la dependencia de zonas horarias, lo que se traduce "
-            f"en un retraso crítico en los bucles de feedback de DevOps."
-        )
+        # Deprecated: use llm_client.generate_draft_proposition instead
+        return self.llm_client.generate_draft_proposition(context, instruction)
 
     @transaction.atomic
-    def refine_proposition(self, proposition, refinement_instruction, researcher=None):
+    def refine_proposition(self, proposition, refinement_instruction, _=None):
         """
         Refina una proposición existente basada en nueva instrucción.
         """
@@ -163,30 +170,29 @@ class InterpretationService:
             context=context,
             role=ConversationTrace.MessageRole.RESEARCHER,
             message=refinement_instruction,
-            title='Instrucción de refinamiento',
+            title="Instrucción de refinamiento",
             body=refinement_instruction,
-            tags='refinamiento'
+            tags="refinamiento",
         )
 
-        # Generar texto refinado
-        refined_text = self._generate_refined_proposition(
-            proposition.proposition_text,
-            refinement_instruction
+        # Generar texto refinado delegando al cliente LLM
+        refined_text = self.llm_client.generate_refined_proposition(
+            proposition.proposition_text, refinement_instruction
         )
 
         # Actualizar proposición
         proposition.proposition_text = refined_text
         proposition.status = InterpretativeProposition.PropositionStatus.REFINED
-        proposition.save(update_fields=['proposition_text', 'status', 'modified_at'])
+        proposition.save(update_fields=["proposition_text", "status", "modified_at"])
 
         # Registrar respuesta refinada
         trace = ConversationTrace.objects.create(
             context=context,
             role=ConversationTrace.MessageRole.COPILOT,
             message=refined_text,
-            title='Proposición Refinada',
+            title="Proposición Refinada",
             body=refined_text,
-            tags='refinado, proposicion'
+            tags="refinado, proposicion",
         )
 
         return proposition, trace
@@ -196,12 +202,9 @@ class InterpretationService:
         Genera una versión refinada de la proposición.
         En producción, esto se conectaría con un servicio de IA.
         """
-        # Placeholder para demostración
-        return (
-            f"La principal barrera organizacional identificada es la disrupción de la "
-            f"comunicación asíncrona necesaria para DevOps, causada por la dependencia "
-            f"de zonas horarias geográficamente distribuidas, resultando en retrasos "
-            f"críticos en los bucles de feedback según el marco teórico de la SLR."
+        # Deprecated: use llm_client.generate_refined_proposition instead
+        return self.llm_client.generate_refined_proposition(
+            original_text, refinement_instruction
         )
 
     @transaction.atomic
@@ -213,33 +216,33 @@ class InterpretationService:
 
         # Actualizar estado de la proposición
         proposition.status = InterpretativeProposition.PropositionStatus.FINAL
-        proposition.save(update_fields=['status', 'modified_at'])
+        proposition.save(update_fields=["status", "modified_at"])
 
         # Marcar el subtema como interpretación finalizada
         subtheme = proposition.subtheme
         subtheme.status = SubTheme.Status.INTERPRETATION_COMPLETED
-        subtheme.save(update_fields=['status', 'modified_at'])
+        subtheme.save(update_fields=["status", "modified_at"])
 
         # Desactivar el contexto
         context.is_active = False
-        context.save(update_fields=['is_active', 'modified_at'])
+        context.save(update_fields=["is_active", "modified_at"])
 
         return proposition
 
     def get_conversation_trace(self, context):
         """Obtiene la traza completa de conversación para un contexto."""
-        return ConversationTrace.objects.filter(context=context).order_by('created_at')
+        return ConversationTrace.objects.filter(context=context).order_by("created_at")
 
     def get_subtheme_by_id(self, subtheme_id):
         """Obtiene un subtema por su ID."""
         try:
             return SubTheme.objects.get(id=subtheme_id)
-        except SubTheme.DoesNotExist:
-            raise ValueError(f"SubTheme with id {subtheme_id} not found")
+        except SubTheme.DoesNotExist as e:
+            raise ValueError(f"SubTheme with id {subtheme_id} not found") from e
 
     def get_theme_by_name(self, name):
         """Obtiene un tema por su nombre."""
         try:
             return Theme.objects.get(name=name)
-        except Theme.DoesNotExist:
-            raise ValueError(f"Theme with name '{name}' not found")
+        except Theme.DoesNotExist as e:
+            raise ValueError(f"Theme with name '{name}' not found") from e

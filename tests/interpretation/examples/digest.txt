@@ -1,0 +1,290 @@
+## Directory Structure
+
+Directory structure:
+└── Alexis Lapo_papers/
+    ├── 100_extracción.md
+    ├── 65_extracción.md
+    ├── 78_extracción.md
+    ├── 81_extracción.md
+    ├── 92_extracción.md
+    ├── 98_extracción.md
+    ├── 99_extracción.md
+    └── _RESUMEN.txt
+
+
+## Files Content
+
+================================================
+FILE: 100_extracción.md
+================================================
+---
+annotation-target: 100.pdf
+procesado_con: ADN CLI
+fecha-creaciÃ³n: 2025-10-02T09:41:01.570290
+Resumen_Personal: "Este paper se especializa en un dominio concreto: el desarrollo de videojuegos. Su idea principal es que los anti-patterns generales no son suficientes para los juegos, que tienen problemas Ãºnicos (fÃ­sicas, controles en tiempo real, etc.)"
+---
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:51:52.608Z","text":"Ofrece la definiciÃ³n conceptual de \"anti-patrÃ³n\" que guÃ­a la investigaciÃ³n: una soluciÃ³n ineficaz y contraproducente para un problema recurrente, la cual debe ser evitada.","updated":"2025-10-23T14:51:52.608Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":4021,"end":4180},{"type":"TextQuoteSelector","exact":"Brown et al. (1998) explain anti-patterns by stating thatthey are like misfits to a problem that should be prevented andavoided to lead to a better solution. D","prefix":"al., 2021; GuamÃ¡n et al.,2022). ","suffix":"espite the existence ofseveral s"}]}]}
+>```
+>%%
+>*%%PREFIX%%al., 2021; GuamÃ¡n et al.,2022).%%HIGHLIGHT%% ==Brown et al. (1998) explain anti-patterns by stating thatthey are like misfits to a problem that should be prevented andavoided to lead to a better solution. D== %%POSTFIX%%espite the existence ofseveral s*
+>%%LINK%%[[#^68ef6du6vy8|show annotation]]
+>%%COMMENT%%
+>Ofrece la definiciÃ³n conceptual de "anti-patrÃ³n" que guÃ­a la investigaciÃ³n: una soluciÃ³n ineficaz y contraproducente para un problema recurrente, la cual debe ser evitada.
+>%%TAGS%%
+>#RQ1
+^68ef6du6vy8
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:54:35.953Z","text":"Responde directamente a RQ1, detallando el mÃ©todo de identificaciÃ³n usado en el estudio. No es un anÃ¡lisis de cÃ³digo (estÃ¡tico/dinÃ¡mico), sino un anÃ¡lisis temÃ¡tico cualitativo de los artefactos textuales de la comunidad (issues, commits, Q&A) para descubrir los APs","updated":"2025-10-23T14:54:35.953Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":8913,"end":9209},{"type":"TextQuoteSelector","exact":"We applied a systematic methodology comprising of data col-lection followed by the commonly used thematic analysis (Fere-dayandMuir-Cochrane,2006;Petersenetal.,2008)on2156textdata records of consisting of issues, commits, pull requests fromGitHub and questions from Game Development Stack Exchang","prefix":"patterns in the context ofgames?","suffix":"eto propose a catalogue of fifte"}]}]}
+>```
+>%%
+>*%%PREFIX%%patterns in the context ofgames?%%HIGHLIGHT%% ==We applied a systematic methodology comprising of data col-lection followed by the commonly used thematic analysis (Fere-dayandMuir-Cochrane,2006;Petersenetal.,2008)on2156textdata records of consisting of issues, commits, pull requests fromGitHub and questions from Game Development Stack Exchang== %%POSTFIX%%eto propose a catalogue of fifte*
+>%%LINK%%[[#^9o1xwrsljnq|show annotation]]
+>%%COMMENT%%
+>Responde directamente a RQ1, detallando el mÃ©todo de identificaciÃ³n usado en el estudio. No es un anÃ¡lisis de cÃ³digo (estÃ¡tico/dinÃ¡mico), sino un anÃ¡lisis temÃ¡tico cualitativo de los artefactos textuales de la comunidad (issues, commits, Q&A) para descubrir los APs
+>%%TAGS%%
+>#RQ1, #antipattern_detection, #methodology, #thematic_analysis, #epository_mining, #repository_mining, #github, #stack_exchange, #qualitative_method
+^9o1xwrsljnq
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:53:39.529Z","text":"Este fragmento identifica la causa raÃ­z contextual (RQ2) en el dominio de juegos. La presiÃ³n por actualizaciones frecuentes (time_pressure) induce a tomar atajos (\"quick-fix solutions\"), que es la definiciÃ³n de la deuda tÃ©cnica que genera los APs.","updated":"2025-10-23T14:53:39.529Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":853,"end":968},{"type":"TextQuoteSelector","exact":"However, the need forfrequent updates in game development may lead to quick-fix solutions and bad coding practices.","prefix":"intainability, and performance. ","suffix":"Though unintentional, these bad "}]}]}
+>```
+>%%
+>*%%PREFIX%%intainability, and performance.%%HIGHLIGHT%% ==However, the need forfrequent updates in game development may lead to quick-fix solutions and bad coding practices.== %%POSTFIX%%Though unintentional, these bad*
+>%%LINK%%[[#^g628x02tdl9|show annotation]]
+>%%COMMENT%%
+>Este fragmento identifica la causa raÃ­z contextual (RQ2) en el dominio de juegos. La presiÃ³n por actualizaciones frecuentes (time_pressure) induce a tomar atajos ("quick-fix solutions"), que es la definiciÃ³n de la deuda tÃ©cnica que genera los APs.
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #time_pressure, #quick_fix, #bad_practices, #game_development
+^g628x02tdl9
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:55:52.852Z","text":"Confirma que la fuente de datos primaria para la identificaciÃ³n (RQ1) son los artefactos textuales de GitHub. Los APs se encuentran analizando el texto donde los desarrolladores discuten los problemas y soluciones.","updated":"2025-10-23T14:55:52.852Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":7306,"end":7489},{"type":"TextQuoteSelector","exact":"Thus, taking cues from ear-lier studies we considered the text corpus of commits, issues, andpull requests to find the existence of game-specific anti-patternsin the game repositories","prefix":"re (Kalliamvakou et al., 2014). ","suffix":".The second source we considered"}]}]}
+>```
+>%%
+>*%%PREFIX%%re (Kalliamvakou et al., 2014).%%HIGHLIGHT%% ==Thus, taking cues from ear-lier studies we considered the text corpus of commits, issues, andpull requests to find the existence of game-specific anti-patternsin the game repositories== %%POSTFIX%%.The second source we considered*
+>%%LINK%%[[#^78tumv0enfd|show annotation]]
+>%%COMMENT%%
+>Confirma que la fuente de datos primaria para la identificaciÃ³n (RQ1) son los artefactos textuales de GitHub. Los APs se encuentran analizando el texto donde los desarrolladores discuten los problemas y soluciones.
+>%%TAGS%%
+>#RQ1, #antipattern_detection, #repository_mining, #github, #text_corpus, #commits, #issues, #pull_requests
+^78tumv0enfd
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:57:03.514Z","text":"Detalla el proceso de 4 pasos del \"AnÃ¡lisis TemÃ¡tico\", que es el motor metodolÃ³gico de identificaciÃ³n de APs en este paper. Es un proceso manual y cualitativo de etiquetado y agrupaciÃ³n de problemas reportados por la comunidad.","updated":"2025-10-23T14:57:03.514Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":25097,"end":25188},{"type":"TextQuoteSelector","exact":"We followed the approachof thematic analysis by implementing below four steps on ourdataset","prefix":"e process of thematic analysis. ","suffix":":â€¢ Data Familiarization: We thor"}]}]}
+>```
+>%%
+>*%%PREFIX%%e process of thematic analysis.%%HIGHLIGHT%% ==We followed the approachof thematic analysis by implementing below four steps on ourdataset== %%POSTFIX%%:â€¢ Data Familiarization: We thor*
+>%%LINK%%[[#^nnzgdnspbp|show annotation]]
+>%%COMMENT%%
+>Detalla el proceso de 4 pasos del "AnÃ¡lisis TemÃ¡tico", que es el motor metodolÃ³gico de identificaciÃ³n de APs en este paper. Es un proceso manual y cualitativo de etiquetado y agrupaciÃ³n de problemas reportados por la comunidad.
+>%%TAGS%%
+>#RQ1, #antipattern_detection, #thematic_analysis, #qualitative_method, #process_steps
+^nnzgdnspbp
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:57:45.429Z","updated":"2025-10-23T14:57:45.429Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":25196,"end":25211},{"type":"TextQuoteSelector","exact":"Familiarization","prefix":"four steps on ourdataset:â€¢ Data ","suffix":": We thoroughly analyzed each re"}]}]}
+>```
+>%%
+>*%%PREFIX%%four steps on ourdataset:â€¢ Data%%HIGHLIGHT%% ==Familiarization== %%POSTFIX%%: We thoroughly analyzed each re*
+>%%LINK%%[[#^8syqhzyd4vb|show annotation]]
+>%%COMMENT%%
+>
+>%%TAGS%%
+>
+^8syqhzyd4vb
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:57:50.569Z","updated":"2025-10-23T14:57:50.569Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":25480,"end":25504},{"type":"TextQuoteSelector","exact":"Generating Initial Label","prefix":"author and a fellow volunteer.â€¢ ","suffix":"s: Based on records of commits, "}]}]}
+>```
+>%%
+>*%%PREFIX%%author and a fellow volunteer.â€¢%%HIGHLIGHT%% ==Generating Initial Label== %%POSTFIX%%s: Based on records of commits,*
+>%%LINK%%[[#^80p1gxkstuh|show annotation]]
+>%%COMMENT%%
+>
+>%%TAGS%%
+>
+^80p1gxkstuh
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:57:53.968Z","updated":"2025-10-23T14:57:53.968Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":25840,"end":25871},{"type":"TextQuoteSelector","exact":"Identifying and Reviewing Theme","prefix":"authors and a fellowvolunteer.â€¢ ","suffix":"s: After analyzing all theinstan"}]}]}
+>```
+>%%
+>*%%PREFIX%%authors and a fellowvolunteer.â€¢%%HIGHLIGHT%% ==Identifying and Reviewing Theme== %%POSTFIX%%s: After analyzing all theinstan*
+>%%LINK%%[[#^sgczhxbutu|show annotation]]
+>%%COMMENT%%
+>
+>%%TAGS%%
+>
+^sgczhxbutu
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:57:57.441Z","updated":"2025-10-23T14:57:57.441Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":26345,"end":26361},{"type":"TextQuoteSelector","exact":"Defining Themes:","prefix":"hat may have bad consequences.â€¢ ","suffix":" In this stage, we made an order"}]}]}
+>```
+>%%
+>*%%PREFIX%%hat may have bad consequences.â€¢%%HIGHLIGHT%% ==Defining Themes:== %%POSTFIX%%In this stage, we made an order*
+>%%LINK%%[[#^jdssottgzi|show annotation]]
+>%%COMMENT%%
+>
+>%%TAGS%%
+>
+^jdssottgzi
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:58:22.259Z","text":"Identifica una causa (RQ2) especÃ­fica del dominio de juegos: heredar APs directamente del motor o framework (ej. Unity) que se estÃ¡ utilizando. El AP no es creado por el desarrollador, sino heredado.","updated":"2025-10-23T14:58:22.259Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":30996,"end":31089},{"type":"TextQuoteSelector","exact":"The anti-patterns inherited can affect functionaland non-functional requirements of the game.","prefix":"wis andJacobson, 2002).Problem: ","suffix":"Solution: We should be aware of "}]}]}
+>```
+>%%
+>*%%PREFIX%%wis andJacobson, 2002).Problem:%%HIGHLIGHT%% ==The anti-patterns inherited can affect functionaland non-functional requirements of the game.== %%POSTFIX%%Solution: We should be aware of*
+>%%LINK%%[[#^y7ivab9sjpi|show annotation]]
+>%%COMMENT%%
+>Identifica una causa (RQ2) especÃ­fica del dominio de juegos: heredar APs directamente del motor o framework (ej. Unity) que se estÃ¡ utilizando. El AP no es creado por el desarrollador, sino heredado.
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #vague_inheritance, #framework_dependency, #engine_constraints, #inherited_debt
+^y7ivab9sjpi
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T14:59:22.295Z","text":"Identifica una causa humana/cognitiva (RQ2). El mal uso de una API  (un patrÃ³n) debido a la falta de comprensiÃ³n  (falta de experiencia/habilidad) induce el AP. Esto es consistente con hallazgos de otros estudios","updated":"2025-10-23T14:59:22.295Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":47379,"end":47656},{"type":"TextQuoteSelector","exact":"PIsmaybeusefulinimplementingtherequiredfunctionalities.However,theirincorrectorimproperusagedue to a lack of proper understanding of their usage andworking may cause the game to malfunction and lead toinefficiencies. This may impact the gameâ€™s functionalityand the performance.","prefix":"quirements of the game.Problem:A","suffix":"Solution: This can be avoided by"}]}]}
+>```
+>%%
+>*%%PREFIX%%quirements of the game.Problem:A%%HIGHLIGHT%% ==PIsmaybeusefulinimplementingtherequiredfunctionalities.However,theirincorrectorimproperusagedue to a lack of proper understanding of their usage andworking may cause the game to malfunction and lead toinefficiencies. This may impact the gameâ€™s functionalityand the performance.== %%POSTFIX%%Solution: This can be avoided by*
+>%%LINK%%[[#^it7euh3zbx|show annotation]]
+>%%COMMENT%%
+>Identifica una causa humana/cognitiva (RQ2). El mal uso de una API  (un patrÃ³n) debido a la falta de comprensiÃ³n  (falta de experiencia/habilidad) induce el AP. Esto es consistente con hallazgos de otros estudios
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #api_misuse, #lack_of_understanding, #human_factors, #developer_skill
+^it7euh3zbx
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T15:00:28.188Z","text":"Una decisiÃ³n de diseÃ±o arquitectÃ³nico (RQ2) â€”la incorrecta distribuciÃ³n de responsabilidades entre cliente y servidorâ€” induce APs de seguridad (exploits, cheating).","updated":"2025-10-23T15:00:28.188Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":48780,"end":49326},{"type":"TextQuoteSelector","exact":"iolatingtheconventionsandstandardpracticeswhile distributing the tasks between the client and the16 https://gamedev.stackexchange.com/questions/1520/17 https://gamedev.stackexchange.com/questions/82799/Fig. 10. Example of a Stack Exchange post showing a pitfall while usingSpriteBatch in Monogame.Fig. 11. Stack Exchange post explaining resolution to the server capacity issuewithout performing the calculations on the client.server to deal with the latency or minimize resource us-age may leave vulnerable loopholes for exploitation andcheating.","prefix":"uesand vulnerabilities.Problem:V","suffix":"Solution: This can be avoided by"}]}]}
+>```
+>%%
+>*%%PREFIX%%uesand vulnerabilities.Problem:V%%HIGHLIGHT%% ==iolatingtheconventionsandstandardpracticeswhile distributing the tasks between the client and the16 https://gamedev.stackexchange.com/questions/1520/17 https://gamedev.stackexchange.com/questions/82799/Fig. 10. Example of a Stack Exchange post showing a pitfall while usingSpriteBatch in Monogame.Fig. 11. Stack Exchange post explaining resolution to the server capacity issuewithout performing the calculations on the client.server to deal with the latency or minimize resource us-age may leave vulnerable loopholes for exploitation andcheating.== %%POSTFIX%%Solution: This can be avoided by*
+>%%LINK%%[[#^oss3i3j799|show annotation]]
+>%%COMMENT%%
+>Una decisiÃ³n de diseÃ±o arquitectÃ³nico (RQ2) â€”la incorrecta distribuciÃ³n de responsabilidades entre cliente y servidorâ€” induce APs de seguridad (exploits, cheating).
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #design_decisions, #client_server_architecture, #security_vulnerability, #convention_violation
+^oss3i3j799
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-23T15:01:38.166Z","text":"Aunque el mÃ©todo actual del paper es manual (AnÃ¡lisis TemÃ¡tico), esta cita es clave para RQ1 al seÃ±alar que la futura identificaciÃ³n de estos APs (basados en texto) requerirÃ¡ detecciÃ³n automÃ¡tica usando ML y NLP","updated":"2025-10-23T15:01:38.166Z","document":{"title":"A catalogue of game-specific anti-patterns based on GitHub and Game Development Stack Exchange","link":[{"href":"urn:x-pdf:e7f560718fd13c1394ead425ac4aeffb"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf"}],"documentFingerprint":"e7f560718fd13c1394ead425ac4aeffb"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/100.pdf","selector":[{"type":"TextPositionSelector","start":66734,"end":66970},{"type":"TextQuoteSelector","exact":"We also plan to explore automatic and semi-automaticapproachesandtoolsfordetectionofgame-specificanti-patternsand code smells specifically leveraging advances in Artificial In-telligence, Machine Learning and Natural Language Processing","prefix":" into game-specific codesmells. ","suffix":".The catalogue is based on artif"}]}]}
+>```
+>%%
+>*%%PREFIX%%into game-specific codesmells.%%HIGHLIGHT%% ==We also plan to explore automatic and semi-automaticapproachesandtoolsfordetectionofgame-specificanti-patternsand code smells specifically leveraging advances in Artificial In-telligence, Machine Learning and Natural Language Processing== %%POSTFIX%%.The catalogue is based on artif*
+>%%LINK%%[[#^o4nf77w48mn|show annotation]]
+>%%COMMENT%%
+>Aunque el mÃ©todo actual del paper es manual (AnÃ¡lisis TemÃ¡tico), esta cita es clave para RQ1 al seÃ±alar que la futura identificaciÃ³n de estos APs (basados en texto) requerirÃ¡ detecciÃ³n automÃ¡tica usando ML y NLP
+>%%TAGS%%
+>#antipattern_detection, #RQ1, #automated_detection, #future_work, #machine_learning, #nlp
+^o4nf77w48mn
+
+
+
+================================================
+FILE: 65_extracción.md
+================================================
+Error reading file with 'cp1252': 'charmap' codec can't decode byte 0x9d in position 4212: character maps to <undefined>
+
+
+================================================
+FILE: 78_extracción.md
+================================================
+---
+annotation-target: 78.pdf
+procesado_con: ADN CLI
+fecha-creaciÃ³n: 2025-10-02T09:41:01.593722
+Resumen_Personal: Este artÃ­culo propone un mÃ©todo concreto para solucionar "performance antipatterns" (malas prÃ¡cticas de diseÃ±o que afectan el rendimiento). Lo interesante es que no solo los detecta, sino que sugiere quÃ© "design pattern" (buena prÃ¡ctica de diseÃ±o) aplicar para corregirlo
+---
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-15T16:15:04.331Z","text":"Este fragmento establece la causa fundamental de la apariciÃ³n de anti-patrones. No son errores aleatorios, sino la consecuencia directa de decisiones de diseÃ±o deficientes que comprometen el rendimiento. La inducciÃ³n de un anti-patrÃ³n es, por tanto, la manifestaciÃ³n de una arquitectura o diseÃ±o subÃ³ptimo.","updated":"2025-10-15T16:15:04.331Z","document":{"title":"Applying Design Patterns to Remove Software Performance Antipatterns: A Preliminary Approach","link":[{"href":"urn:x-pdf:227d420c01a1744dba52a9b6236eead3"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf"}],"documentFingerprint":"227d420c01a1744dba52a9b6236eead3"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","selector":[{"type":"TextPositionSelector","start":4562,"end":4794},{"type":"TextQuoteSelector","exact":"the concept of design pattern has been introduced several decades ago fordefining good practices to design software6. Conversely, few decades ago the concept of antipattern has been intro-duced for characterizing bad design practice","prefix":"e software development process, ","suffix":"s. In this context, Smith and Wi"}]}]}
+>```
+>%%
+>*%%PREFIX%%e software development process,%%HIGHLIGHT%% ==the concept of design pattern has been introduced several decades ago fordefining good practices to design software6. Conversely, few decades ago the concept of antipattern has been intro-duced for characterizing bad design practice== %%POSTFIX%%s. In this context, Smith and Wi*
+>%%LINK%%[[#^rb67mssncdp|show annotation]]
+>%%COMMENT%%
+>Este fragmento establece la causa fundamental de la apariciÃ³n de anti-patrones. No son errores aleatorios, sino la consecuencia directa de decisiones de diseÃ±o deficientes que comprometen el rendimiento. La inducciÃ³n de un anti-patrÃ³n es, por tanto, la manifestaciÃ³n de una arquitectura o diseÃ±o subÃ³ptimo.
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #poor_design_decisions, #pattern_misapplication, #performance_degradation, #software_quality_attributes, #pattern_based_design
+^rb67mssncdp
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-15T16:21:01.364Z","text":"Se identifica una causa de naturaleza organizacional y de proceso que induce la apariciÃ³n de anti-patrones. La ausencia de un experto en rendimiento en fases tempranas, a menudo por razones de coste, permite que las malas prÃ¡cticas de diseÃ±o persistan, manifestÃ¡ndose como problemas de rendimiento en etapas tardÃ­as del ciclo de vida.","updated":"2025-10-15T16:21:01.364Z","document":{"title":"Applying Design Patterns to Remove Software Performance Antipatterns: A Preliminary Approach","link":[{"href":"urn:x-pdf:227d420c01a1744dba52a9b6236eead3"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf"}],"documentFingerprint":"227d420c01a1744dba52a9b6236eead3"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","selector":[{"type":"TextPositionSelector","start":5813,"end":6072},{"type":"TextQuoteSelector","exact":" namely performance expert â€“ thatworks towards the fulfillment of performance requirements. Introducing such an actor is costly and, for this reason, itis not widespread in software development, thus delaying performance issues resolution to the testing phase","prefix":"ular actor into the life-cycle â€“","suffix":".Goal of this paper is to reduce"}]}]}
+>```
+>%%
+>*%%PREFIX%%ular actor into the life-cycle â€“%%HIGHLIGHT%% ==namely performance expert â€“ thatworks towards the fulfillment of performance requirements. Introducing such an actor is costly and, for this reason, itis not widespread in software development, thus delaying performance issues resolution to the testing phase== %%POSTFIX%%.Goal of this paper is to reduce*
+>%%LINK%%[[#^w57ew484tce|show annotation]]
+>%%COMMENT%%
+>Se identifica una causa de naturaleza organizacional y de proceso que induce la apariciÃ³n de anti-patrones. La ausencia de un experto en rendimiento en fases tempranas, a menudo por razones de coste, permite que las malas prÃ¡cticas de diseÃ±o persistan, manifestÃ¡ndose como problemas de rendimiento en etapas tardÃ­as del ciclo de vida.
+>%%TAGS%%
+>#RQ2, #antipattern_causes, #organizational_factors, #performance_expert, #cost_constraints, #testing_phase_delays, #insufficient_expertise
+^w57ew484tce
+
+
+
+>%%
+>```annotation-json
+>{"created":"2025-10-15T16:49:25.536Z","text":" Este fragmento detalla el mecanismo prÃ¡ctico de la identificaciÃ³n. El proceso se basa en la cuantificaciÃ³n y comparaciÃ³n: se miden atributos especÃ­ficos del software (mÃ©tricas como el \"nÃºmero de mensajes remotos\") y se contrastan con valores lÃ­mite predefinidos (umbrales). Esto transforma el concepto abstracto de \"mala prÃ¡ctica\" en una condiciÃ³n verificable","updated":"2025-10-15T16:49:25.536Z","document":{"title":"Applying Design Patterns to Remove Software Performance Antipatterns: A Preliminary Approach","link":[{"href":"urn:x-pdf:227d420c01a1744dba52a9b6236eead3"},{"href":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf"}],"documentFingerprint":"227d420c01a1744dba52a9b6236eead3"},"uri":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","target":[{"source":"vault:/02_procesos_de_investigaci%C3%B3n/01_SLR/02_ejecuci%C3%B3n/03.2%20estudios_aprobados/78.pdf","selector":[{"type":"TextPositionSelector","start":9380,"end":9839},{"type":"TextQuoteSelector","exact":"ach logical predicate contains literals, each composed bya metric (namely F) and a threshold (namely Th). Metrics have to be extracted from the software artifact (MetricsCalculation), and we distinguish design metrics (e.g., the number of messages generated by a component) and per-formance metrics (e.g., hardware nodes utilization). Such metrics are compared to thresholds, whose values have tobe set (Thresholds Binding), e.g. by means of some heuristics5.","prefix":"itions under which it occurs5. E","suffix":" We also considered range of val"}]}]}
+>```
+>%%
+>*%%PREFIX%%itions under which it occurs5. E%%HIGHLIGHT%% ==ach logical predicate contains literals, each composed bya metric (namely F) and a threshold (namely Th). Metrics have to be extracted from the software artifact (MetricsCalculation), and we distinguish design metrics (e.g., the number of messages generated by a component) and per-formance metrics (e.g., hardware nodes utilization). Such metrics are compared to thresholds, whose values have tobe set (Thresholds Binding), e.g. by means of some heuristics5.== %%POSTFIX%%We also considered range of val*
+>%%LINK%%[[#^anuxhwopxhu|show annotation]]
+>%%COMMENT%%
+> Este fragmento detalla el mecanismo prÃ¡ctico de la identificaciÃ³n. El proceso se basa en la cuantificaciÃ³n y comparaciÃ³n: se miden atributos especÃ­ficos del software (mÃ©tricas como el "nÃºmero de mensajes remotos") y se contrastan con valores lÃ­mite predefinidos (umbrales). Esto transforma el concepto abstracto de "mala prÃ¡ctica" en una condiciÃ³n verificable
+>%%TAGS%%
+>#RQ1, #antipattern_detection, #metrics_calculation, #threshold_comparison, #design_metrics, #performance_metrics
+^anuxhwopxhu
+
+
+================================================
+FILE: _RESUMEN.txt
+================================================
+Papers asignados a: Alexis Lapo
+==================================================
+Fecha de distribuciÃ³n: 2025-10-01 15:50:59
+Total de papers: 7
+
+Lista de archivos:
+--------------------
+â€¢ 65.pdf
+â€¢ 78.pdf
+â€¢ 81.pdf
+â€¢ 92.pdf
+â€¢ 98.pdf
+â€¢ 99.pdf
+â€¢ 100.pdf
+
+
+

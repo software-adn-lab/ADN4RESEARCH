@@ -1,10 +1,10 @@
 Feature: Asistencia Inteligente para la Síntesis Interpretativa
     Como un Investigador de SLR en Ingeniería de Software
-    Quiero utilizar una función de IA para generar un borrador de Proposición Interpretativa (Conclusión) y su narrativa de soporte
-    Para asegurar que la interpretación de los datos cualitativos responda directamente a las Preguntas de Investigación y sea metodológicamente rigurosa.
+    Quiero utilizar generar un borrador de Proposición Interpretativa (Conclusión) y su narrativa de soporte
+    Para asegurar que la interpretación de los datos cualitativos responda directamente a las Preguntas de Investigación.
 
 Background:
-    Given que el Investigador ha definido la Pregunta de Investigación (RQ): "¿Cuáles son los desafíos técnicos y organizacionales reportados al implementar DevOps en equipos distribuidos?"
+    Given que el Investigador ha definido la Pregunta de Investigación: "¿Cuáles son los desafíos técnicos y organizacionales reportados al implementar DevOps en equipos distribuidos?"
     And se tiene el tema "Antipatrones en el desarrollo de software" como foco de la interpretación actual
     And el Investigador selecciona el "Subtema B: Retos Culturales y de Comunicación" como objeto de la interpretación
         | Tema Seleccionado | Códigos Centrales | Citas Clave de Estudios |
@@ -14,8 +14,8 @@ Scenario: Inicio de la Asistencia Contextual de Interpretación
 
     Given que el Módulo de Interpretación está disponible para la Síntesis de Datos y las "extracciones" del "tema B" son parte del contexto activo
     
-    When el Investigador **inicia de la asistencia interpretativa conversacional** sobre el "Subtema B"
-        And **Establece la RQ, el Tema B y los códigos/citas de soporte como contexto activo** para la interacción.
+    When el Investigador **inicia de la asistencia conversacional** sobre el "Subtema B"
+        And **Establece la RQ, el subtema B y los códigos/citas de soporte como contexto activo** para la interacción.
     
     Then se genera un texto con la estructura:
         | Title | Body | Tags |

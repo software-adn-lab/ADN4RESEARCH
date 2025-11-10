@@ -1,8 +1,8 @@
 [MASTER]
 # Files or directories to be ignored. Add more if you use a different layout.
-ignore=venv,.venv,env,build,dist,tests
-ignore-paths=tests/.*$
-ignore-patterns=tests/.*$
+ignore=venv,.venv,env,build,dist,tests,migrations
+ignore-paths=tests/.*$,migrations/.*$
+ignore-patterns=tests/.*$,migrations/.*$
 
 [MESSAGES CONTROL]
 # Common noisy messages disabled to match project preference
