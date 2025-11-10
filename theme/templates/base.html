@@ -1,6 +1,6 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <title>ADN4Research</title>
@@ -9,13 +9,180 @@
 </head>
 
 <body>
+    <header class="bg-base-100 p-4">
+        <div class="flex justify-center">
+            <label class="input w-150 h-8">
+                <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
+                        stroke="currentColor">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                </svg>
+                <input type="search" required placeholder="Search a task, project or module" />
+            </label>
+        </div>
+    </header>
+    <div class="flex relative">
+        <!-- Overlay for mobile (cuando el sidebar está abierto) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+        
 
-    <div class="body-content content-grid">
-        {% block content %}
+        <!-- Sidebar (Menu Vertical) -->
+        <aside id="sidebar"
+            class="fixed lg:sticky top-0 lg:top-16 left-0 w-64 bg-base-200 border-gray-200 h-screen lg:h-[calc(100vh-4rem)] overflow-y-auto z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out border">
+            <div class="flex flex-col h-full">
+                <!-- Perfil -->
+                <div class="flex items-center justify-between px-5 py-6 border-b border-base-300">
+                    <div class="flex items-center gap-3">
+                        <div class="avatar placeholder">
+                            <div class="w-10 rounded-full bg-primary/20 text-primary font-semibold">
+                                C
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm text-base-content">ADN4Research</p>
+                            <p class="text-xs text-base-content/60">researcher@example.com</p>
+                        </div>
+                    </div>
+                    <svg class="w-4 h-4 text-base-content/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
 
-        {% endblock %}
+                <!-- Navegación -->
+                <nav class="flex-1 px-2 py-4">
+                    <ul class="menu menu-sm gap-1 w-full text-sm text-base-content/80">
+                        <li>
+                            <a href="#" class="py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary hover:text-white hover:font-bold">
+                                <svg class="w-4 h-4 hover:font-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M3 9.75L12 4l9 5.75V19a1.25 1.25 0 01-1.25 1.25H4.25A1.25 1.25 0 013 19V9.75z" />
+                                </svg>
+                                Home
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary hover:text-white hover:font-bold">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M3 8l9 5 9-5M5 18h14a2 2 0 002-2V8a2 2 0 00-1-1.732l-9-5a2 2 0 00-2 0l-9 5A2 2 0 002 8v8a2 2 0 002 2z" />
+                                </svg>
+                                Inbox
+                            </a>
+                        </li>
+                    </ul>
+                    <!-- Workspace -->
+                    <div class="mt-6">
+                        <p class="px-3 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">Workspace</p>
+                        <ul class="menu menu-sm gap-1 text-sm text-base-content/80 w-full">
+                            <li>
+                                <a href="#" class="py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary hover:text-white hover:font-bold">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M7 8h10M7 12h4m-4 4h6m5 4H6a2 2 0 01-2-2V6a2 2 0 012-2h5.586a1 1 0 01.707.293l6.414 6.414A1 1 0 0119 11.414V18a2 2 0 01-2 2z" />
+                                    </svg>
+                                    My Tasks
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary hover:text-white hover:font-bold">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M3 9a2 2 0 012-2h1.5a2 2 0 011.414.586l1.5 1.5A2 2 0 0010.828 10H19a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M8 3h8a2 2 0 012 2v5H6V5a2 2 0 012-2z" />
+                                    </svg>
+                                    General Stats
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="mt-6">
+                        <p class="px-3 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">Research Projects</p>
+                        <div class="menu menu-sm gap-1 text-sm text-base-content/80">
+                            <div class="collapse collapse-arrow bg-base-200 rounded-xl">
+                                <input type="checkbox" checked />
+                                <div class="collapse-title py-0">
+                                    <a href="#" class="w-full py-2 px-3 rounded-lg flex items-center justify-between">
+                                        <span class="flex items-center gap-3">
+                                            Anti Patterns Project
+                                        </span>
+                                    </a>
+                                </div>
+                                <div class="collapse-content pl-9 pr-3 pb-3 space-y-2">
+                                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M4 6h16M4 10h16M4 14h10m-6 4h6" />
+                                        </svg>
+                                        Design
+                                    </a>
+                                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M12 6v12m6-6H6" />
+                                        </svg>
+                                        Selection
+                                    </a>
+                                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M3 5h12M9 3v4M5 9h8a2 2 0 012 2v6h4M5 9v10a2 2 0 002 2h6" />
+                                        </svg>
+                                        Extraction
+                                    </a>
+                                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M4 19h16M4 11l4-2 4 2 4-2 4 2M4 15l4-2 4 2 4-2 4 2" />
+                                        </svg>
+                                        Stats
+                                    </a>
+                                </div>
+                            </div>
+                            <a href="#" class="py-2 px-3 rounded-lg flex items-center gap-3 text-primary hover:bg-primary/10">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                                Create a New Project
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Footer -->
+                <div class="border-t border-base-300 px-4 py-4 space-y-1">
+                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70 px-3 py-2 rounded-lg hover:bg-base-300/60">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                    </a>
+                    <a href="#" class="flex items-center gap-3 text-sm text-base-content/70 px-3 py-2 rounded-lg hover:bg-base-300/60">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 18h.01M12 6v6m-6 6a6 6 0 1112 0 6 6 0 01-12 0z" />
+                        </svg>
+                        Help & Support
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Container -->
+        <main class="flex-1 h-screen lg:h-[calc(100vh-4rem)] overflow-y-auto">
+                {% block content %}
+
+                {% endblock %}
+        </main>
     </div>
-    </div>
+
+
 </body>
 
 </html>

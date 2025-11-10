@@ -25,10 +25,11 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
             | "PEO"     | {"Population": "Nurses", "Exposure": "Night shifts", "Outcome": "Burnout levels"}                                | "What is ...?"          | "To improve ..."    |
             | "PCC"     | {"Population": "Remote workers", "Concept": "Digital nomadism", "Context": "Post-pandemic"}                      | "What are the ...?"     | "Exploring new ..." |'''
 
-    Esquema del escenario: Enviar una pregunta de investigacion para su revision
-        Dado que estoy asignado a un proyecto de investigacion
-        Y la etapa de "sugerencias de pregunta de investigacion" esta abierta
-        Cuando envie una pregunta de investigacion para su revision:
+    Esquema del escenario: Enviar una pregunta de investigación para su revision
+        Dado que estoy asignado a un proyecto de investigación
+        Y el proyecto tiene como framework investigativo a <framework>
+        Y la etapa de "sugerencias de pregunta de investigación" esta abierta
+        Cuando envie una pregunta de investigación para su revision:
             """
             {
                 "framework": <framework>,

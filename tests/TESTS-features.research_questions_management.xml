@@ -1,10 +1,11 @@
-<testsuite name="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" tests="3" errors="0" failures="0" skipped="0" time="0.029691" timestamp="2025-11-06T15:05:08.030073" hostname="Cristian"><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.1 " status="passed" time="0.019148"><system-out>
+<testsuite name="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" tests="3" errors="0" failures="0" skipped="0" time="0.092635" timestamp="2025-11-09T19:33:16.412151" hostname="Cristian-Zambrano"><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigación para su revision -- @1.1 " status="passed" time="0.042488"><system-out>
 <![CDATA[
 @scenario.begin
-  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.1 
-    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.002s
-    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.012s
-    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.004s
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.1 
+    Dado que estoy asignado a un proyecto de investigación ... passed in 0.004s
+    Y el proyecto tiene como framework investigativo a "PICO" ... passed in 0.004s
+    Y la etapa de "sugerencias de pregunta de investigación" esta abierta ... passed in 0.021s
+    Cuando envie una pregunta de investigación para su revision: ... passed in 0.008s
       """
       {
           "framework": "PICO",
@@ -13,31 +14,32 @@
           "motivation": "To understand ..."
       }
       """
-    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.001s
-    Y la etapa se cerrará ... passed in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.003s
+    Y la etapa se cerrará ... passed in 0.002s
 
 @scenario.end
 --------------------------------------------------------------------------------
 
 Captured stdout:
-what dict_keys(['Population', 'Intervention', 'Context', 'Outcome'])
-what dict_keys(['Population', 'Intervention', 'Context', 'Outcome'])
+what dict_keys([])
+what dict_keys([])
 
 ]]>
 </system-out><system-err>
 <![CDATA[
 Captured stderr:
-C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-18 18:34:27) while time zone support is active.
+C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-13 12:56:51) while time zone support is active.
   warnings.warn(
 
 ]]>
-</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.2 " status="passed" time="0.005297"><system-out>
+</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigación para su revision -- @1.2 " status="passed" time="0.01386"><system-out>
 <![CDATA[
 @scenario.begin
-  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.2 
-    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.001s
-    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.001s
-    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.002s
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.2 
+    Dado que estoy asignado a un proyecto de investigación ... passed in 0.003s
+    Y el proyecto tiene como framework investigativo a "PEO" ... passed in 0.002s
+    Y la etapa de "sugerencias de pregunta de investigación" esta abierta ... passed in 0.002s
+    Cuando envie una pregunta de investigación para su revision: ... passed in 0.004s
       """
       {
           "framework": "PEO",
@@ -46,31 +48,32 @@ C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\
           "motivation": "To improve ..."
       }
       """
-    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.000s
-    Y la etapa se cerrará ... passed in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.001s
+    Y la etapa se cerrará ... passed in 0.001s
 
 @scenario.end
 --------------------------------------------------------------------------------
 
 Captured stdout:
-what dict_keys(['Population', 'Exposure', 'Outcome'])
-what dict_keys(['Population', 'Exposure', 'Outcome'])
+what dict_keys([])
+what dict_keys([])
 
 ]]>
 </system-out><system-err>
 <![CDATA[
 Captured stderr:
-C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-09 03:34:15) while time zone support is active.
+C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-12-02 18:55:54) while time zone support is active.
   warnings.warn(
 
 ]]>
-</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigacion para su revision -- @1.3 " status="passed" time="0.005245"><system-out>
+</system-err></testcase><testcase classname="features.research_questions_management.Administrar el ciclo de vida de las preguntas de investigación" name="Enviar una pregunta de investigación para su revision -- @1.3 " status="passed" time="0.036288"><system-out>
 <![CDATA[
 @scenario.begin
-  Esquema del escenario: Enviar una pregunta de investigacion para su revision -- @1.3 
-    Dado que estoy asignado a un proyecto de investigacion ... passed in 0.001s
-    Y la etapa de "sugerencias de pregunta de investigacion" esta abierta ... passed in 0.001s
-    Cuando envie una pregunta de investigacion para su revision: ... passed in 0.002s
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.3 
+    Dado que estoy asignado a un proyecto de investigación ... passed in 0.002s
+    Y el proyecto tiene como framework investigativo a "PCC" ... passed in 0.003s
+    Y la etapa de "sugerencias de pregunta de investigación" esta abierta ... passed in 0.002s
+    Cuando envie una pregunta de investigación para su revision: ... passed in 0.006s
       """
       {
           "framework": "PCC",
@@ -79,21 +82,21 @@ C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\
           "motivation": "Exploring new ..."
       }
       """
-    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.000s
-    Y la etapa se cerrará ... passed in 0.000s
+    Entonces el sistema notificara la creacion al equipo investigador ... passed in 0.022s
+    Y la etapa se cerrará ... passed in 0.001s
 
 @scenario.end
 --------------------------------------------------------------------------------
 
 Captured stdout:
-what dict_keys(['Population', 'Concept', 'Context'])
-what dict_keys(['Population', 'Concept', 'Context'])
+what dict_keys([])
+what dict_keys([])
 
 ]]>
 </system-out><system-err>
 <![CDATA[
 Captured stderr:
-C:\Users\cjzam\OneDrive\Documentos\Projects\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-16 00:14:52) while time zone support is active.
+C:\Users\cjzam\OneDrive - Escuela Politécnica Nacional\0. Tesis\6. Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Stage.due_time received a naive datetime (2025-11-10 08:40:08) while time zone support is active.
   warnings.warn(
 
 ]]>

@@ -4,10 +4,10 @@ from behave import given, then, when, step
 from faker import Faker
 from django.contrib.auth.models import User
 
-from apps.design.models.research_question_models import ResearchFramework, ResearchQuestion
+from apps.design.models.research_question import ResearchFramework, ResearchQuestion
 from apps.design.services.question_services import ResearchQuestionService
 from apps.notification.models import Notification
-from apps.project.models import Project, Stage
+from apps.project.models import Stage
 from apps.project.services.project_services import ProjectService
 
 
@@ -56,7 +56,7 @@ def step_impl(context):
         name=context.framework,
         defaults={
             "is_global": context.framework in ["PICO", "PEO", "PCC"],
-            "created_by": context.researcher if context.framework not in ["PICO", "PEO", "PCC"] else None,
+            "assigned_by": context.researcher if context.framework not in ["PICO", "PEO", "PCC"] else None,
             "total_fields": len(context.fields),
             "fields": context.fields
         }
@@ -112,14 +112,29 @@ def step_impl(context, notification_type):
     assert len(notifications) > 0'''
 
 
-@step('que estoy asignado a un proyecto de investigacion')
-def step_impl(context):
+@given('que estoy asignado a un proyecto de investigación')
+def step_dado_proyecto_asignado(context):
     project_memebers = project_service.get_members(project=context.project)
     assert context.researcher in [member.user for member in project_memebers]
-
+    
+@step('el proyecto tiene como framework investigativo a {framework_name}')
+def step_y_proyecto_con_framework(context, framework_name):
+    context.framework_name = framework_name
+    context.framework, created = ResearchFramework.objects.get_or_create(
+        name=context.framework_name,
+        defaults={
+            "is_global": context.framework_name in ["PICO", "PEO", "PCC"],
+            "assigned_by": context.owner,
+        }
+    )
+    project_service.asign_research_framework_to_project(
+        project=context.project,
+        framework=context.framework
+    )
+    assert context.project.research_framework == context.framework
 
 @step('la etapa de "{nombre_etapa}" esta abierta')
-def step_impl(context, nombre_etapa):
+def step_y_etapa_abierta(context, nombre_etapa):
     context.stage = Stage.objects.create(
         project=context.project,
         name=nombre_etapa,
@@ -129,18 +144,17 @@ def step_impl(context, nombre_etapa):
     assert project_service.is_stage_opened(stage=context.stage)
 
 
-@step('envie una pregunta de investigacion para su revision:')
-def step_impl(context):
+@when('envie una pregunta de investigación para su revision:')
+def step_cuando_envio_pregunta_revision(context):
     payload = json.loads(context.text)
-    context.framework = payload["framework"]
     context.fields = payload["fields"]
     context.suggested_question = payload["suggested_question"]
     context.motivation = payload["motivation"]
     framework_obj, created = ResearchFramework.objects.get_or_create(
-        name=context.framework,
+        name=context.framework_name,
         defaults={
-            "is_global": context.framework in ["PICO", "PEO", "PCC"],
-            "created_by": context.researcher if context.framework not in ["PICO", "PEO", "PCC"] else None,
+            "is_global": context.framework_name in ["PICO", "PEO", "PCC"],
+            "assigned_by": context.owner,
             "total_fields": len(context.fields),
             "fields": context.fields
         })
@@ -151,14 +165,14 @@ def step_impl(context):
         project=context.project,
         stage=context.stage,
         researcher=context.researcher,
-        framework_fields = context.fields)
+        framework_fields=context.fields)
     context.research_question.save()
     research_question_service.submit_research_question_for_review(research_question=context.research_question)
     assert context.research_question.status == context.research_question.Status.SUGGESTED
 
 
-@step('el sistema notificara la creacion al equipo investigador')
-def step_impl(context):
+@then('el sistema notificara la creacion al equipo investigador')
+def step_entonces_sistema_notifica_equipo(context):
     context.notification = Notification.objects.create(
         type="RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW",
         project=context.project,
@@ -168,10 +182,12 @@ def step_impl(context):
     notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
     assert len(notifications) > 0
 
+
 @step('la etapa se cerrará')
-def step_impl(context):
+def step_y_etapa_cerrada(context):
     project_service.close_stage(stage=context.stage, closed_by=context.owner)
     assert not project_service.is_stage_opened(stage=context.stage)
+
 
 '''
 # SEGUNDO SCENARIO
