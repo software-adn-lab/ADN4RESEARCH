@@ -15,4 +15,9 @@ urlpatterns = [
     path('delete-research-question/<int:question_id>/', research_question.delete_research_question, name='delete_research_question'),
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
     path('eligibility-criteria-panel/<int:project_id>/', eligibility_criterion.open_eligibility_criteria_panel, name='eligibility_criteria_panel'),
+    path('create-criterion/<int:project_id>/', eligibility_criterion.create_eligibility_criterion, name='create_criterion'),
+    path('update-criterion/<int:criterion_id>/', eligibility_criterion.update_eligibility_criterion, name='update_criterion'),
+    path('approve-criterion/<int:criterion_id>/', eligibility_criterion.approve_eligibility_criterion, name='approve_criterion'),
+    path('reject-criterion/<int:criterion_id>/', eligibility_criterion.reject_eligibility_criterion, name='reject_criterion'),
+    path('delete-criterion/<int:criterion_id>/', eligibility_criterion.delete_eligibility_criterion, name='delete_criterion'),
 ]

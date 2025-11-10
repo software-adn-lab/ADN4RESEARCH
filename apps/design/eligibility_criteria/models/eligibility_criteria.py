@@ -25,3 +25,6 @@ class EligibilityCriterion(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()}: {self.description[:50]}"
+    
+    def get_type_display(self):
+        return self.CriterionType(self.type).label
