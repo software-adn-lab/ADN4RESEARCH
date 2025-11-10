@@ -7,8 +7,8 @@ Background:
     Given que el Investigador ha definido la Pregunta de Investigación: "¿Cuáles son los desafíos técnicos y organizacionales reportados al implementar DevOps en equipos distribuidos?"
     And se tiene el tema "Antipatrones en el desarrollo de software" como foco de la interpretación actual
     And el Investigador selecciona el "Subtema B: Retos Culturales y de Comunicación" como objeto de la interpretación
-        | Tema Seleccionado | Códigos Centrales | Citas Clave de Estudios |
-        | Retos Culturales y de Comunicación | Dependencia de zonas horarias, Retraso en feedback, Falta de confianza. | Fragmentos de texto específicos. |
+        # Nota: los códigos centrales y citas se obtendrán desde los ejemplos de prueba
+        # (tests/interpretation/examples/digest.txt y questions.txt) mediante el proveedor de datos
 
 Scenario: Inicio de la Asistencia Contextual de Interpretación
 
