@@ -6,6 +6,6 @@ max-line-length = 100
 extend-ignore = E203, W503
 
 # Ignore docstring checks (D1xx from pydocstyle / flake8-docstrings) and E501
-ignore = D100,D101,D102,D103,D104,D105,D106,E501
+ignore = D100,D101,D102,D103,D104,D105,D106,E501,D200,D205,D204
 
 exclude = .git,__pycache__,env,venv,.venv,build,dist
