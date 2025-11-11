@@ -1,10 +1,11 @@
 """
 Mock IEEE connector for testing.
 
-FIXTURES DETERMINISTAS:
-- 2 estudios únicos de IEEE
-- 1 estudio duplicado con Scopus (mismo DOI: 10.1109/tse.2023.shared)
-- Total: 3 estudios (2 únicos + 1 duplicado)
+FIXTURES DETERMINISTAS FASE 1:
+- 1 estudio con DOI compartido con Scopus (duplicado por DOI)
+- 1 estudio con título equivalente al de Scopus bajo normalización (duplicado por título, sin DOI)
+- 1 estudio único de IEEE
+- Total: 3 estudios (1 duplicado DOI + 1 duplicado título + 1 único)
 """
 from typing import List
 
@@ -16,10 +17,10 @@ class MockIeeeConnector(IAcademicConnector):
     """
     Mock implementation of IEEE connector for testing purposes.
 
-    Retorna fixtures deterministas para pruebas de:
-    - Deduplicación (incluye 1 duplicado con Scopus por DOI)
-    - Validación de estructura mínima
-    - Consolidación de resultados
+    Fixtures deterministas que fuerzan comportamiento clave:
+    1. Deduplicación por DOI (mismo DOI que Scopus)
+    2. Deduplicación por título normalizado (variantes de título sin DOI)
+    3. Validación de estructura mínima (title, link, source)
     """
 
     def search(self, query: str, max_results: int = 10) -> List[Study]:
@@ -31,28 +32,36 @@ class MockIeeeConnector(IAcademicConnector):
             max_results: Maximum number of results to return
 
         Returns:
-            List of 3 Study objects (2 unique + 1 duplicate with Scopus)
+            List of 3 Study objects:
+            - 1 duplicado con Scopus por DOI
+            - 1 duplicado con Scopus por título normalizado (sin DOI)
+            - 1 único de IEEE
         """
-        # Fixture: 3 estudios de IEEE
-        # - study_ieee_1, study_ieee_2: únicos
-        # - study_ieee_3: duplicado con Scopus (mismo DOI)
         return [
+            # CASO 1: Duplicado por DOI (mismo DOI que Scopus)
             Study(
-                title="Automated Testing with Machine Learning",
+                title="Neural Networks for Fault Detection in Code",
                 link="https://ieeexplore.ieee.org/document/12345",
                 source="IEEE Xplore",
-                doi="10.1109/icse.2023.001"
+                doi="10.1109/tse.2023.shared"  # ← Mismo DOI que Scopus
             ),
+
+            # CASO 2: Duplicado por título normalizado (sin DOI)
+            # Título con variaciones diferentes a Scopus pero que normalizan igual
+            # Scopus: "Machine-Learning: A Survey"
+            # IEEE:   "MACHINE LEARNING A SURVEY!" (normaliza a lo mismo)
             Study(
-                title="Code Review Automation using Deep Learning",
+                title="MACHINE LEARNING A SURVEY!",  # ← Variante con MAYÚSCULAS y puntuación
                 link="https://ieeexplore.ieee.org/document/12346",
                 source="IEEE Xplore",
-                doi="10.1109/ase.2023.002"
+                doi=None  # ← Sin DOI para forzar deduplicación por título
             ),
+
+            # CASO 3: Estudio único de IEEE
             Study(
-                title="Neural Networks for Fault Detection in Code",  # ← Mismo título que Scopus
+                title="Code Review Automation using Deep Learning",
                 link="https://ieeexplore.ieee.org/document/12347",
                 source="IEEE Xplore",
-                doi="10.1109/tse.2023.shared"  # ← Mismo DOI que Scopus study_4
+                doi="10.1109/ase.2023.unique"
             ),
         ]

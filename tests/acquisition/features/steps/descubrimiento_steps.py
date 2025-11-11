@@ -48,7 +48,7 @@ def step_estrategia_con_id(context, strategy_id: str):
     context.strategy_id = strategy_id
 
 
-@given('las traducciones para esa estrategia tienen los siguientes estados')
+@given('las traducciones para esa estrategia tienen los siguientes estados:')
 def step_traducciones_con_estados(context):
     """
     Carga estados de traducciones por fuente desde la tabla del escenario.
