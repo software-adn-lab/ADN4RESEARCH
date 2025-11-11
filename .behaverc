@@ -1,2 +1,2 @@
 [behave]
-paths = tests/design
+paths = tests
