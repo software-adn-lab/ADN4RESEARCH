@@ -22,7 +22,7 @@ Para MVP es aceptable. Para producción avanzada, considerar:
 Documentado para: Revisión técnica pre-producción
 """
 
-from apps.acquisition.discovery.domain.entities.study import Study
+from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.normalizers import normalize_title, normalize_doi
 
 
@@ -72,8 +72,8 @@ class Deduplicator:
         for study in studies:
             # Determinar clave de deduplicación
             if study.doi:
-                # DOI tiene prioridad
-                key = f"doi::{normalize_doi(study.doi)}"
+                # DOI tiene prioridad (acceder al valor del value object)
+                key = f"doi::{normalize_doi(study.doi.value)}"
             else:
                 # Fallback a título
                 key = f"title::{normalize_title(study.title)}"

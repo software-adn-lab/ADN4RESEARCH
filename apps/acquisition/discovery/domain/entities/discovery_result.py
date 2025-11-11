@@ -4,7 +4,7 @@ DiscoveryResult entity for the discovery domain.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
-from .study import Study
+from apps.acquisition.shared.domain.entities.study import Study
 
 
 @dataclass
@@ -27,14 +27,6 @@ class DiscoveryResult:
             Dictionary with 'studies' and 'summary' keys
         """
         return {
-            "studies": [
-                {
-                    "title": study.title,
-                    "link": study.link,
-                    "source": study.source,
-                    "doi": study.doi
-                }
-                for study in self.studies
-            ],
+            "studies": [study.to_dict() for study in self.studies],
             "summary": self.summary
         }

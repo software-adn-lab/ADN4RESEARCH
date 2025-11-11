@@ -10,7 +10,7 @@ FIXTURES DETERMINISTAS FASE 1:
 from typing import List
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
-from apps.acquisition.discovery.domain.entities.study import Study
+from apps.acquisition.shared.domain.entities.study import Study
 
 
 class MockScopusConnector(IAcademicConnector):
@@ -39,7 +39,7 @@ class MockScopusConnector(IAcademicConnector):
         """
         return [
             # CASO 1: Duplicado por DOI (mismo DOI que IEEE)
-            Study(
+            Study.create_discovered(
                 title="Neural Networks for Fault Detection in Code",
                 link="https://scopus.example.com/study1",
                 source="Scopus",
@@ -49,7 +49,7 @@ class MockScopusConnector(IAcademicConnector):
             # CASO 2: Duplicado por título normalizado (sin DOI)
             # Título con variaciones: mayúsculas, guiones, puntuación
             # Debe coincidir con IEEE bajo normalización
-            Study(
+            Study.create_discovered(
                 title="Machine-Learning: A Survey",  # ← Variante con guión y mayúsculas
                 link="https://scopus.example.com/study2",
                 source="Scopus",
@@ -57,7 +57,7 @@ class MockScopusConnector(IAcademicConnector):
             ),
 
             # CASO 3: Estudio único de Scopus
-            Study(
+            Study.create_discovered(
                 title="Software Quality Assessment using AI",
                 link="https://scopus.example.com/study3",
                 source="Scopus",
