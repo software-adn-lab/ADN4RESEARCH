@@ -6,8 +6,21 @@ ESTRATEGIA:
 2. Si un estudio tiene DOI, se usa como clave de deduplicación
 3. Si no tiene DOI, se usa el título normalizado
 4. Se mantiene la primera ocurrencia de cada duplicado
+
+EDGE CASE CONOCIDO (Record Linkage):
+Si el estudio A tiene DOI y el estudio B (mismo paper) no tiene DOI:
+- A -> key: "doi::10.1234/abc"
+- B -> key: "title::machine learning"
+- NO se detectarán como duplicados (diferentes claves)
+
+Esto es una limitación conocida de la estrategia de "single-pass deduplication".
+Para MVP es aceptable. Para producción avanzada, considerar:
+- Estrategia de doble pasada (agrupar por DOI, luego por título, luego cruzar)
+- Fuzzy matching de títulos para variaciones menores
+- Clustering jerárquico de registros
+
+Documentado para: Revisión técnica pre-producción
 """
-from typing import List, Dict
 
 from apps.acquisition.domain.entities.study import Study
 from .normalizers import normalize_title, normalize_doi
@@ -25,7 +38,7 @@ class Deduplicator:
     - Normalización case-insensitive y sin acentos
     """
 
-    def deduplicate(self, studies: List[Study]) -> List[Study]:
+    def deduplicate(self, studies: list[Study]) -> list[Study]:
         """
         Remove duplicate studies from the list.
 
@@ -53,8 +66,8 @@ class Deduplicator:
         if not studies:
             return []
 
-        seen_keys: Dict[str, bool] = {}
-        unique_studies: List[Study] = []
+        seen_keys: dict[str, bool] = {}
+        unique_studies: list[Study] = []
 
         for study in studies:
             # Determinar clave de deduplicación

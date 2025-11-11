@@ -1,15 +1,17 @@
 """
 Discovery service for executing discovery operations.
 
-ORQUESTACIÓN FASE 4 (con trazabilidad completa):
-1. Calcular fuentes ejecutables y rastrear no ejecutadas con razones
-2. Consultar cada fuente ejecutable usando su conector
-3. Consolidar estudios de todas las fuentes
-4. DEDUPLICAR usando Deduplicator del dominio
-5. Construir summary completo: id_estrategia, total_por_fuente, total_bruto, total_unicos, no_ejecutadas, resultado
-6. Definir resultado: "complete" si no_ejecutadas está vacío, "partial" en caso contrario
+ORQUESTACIÓN (Refactorizada para producción):
+1. Validar entradas (fail-fast)
+2. Sanear translation_statuses (tolerancia)
+3. Calcular fuentes ejecutables y rastrear no ejecutadas con razones
+4. Consultar cada fuente ejecutable usando su conector (con manejo de excepciones)
+5. Consolidar estudios de todas las fuentes
+6. DEDUPLICAR usando Deduplicator del dominio
+7. Construir summary completo: id_estrategia, total_por_fuente, total_bruto, total_unicos, no_ejecutadas, resultado
+8. Definir resultado: "complete" si no_ejecutadas está vacío, "partial" en caso contrario
 """
-from typing import Dict, List
+import logging
 
 from apps.acquisition.domain.interfaces.i_academic_connector import IAcademicConnector
 from apps.acquisition.domain.entities.discovery_result import DiscoveryResult
@@ -21,6 +23,8 @@ from apps.acquisition.domain.constants import (
     DISCOVERY_RESULT_COMPLETE,
     DISCOVERY_RESULT_PARTIAL
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DiscoveryService:
@@ -35,7 +39,7 @@ class DiscoveryService:
     5. Construir resumen de ejecución con trazabilidad completa
     """
 
-    def __init__(self, connectors: Dict[str, IAcademicConnector]):
+    def __init__(self, connectors: dict[str, IAcademicConnector]):
         """
         Initialize the discovery service.
 
@@ -49,7 +53,7 @@ class DiscoveryService:
         self,
         strategy_id: str,
         translation_statuses: dict,
-        supported_sources: list
+        supported_sources: list[str]
     ) -> DiscoveryResult:
         """
         Execute the discovery process (FASE 4: con trazabilidad completa).
@@ -116,27 +120,97 @@ class DiscoveryService:
             >>> result.summary["total_unicos"]
             3
         """
-        # 0. VALIDACIONES TEMPRANAS (FASE 5: robustez de entradas)
+        # 1. Validaciones tempranas (fail-fast)
+        self._validate_inputs(strategy_id)
 
-        # Validar strategy_id no vacío
+        # 2. Sanear translation_statuses (tolerancia)
+        sane_statuses = self._sanitize_statuses(translation_statuses)
+
+        # 3. Determinar plan de ejecución (fuentes ejecutables vs no ejecutables)
+        executable_sources, no_ejecutadas = self._determine_execution_plan(
+            supported_sources, sane_statuses
+        )
+
+        # 4. Consultar fuentes ejecutables (con manejo robusto de excepciones)
+        all_studies, total_por_fuente = self._fetch_studies(
+            executable_sources, sane_statuses, no_ejecutadas
+        )
+
+        # 5. Deduplicar (dominio)
+        unique_studies = self.deduplicator.deduplicate(all_studies)
+
+        # 6. Construir resultado final
+        return self._build_result(
+            strategy_id, unique_studies, total_por_fuente, no_ejecutadas
+        )
+
+    # ========================================================================
+    # MÉTODOS PRIVADOS (Extract Method Pattern)
+    # ========================================================================
+
+    def _validate_inputs(self, strategy_id: str) -> None:
+        """
+        Validar entradas críticas (fail-fast).
+
+        Args:
+            strategy_id: ID de la estrategia
+
+        Raises:
+            ValueError: Si strategy_id está vacío
+        """
         if not strategy_id or not strategy_id.strip():
             raise ValueError("strategy_id no puede estar vacío")
 
-        # Validar que translation_statuses solo contenga fuentes soportadas
-        # (advertencia, no excepción - ser tolerante)
-        if translation_statuses:
-            unsupported = set(translation_statuses.keys()) - set(SUPPORTED_SOURCES)
-            if unsupported:
-                # Filtrar silenciosamente fuentes no soportadas
-                translation_statuses = {
-                    k: v for k, v in translation_statuses.items()
-                    if k in SUPPORTED_SOURCES
-                }
+    def _sanitize_statuses(self, translation_statuses: dict) -> dict:
+        """
+        Filtrar fuentes no soportadas de translation_statuses.
 
-        # 1. Calcular fuentes ejecutables y rastrear no ejecutadas con razones
-        # Intersección: supported_sources ∩ connectors.keys() ∩ status=="ready" ∩ query no vacía
-        executable_sources: List[str] = []
-        no_ejecutadas: Dict[str, str] = {}
+        Ser tolerante: no lanzar excepción, solo advertir y filtrar.
+
+        Args:
+            translation_statuses: Estados de traducción por fuente
+
+        Returns:
+            dict con solo fuentes soportadas
+        """
+        if not translation_statuses:
+            return {}
+
+        unsupported = set(translation_statuses.keys()) - set(SUPPORTED_SOURCES)
+        if unsupported:
+            logger.warning(
+                f"Fuentes no soportadas ignoradas: {unsupported}. "
+                f"Soportadas: {SUPPORTED_SOURCES}"
+            )
+            return {
+                k: v for k, v in translation_statuses.items()
+                if k in SUPPORTED_SOURCES
+            }
+
+        return translation_statuses
+
+    def _determine_execution_plan(
+        self,
+        supported_sources: list[str],
+        translation_statuses: dict
+    ) -> tuple[list[str], dict[str, str]]:
+        """
+        Calcular fuentes ejecutables y rastrear no ejecutadas con razones.
+
+        Una fuente es ejecutable si:
+        - Tiene conector inyectado
+        - Tiene status "ready" en translation_statuses
+        - Tiene query no vacía
+
+        Args:
+            supported_sources: Lista de fuentes soportadas
+            translation_statuses: Estados de traducción por fuente
+
+        Returns:
+            (executable_sources, no_ejecutadas)
+        """
+        executable_sources: list[str] = []
+        no_ejecutadas: dict[str, str] = {}
 
         for source in supported_sources:
             # Verificar que tiene conector
@@ -163,33 +237,82 @@ class DiscoveryService:
             # Si pasa todas las condiciones, es ejecutable
             executable_sources.append(source)
 
-        # 2. Consultar cada fuente ejecutable
-        all_studies: List[Study] = []
-        total_por_fuente: Dict[str, int] = {}
+        return executable_sources, no_ejecutadas
+
+    def _fetch_studies(
+        self,
+        executable_sources: list[str],
+        translation_statuses: dict,
+        no_ejecutadas: dict[str, str]
+    ) -> tuple[list[Study], dict[str, int]]:
+        """
+        Consultar cada fuente ejecutable con manejo robusto de excepciones.
+
+        CRÍTICO PARA PRODUCCIÓN: Si una fuente falla (timeout, error 500, etc.),
+        NO detener todo el proceso. Registrar el error y continuar con las demás.
+
+        Args:
+            executable_sources: Fuentes a consultar
+            translation_statuses: Estados de traducción
+            no_ejecutadas: Dict para registrar fuentes que fallen (se modifica in-place)
+
+        Returns:
+            (all_studies, total_por_fuente)
+        """
+        all_studies: list[Study] = []
+        total_por_fuente: dict[str, int] = {}
 
         for source in executable_sources:
             connector = self.connectors[source]
             query = translation_statuses[source].get("query", "")
 
-            # Consultar fuente
-            studies = list(connector.search(query))
+            try:
+                # PUNTO CRÍTICO: Aquí es donde puede fallar en producción
+                studies = list(connector.search(query))
 
-            # Acumular
-            all_studies.extend(studies)
-            total_por_fuente[source] = len(studies)
+                # Éxito: acumular resultados
+                all_studies.extend(studies)
+                total_por_fuente[source] = len(studies)
 
-        # 3. Calcular total_bruto
+                logger.info(f"✓ {source}: {len(studies)} estudios obtenidos")
+
+            except Exception as e:
+                # NO detener todo el proceso por una fuente caída
+                error_msg = f"connection_error: {type(e).__name__}: {str(e)}"
+                no_ejecutadas[source] = error_msg
+
+                logger.error(
+                    f"✗ {source}: Error al consultar conector. "
+                    f"Continuando con otras fuentes. Error: {e}",
+                    exc_info=True
+                )
+
+        return all_studies, total_por_fuente
+
+    def _build_result(
+        self,
+        strategy_id: str,
+        unique_studies: list[Study],
+        total_por_fuente: dict[str, int],
+        no_ejecutadas: dict[str, str]
+    ) -> DiscoveryResult:
+        """
+        Construir el resultado final con summary completo.
+
+        Args:
+            strategy_id: ID de la estrategia
+            unique_studies: Estudios después de deduplicación
+            total_por_fuente: Conteo bruto por fuente
+            no_ejecutadas: Fuentes no ejecutadas con razones
+
+        Returns:
+            DiscoveryResult con studies y summary
+        """
         total_bruto = sum(total_por_fuente.values())
 
-        # 4. DEDUPLICAR (FASE 3)
-        unique_studies = self.deduplicator.deduplicate(all_studies)
-
-        # 5. Determinar resultado (complete | partial) - FASE 4: basado en no_ejecutadas
-        # "complete" solo si no_ejecutadas está vacío (todas las fuentes ejecutadas)
-        # "partial" si hay al menos una fuente no ejecutada
+        # Determinar resultado (complete | partial)
         resultado = DISCOVERY_RESULT_COMPLETE if not no_ejecutadas else DISCOVERY_RESULT_PARTIAL
 
-        # 6. Construir resumen completo (FASE 4: con no_ejecutadas)
         summary = {
             "id_estrategia": strategy_id,
             "resultado": resultado,
@@ -199,5 +322,4 @@ class DiscoveryService:
             "no_ejecutadas": no_ejecutadas,
         }
 
-        # 7. Retornar resultado (CON deduplicación y trazabilidad completa)
         return DiscoveryResult(studies=unique_studies, summary=summary)
