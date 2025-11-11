@@ -1,5 +1,5 @@
 from django.db import transaction
-from apps.interpretation.models import (
+from apps.interpretation.conclusion_assistant.models import (
     Theme,
     SubTheme,
     InterpretationContext,
