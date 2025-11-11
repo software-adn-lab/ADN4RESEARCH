@@ -1,38 +1,28 @@
 # language: es
 @modulo:busqueda @componente:descubrimiento @mvp
-Característica: Búsqueda y consolidación inicial de estudios desde múltiples fuentes
-  Como investigador 
-  Quiero ejecutar mi estrategia de búsqueda en diferentes bases de datos y obtener un listado unificado
-  Para tener una vista consolidada de todos los estudios potencialmente relevantes
+Característica: Descubrimiento y consolidación de estudios desde múltiples fuentes
+  Como investigador
+  Quiero ejecutar el descubrimiento de estudios sobre una estrategia normalizada
+  Para obtener un listado consolidado sin duplicados y conocer qué fuentes fueron consultadas
 
   Antecedentes:
     Dado que el sistema soporta las fuentes "Scopus" e "IEEE Xplore"
-    Y existe una estrategia normalizada identificada como "<id_estrategia>"
-    Y existen traducciones por fuente asociadas a esa estrategia
 
   @descubrimiento @mvp
-  Esquema del escenario: Descubrimiento consolida resultados y resume el estado por fuente
-    Dada una estrategia previamente normalizada con identificador "<id>"
-    Y las traducciones preparadas tienen los siguientes estados:
-      | fuente       | estado          |
-      | Scopus       | <estado_scopus> |
-      | IEEE Xplore  | <estado_ieee>   |
-    Cuando ejecuto el descubrimiento
-    Entonces obtengo un listado de estudios encontrados
-    Y cada estudio incluye título, enlace y fuente de origen
-    Y el sistema me proporciona un resumen con:
-      """
-      id_estrategia = "<id>",
-      fuentes_consultadas = <consultadas>,
-      fuentes_no_consideradas = <no_consideradas>,
-      total_por_fuente = {...},
-      total_bruto >= 0,
-      total_unicos >= 0,
-      resultado = "<resultado>"
-      """
+  Esquema del escenario: El descubrimiento consulta solo fuentes ready y consolida resultados
+    Dada una estrategia normalizada con id "<id>"
+    Y las traducciones para esa estrategia tienen los siguientes estados:
+      | fuente      | estado          |
+      | Scopus      | <estado_scopus> |
+      | IEEE Xplore | <estado_ieee>   |
+    Cuando ejecuto el descubrimiento para la estrategia "<id>"
+    Entonces obtengo un listado de estudios
+    Y el listado no contiene duplicados
+    Y cada estudio tiene título, enlace y fuente
+    Y obtengo un resumen con id_estrategia "<id>" y resultado "<resultado>"
 
     Ejemplos:
-      | id        | estado_scopus | estado_ieee   | consultadas                      | no_consideradas                                   | resultado  |
-      | norm-001  | lista         | lista         | ["Scopus","IEEE Xplore"]         | []                                                | completo   |
-      | norm-002  | lista         | no compatible | ["Scopus"]                       | [{"fuente":"IEEE Xplore","motivo":"no compatible"}] | parcial    |
-      | norm-003  | lista         | lista         | ["Scopus","IEEE Xplore"]         | []                                                | completo   |
+      | id       | estado_scopus | estado_ieee   | resultado |
+      | norm-001 | ready         | ready         | complete  |
+      | norm-002 | ready         | not_supported | partial   |
+      | norm-003 | not_supported | ready         | partial   |
