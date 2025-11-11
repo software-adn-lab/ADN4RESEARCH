@@ -2,11 +2,11 @@ from behave import given, when, then
 from django.contrib.auth.models import User
 from tests.interpretation.helpers.data_provider import data_provider
 
-from apps.interpretation.models import (
+from apps.interpretation.conclusion_assistant.models import (
     SubTheme,
     ConversationTrace,
 )
-from apps.interpretation.services.interpretation_services import InterpretationService
+from apps.interpretation.conclusion_assistant.services.interpretation_services import InterpretationService
 
 interpretation_service = InterpretationService()
 

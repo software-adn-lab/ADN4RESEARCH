@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
 
+# No top-level views in this app; keep urlpatterns empty until routes are added.
 app_name = 'interpretation'
 
 urlpatterns = [
