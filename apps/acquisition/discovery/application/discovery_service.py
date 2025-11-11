@@ -16,7 +16,7 @@ import logging
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from apps.acquisition.discovery.domain.entities.discovery_result import DiscoveryResult
 from apps.acquisition.discovery.domain.entities.study import Study
-from apps.acquisition.metadata.domain.services.deduplicator import Deduplicator
+from apps.acquisition.discovery.domain.services.deduplicator import Deduplicator
 from apps.acquisition.shared.domain.constants import (
     SUPPORTED_SOURCES,
     TRANSLATION_STATUS_READY,

@@ -23,7 +23,7 @@ Documentado para: Revisión técnica pre-producción
 """
 
 from apps.acquisition.discovery.domain.entities.study import Study
-from .normalizers import normalize_title, normalize_doi
+from apps.acquisition.shared.domain.normalizers import normalize_title, normalize_doi
 
 
 class Deduplicator:

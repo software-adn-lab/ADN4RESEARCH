@@ -26,7 +26,7 @@ from behave import given, when, then
 from typing import Dict, List, Any
 
 # IMPORTS WISHFUL: Normalizadores del DOMINIO (una sola fuente de verdad)
-from apps.acquisition.metadata.domain.services.normalizers import (
+from apps.acquisition.shared.domain.normalizers import (
     normalize_title,
     normalize_doi,
 )
