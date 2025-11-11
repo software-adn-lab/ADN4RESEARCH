@@ -10,11 +10,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 from apps.acquisition.domain.models import NormalizedStrategy
 from apps.acquisition.domain.services.translation import ScopusTranslator, IeeeTranslator
+from apps.acquisition.domain.constants import SUPPORTED_SOURCES
 from .exceptions import InvalidTargetError
-
-
-# Constantes de targets soportados
-SUPPORTED_TARGETS = ["Scopus", "IEEE Xplore"]
 
 
 class TranslationService:
@@ -85,7 +82,7 @@ class TranslationService:
             translator = IeeeTranslator()
         else:
             # No debería llegar aquí (la validación ya filtró)
-            raise InvalidTargetError(target, SUPPORTED_TARGETS)
+            raise InvalidTargetError(target, SUPPORTED_SOURCES)
 
         # 3. Ejecutar traducción
         translation_result = translator.translate(strategy)
@@ -115,10 +112,10 @@ class TranslationService:
             target: Target a validar
 
         Raises:
-            InvalidTargetError: Si el target no está en SUPPORTED_TARGETS
+            InvalidTargetError: Si el target no está en SUPPORTED_SOURCES
         """
-        if target not in SUPPORTED_TARGETS:
-            raise InvalidTargetError(target, SUPPORTED_TARGETS)
+        if target not in SUPPORTED_SOURCES:
+            raise InvalidTargetError(target, SUPPORTED_SOURCES)
 
     def _build_trace(
         self,
