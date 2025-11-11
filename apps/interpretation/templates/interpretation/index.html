@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Interpretación - Temas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f6f6f6}
+        .card{background:#fff;border-radius:6px;padding:16px;margin-bottom:12px}
+        .btn{display:inline-block;padding:8px 12px;background:#7B61FF;color:#fff;border-radius:4px;text-decoration:none}
+    </style>
+</head>
+<body>
+    <h1>Asistencia Interpretativa — Temas</h1>
+
+    {% for theme in themes %}
+    <div class="card">
+        <h2>{{ theme.name }}</h2>
+        <p><strong>RQ:</strong> {{ theme.research_question }}</p>
+        <div>
+            <h3>Subtemas</h3>
+            {% if theme.subthemes.all %}
+                <ul>
+                {% for sub in theme.subthemes.all %}
+                    <li>
+                        <strong>{{ sub.name }}</strong>
+                        {% if sub.central_codes %}
+                            — códigos: {{ sub.central_codes|join:", " }}
+                        {% endif %}
+                        <form method="post" action="{% url 'interpretation:start_interpretation' sub.id %}" style="display:inline">{% csrf_token %}
+                            <button class="btn" type="submit">Iniciar asistencia</button>
+                        </form>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>No hay subtemas</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+</body>
+</html>

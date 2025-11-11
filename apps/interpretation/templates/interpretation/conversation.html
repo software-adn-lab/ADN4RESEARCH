@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Asistencia de Interpretación</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f6f6f6}
+        .card{background:#fff;border-radius:6px;padding:16px;margin-bottom:12px}
+        .trace{border-left:3px solid #7B61FF;padding:8px;margin-bottom:8px}
+        .meta{font-size:0.9em;color:#666}
+        .btn{display:inline-block;padding:6px 10px;background:#7B61FF;color:#fff;border-radius:4px;text-decoration:none}
+        textarea{width:100%;min-height:100px}
+        .prop{background:#f3f4f6;padding:10px;border-radius:6px;margin-bottom:8px}
+    </style>
+</head>
+<body>
+    <a href="{% url 'interpretation:index' %}">&larr; Volver a temas</a>
+    <h1>Asistencia: {{ context.subtheme.name }}</h1>
+    <div class="card">
+        <p class="meta"><strong>Tema:</strong> {{ context.theme_name }} — <strong>RQ:</strong> {{ context.research_question }}</p>
+        <p class="meta"><strong>Códigos centrales:</strong> {% if context.extractions_context.central_codes %}{{ context.extractions_context.central_codes|join:", " }}{% else %}—{% endif %}</p>
+        <p class="meta"><strong>Citas clave:</strong> {% if context.extractions_context.key_citations %}{{ context.extractions_context.key_citations|join:", " }}{% else %}—{% endif %}</p>
+    </div>
+
+    <div class="card">
+        <h3>Conversación</h3>
+        {% for t in traces %}
+            <div class="trace">
+                <strong>{{ t.title }}</strong> <span class="meta">({{ t.role }})</span>
+                <p>{{ t.body }}</p>
+                {% if t.tags %}<p class="meta">Tags: {{ t.tags }}</p>{% endif %}
+            </div>
+        {% empty %}
+            <p>No hay mensajes aún.</p>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <h3>Generar Borrador de Proposición</h3>
+        <form method="post" action="{% url 'interpretation:create_draft' context.id %}">{% csrf_token %}
+            <label for="instruction">Instrucción al Copilot</label>
+            <textarea id="instruction" name="instruction" placeholder="Por ejemplo: 'Genera una proposición fuerte sobre zonas horarias y feedback.'"></textarea>
+            <p><button class="btn" type="submit">Generar borrador</button></p>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Proposiciones</h3>
+        {% for p in propositions %}
+            <div class="prop">
+                <p><strong>Estado:</strong> {{ p.get_status_display }} — <em>{{ p.modified_at }}</em></p>
+                <div>{{ p.proposition_text }}</div>
+
+                <form method="post" action="{% url 'interpretation:refine_proposition' context.id p.id %}">{% csrf_token %}
+                    <label>Refinar proposición</label>
+                    <textarea name="refinement" placeholder="Por ejemplo: 'Enfatiza comunicación asíncrona'"></textarea>
+                    <p>
+                        <button class="btn" type="submit">Refinar</button>
+                        <button class="btn" formaction="{% url 'interpretation:finalize_proposition' context.id p.id %}" formmethod="post">Finalizar</button>
+                    </p>
+                </form>
+            </div>
+        {% empty %}
+            <p>No hay proposiciones todavía.</p>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
