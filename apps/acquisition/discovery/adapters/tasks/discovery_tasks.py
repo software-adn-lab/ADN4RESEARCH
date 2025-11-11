@@ -35,7 +35,7 @@ def perform_discovery(
         DiscoveryResult with studies and summary
 
     Example:
-        >>> from apps.acquisition.discovery.api import DiscoveryService
+        >>> from apps.acquisition.discovery.application.discovery_service import DiscoveryService
         >>> from apps.acquisition.shared.testing.mocks import MockScopusConnector, MockIeeeConnector
         >>>
         >>> connectors = {
