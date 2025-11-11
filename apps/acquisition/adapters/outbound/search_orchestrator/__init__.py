@@ -1,1 +1,0 @@
-"""Search orchestrator component package."""

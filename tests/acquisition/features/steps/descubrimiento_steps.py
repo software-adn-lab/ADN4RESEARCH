@@ -26,7 +26,7 @@ from behave import given, when, then
 from typing import Dict, List, Any
 
 # IMPORTS WISHFUL: Normalizadores del DOMINIO (una sola fuente de verdad)
-from apps.acquisition.domain.services.deduplication.normalizers import (
+from apps.acquisition.metadata.domain.services.normalizers import (
     normalize_title,
     normalize_doi,
 )
@@ -129,9 +129,9 @@ def step_ejecutar_descubrimiento(context, strategy_id: str):
     assert hasattr(context, "translation_statuses"), "Faltan translation_statuses"
 
     # IMPORTS WISHFUL: Clases que se generarán con el IDE
-    from apps.acquisition.application.discovery_service import DiscoveryService
-    from apps.acquisition.testing.mocks.mock_scopus_connector import MockScopusConnector
-    from apps.acquisition.testing.mocks.mock_ieee_connector import MockIeeeConnector
+    from apps.acquisition.discovery.application.discovery_service import DiscoveryService
+    from apps.acquisition.shared.testing.mocks.mock_scopus_connector import MockScopusConnector
+    from apps.acquisition.shared.testing.mocks.mock_ieee_connector import MockIeeeConnector
 
     # Inyección de conectores mock (contrato explícito)
     connectors = {

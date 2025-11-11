@@ -61,7 +61,7 @@ def step_given_estrategia_normalizada(context):
     assert len(strategy_json["main_terms"]) > 0, "main_terms no puede estar vacío"
 
     # WISHFUL THINKING: crear entidad de dominio que NO existe aún
-    from apps.acquisition.domain.models import NormalizedStrategy
+    from apps.acquisition.translation.domain.models import NormalizedStrategy
 
     context.strategy = NormalizedStrategy.from_dict(strategy_json)
     context.strategy_original = NormalizedStrategy.from_dict(strategy_json)
@@ -93,7 +93,7 @@ def step_when_solicito_traducir(context, base_datos):
     context.base_datos = base_datos
 
     # WISHFUL THINKING: invocar servicio que NO existe aún
-    from apps.acquisition.application.translation_service import TranslationService
+    from apps.acquisition.translation.application.translation_service import TranslationService
 
     service = TranslationService()
 
@@ -138,7 +138,7 @@ def step_then_consulta_compatible_sintaxis(context, base_datos):
     - Barra clara de "compatible con dialecto" por base
     """
     # WISHFUL THINKING: usar módulo de aserciones que NO existe aún
-    from apps.acquisition.testing.assertions import SyntaxValidator
+    from apps.acquisition.shared.testing.assertions import SyntaxValidator
 
     validator = SyntaxValidator()
 
@@ -198,7 +198,7 @@ def step_then_preserva_logica(context):
     - Blinda el significado de la estrategia en la traducción
     """
     # WISHFUL THINKING: usar verificador semántico que NO existe aún
-    from apps.acquisition.testing.assertions import LogicPreservationChecker
+    from apps.acquisition.shared.testing.assertions import LogicPreservationChecker
 
     checker = LogicPreservationChecker()
 
@@ -286,7 +286,7 @@ def step_then_trazabilidad(context):
     - Explicabilidad y reproducibilidad sin tocar infraestructura
     """
     # WISHFUL THINKING: usar módulo de aserciones de traza que NO existe aún
-    from apps.acquisition.testing.assertions import TraceValidator
+    from apps.acquisition.shared.testing.assertions import TraceValidator
 
     validator = TraceValidator()
 
@@ -329,7 +329,7 @@ def step_then_advertencias(context, advertencias):
     - Cubre diferencia de capacidades entre targets (año en UI vs query)
     """
     # WISHFUL THINKING: usar módulo de validación de warnings que NO existe aún
-    from apps.acquisition.testing.assertions import WarningValidator
+    from apps.acquisition.shared.testing.assertions import WarningValidator
 
     validator = WarningValidator()
 
