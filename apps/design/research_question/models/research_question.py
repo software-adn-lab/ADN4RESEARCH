@@ -58,6 +58,7 @@ class ResearchQuestion(models.Model):
     stage = models.ForeignKey('project.Stage', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
     researcher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        
         on_delete=models.SET_NULL,
         related_name='research_questions',
         null=True

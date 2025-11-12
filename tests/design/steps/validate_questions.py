@@ -10,7 +10,7 @@ project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 fake =Faker()
 
-@step('que la etapa de {nombre_etapa} está abierta')
+@step('la etapa de {nombre_etapa} está abierta')
 def step_impl(context, nombre_etapa):
     context.stage = Stage.objects.create(
         project=context.project,

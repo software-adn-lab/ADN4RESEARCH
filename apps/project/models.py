@@ -46,7 +46,7 @@ class Membership(models.Model):
 class Stage(models.Model):
     class Status(models.TextChoices):
         INACTIVE = 'INACTIVE', 'Inactive'
-        OPENED = 'OPENED', 'Opened'
+        OPEN = 'OPENED', 'Opened'
         CLOSED = 'CLOSED', 'Closed'
 
     opened_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='opened_stages')

@@ -59,38 +59,70 @@ class ResearchQuestionService:
     def can_submit_question(self, research_question: ResearchQuestion) -> bool:
         return research_question.can_submit_for_review()
     
+    def add_research_question(self, project: Project, research_framework, suggested_question, motivation, researcher, framework_fields):
+        """Crear una nueva pregunta de investigación con todos los atributos necesarios."""
+        return ResearchQuestion.objects.create(
+            project=project,
+            research_framework=research_framework,
+            suggested_question=suggested_question,
+            motivation=motivation,
+            researcher=researcher,
+            framework_fields=framework_fields
+        )
+    
+    def update_research_question(self, question_id, user, suggested_question=None, motivation=None, framework_fields=None):
+        question = self.get_research_question_by_id(question_id, user=user)
+        update_fields = []
+        # Solo actualizar campos permitidos si se proporcionan
+        if suggested_question is not None:
+            question.suggested_question = suggested_question
+            update_fields.append('suggested_question')
+        
+        if motivation is not None:
+            question.motivation = motivation
+            update_fields.append('motivation')
+        
+        if framework_fields is not None:
+            question.framework_fields = framework_fields
+            update_fields.append('framework_fields')
+        if update_fields:
+            update_fields.extend(['status', 'modified_at'])
+            question.save(update_fields=update_fields)
+        return question
+    
     @transaction.atomic
     def autosave_question(self, data, user, project_id):
         question_id = data.get('id') or None
         framework_id = data.get('research_framework')
-        researcher_instance = user
         
         framework = self.get_framework_by_id(framework_id)
-        project = Project.objects.get(id=project_id) # Obtener el proyecto
+        project = Project.objects.get(id=project_id)
         
         framework_fields_data = {
             key.replace('framework_fields[', '').replace(']', ''): value
             for key, value in data.items() if key.startswith('framework_fields[')
         }
+        
         if question_id:
-            question = self.get_research_question_by_id(question_id, user=researcher_instance)
-            question.research_framework = framework
-            question.researcher = researcher_instance
-            question.motivation = data.get('motivation', '')
-            question.framework_fields = framework_fields_data
-            question.suggested_question = data.get('suggested_question', '')
-            question.project = project # Asegurarse de que el proyecto esté asignado
-            question.save()
-        else: 
-            question = ResearchQuestion.objects.create(
-                project=project, # Asignar el proyecto en la creación
+            # Usar el método update_research_question
+            question = self.update_research_question(
+                question_id=question_id,
+                user=user,
+                suggested_question=data.get('suggested_question', ''),
+                motivation=data.get('motivation', ''),
+                framework_fields=framework_fields_data
+            )
+        else:
+            # Usar el método add_research_question
+            question = self.add_research_question(
+                project=project,
                 research_framework=framework,
                 suggested_question=data.get('suggested_question', ''),
                 motivation=data.get('motivation', ''),
-                researcher=researcher_instance,
-                framework_fields=framework_fields_data,
-                
+                researcher=user,
+                framework_fields=framework_fields_data
             )
+        
         return question
     
     def get_all_questions_by_user_and_project(self, user, project_id: int):
@@ -104,15 +136,6 @@ class ResearchQuestionService:
             project=project,
             status=status
         ).order_by('-modified_at')
-    
-    def add_research_question(self, project: Project, suggested_question, suggester, status):
-        # Implementation to add a research question to the project
-        ResearchQuestion.objects.create(
-            project=project,
-            suggested_question=suggested_question,
-            suggester=suggester,
-            status=status
-        )
     
     def get_frameworks(self, request):
         frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=request.user))
