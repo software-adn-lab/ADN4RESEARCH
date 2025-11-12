@@ -20,6 +20,10 @@ Plataforma Django para gestion de **Systematic Literature Reviews (SLR)** dividi
 - **Frontend:** TailwindCSS + DaisyUI
 - **Testing:** Behave (BDD)
 - **Container:** Docker + Docker Compose
+- **Extra Dependency nltk:** execute a script or bash with nltk.download('punkt') and nltk.download('averaged_perceptron_tagger')
+
+---
+
 
 ## Inicio Rapido
 
