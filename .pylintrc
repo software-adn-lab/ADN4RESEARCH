@@ -14,6 +14,7 @@ disable=
     R0201,  # no-self-use
     R0903,  # too-few-public-methods
     E1101,  # no-member
+    W0718,  # no-else-return
 
 [FORMAT]
 # Keep a reasonable line length to play nice with tools/formatters

@@ -11,6 +11,7 @@ the same interface.
 from typing import Dict
 import os
 import logging
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,32 @@ class DefaultLLMClient(LLMClient):
     """
 
     def generate_opening_message(self, subtheme):
-        tags = (
-            (subtheme.theme.name.lower().replace(" ", "_") + ", " + subtheme.name.lower().replace(" ", "_"))
-            if hasattr(subtheme, "theme") else "interpretation"
-        )
+        # Generate tags from theme, subtheme, and central codes
+        tag_list = []
+
+        if hasattr(subtheme, "theme") and subtheme.theme:
+            theme_tag = subtheme.theme.name.lower().replace(" ", "_")
+            tag_list.append(theme_tag)
+
+        if hasattr(subtheme, "name") and subtheme.name:
+            # Extract key words from subtheme name
+            subtheme_words = [
+                word.lower().replace(":", "").strip()
+                for word in subtheme.name.split()
+                if len(word) > 3 and word.lower() not in ["subtema", "retos", "tema"]
+            ]
+            tag_list.extend(subtheme_words[:2])  # Add first 2 relevant words
+
+        # Add a tag from central codes if available
+        if hasattr(subtheme, "central_codes") and subtheme.central_codes:
+            # Use first central code as a tag (simplified)
+            first_code = subtheme.central_codes[0].lower().replace(" ", "_")
+            # Extract main concept (first word if multi-word)
+            code_tag = first_code.split("_")[0] if "_" in first_code else first_code
+            if code_tag not in tag_list:
+                tag_list.append(code_tag)
+
+        tags = ", ".join(tag_list) if tag_list else "interpretation"
 
         body = (
             f"Asistiendo en la interpretación del Subtema: {getattr(subtheme, 'name', 'Subtema')}. "
@@ -78,14 +101,6 @@ class GeminiLLMClient(LLMClient):
     """
 
     def __init__(self, api_key: str | None = None, model: str | None = None):
-        try:
-            import google.generativeai as genai
-        except Exception as e:  # ImportError or other import-time errors
-            raise RuntimeError(
-                "google.generativeai is required for GeminiLLMClient but it's not installed. "
-                "Install with `pip install google-generative-ai`"
-            ) from e
-
         self.genai = genai
         key = api_key or os.getenv("GEMINI_API_KEY")
         if not key:

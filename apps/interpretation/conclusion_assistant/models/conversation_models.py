@@ -28,3 +28,9 @@ class ConversationTrace(models.Model):
 
     def __str__(self):
         return f"{self.role} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_tags_list(self):
+        """Return tags as a list, splitting by comma."""
+        if not self.tags:
+            return []
+        return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
