@@ -1,25 +1,27 @@
 """
-Deduplicator service for removing duplicate studies.
+Deduplicator service for removing duplicate studies with intelligent merging.
 
-ESTRATEGIA:
-1. DOI normalizado tiene prioridad sobre título
-2. Si un estudio tiene DOI, se usa como clave de deduplicación
-3. Si no tiene DOI, se usa el título normalizado
-4. Se mantiene la primera ocurrencia de cada duplicado
+ESTRATEGIA (2-Pass + Fusion):
+1. Primera pasada: Indexar por DOI (más confiable)
+2. Segunda pasada: Indexar por título normalizado
+3. Fusión inteligente: Si mismo título pero uno tiene DOI y otro no,
+   enriquece el registro sin DOI con el DOI encontrado
 
-EDGE CASE CONOCIDO (Record Linkage):
+EDGE CASE RESUELTO (Record Linkage):
 Si el estudio A tiene DOI y el estudio B (mismo paper) no tiene DOI:
-- A -> key: "doi::10.1234/abc"
-- B -> key: "title::machine learning"
-- NO se detectarán como duplicados (diferentes claves)
+- A -> DOI: "10.1234/abc", Title: "Machine Learning"
+- B -> DOI: None, Title: "Machine Learning"
+→ Resultado: 1 estudio con DOI="10.1234/abc" (fusionado)
 
-Esto es una limitación conocida de la estrategia de "single-pass deduplication".
-Para MVP es aceptable. Para producción avanzada, considerar:
-- Estrategia de doble pasada (agrupar por DOI, luego por título, luego cruzar)
-- Fuzzy matching de títulos para variaciones menores
+La fusión permite:
+- Enriquecer datos automáticamente
+- Evitar duplicados cross-source (Scopus con DOI + IEEE sin DOI)
+- Maximizar calidad de metadatos
+
+MEJORAS FUTURAS (si es necesario):
+- Fuzzy matching de títulos para variaciones menores (Levenshtein distance)
 - Clustering jerárquico de registros
-
-Documentado para: Revisión técnica pre-producción
+- Fusión de otros campos (autores, abstract, etc.)
 """
 
 from apps.acquisition.shared.domain.entities.study import Study
@@ -40,48 +42,75 @@ class Deduplicator:
 
     def deduplicate(self, studies: list[Study]) -> list[Study]:
         """
-        Remove duplicate studies from the list.
+        Remove duplicate studies from the list with intelligent merging.
 
-        Reglas:
-        1. Si estudio tiene DOI: clave = "doi::{normalize_doi(doi)}"
-        2. Si no tiene DOI: clave = "title::{normalize_title(title)}"
-        3. Primera ocurrencia se mantiene, siguientes se descartan
+        Estrategia de 2 pasadas + fusión:
+        1. Primera pasada: agrupa por DOI (más confiable)
+        2. Segunda pasada: agrupa por título normalizado
+        3. Fusión: si encontramos mismo título pero uno tiene DOI y otro no,
+           enriquece el registro sin DOI con el DOI encontrado
+
+        Esto resuelve el edge case:
+        - Scopus: "Machine Learning" DOI=10.1234/abc
+        - IEEE:   "Machine Learning" DOI=None
+        → Resultado: 1 estudio con DOI=10.1234/abc (fusionado)
 
         Args:
             studies: List of studies to deduplicate
 
         Returns:
-            List of unique studies (mantiene orden de entrada)
+            List of unique studies (mantiene orden, enriquecidos con fusión)
 
         Ejemplos:
             >>> s1 = Study(title="Machine Learning", link="url1", source="Scopus", doi="10.1234/abc")
-            >>> s2 = Study(title="Machine Learning", link="url2", source="IEEE", doi="10.1234/abc")
+            >>> s2 = Study(title="Machine Learning", link="url2", source="IEEE", doi=None)
             >>> dedup = Deduplicator()
             >>> result = dedup.deduplicate([s1, s2])
             >>> len(result)
             1
-            >>> result[0].source
-            'Scopus'
+            >>> result[0].doi.value
+            '10.1234/abc'
         """
         if not studies:
             return []
 
-        seen_keys: dict[str, bool] = {}
-        unique_studies: list[Study] = []
+        # Paso 1: Indexar por DOI (los que tienen)
+        by_doi: dict[str, Study] = {}
+        by_title: dict[str, Study] = {}
+        result: list[Study] = []
 
         for study in studies:
-            # Determinar clave de deduplicación
+            # Si tiene DOI, indexar por DOI
             if study.doi:
-                # DOI tiene prioridad (acceder al valor del value object)
-                key = f"doi::{normalize_doi(study.doi.value)}"
+                doi_key = normalize_doi(study.doi.value)
+                if doi_key not in by_doi:
+                    by_doi[doi_key] = study
+                    result.append(study)
+                # else: duplicado por DOI, ignorar
             else:
-                # Fallback a título
-                key = f"title::{normalize_title(study.title)}"
+                # Si no tiene DOI, indexar por título
+                title_key = normalize_title(study.title)
+                if title_key not in by_title:
+                    by_title[title_key] = study
+                    result.append(study)
+                # else: duplicado por título, ignorar
 
-            # Si no hemos visto esta clave, mantener el estudio
-            if key not in seen_keys:
-                seen_keys[key] = True
-                unique_studies.append(study)
-            # else: duplicado, se descarta silenciosamente
+        # Paso 2: Fusión inteligente
+        # Para cada estudio sin DOI, verificar si existe uno con DOI y mismo título
+        for title_key, study_without_doi in list(by_title.items()):
+            # Buscar en by_doi si hay alguno con el mismo título
+            for study_with_doi in by_doi.values():
+                if normalize_title(study_with_doi.title) == title_key:
+                    # ¡Encontramos el mismo paper!
+                    # Enriquecer el estudio sin DOI con el DOI del otro
+                    from apps.acquisition.shared.domain.value_objects import DOI
+                    study_without_doi.doi = DOI(study_with_doi.doi.value)
 
-        return unique_studies
+                    # Remover de resultado para evitar duplicado
+                    # (el que tiene DOI ya está en resultado)
+                    if study_without_doi in result:
+                        result.remove(study_without_doi)
+
+                    break  # Ya encontramos match, salir del loop
+
+        return result
