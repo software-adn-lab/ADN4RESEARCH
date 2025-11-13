@@ -50,6 +50,15 @@ htmlcov/
 # BDD Test results
 tests/TESTS-*.xml
 
-# Claude-related local files
-claude/
+# Claude / MCP (archivos locales, no versionar)
+.claude/
+.claude/**
+
+.mcp.json
+*.mcp.json
+
+# Archivos locales de configuración
+*settings.local.json
+*config.local.json
+*.local.json
 
