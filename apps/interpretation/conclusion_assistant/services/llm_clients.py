@@ -27,6 +27,14 @@ class LLMClient:
 
     def generate_refined_proposition(self, original_text: str, refinement_instruction: str) -> str:
         raise NotImplementedError()
+    
+    def propose_code_normalization(self, codes_data: list) -> list:
+        """Propose normalization of initial codes by merging similar ones."""
+        raise NotImplementedError()
+    
+    def propose_theme_structure(self, codes_data: list) -> list:
+        """Propose high-level theme structure from normalized codes."""
+        raise NotImplementedError()
 
 
 class DefaultLLMClient(LLMClient):
@@ -89,6 +97,94 @@ class DefaultLLMClient(LLMClient):
             "de zonas horarias geográficamente distribuidas, resultando en retrasos "
             "críticos en los bucles de feedback según el marco teórico de la SLR."
         )
+    
+    def propose_code_normalization(self, codes_data: list) -> list:
+        """Propose normalization of initial codes - deterministic placeholder."""
+        # Group similar codes for demonstration
+        proposals = []
+        
+        # Merge repository mining codes
+        if any(c['code'] in ['#repository_mining', '#github'] for c in codes_data):
+            proposals.append({
+                'normalized_code': '#extracción_de_repositorios_SWH',
+                'original_codes': ['#repository_mining', '#github'],
+                'rationale': 'Ambos códigos se refieren al proceso de extracción de datos de repositorios.'
+            })
+        
+        # Merge qualitative method codes
+        if any(c['code'] in ['#qualitative_method', '#thematic_analysis'] for c in codes_data):
+            proposals.append({
+                'normalized_code': '#análisis_temático_cualitativo',
+                'original_codes': ['#qualitative_method', '#thematic_analysis'],
+                'rationale': 'Estos códigos describen métodos cualitativos relacionados.'
+            })
+        
+        # Merge inheritance-related codes
+        if any(c['code'] in ['#vague_inheritance', '#inherited_debt'] for c in codes_data):
+            proposals.append({
+                'normalized_code': '#deuda_heredada_de_framework',
+                'original_codes': ['#vague_inheritance', '#inherited_debt'],
+                'rationale': 'Ambos códigos se relacionan con problemas de herencia y deuda técnica.'
+            })
+        
+        return proposals
+    
+    def propose_theme_structure(self, codes_data: list) -> list:
+        """Propose theme structure - deterministic placeholder."""
+        # Group codes by RQ focus
+        rq1_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ1')]
+        rq2_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ2')]
+        
+        proposals = []
+        
+        if rq1_codes:
+            proposals.append({
+                'theme_name': 'Métodos de Descubrimiento de Anti-Patrones',
+                'description': 'Técnicas y metodologías para identificar anti-patrones en software',
+                'rq_focus': 'RQ1',
+                'codes': [c['code'] for c in rq1_codes],
+                'subthemes': [
+                    {
+                        'name': 'Técnicas de Extracción',
+                        'codes': [c['code'] for c in rq1_codes[:len(rq1_codes)//2]]
+                    }
+                ],
+                'rationale': 'Agrupa los códigos relacionados con métodos de identificación'
+            })
+        
+        if rq2_codes:
+            # Group RQ2 codes into subcategories
+            org_codes = [c for c in rq2_codes if 'pressure' in c['code'].lower()]
+            arch_codes = [c for c in rq2_codes if 'architecture' in c['code'].lower() or 'framework' in c['code'].lower()]
+            human_codes = [c for c in rq2_codes if 'skill' in c['code'].lower() or 'misuse' in c['code'].lower()]
+            
+            subthemes = []
+            if org_codes:
+                subthemes.append({
+                    'name': 'Factores Organizacionales',
+                    'codes': [c['code'] for c in org_codes]
+                })
+            if arch_codes:
+                subthemes.append({
+                    'name': 'Factores Arquitectónicos',
+                    'codes': [c['code'] for c in arch_codes]
+                })
+            if human_codes:
+                subthemes.append({
+                    'name': 'Factores Humanos/Cognitivos',
+                    'codes': [c['code'] for c in human_codes]
+                })
+            
+            proposals.append({
+                'theme_name': 'Factores Determinantes de Anti-Patrones',
+                'description': 'Factores que causan o contribuyen a la aparición de anti-patrones',
+                'rq_focus': 'RQ2',
+                'codes': [c['code'] for c in rq2_codes],
+                'subthemes': subthemes,
+                'rationale': 'Agrupa los códigos relacionados con causas de anti-patrones'
+            })
+        
+        return proposals
 
 
 class GeminiLLMClient(LLMClient):
@@ -176,6 +272,73 @@ class GeminiLLMClient(LLMClient):
         )
 
         return self._generate(prompt, max_output_tokens=256)
+    
+    def propose_code_normalization(self, codes_data: list) -> list:
+        """Use Gemini to propose code normalization."""
+        codes_str = "\n".join([f"- {c['code']} (frecuencia: {c['frequency']})" for c in codes_data])
+        
+        prompt = (
+            "Eres un experto en análisis cualitativo y codificación temática. "
+            "Analiza los siguientes códigos (tags) de una revisión sistemática y propón fusiones "
+            "de códigos similares o relacionados para reducir redundancia.\n\n"
+            f"Códigos iniciales:\n{codes_str}\n\n"
+            "Para cada propuesta de fusión, devuelve en formato JSON:\n"
+            "[\n"
+            '  {"normalized_code": "nuevo_codigo", "original_codes": ["codigo1", "codigo2"], '
+            '"rationale": "explicación breve"}\n'
+            "]\n\n"
+            "Devuelve solo el JSON, sin explicaciones adicionales."
+        )
+        
+        try:
+            response_text = self._generate(prompt, max_output_tokens=512)
+            # Parse JSON response
+            import json
+            proposals = json.loads(response_text)
+            return proposals
+        except Exception as e:
+            logger.warning(f"Failed to parse Gemini response for code normalization: {e}")
+            # Fallback to default implementation
+            return DefaultLLMClient().propose_code_normalization(codes_data)
+    
+    def propose_theme_structure(self, codes_data: list) -> list:
+        """Use Gemini to propose theme structure."""
+        codes_str = "\n".join([
+            f"- {c['code']} (frecuencia: {c['frequency']}, RQ: {c.get('rq_focus', 'N/A')})"
+            for c in codes_data
+        ])
+        
+        prompt = (
+            "Eres un experto en Teoría Fundamentada y análisis temático cualitativo. "
+            "A partir de los siguientes códigos normalizados de una revisión sistemática, "
+            "propón una estructura jerárquica de temas y subtemas que sintetice los hallazgos.\n\n"
+            f"Códigos normalizados:\n{codes_str}\n\n"
+            "Para cada tema, devuelve en formato JSON:\n"
+            "[\n"
+            '  {\n'
+            '    "theme_name": "Nombre del Tema",\n'
+            '    "description": "Descripción del tema",\n'
+            '    "rq_focus": "RQ1 o RQ2",\n'
+            '    "codes": ["codigo1", "codigo2"],\n'
+            '    "subthemes": [\n'
+            '      {"name": "Subtema 1", "codes": ["codigo1"]}\n'
+            '    ],\n'
+            '    "rationale": "Justificación de la agrupación"\n'
+            '  }\n'
+            "]\n\n"
+            "Devuelve solo el JSON, sin explicaciones adicionales."
+        )
+        
+        try:
+            response_text = self._generate(prompt, max_output_tokens=1024)
+            # Parse JSON response
+            import json
+            proposals = json.loads(response_text)
+            return proposals
+        except Exception as e:
+            logger.warning(f"Failed to parse Gemini response for theme structure: {e}")
+            # Fallback to default implementation
+            return DefaultLLMClient().propose_theme_structure(codes_data)
 
 
 def get_default_client() -> LLMClient:
