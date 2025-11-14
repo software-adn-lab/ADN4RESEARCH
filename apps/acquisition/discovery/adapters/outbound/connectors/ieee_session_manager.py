@@ -122,3 +122,35 @@ class IeeeSessionManager(SessionManager):
             timeout=10,
             allow_redirects=False
         )
+
+    def _test_direct_access(self) -> requests.Response:
+        """
+        Prueba acceso directo por IP (sin cookies).
+
+        Si estás en la red de la universidad, IEEE debería permitir
+        acceso directo por la IP institucional.
+        """
+        # Crear sesión temporal SIN cookies
+        temp_session = requests.Session()
+        temp_session.headers.update({
+            'User-Agent': self.USER_AGENT,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        })
+
+        # Request de prueba al endpoint de búsqueda
+        # (el que descubriste en TEST 3)
+        IEEE_SEARCH_API = "https://ieeexplore.ieee.org/rest/search"
+
+        payload = {
+            "queryText": "test",
+            "rowsPerPage": 1,
+            "pageNumber": 1
+        }
+
+        return temp_session.post(
+            IEEE_SEARCH_API,
+            json=payload,
+            timeout=10,
+            allow_redirects=False
+        )

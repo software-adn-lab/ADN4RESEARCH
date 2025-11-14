@@ -73,17 +73,56 @@ class SessionManager(ABC):
         """
         Asegura que hay sesión válida.
 
+        Estrategia:
+        1. Intentar acceso directo por IP (si estás en red universitaria)
+        2. Si falla, intentar con cookies guardadas
+        3. Si falla, autenticar con Playwright
+
         Returns:
-            True si hay sesión válida (cargada o recién autenticada)
+            True si hay sesión válida (IP, cookies o recién autenticada)
         """
-        # Intentar cargar cookies guardadas
-        if self._has_valid_session():
-            logger.info("✓ Sesión válida detectada")
+        # 1. PRIMERO: Intentar acceso directo por IP (red universitaria)
+        logger.info("🔍 Verificando acceso directo por IP (red universitaria)...")
+        if self._has_direct_access():
+            logger.info("✅ Acceso directo por IP detectado (estás en la red universitaria)")
+            logger.info("   No se requiere autenticación ni cookies")
             return True
 
-        # Si no hay sesión válida, autenticar
-        logger.info("⚠️  No hay sesión válida, autenticando...")
+        # 2. SEGUNDO: Intentar cargar cookies guardadas
+        logger.info("⚠️  Sin acceso directo. Verificando cookies guardadas...")
+        if self._has_valid_session():
+            logger.info("✓ Sesión válida con cookies detectada")
+            return True
+
+        # 3. TERCERO: Autenticar con Playwright
+        logger.info("⚠️  No hay sesión válida, autenticando con Playwright...")
         return self._authenticate()
+
+    def _has_direct_access(self) -> bool:
+        """
+        Verifica si hay acceso directo por IP (red universitaria).
+
+        Returns:
+            True si se puede acceder sin cookies (IP autorizada)
+        """
+        try:
+            # Intentar request de prueba SIN cookies
+            response = self._test_direct_access()
+
+            # Si responde 200, la IP está autorizada
+            if response.status_code == 200:
+                logger.info("   ✓ Request de prueba exitoso sin cookies")
+                # Limpiar cookies viejas - no las necesitamos
+                self.session.cookies.clear()
+                logger.debug("   Cookies limpiadas (no necesarias con acceso por IP)")
+                return True
+            else:
+                logger.debug(f"   Request directo falló: {response.status_code}")
+                return False
+
+        except Exception as e:
+            logger.debug(f"   Sin acceso directo: {e}")
+            return False
 
     def _has_valid_session(self) -> bool:
         """
@@ -212,6 +251,16 @@ class SessionManager(ABC):
     def _test_session(self) -> requests.Response:
         """
         Hace request de prueba para verificar si sesión es válida.
+
+        Returns:
+            Response del request de prueba
+        """
+        pass
+
+    @abstractmethod
+    def _test_direct_access(self) -> requests.Response:
+        """
+        Hace request de prueba SIN cookies para verificar acceso directo por IP.
 
         Returns:
             Response del request de prueba

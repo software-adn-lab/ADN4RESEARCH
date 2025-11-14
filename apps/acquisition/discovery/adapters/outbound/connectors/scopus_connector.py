@@ -1,16 +1,31 @@
 """
-Scopus Connector con sesión persistente.
+Scopus Connector con sesión persistente y detección automática de red.
 
-Flujo automático:
-1. Primera búsqueda: Autentica con Playwright → guarda cookies → busca con requests
-2. Siguientes búsquedas: Usa cookies guardadas → busca directo con requests (sin browser)
+DETECCIÓN AUTOMÁTICA DE RED:
+- EN LA RED universitaria (EPN): Acceso directo por IP → sin login → sin cookies → RÁPIDO
+- FUERA de la red: Autenticación automática con Playwright → guarda cookies → usa cookies
+
+FLUJO:
+1. Primera búsqueda:
+   a. Intenta acceso directo por IP (red universitaria)
+   b. Si falla: Autentica con Playwright → guarda cookies → busca con requests
+2. Siguientes búsquedas:
+   a. Si estás en la red: Acceso directo (sin cookies)
+   b. Si estás fuera: Usa cookies guardadas
 3. Si cookies expiran: Re-autentica automáticamente
 
-NOTA: Este conector requiere identificar el endpoint de búsqueda de Scopus.
-      Posibles endpoints a investigar:
-      - /api/search
-      - /results/results.uri
-      - Algún endpoint REST interno
+ESTADO ACTUAL:
+⚠️  TODO: Identificar endpoint de búsqueda de Scopus mediante captura XHR
+    Endpoints posibles:
+    - /api/search
+    - /results/results.uri
+    - Algún endpoint REST interno
+
+    Proceso para descubrir endpoint:
+    1. Ejecutar navegador con Playwright
+    2. Hacer búsqueda de prueba en Scopus
+    3. Capturar peticiones XHR/Fetch
+    4. Identificar endpoint que retorna resultados en JSON
 """
 from typing import Iterable, Dict, Any
 import logging

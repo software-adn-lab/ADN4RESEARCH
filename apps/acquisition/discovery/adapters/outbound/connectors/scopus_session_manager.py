@@ -122,3 +122,25 @@ class ScopusSessionManager(SessionManager):
             timeout=10,
             allow_redirects=False
         )
+
+    def _test_direct_access(self) -> requests.Response:
+        """
+        Prueba acceso directo por IP (sin cookies).
+
+        Si estás en la red de la universidad, Scopus debería permitir
+        acceso directo por la IP institucional.
+        """
+        # Crear sesión temporal SIN cookies
+        temp_session = requests.Session()
+        temp_session.headers.update({
+            'User-Agent': self.USER_AGENT,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        })
+
+        # Request de prueba a la página principal de Scopus
+        # Si la IP está autorizada, responderá 200
+        return temp_session.get(
+            self.SCOPUS_HOME,
+            timeout=10,
+            allow_redirects=False
+        )

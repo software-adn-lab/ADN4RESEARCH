@@ -1,11 +1,24 @@
 """
-IEEE Xplore Connector usando Playwright para scraping via EZproxy.
+IEEE Xplore Connector usando SOLO Playwright (sin session manager).
 
-Este conector:
-1. Autentica a través de bvirtual.epn.edu.ec (EZproxy)
+⚠️  NOTA: Este conector es una versión legacy/alternativa.
+    Para uso normal, usa IeeeConnector (ieee_connector.py) que:
+    - Detecta automáticamente red universitaria
+    - Usa session manager con cookies persistentes
+    - Es más rápido (no abre navegador en cada búsqueda)
+
+CASOS DE USO de este connector:
+- Testing y debugging de autenticación EZproxy
+- Referencia de cómo funciona Playwright con IEEE
+- Fallback si session manager falla
+
+FUNCIONAMIENTO:
+1. Autentica a través de bvirtual.epn.edu.ec (EZproxy) con Playwright
 2. Ejecuta búsquedas en IEEE Xplore
 3. Captura resultados del endpoint /rest/search
 4. Normaliza resultados al contrato esperado
+
+IMPORTANTE: Abre navegador en CADA búsqueda (lento).
 """
 from typing import Iterable, Dict, Any, Optional
 from playwright.sync_api import sync_playwright, Page, BrowserContext

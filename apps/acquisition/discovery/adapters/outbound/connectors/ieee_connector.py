@@ -1,12 +1,25 @@
 """
-IEEE Xplore Connector con sesión persistente.
+IEEE Xplore Connector con sesión persistente y detección automática de red.
 
-Flujo automático:
-1. Primera búsqueda: Autentica con Playwright → guarda cookies → busca con requests
-2. Siguientes búsquedas: Usa cookies guardadas → busca directo con requests (sin browser)
+DETECCIÓN AUTOMÁTICA DE RED:
+- EN LA RED universitaria (EPN): Acceso directo por IP → sin login → sin cookies → RÁPIDO
+- FUERA de la red: Autenticación automática con Playwright → guarda cookies → usa cookies
+
+FLUJO:
+1. Primera búsqueda:
+   a. Intenta acceso directo por IP (red universitaria)
+   b. Si falla: Autentica con Playwright → guarda cookies → busca con requests
+2. Siguientes búsquedas:
+   a. Si estás en la red: Acceso directo (sin cookies)
+   b. Si estás fuera: Usa cookies guardadas
 3. Si cookies expiran: Re-autentica automáticamente
 
-NO abre navegador en búsquedas subsecuentes (rápido y eficiente).
+CARACTERÍSTICAS:
+- NO abre navegador en búsquedas subsecuentes (rápido y eficiente)
+- Usa endpoint /rest/search para obtener JSON directo (no scraping HTML)
+- Rate limiting con variación aleatoria (anti-detección)
+- Retry automático con backoff exponencial
+- Paginación automática
 """
 from typing import Iterable, Dict, Any
 import logging
