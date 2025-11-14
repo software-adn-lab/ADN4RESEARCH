@@ -62,3 +62,11 @@ tests/TESTS-*.xml
 *config.local.json
 *.local.json
 
+# Session files (cookies, authentication)
+.session/
+.sessions/
+*_session.json
+*_response.json
+*_response.html
+*.png
+captured_*.json

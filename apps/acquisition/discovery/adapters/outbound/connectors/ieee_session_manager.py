@@ -15,9 +15,13 @@ class IeeeSessionManager(SessionManager):
     """Maneja sesión persistente de IEEE Xplore vía EZproxy EPN"""
 
     # URLs - SIEMPRE a través de EZproxy (puerto 2097)
+    # EZproxy URLs (solo para autenticación)
     IEEE_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://ieeexplore.ieee.org/Xplore/home.jsp"
     IEEE_PROXY_HOME = "https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp"
-    IEEE_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2097/rest/search"
+
+    # IEEE directo (para búsquedas con cookies)
+    IEEE_DIRECT_SEARCH = "https://ieeexplore.ieee.org/rest/search"
+    IEEE_DIRECT_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
 
     def __init__(self, username: str, password: str, headless: bool = True):
         super().__init__(
@@ -130,7 +134,7 @@ class IeeeSessionManager(SessionManager):
         }
 
         return self.session.post(
-            self.IEEE_PROXY_SEARCH,
+            self.IEEE_DIRECT_SEARCH,  # Búsqueda DIRECTA con cookies
             json=payload,
             timeout=10,
             allow_redirects=False
@@ -149,20 +153,16 @@ class IeeeSessionManager(SessionManager):
         temp_session = requests.Session()
         temp_session.headers.update({
             'User-Agent': self.USER_AGENT,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         })
 
-        # Request de prueba al endpoint de búsqueda VIA EZPROXY
-        payload = {
-            "queryText": "test",
-            "rowsPerPage": 1,
-            "pageNumber": 1
-        }
+        # Request de prueba a la homepage de IEEE VIA EZPROXY (GET en lugar de POST)
+        # Si estás en la red, retorna 200
+        # Si estás fuera, redirige a login (302)
+        ieee_home_ezproxy = "https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp"
 
-        return temp_session.post(
-            self.IEEE_PROXY_SEARCH,  # SIEMPRE a través de EZproxy
-            json=payload,
+        return temp_session.get(
+            ieee_home_ezproxy,
             timeout=10,
             allow_redirects=False  # Si redirige (302) = no estás en la red
         )

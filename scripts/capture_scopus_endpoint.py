@@ -18,6 +18,11 @@ import time
 import sys
 from pathlib import Path
 
+# Fix encoding for Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 print("=" * 80)
 print("CAPTURA DE ENDPOINT DE SCOPUS")
 print("=" * 80)
@@ -178,7 +183,7 @@ try:
         print()
 
         # Esperar a que cargue bien
-        time.sleep(2)
+        time.sleep(5)
 
         # Buscar campo de búsqueda (Scopus tiene varios selectores posibles)
         search_selectors = [
@@ -188,7 +193,12 @@ try:
             'input[placeholder*="Enter" i]',
             'textarea[name="query"]',
             '#searchfield',
-            '.searchField'
+            '.searchField',
+            'input[type="text"]',  # Más genérico
+            'input.MuiInputBase-input',  # Material UI
+            'textarea',  # Cualquier textarea
+            'input[aria-label*="search" i]',
+            'input[data-testid*="search" i]'
         ]
 
         search_box = None
@@ -220,19 +230,37 @@ try:
         else:
             print("   ✗ No se encontró campo de búsqueda automáticamente")
             print()
-            print("=" * 80)
-            print("MODO MANUAL")
-            print("=" * 80)
+
+            # Tomar screenshot para debugging
+            print("   📸 Tomando screenshot de la página para análisis...")
+            page.screenshot(path='scopus_homepage.png', full_page=True)
+            print("      Guardado: scopus_homepage.png")
             print()
-            print("Por favor, ejecuta una búsqueda MANUALMENTE en el navegador:")
-            print("  1. Busca 'machine learning'")
-            print("  2. Presiona Enter")
-            print("  3. Espera a que carguen los resultados")
+
+            # Intentar capturar el HTML del campo de búsqueda
+            print("   🔍 Buscando TODOS los inputs en la página...")
+            all_inputs = page.query_selector_all('input, textarea')
+            print(f"      Encontrados: {len(all_inputs)} campos de entrada")
+
+            for i, inp in enumerate(all_inputs[:10], 1):  # Solo primeros 10
+                try:
+                    tag = inp.evaluate('el => el.tagName')
+                    inp_type = inp.evaluate('el => el.type') if tag == 'INPUT' else 'N/A'
+                    inp_name = inp.evaluate('el => el.name')
+                    inp_id = inp.evaluate('el => el.id')
+                    inp_class = inp.evaluate('el => el.className')
+                    is_visible = inp.is_visible()
+                    print(f"      {i}. <{tag}> type={inp_type} name={inp_name} id={inp_id} visible={is_visible}")
+                except:
+                    pass
+
             print()
-            input("⏸️  Cuando termines, presiona Enter aquí para continuar...")
+            print("   ⚠️  El navegador permanecerá abierto 30 segundos para inspección manual.")
+            print("       Puedes hacer una búsqueda manualmente ahora si quieres.")
+            print("       El script capturará automáticamente todas las peticiones.")
             print()
-            print("⏳ Capturando peticiones adicionales (5 segundos)...")
-            time.sleep(5)
+            print("   ⏳ Capturando peticiones... (30 segundos)")
+            time.sleep(30)
 
         browser.close()
 
