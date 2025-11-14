@@ -49,3 +49,7 @@ htmlcov/
 
 # BDD Test results
 tests/TESTS-*.xml
+
+# Claude-related local files
+claude/
+
