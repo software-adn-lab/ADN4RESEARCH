@@ -45,9 +45,10 @@ class IeeeConnector(IAcademicConnector):
     - Usa endpoint /rest/search para obtener JSON directo
     """
 
-    # URLs
-    IEEE_SEARCH_API = "https://ieeexplore.ieee.org/rest/search"
-    IEEE_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
+    # URLs - SIEMPRE a través de EZproxy (puerto 2097)
+    # El EZproxy detecta automáticamente si estás en la red (IP) o fuera (cookies)
+    IEEE_SEARCH_API = "https://bvirtual.epn.edu.ec:2097/rest/search"
+    IEEE_HOME = "https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp"
 
     def __init__(
         self,

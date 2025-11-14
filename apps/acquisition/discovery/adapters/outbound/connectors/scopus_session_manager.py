@@ -14,9 +14,11 @@ logger = logging.getLogger(__name__)
 class ScopusSessionManager(SessionManager):
     """Maneja sesión persistente de Scopus vía EZproxy EPN"""
 
-    # URLs
+    # URLs - SIEMPRE a través de EZproxy (puerto 2057)
     SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com"
-    SCOPUS_HOME = "https://www.scopus.com"
+    SCOPUS_PROXY_HOME = "https://bvirtual.epn.edu.ec:2057/pages/home?display=basic#basic"
+    # TODO: Descubrir endpoint de búsqueda de Scopus
+    # SCOPUS_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2057/[ENDPOINT_A_DESCUBRIR]"
 
     def __init__(self, username: str, password: str, headless: bool = True):
         super().__init__(
@@ -116,19 +118,26 @@ class ScopusSessionManager(SessionManager):
             return False
 
     def _test_session(self) -> requests.Response:
-        """Prueba sesión con request simple a Scopus"""
+        """
+        Prueba sesión con cookies guardadas.
+
+        Intenta acceder a Scopus via EZproxy con las cookies.
+        Si estás FUERA de la red y las cookies son válidas → 200
+        """
         return self.session.get(
-            self.SCOPUS_HOME,
+            self.SCOPUS_PROXY_HOME,
             timeout=10,
             allow_redirects=False
         )
 
     def _test_direct_access(self) -> requests.Response:
         """
-        Prueba acceso directo por IP (sin cookies).
+        Prueba acceso directo por IP (sin cookies) al EZproxy.
 
-        Si estás en la red de la universidad, Scopus debería permitir
-        acceso directo por la IP institucional.
+        Si estás EN LA RED universitaria, el EZproxy detecta tu IP
+        y te deja pasar sin autenticación → 200
+
+        Si estás FUERA, te redirige al login → 302
         """
         # Crear sesión temporal SIN cookies
         temp_session = requests.Session()
@@ -137,10 +146,10 @@ class ScopusSessionManager(SessionManager):
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         })
 
-        # Request de prueba a la página principal de Scopus
+        # Request de prueba VIA EZPROXY
         # Si la IP está autorizada, responderá 200
         return temp_session.get(
-            self.SCOPUS_HOME,
+            self.SCOPUS_PROXY_HOME,  # SIEMPRE a través de EZproxy
             timeout=10,
-            allow_redirects=False
+            allow_redirects=False  # Si redirige (302) = no estás en la red
         )

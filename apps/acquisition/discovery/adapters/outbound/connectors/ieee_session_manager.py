@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 class IeeeSessionManager(SessionManager):
     """Maneja sesión persistente de IEEE Xplore vía EZproxy EPN"""
 
-    # URLs
+    # URLs - SIEMPRE a través de EZproxy (puerto 2097)
     IEEE_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://ieeexplore.ieee.org/Xplore/home.jsp"
-    IEEE_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
+    IEEE_PROXY_HOME = "https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp"
+    IEEE_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2097/rest/search"
 
     def __init__(self, username: str, password: str, headless: bool = True):
         super().__init__(
@@ -116,19 +117,33 @@ class IeeeSessionManager(SessionManager):
             return False
 
     def _test_session(self) -> requests.Response:
-        """Prueba sesión con request simple a IEEE"""
-        return self.session.get(
-            self.IEEE_HOME,
+        """
+        Prueba sesión con cookies guardadas.
+
+        Intenta acceder al endpoint de búsqueda de EZproxy con las cookies.
+        Si estás FUERA de la red y las cookies son válidas → 200
+        """
+        payload = {
+            "queryText": "test",
+            "rowsPerPage": 1,
+            "pageNumber": 1
+        }
+
+        return self.session.post(
+            self.IEEE_PROXY_SEARCH,
+            json=payload,
             timeout=10,
             allow_redirects=False
         )
 
     def _test_direct_access(self) -> requests.Response:
         """
-        Prueba acceso directo por IP (sin cookies).
+        Prueba acceso directo por IP (sin cookies) al EZproxy.
 
-        Si estás en la red de la universidad, IEEE debería permitir
-        acceso directo por la IP institucional.
+        Si estás EN LA RED universitaria, el EZproxy detecta tu IP
+        y te deja pasar sin autenticación → 200
+
+        Si estás FUERA, te redirige al login → 302
         """
         # Crear sesión temporal SIN cookies
         temp_session = requests.Session()
@@ -138,10 +153,7 @@ class IeeeSessionManager(SessionManager):
             'Content-Type': 'application/json'
         })
 
-        # Request de prueba al endpoint de búsqueda
-        # (el que descubriste en TEST 3)
-        IEEE_SEARCH_API = "https://ieeexplore.ieee.org/rest/search"
-
+        # Request de prueba al endpoint de búsqueda VIA EZPROXY
         payload = {
             "queryText": "test",
             "rowsPerPage": 1,
@@ -149,8 +161,8 @@ class IeeeSessionManager(SessionManager):
         }
 
         return temp_session.post(
-            IEEE_SEARCH_API,
+            self.IEEE_PROXY_SEARCH,  # SIEMPRE a través de EZproxy
             json=payload,
             timeout=10,
-            allow_redirects=False
+            allow_redirects=False  # Si redirige (302) = no estás en la red
         )

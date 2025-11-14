@@ -2,19 +2,24 @@
 
 Conectores para búsqueda en bases de datos académicas vía EZproxy institucional de la EPN.
 
-## 🎯 Detección Automática de Red
+## 🎯 Cómo Funciona (100% vía EZproxy)
 
-El sistema detecta automáticamente si estás en la red universitaria y ajusta el método de autenticación:
+**TODAS las peticiones van a través de EZproxy institucional:**
+- IEEE: `https://bvirtual.epn.edu.ec:2097/...`
+- Scopus: `https://bvirtual.epn.edu.ec:2057/...`
+
+El **EZproxy detecta automáticamente** tu ubicación:
 
 ### ✅ Dentro de la Red EPN
-- **Acceso directo por IP** (sin login, sin cookies)
-- **RÁPIDO**: No abre navegador
+- EZproxy detecta tu IP universitaria
+- **Te deja pasar SIN login** (HTTP 200)
 - **0 segundos** de autenticación
-- Solo hace request directo al endpoint
+- No necesita cookies ni navegador
 
 ### 🌍 Fuera de la Red EPN
-- **Login automático** con credenciales del `.env`
-- Usa Playwright para autenticarse (solo primera vez)
+- EZproxy detecta IP externa
+- **Te redirige al login** (HTTP 302)
+- Login automático con credenciales del `.env` (usando Playwright)
 - **Guarda cookies** en `.sessions/`
 - Búsquedas subsecuentes usan cookies (sin navegador)
 
@@ -118,10 +123,12 @@ EPN_PASS=tu_contraseña
     con requests
 ```
 
-## 📊 Endpoints Utilizados
+## 📊 Endpoints Utilizados (VÍA EZPROXY)
 
 ### IEEE Xplore
-- **Endpoint de búsqueda**: `POST https://ieeexplore.ieee.org/rest/search`
+- **URL de login**: `https://bvirtual.epn.edu.ec/login?url=http://ieeexplore.ieee.org/Xplore/home.jsp`
+- **URL después del login**: `https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp`
+- **Endpoint de búsqueda**: `POST https://bvirtual.epn.edu.ec:2097/rest/search`
 - **Payload**:
   ```json
   {
@@ -137,7 +144,9 @@ EPN_PASS=tu_contraseña
 - **Respuesta**: JSON con `records` array
 
 ### Scopus
-- ⚠️ **TODO**: Identificar endpoint
+- **URL de login**: `https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com`
+- **URL después del login**: `https://bvirtual.epn.edu.ec:2057/pages/home?display=basic#basic`
+- **Endpoint de búsqueda**: ⚠️ **TODO**: Descubrir endpoint mediante captura XHR
 
 ## 🧪 Testing
 
