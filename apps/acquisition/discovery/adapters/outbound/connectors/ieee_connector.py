@@ -236,8 +236,14 @@ class IeeeConnector(IAcademicConnector):
         author_names = []
         for author in authors_data:
             if isinstance(author, dict):
-                # Formato: {"fullName": "John Doe"}
-                name = author.get('fullName') or author.get('name', '')
+                # IEEE usa 'preferredName' como campo principal
+                # También puede tener 'fullName', 'name', o 'normalizedName'
+                name = (
+                    author.get('preferredName') or
+                    author.get('fullName') or
+                    author.get('name') or
+                    author.get('normalizedName', '')
+                )
                 if name:
                     author_names.append(name)
             elif isinstance(author, str):

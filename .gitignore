@@ -69,4 +69,22 @@ tests/TESTS-*.xml
 *_response.json
 *_response.html
 *.png
-captured_*.json
+captured_*.json# Archivos JSON de test/debug
+*_results.json
+*_api_candidate_*.json
+combined_results.json
+final_combined_results.json
+ieee_normalized_results.json
+scopus_test_results.json
+scopus_v2_results.json
+scopus_all_requests.json
+
+# Archivos HTML de debug
+scopus_*.html
+
+# Archivos temporales de Windows
+nul
+
+# Documentación de status (mover a docs/)
+SCOPUS_IEEE_STATUS.md
+SCOPUS_V2_FINAL_STATUS.md
