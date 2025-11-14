@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 fake = Faker()
 
 
-def before_scenario(context, scenario):
+def before_scenario(context, _):
     """Set up default user for interpretation tests."""
     # Create a test researcher user
     context.researcher = User.objects.create_user(

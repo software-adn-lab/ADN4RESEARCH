@@ -130,7 +130,7 @@ class DefaultLLMClient(LLMClient):
         return proposals
     
     def propose_theme_structure(self, codes_data: list) -> list:
-        """Propose theme structure - deterministic placeholder."""
+        """Propose Level 1 theme structure - deterministic placeholder."""
         # Group codes by RQ focus
         rq1_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ1')]
         rq2_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ2')]
@@ -143,44 +143,17 @@ class DefaultLLMClient(LLMClient):
                 'description': 'Técnicas y metodologías para identificar anti-patrones en software',
                 'rq_focus': 'RQ1',
                 'codes': [c['code'] for c in rq1_codes],
-                'subthemes': [
-                    {
-                        'name': 'Técnicas de Extracción',
-                        'codes': [c['code'] for c in rq1_codes[:len(rq1_codes)//2]]
-                    }
-                ],
+                'subthemes': [],  # Level 1: No subthemes
                 'rationale': 'Agrupa los códigos relacionados con métodos de identificación'
             })
         
         if rq2_codes:
-            # Group RQ2 codes into subcategories
-            org_codes = [c for c in rq2_codes if 'pressure' in c['code'].lower()]
-            arch_codes = [c for c in rq2_codes if 'architecture' in c['code'].lower() or 'framework' in c['code'].lower()]
-            human_codes = [c for c in rq2_codes if 'skill' in c['code'].lower() or 'misuse' in c['code'].lower()]
-            
-            subthemes = []
-            if org_codes:
-                subthemes.append({
-                    'name': 'Factores Organizacionales',
-                    'codes': [c['code'] for c in org_codes]
-                })
-            if arch_codes:
-                subthemes.append({
-                    'name': 'Factores Arquitectónicos',
-                    'codes': [c['code'] for c in arch_codes]
-                })
-            if human_codes:
-                subthemes.append({
-                    'name': 'Factores Humanos/Cognitivos',
-                    'codes': [c['code'] for c in human_codes]
-                })
-            
             proposals.append({
                 'theme_name': 'Factores Determinantes de Anti-Patrones',
                 'description': 'Factores que causan o contribuyen a la aparición de anti-patrones',
                 'rq_focus': 'RQ2',
                 'codes': [c['code'] for c in rq2_codes],
-                'subthemes': subthemes,
+                'subthemes': [],  # Level 1: No subthemes
                 'rationale': 'Agrupa los códigos relacionados con causas de anti-patrones'
             })
         
@@ -302,7 +275,7 @@ class GeminiLLMClient(LLMClient):
             return DefaultLLMClient().propose_code_normalization(codes_data)
     
     def propose_theme_structure(self, codes_data: list) -> list:
-        """Use Gemini to propose theme structure."""
+        """Use Gemini to propose Level 1 theme structure (no subthemes)."""
         codes_str = "\n".join([
             f"- {c['code']} (frecuencia: {c['frequency']}, RQ: {c.get('rq_focus', 'N/A')})"
             for c in codes_data
@@ -311,7 +284,8 @@ class GeminiLLMClient(LLMClient):
         prompt = (
             "Eres un experto en Teoría Fundamentada y análisis temático cualitativo. "
             "A partir de los siguientes códigos normalizados de una revisión sistemática, "
-            "propón una estructura jerárquica de temas y subtemas que sintetice los hallazgos.\n\n"
+            "propón una estructura de Temas de Nivel 1 (SIN SUBTEMAS) que sintetice los hallazgos "
+            "agrupando códigos por coherencia semántica.\n\n"
             f"Códigos normalizados:\n{codes_str}\n\n"
             "Para cada tema, devuelve en formato JSON:\n"
             "[\n"
@@ -320,12 +294,11 @@ class GeminiLLMClient(LLMClient):
             '    "description": "Descripción del tema",\n'
             '    "rq_focus": "RQ1 o RQ2",\n'
             '    "codes": ["codigo1", "codigo2"],\n'
-            '    "subthemes": [\n'
-            '      {"name": "Subtema 1", "codes": ["codigo1"]}\n'
-            '    ],\n'
+            '    "subthemes": [],\n'
             '    "rationale": "Justificación de la agrupación"\n'
             '  }\n'
             "]\n\n"
+            "IMPORTANTE: No incluyas subtemas, solo temas de Nivel 1 con sus códigos asociados.\n"
             "Devuelve solo el JSON, sin explicaciones adicionales."
         )
         
@@ -336,7 +309,7 @@ class GeminiLLMClient(LLMClient):
             proposals = json.loads(response_text)
             return proposals
         except Exception as e:
-            logger.warning(f"Failed to parse Gemini response for theme structure: {e}")
+            logger.warning("Failed to parse Gemini response for theme structure: %s", e)
             # Fallback to default implementation
             return DefaultLLMClient().propose_theme_structure(codes_data)
 

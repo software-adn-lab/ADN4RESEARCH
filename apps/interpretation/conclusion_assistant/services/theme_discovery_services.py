@@ -10,7 +10,6 @@ from apps.interpretation.conclusion_assistant.models import (
     ThemeDiscoveryProposal,
     AnalysisTrace,
     Theme,
-    SubTheme,
 )
 
 logger = logging.getLogger(__name__)
@@ -262,7 +261,7 @@ class ThemeDiscoveryService:
         proposal.save(update_fields=['theme_name', 'theme_description', 'proposed_subthemes', 
                                      'status', 'reviewed_by', 'modified_at'])
         
-        # Create Theme
+        # Create Theme (Level 1 only, no subthemes)
         theme = Theme.objects.create(
             name=proposal.theme_name,
             description=proposal.theme_description,
@@ -270,14 +269,8 @@ class ThemeDiscoveryService:
             created_by=reviewer
         )
         
-        # Create SubThemes
-        for subtheme_info in proposal.proposed_subthemes:
-            SubTheme.objects.create(
-                theme=theme,
-                name=subtheme_info.get('name', ''),
-                central_codes=subtheme_info.get('codes', []),
-                key_citations=[]  # Will be filled later from extraction
-            )
+        # NOTE: No SubThemes are created for Level 1 themes
+        # Subthemes can be created later if needed through the SubTheme model directly
         
         # Create analysis trace
         AnalysisTrace.objects.create(
@@ -297,7 +290,7 @@ class ThemeDiscoveryService:
             created_by=reviewer
         )
         
-        logger.info(f"Created theme '{theme.name}' with {theme.subthemes.count()} subthemes")
+        logger.info("Created Level 1 theme '%s' (no subthemes)", theme.name)
         return [theme]
 
     def get_normalization_proposals(self, project=None) -> List[CodeNormalizationProposal]:

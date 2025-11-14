@@ -196,11 +196,9 @@ def step_impl(context):
         assert len(context.normalized_codes) == len(context.table.rows)
 
 
-@when(
-    "el Investigador **solicita a la IA generar una estructura de temas de alto nivel** (emulando la Teoría Fundamentada)"
-)
+@when("el Investigador **solicita a la IA generar una estructura de temas de Nivel 1** (sin subtemas)")
 def step_impl(context):
-    """Request AI to generate theme structure."""
+    """Request AI to generate Level 1 theme structure without subthemes."""
     context.theme_proposals = theme_discovery_service.propose_theme_structure(
         project=None
     )
@@ -213,18 +211,22 @@ def step_impl(context):
     )
 
 
-@then(
-    "el sistema (IA/LLM) debería proponer una jerarquía de **Temas** que clasifiquen y sinteticen los códigos:"
-)
+@then("el sistema (IA/LLM) debería, basándose en la coherencia semántica de los códigos, proponer los siguientes Temas de Nivel 1:")
 def step_impl(context):
-    """Verify theme proposals were generated."""
+    """Verify Level 1 theme proposals were generated."""
     assert hasattr(context, "theme_proposals")
     assert len(context.theme_proposals) > 0
+    
+    # Verify no subthemes are present (Level 1 only)
+    for proposal in context.theme_proposals:
+        assert len(proposal.proposed_subthemes) == 0, (
+            f"Theme '{proposal.theme_name}' should not have subthemes for Level 1"
+        )
 
 
-@then('Proponer el Tema 1: "{theme_name}" que agrupe códigos de {rq_focus}.')
-def step_impl(context, theme_name, rq_focus):
-    """Verify a specific theme proposal exists."""
+@then('Proponer el Tema 1: "{theme_name}" que agrupe:')
+def step_impl(context, theme_name):
+    """Verify Tema 1 proposal with specific codes."""
     # Find matching theme
     matching_theme = None
     for proposal in context.theme_proposals:
@@ -236,15 +238,24 @@ def step_impl(context, theme_name, rq_focus):
         matching_theme is not None
     ), f"No theme proposal found matching '{theme_name}'"
 
-    # Verify it groups codes from the right RQ
-    assert rq_focus in matching_theme.research_question_focus or rq_focus in str(
-        matching_theme.codes_used.values_list("research_question_focus", flat=True)
-    )
+    # Verify it groups codes from RQ1 (if table provided, check specific codes)
+    if context.table and len(context.table.rows) > 0:
+        # The table is a single row with multiple columns (codes)
+        expected_codes = [cell for cell in context.table.rows[0].cells]
+        
+        theme_codes = [c.code for c in matching_theme.codes_used.all()]
+        for expected_code in expected_codes:
+            assert any(expected_code in code for code in theme_codes), (
+                f"Expected code {expected_code} not found in theme codes: {theme_codes}"
+            )
+    
+    # Store for later verification
+    context.theme_1 = matching_theme
 
 
-@then('Proponer el Tema 2: "{theme_name}" con una sub-clasificación inicial:')
+@then('Proponer el Tema 2: "{theme_name}" que agrupe:')
 def step_impl(context, theme_name):
-    """Verify theme with subthemes was proposed."""
+    """Verify Tema 2 proposal with specific codes."""
     # Find matching theme
     matching_theme = None
     for proposal in context.theme_proposals:
@@ -259,11 +270,19 @@ def step_impl(context, theme_name):
         matching_theme is not None
     ), f"No theme proposal found matching '{theme_name}'"
 
-    # Verify it has subthemes
-    assert len(matching_theme.proposed_subthemes) > 0
-
-    # Store for next verification
-    context.theme_with_subthemes = matching_theme
+    # Verify it groups codes from RQ2 (if table provided, check specific codes)
+    if context.table and len(context.table.rows) > 0:
+        # The table is a single row with multiple columns (codes)
+        expected_codes = [cell for cell in context.table.rows[0].cells]
+        
+        theme_codes = [c.code for c in matching_theme.codes_used.all()]
+        for expected_code in expected_codes:
+            assert any(expected_code in code for code in theme_codes), (
+                f"Expected code {expected_code} not found in theme codes: {theme_codes}"
+            )
+    
+    # Store for next modification step
+    context.theme_2 = matching_theme
 
 
 @when("el Investigador aplica **Reflexividad** y revisa las propuestas")
@@ -281,7 +300,7 @@ def step_impl(context):
 def step_impl(context, new_theme_name):
     """Researcher modifies a theme proposal."""
     # Find the theme to edit (stored in previous step)
-    theme_to_edit = context.theme_with_subthemes
+    theme_to_edit = context.theme_2
 
     # Apply modifications
     modifications = {
@@ -299,9 +318,9 @@ def step_impl(context, new_theme_name):
     assert len(context.final_themes) > 0
 
 
-@then("el Módulo de Interpretación persiste la estructura de Temas Finales validados")
+@then("el Módulo de Interpretación persiste la estructura de Temas Finales de Nivel 1 validados")
 def step_impl(context):
-    """Verify final themes were persisted."""
+    """Verify final Level 1 themes were persisted."""
     assert hasattr(context, "final_themes")
     assert len(context.final_themes) > 0
 
@@ -310,8 +329,10 @@ def step_impl(context):
         assert theme.id is not None
         assert Theme.objects.filter(id=theme.id).exists()
 
-        # Verify subthemes were created
-        assert theme.subthemes.count() > 0
+        # Verify NO subthemes were created (Level 1 only)
+        assert theme.subthemes.count() == 0, (
+            f"Theme '{theme.name}' should not have subthemes for Level 1"
+        )
 
 
 @then(
