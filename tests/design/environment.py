@@ -12,3 +12,4 @@ def before_scenario(context, scenario):
     context.project = create_project(context.owner)
     context.project_service.add_member(context.project, context.owner, role="OWNER")
     context.project_service.add_member(context.project, context.researcher, role="RESEARCHER")
+    
