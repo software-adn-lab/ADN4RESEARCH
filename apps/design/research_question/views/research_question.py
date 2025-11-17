@@ -71,16 +71,25 @@ def delete_research_question(request, question_id):
         raise Http404("Research question not found")
     
 def questions_history_view(request, project_id):
-    project = get_object_or_404(Project, id=1)
-    # Asumiendo que tus preguntas están relacionadas con un proyecto
-    questions = research_question_service.get_all_questions_by_user_and_project(user=request.user, project_id=project_id)
-    print(questions, "QUESTIONS")
+    project = get_object_or_404(Project, id=project_id)
+    status_filter = request.GET.get('status', None)
+    if status_filter in [ResearchQuestion.Status.DRAFT, ResearchQuestion.Status.READY_TO_SEND, ResearchQuestion.Status.SUGGESTED]:
+        questions = research_question_service.get_research_questions_by_status(
+            project=project, 
+            status=status_filter
+        )
+    else:
+        # Si no, obtén todas las preguntas para el usuario y proyecto.
+        questions = research_question_service.get_all_questions_by_user_and_project(
+            user=request.user, 
+            project_id=project_id
+        )
     context = {
         'project': project, # Añadir el proyecto al contexto
         'questions': questions,
         'active_tab': 'questions_history', 
     }
-    return render(request, 'question_history.html', context)
+    return render(request, 'research_question_workspace.html', context)
     
 def autosave_research_question(request):
     if request.method == 'POST':
