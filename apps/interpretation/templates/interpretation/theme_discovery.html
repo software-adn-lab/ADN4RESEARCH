@@ -1,0 +1,304 @@
+{% extends 'base_tabs.html' %}
+{% load static %}
+{% block content %}
+
+<div class="p-4" data-project-id="{{ project.id }}">
+    {% csrf_token %}
+    
+    <!-- Title -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-base-content">AI-Driven Theme Discovery</h1>
+        <div class="text-xs text-base-content/80">
+            <span class="font-medium">Project: {{ project.name }}</span>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">1</div>
+                <span class="ml-2 font-medium">Code Normalization</span>
+            </div>
+            <div class="w-16 h-1 bg-base-300"></div>
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full {% if step == 2 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold">2</div>
+                <span class="ml-2 font-medium {% if step != 2 %}text-base-content/60{% endif %}">Theme Generation</span>
+            </div>
+        </div>
+    </div>
+
+    {% if step == 1 %}
+    <!-- Step 1: Code Normalization -->
+    <div class="space-y-6">
+        <!-- Initial Codes Section -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-base-content">Initial Codes (Tags)</h2>
+                <button id="normalize-codes-btn" class="btn btn-primary btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Normalize Codes with AI
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-2/3">Code</th>
+                            <th class="w-1/3 text-center">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="initial-codes-body" class="text-sm">
+                        {% for code in initial_codes %}
+                        <tr class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">{{ code.code }}</td>
+                            <td class="p-2 text-center">
+                                <span class="badge badge-ghost">{{ code.frequency }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center p-4 text-base-content/60">
+                                No initial codes loaded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Normalization Proposals Section -->
+        {% if normalization_proposals %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content">AI Normalization Proposals</h2>
+            
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-1/4">Normalized Code</th>
+                            <th class="w-1/4">Original Codes</th>
+                            <th class="w-1/3">Rationale</th>
+                            <th class="w-1/6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for proposal in normalization_proposals %}
+                        <tr data-proposal-id="{{ proposal.id }}" class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <span class="font-medium text-primary">{{ proposal.normalized_code }}</span>
+                            </td>
+                            <td class="p-2">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for code in proposal.original_codes %}
+                                    <span class="badge badge-sm badge-ghost">{{ code }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="p-2 text-xs text-base-content/80">
+                                {{ proposal.rationale }}
+                            </td>
+                            <td class="p-2 text-center">
+                                {% if proposal.status == 'PENDING' %}
+                                <div class="flex justify-center gap-2">
+                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 accept-proposal-btn" title="Accept">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-proposal-btn" title="Reject">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                {% elif proposal.status == 'ACCEPTED' %}
+                                <span class="badge badge-success text-xs">Accepted</span>
+                                {% else %}
+                                <span class="badge badge-error text-xs">Rejected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button id="accept-all-btn" class="btn btn-success btn-sm">Accept All Proposals</button>
+                <button id="proceed-to-themes-btn" class="btn btn-primary btn-sm">Proceed to Theme Generation</button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% elif step == 2 %}
+    <!-- Step 2: Theme Generation -->
+    <div class="space-y-6">
+        <!-- Normalized Codes Section -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-base-content">Normalized Codes (Final)</h2>
+                <button id="generate-themes-btn" class="btn btn-primary btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Generate Themes with AI
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-1/3">Code</th>
+                            <th class="w-1/3">Research Question Focus</th>
+                            <th class="w-1/3 text-center">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for code in normalized_codes %}
+                        <tr class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <span class="font-medium">{{ code.code }}</span>
+                            </td>
+                            <td class="p-2">
+                                <span class="badge badge-primary badge-sm">{{ code.research_question_focus }}</span>
+                            </td>
+                            <td class="p-2 text-center">
+                                <span class="badge badge-ghost">{{ code.frequency }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Theme Proposals Section -->
+        {% if theme_proposals %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content">AI Theme Proposals (Level 1)</h2>
+            
+            {% for proposal in theme_proposals %}
+            <div class="card bg-base-100 border border-base-300">
+                <div class="card-body">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="card-title text-base" contenteditable="true" data-proposal-id="{{ proposal.id }}" id="theme-name-{{ proposal.id }}">
+                                {{ proposal.theme_name }}
+                            </h3>
+                            <p class="text-sm text-base-content/70 mt-2">{{ proposal.theme_description }}</p>
+                            <div class="mt-3">
+                                <span class="text-xs font-semibold text-base-content/60">Grouped Codes:</span>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    {% for code in proposal.codes_used.all %}
+                                    <span class="badge badge-sm badge-primary badge-outline">{{ code.code }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <span class="text-xs font-semibold text-base-content/60">RQ Focus:</span>
+                                <span class="badge badge-sm badge-ghost ml-2">{{ proposal.research_question_focus }}</span>
+                            </div>
+                            <div class="mt-2 text-xs text-base-content/60 italic">
+                                <strong>Rationale:</strong> {{ proposal.rationale }}
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            {% if proposal.status == 'PENDING' %}
+                            <button class="btn btn-success btn-sm accept-theme-btn" data-proposal-id="{{ proposal.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Accept
+                            </button>
+                            <button class="btn btn-error btn-sm reject-theme-btn" data-proposal-id="{{ proposal.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                            </button>
+                            {% elif proposal.status == 'ACCEPTED' or proposal.status == 'MODIFIED' %}
+                            <span class="badge badge-success">Accepted</span>
+                            {% else %}
+                            <span class="badge badge-error">Rejected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button id="accept-all-themes-btn" class="btn btn-success btn-sm">Accept All Themes</button>
+                <button id="finalize-themes-btn" class="btn btn-primary btn-sm">Finalize and Create Themes</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Created Themes Section -->
+        {% if created_themes %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-success">✓ Created Level 1 Themes</h2>
+            
+            {% for theme in created_themes %}
+            <div class="card bg-success/10 border border-success/30">
+                <div class="card-body">
+                    <h3 class="card-title text-base text-success">{{ theme.name }}</h3>
+                    <p class="text-sm text-base-content/70">{{ theme.description }}</p>
+                    <div class="mt-2">
+                        <span class="badge badge-success badge-sm">{{ theme.research_question }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- JS -->
+<script>
+    const URLS = {
+        normalizeyCodes: "{% url 'interpretation:normalize_codes' project.id %}",
+        acceptProposal: "{% url 'interpretation:accept_normalization' 9999 %}",
+        acceptAllProposals: "{% url 'interpretation:accept_all_normalizations' project.id %}",
+        generateThemes: "{% url 'interpretation:generate_themes' project.id %}",
+        acceptTheme: "{% url 'interpretation:accept_theme' 9999 %}",
+        acceptAllThemes: "{% url 'interpretation:accept_all_themes' project.id %}",
+        finalizeThemes: "{% url 'interpretation:finalize_themes' project.id %}",
+    };
+    const PROJECT_ID = {{ project.id }};
+    const STEP = {{ step }};
+</script>
+<script src="{% static 'scripts/theme_discovery.js' %}"></script>
+
+<style>
+    [contenteditable="true"] {
+        min-height: 1.5rem;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    [contenteditable="true"]:hover {
+        background-color: hsl(var(--b2) / 0.3);
+        border-color: hsl(var(--bc) / 0.1);
+    }
+
+    [contenteditable="true"]:focus {
+        background-color: hsl(var(--b1));
+        border-color: hsl(var(--p) / 0.5);
+        outline: none;
+    }
+</style>
+
+{% endblock content %}
