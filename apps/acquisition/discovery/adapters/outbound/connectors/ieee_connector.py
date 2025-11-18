@@ -45,9 +45,9 @@ class IeeeConnector(IAcademicConnector):
     - Usa endpoint /rest/search para obtener JSON directo
     """
 
-    # URLs - Búsqueda DIRECTA a IEEE (EZproxy se usa SOLO para autenticación)
-    # Una vez autenticado con cookies, las búsquedas van directo a ieeexplore.ieee.org
-    IEEE_SEARCH_API = "https://ieeexplore.ieee.org/rest/search"
+    # URLs - Búsqueda vía EZproxy (las cookies solo funcionan con el dominio del proxy)
+    IEEE_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2097/rest/search"
+    IEEE_DIRECT_SEARCH = "https://ieeexplore.ieee.org/rest/search"
     IEEE_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
 
     def __init__(
@@ -164,24 +164,28 @@ class IeeeConnector(IAcademicConnector):
                     "rowsPerPage": page_size
                 }
 
-                logger.debug(f"POST {self.IEEE_SEARCH_API} (página {page_number})")
+                # Intentar primero con EZproxy, luego directo
+                search_url = self.IEEE_PROXY_SEARCH
+                logger.debug(f"POST {search_url} (página {page_number})")
 
                 response = self.session_manager.session.post(
-                    self.IEEE_SEARCH_API,
+                    search_url,
                     json=payload,
-                    timeout=30
+                    timeout=30,
+                    allow_redirects=False  # Evitar que cambie POST a GET en redirects
                 )
 
-                # Verificar si sesión expiró
-                if response.status_code == 302 or response.status_code == 401:
-                    logger.warning("Sesión expirada, re-autenticando...")
+                # Verificar si sesión expiró (redirect o 401)
+                if response.status_code in (301, 302, 303, 307, 308, 401):
+                    logger.warning(f"Sesión no válida ({response.status_code}), re-autenticando...")
                     self.session_manager._authenticate()
 
                     # Reintentar request
                     response = self.session_manager.session.post(
-                        self.IEEE_SEARCH_API,
+                        search_url,
                         json=payload,
-                        timeout=30
+                        timeout=30,
+                        allow_redirects=False
                     )
 
                 content_type = response.headers.get("Content-Type", "")

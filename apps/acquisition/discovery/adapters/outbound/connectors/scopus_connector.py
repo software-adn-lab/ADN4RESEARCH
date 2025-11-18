@@ -1,65 +1,82 @@
 """
-Conector para Scopus (Elsevier).
+Scopus Connector con API oficial de Elsevier y fallback a Playwright.
 
-Scopus NO tiene API REST pública como IEEE.
-Este conector usa Playwright para:
-1. Autenticar via EZproxy (obtener cookies)
-2. Navegar a resultados de búsqueda
-3. Extraer datos del HTML
+ESTRATEGIA DE ACCESO:
+1. API oficial de Elsevier (api.elsevier.com) - Requiere API key
+   - Rápido, confiable, datos completos
+   - Límites: 20,000 búsquedas/semana, 10,000 abstracts/semana
 
-IMPORTANTE:
-- Scopus está protegido por Cloudflare
-- NO se puede usar requests directo (da 403)
-- DEBE usar Playwright para TODO
+2. Fallback: APIs internas de Scopus vía Playwright (EZproxy)
+   - Más lento (requiere navegador)
+   - Útil si no hay API key o si la cuota se agotó
+
+ENDPOINTS ELSEVIER:
+- GET /content/search/scopus -> Búsqueda
+- GET /content/abstract/scopus_id/{id} -> Abstract
+
+DOCS: https://dev.elsevier.com/documentation/ScopusSearchAPI.wadl
 """
 import logging
 import time
-from typing import Dict, List, Any, Generator
-from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
-from bs4 import BeautifulSoup
+import random
 import re
-import json
+from typing import Dict, List, Any, Generator, Optional
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import requests
 
 logger = logging.getLogger(__name__)
 
 
 class ScopusConnector:
     """
-    Conector para búsquedas en Scopus vía EZproxy.
+    Conector para Scopus con API oficial de Elsevier y fallback a Playwright.
 
     Características:
-    - Usa Playwright para navegar (bypass Cloudflare)
-    - Autentica automáticamente vía EZproxy si es necesario
-    - Parsea HTML para extraer resultados
-    - Normaliza datos al formato estándar
-
-    Uso:
-        connector = ScopusConnector(username, password)
-        results = list(connector.search("machine learning", max_results=10))
+    - Usa API oficial primero (rápido, sin navegador)
+    - Fallback automático a Playwright si API falla
+    - Rate limiting configurable
+    - Retry automático con backoff exponencial
     """
 
-    # URLs
-    SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com"
-    SCOPUS_HOME = "https://www.scopus.com/pages/home"
-    SCOPUS_SEARCH_URL = "https://www.scopus.com/results/results.uri"
+    # URLs API oficial de Elsevier
+    ELSEVIER_BASE_URL = "https://api.elsevier.com"
+    SEARCH_ENDPOINT = "/content/search/scopus"
+    ABSTRACT_ENDPOINT = "/content/abstract/scopus_id"
 
     def __init__(
         self,
-        username: str,
-        password: str,
-        headless: bool = True
+        username: str = None,
+        password: str = None,
+        api_key: str = None,
+        headless: bool = True,
+        rate_limit: float = 1.0
     ):
         """
-        Inicializa el conector de Scopus.
-
         Args:
-            username: Usuario EPN
-            password: Contraseña EPN
-            headless: Si True, navegador sin interfaz gráfica
+            username: Usuario EPN (para fallback Playwright)
+            password: Contraseña EPN (para fallback Playwright)
+            api_key: API key de Elsevier (para API oficial)
+            headless: Navegador sin interfaz (para fallback)
+            rate_limit: Segundos de espera entre requests
         """
         self.username = username
         self.password = password
+        self.api_key = api_key
         self.headless = headless
+        self.rate_limit = rate_limit
+
+        # Session para requests
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Accept': 'application/json',
+            'User-Agent': 'ADN4Research/1.0 (Academic Research Tool)'
+        })
+
+        if api_key:
+            self.session.headers['X-ELS-APIKey'] = api_key
+            logger.info("ScopusConnector inicializado con API key de Elsevier")
+        else:
+            logger.warning("ScopusConnector sin API key - solo fallback Playwright disponible")
 
     def search(
         self,
@@ -69,610 +86,327 @@ class ScopusConnector:
         """
         Busca artículos en Scopus.
 
+        Intenta primero con API oficial, luego fallback a Playwright.
+
         Args:
             query: Término de búsqueda
-            max_results: Número máximo de resultados a retornar
+            max_results: Máximo de resultados a retornar
 
         Yields:
-            Dict con datos del artículo normalizado
-
-        Example:
-            >>> connector = ScopusConnector("user@epn.edu.ec", "password")
-            >>> for article in connector.search("machine learning", max_results=10):
-            ...     print(article['title'])
+            Dict normalizado con title, link, doi, source, year, authors, abstract
         """
-        logger.info(f"Iniciando búsqueda en Scopus: '{query}' (max: {max_results})")
+        logger.info(f"Buscando en Scopus: '{query}' (max: {max_results})")
 
-        with sync_playwright() as p:
-            # Lanzar navegador
-            browser = p.chromium.launch(
-                headless=self.headless,
-                args=['--disable-blink-features=AutomationControlled']
-            )
+        results = []
 
-            context = browser.new_context(
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                viewport={'width': 1920, 'height': 1080}
-            )
-
-            page = context.new_page()
-
+        # Intentar con API oficial de Elsevier
+        if self.api_key:
             try:
-                # Autenticar
-                logger.info("Autenticando en Scopus...")
-                self._authenticate(page)
+                logger.info("Usando API oficial de Elsevier...")
+                results = list(self._search_via_api(query, max_results))
 
-                # Buscar
-                logger.info(f"Ejecutando búsqueda: {query}")
-                results = self._search_and_extract(page, query, max_results)
+                if results:
+                    logger.info(f"✓ API Elsevier: {len(results)} resultados obtenidos")
+                else:
+                    logger.warning("API Elsevier no devolvió resultados, intentando fallback...")
+                    raise ValueError("Sin resultados en API")
 
-                # Yield resultados
-                for result in results:
-                    yield result
+            except Exception as api_error:
+                logger.warning(f"API Elsevier falló: {api_error}")
+                results = []
 
-            finally:
-                browser.close()
+        # Fallback a Playwright si API falló o no hay API key
+        if not results:
+            if self.username and self.password:
+                logger.info("Usando fallback Playwright (APIs internas de Scopus)...")
+                try:
+                    results = list(self._search_via_playwright(query, max_results))
+                except Exception as pw_error:
+                    logger.error(f"Fallback Playwright también falló: {pw_error}")
+                    raise
+            else:
+                raise ValueError(
+                    "API de Elsevier falló y no hay credenciales EZproxy para fallback. "
+                    "Proporcione api_key o username/password."
+                )
 
-        logger.info("Búsqueda completada")
+        # Yield resultados
+        for result in results:
+            yield result
 
-    def _authenticate(self, page: Page) -> None:
-        """
-        Autentica en Scopus vía EZproxy.
+        # Rate limiting
+        delay = self.rate_limit + random.uniform(0.1, 0.5)
+        time.sleep(delay)
 
-        Args:
-            page: Página de Playwright
+        logger.info(f"✓ Búsqueda completada: {len(results)} resultados")
 
-        Raises:
-            Exception: Si falla la autenticación
-        """
-        # Navegar a Scopus via EZproxy
-        page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="networkidle", timeout=60000)
-        time.sleep(2)
-
-        current_url = page.url
-
-        # Si ya estamos en Scopus, no necesitamos autenticar
-        if "scopus.com" in current_url:
-            logger.info("✓ Ya autenticado (acceso directo por IP o cookies)")
-            return
-
-        # Buscar formulario de login
-        logger.info("Llenando formulario de login...")
-
-        # Buscar campo de usuario
-        username_field = None
-        username_selectors = [
-            'input[name="user"]',
-            'input[name="username"]',
-            'input[type="email"]',
-            'input[id="username"]'
-        ]
-
-        for selector in username_selectors:
-            try:
-                username_field = page.query_selector(selector)
-                if username_field:
-                    break
-            except:
-                continue
-
-        if not username_field:
-            raise Exception("No se encontró campo de usuario en formulario de login")
-
-        # Llenar credenciales
-        username_field.fill(self.username)
-        time.sleep(0.5)
-
-        password_field = page.query_selector('input[type="password"]')
-        if not password_field:
-            raise Exception("No se encontró campo de contraseña")
-
-        password_field.fill(self.password)
-        time.sleep(0.5)
-
-        # Submit
-        password_field.press('Enter')
-
-        # Esperar redirección a Scopus
-        logger.info("Esperando autenticación...")
-        page.wait_for_url("**/scopus.com/**", timeout=30000)
-
-        logger.info("✓ Autenticación exitosa")
-
-    def _search_and_extract(
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
+        reraise=True
+    )
+    def _search_via_api(
         self,
-        page: Page,
         query: str,
         max_results: int
     ) -> List[Dict[str, Any]]:
         """
-        Ejecuta búsqueda y extrae resultados usando selectores de Playwright.
+        Busca usando API oficial de Elsevier.
 
         Args:
-            page: Página de Playwright
             query: Término de búsqueda
-            max_results: Número máximo de resultados
+            max_results: Máximo de resultados
 
         Returns:
-            Lista de artículos normalizados
+            Lista de resultados normalizados
         """
-        # Construir URL de búsqueda
-        search_params = {
-            "st1": query,
-            "st2": "",
-            "s": f"TITLE-ABS-KEY({query})",
-            "limit": str(min(max_results, 200)),  # Scopus max 200 por página
-            "origin": "searchbasic",
-            "sort": "plf-f",  # newest first
-            "src": "s",
-            "sot": "b",
-            "sdt": "b"
-        }
+        results = []
+        start = 0
+        count = min(max_results, 25)  # API acepta hasta 25 por página (default)
 
-        # Construir query string
-        query_string = "&".join([f"{k}={v}" for k, v in search_params.items()])
-        search_url = f"{self.SCOPUS_SEARCH_URL}?{query_string}"
+        # Construir query de Scopus
+        scopus_query = f"TITLE-ABS-KEY({query})"
 
-        logger.debug(f"Navegando a: {search_url}")
+        while len(results) < max_results:
+            # Parámetros de búsqueda
+            params = {
+                'query': scopus_query,
+                'start': start,
+                'count': count,
+                'view': 'STANDARD'
+            }
 
-        # Navegar a resultados
-        page.goto(search_url, wait_until="networkidle", timeout=60000)
+            url = f"{self.ELSEVIER_BASE_URL}{self.SEARCH_ENDPOINT}"
+            logger.debug(f"GET {url} (start={start}, count={count})")
 
-        # Esperar que cargue el Web Component principal
-        logger.debug("Esperando a que cargue el Web Component...")
+            response = self.session.get(url, params=params, timeout=30)
+
+            # Verificar respuesta
+            if response.status_code == 429:
+                logger.error("Cuota de API agotada (429 Too Many Requests)")
+                raise Exception("API quota exceeded")
+
+            if response.status_code == 401:
+                logger.error("API key inválida o expirada (401 Unauthorized)")
+                raise Exception("Invalid API key")
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Extraer resultados
+            search_results = data.get('search-results', {})
+            entries = search_results.get('entry', [])
+            total_results = int(search_results.get('opensearch:totalResults', 0))
+
+            logger.debug(f"Página {start // count + 1}: {len(entries)} resultados (total: {total_results})")
+
+            if not entries:
+                break
+
+            # Obtener abstracts para estos resultados
+            scopus_ids = []
+            for entry in entries:
+                identifier = entry.get('dc:identifier', '')
+                if identifier.startswith('SCOPUS_ID:'):
+                    scopus_ids.append(identifier.replace('SCOPUS_ID:', ''))
+
+            abstracts_map = self._fetch_abstracts_batch(scopus_ids)
+
+            # Normalizar resultados
+            for entry in entries:
+                if len(results) >= max_results:
+                    break
+
+                identifier = entry.get('dc:identifier', '')
+                scopus_id = identifier.replace('SCOPUS_ID:', '') if identifier.startswith('SCOPUS_ID:') else ''
+                abstract = abstracts_map.get(scopus_id)
+
+                result = self._normalize_api_result(entry, abstract)
+                results.append(result)
+
+            # Si no hay más resultados
+            if len(entries) < count or len(results) >= total_results:
+                break
+
+            start += count
+
+            # Rate limit entre páginas
+            time.sleep(0.5)
+
+        return results
+
+    def _fetch_abstracts_batch(
+        self,
+        scopus_ids: List[str]
+    ) -> Dict[str, str]:
+        """
+        Obtiene abstracts para múltiples documentos.
+
+        Nota: Cada abstract requiere una llamada individual al API.
+        Para no agotar la cuota, limitamos a los primeros N.
+
+        Args:
+            scopus_ids: Lista de Scopus IDs
+
+        Returns:
+            Dict mapeando scopus_id -> abstract
+        """
+        abstracts_map = {}
+
+        # Limitar para no agotar cuota
+        max_abstracts = min(len(scopus_ids), 10)
+
+        for scopus_id in scopus_ids[:max_abstracts]:
+            try:
+                abstract = self._fetch_single_abstract(scopus_id)
+                if abstract:
+                    abstracts_map[scopus_id] = abstract
+
+                # Rate limit entre abstracts
+                time.sleep(0.2)
+
+            except Exception as e:
+                logger.debug(f"No se pudo obtener abstract para {scopus_id}: {e}")
+                continue
+
+        logger.debug(f"Obtenidos {len(abstracts_map)} abstracts")
+        return abstracts_map
+
+    def _fetch_single_abstract(self, scopus_id: str) -> Optional[str]:
+        """
+        Obtiene abstract de un documento individual.
+
+        Args:
+            scopus_id: Scopus ID del documento
+
+        Returns:
+            Texto del abstract o None
+        """
+        url = f"{self.ELSEVIER_BASE_URL}{self.ABSTRACT_ENDPOINT}/{scopus_id}"
 
         try:
-            page.wait_for_selector('document-search-results-page', timeout=15000, state="attached")
-            logger.debug("✓ Web Component cargado")
-        except:
-            logger.warning("No se encontró Web Component, continuando...")
+            response = self.session.get(url, timeout=15)
 
-        # Dar tiempo para que JavaScript renderice contenido
-        time.sleep(5)
+            if not response.ok:
+                return None
 
-        # Extraer resultados usando selectores de Playwright (NO BeautifulSoup)
-        logger.debug("Extrayendo resultados del DOM renderizado...")
-        results = self._extract_with_playwright(page, max_results)
+            data = response.json()
 
-        logger.info(f"✓ Extraídos {len(results)} resultados")
+            # Navegar estructura del response
+            abstract_response = data.get('abstracts-retrieval-response', {})
+            coredata = abstract_response.get('coredata', {})
 
-        return results
+            # El abstract puede estar en dc:description
+            abstract = coredata.get('dc:description', '')
 
-    def _extract_with_playwright(self, page: Page, max_results: int) -> List[Dict[str, Any]]:
+            if abstract:
+                # Limpiar caracteres especiales
+                abstract = abstract.strip()
+                return abstract
+
+        except Exception as e:
+            logger.debug(f"Error obteniendo abstract {scopus_id}: {e}")
+
+        return None
+
+    def _normalize_api_result(
+        self,
+        entry: Dict,
+        abstract: str = None
+    ) -> Dict[str, Any]:
         """
-        Extrae resultados usando selectores de Playwright en el DOM renderizado.
+        Normaliza resultado del API oficial de Elsevier.
 
         Args:
-            page: Página de Playwright
-            max_results: Número máximo de resultados
-
-        Returns:
-            Lista de artículos normalizados
-        """
-        results = []
-
-        # Selectores posibles para items de resultado
-        # Scopus usa TABLA para mostrar resultados
-        # Los data-testid están DENTRO de los <tr>, no en ellos
-        result_item_selectors = [
-            'tr:has([data-testid="author-list"])',  # TR que contiene author-list
-            'tbody tr',  # Filas de tabla genéricas
-            'table tr',  # Filas de cualquier tabla
-        ]
-
-        # Intentar encontrar elementos de resultado
-        result_elements = None
-        used_selector = None
-
-        for selector in result_item_selectors:
-            elements = page.query_selector_all(selector)
-            if elements and len(elements) > 0:
-                result_elements = elements
-                used_selector = selector
-                logger.debug(f"✓ Encontrados {len(elements)} elementos con selector: {selector}")
-                break
-
-        if not result_elements:
-            logger.warning("No se encontraron elementos de resultado con selectores conocidos")
-
-            # Guardar HTML para debugging
-            with open('scopus_search_results_debug.html', 'w', encoding='utf-8') as f:
-                f.write(page.content())
-            logger.debug("HTML guardado en: scopus_search_results_debug.html")
-
-            return []
-
-        # Extraer datos de cada elemento
-        logger.debug(f"Extrayendo datos de {len(result_elements)} elementos...")
-
-        for i, elem in enumerate(result_elements[:max_results]):
-            try:
-                result = self._extract_from_playwright_element(elem)
-                if result and result.get('title'):  # Solo agregar si tiene título
-                    results.append(result)
-                    logger.debug(f"  {i+1}. {result['title'][:60]}...")
-            except Exception as e:
-                logger.warning(f"Error extrayendo elemento {i}: {e}")
-                continue
-
-        return results
-
-    def _extract_from_playwright_element(self, elem) -> Dict[str, Any]:
-        """
-        Extrae datos de un elemento de Playwright.
-
-        Args:
-            elem: ElementHandle de Playwright
-
-        Returns:
-            Dict con datos normalizados
-        """
-        # Título - Scopus usa data-testid o clases específicas
-        title = None
-        title_selectors = [
-            '[data-testid="document-title"] a',  # Link del título
-            '[data-testid="document-title"]',
-            'a[href*="/record/"]',  # Link a record
-            'h2 a',
-            'h3 a',
-            'td a',  # Link en celda de tabla
-            'a',  # Cualquier link como fallback
-        ]
-
-        for selector in title_selectors:
-            title_elem = elem.query_selector(selector)
-            if title_elem:
-                title = title_elem.inner_text().strip()
-                if title and len(title) > 10:  # Validar que sea título real
-                    break
-
-        if not title:
-            # Fallback: buscar primer link significativo
-            all_links = elem.query_selector_all('a')
-            for link in all_links:
-                link_text = link.inner_text().strip()
-                if link_text and len(link_text) > 20:  # Probablemente un título
-                    title = link_text
-                    break
-
-        # Autores - Scopus usa data-testid='author-list'
-        authors = []
-        author_container = elem.query_selector('[data-testid="author-list"]')
-
-        if author_container:
-            # Buscar elementos de autor individuales
-            author_elems = author_container.query_selector_all('button, a, span[class*="Author"]')
-            if author_elems:
-                seen_authors = set()  # Evitar duplicados
-                for auth_elem in author_elems[:15]:  # Máx 15 para tener margen
-                    author_text = auth_elem.inner_text().strip()
-
-                    # Limpiar texto: quitar newlines, comas finales, "and N more..."
-                    author_text = author_text.replace('\n', '').replace('\r', '').strip(' ,.')
-
-                    if author_text and 3 < len(author_text) < 100:
-                        # Ignorar "and N more..." y "..."
-                        if 'more' not in author_text.lower() and author_text != '...':
-                            # Evitar duplicados (normalizar para comparar)
-                            author_normalized = author_text.lower().strip()
-                            if author_normalized not in seen_authors:
-                                seen_authors.add(author_normalized)
-                                authors.append(author_text)
-            else:
-                # Si no hay sub-elementos, tomar texto completo y parsear
-                author_text = author_container.inner_text().strip()
-                authors = self._parse_authors(author_text)
-
-        # Año - Scopus usa data-testid='document-publication-year'
-        year = None
-        year_elem = elem.query_selector('[data-testid="document-publication-year"]')
-
-        if year_elem:
-            year_text = year_elem.inner_text().strip()
-            year = self._extract_year(year_text)
-
-        # Si no encontró año con testid, buscar en texto general
-        if not year:
-            year_selectors = ['[class*="year"]', '[class*="date"]', 'span']
-            for selector in year_selectors:
-                year_elem = elem.query_selector(selector)
-                if year_elem:
-                    year_text = year_elem.inner_text().strip()
-                    year = self._extract_year(year_text)
-                    if year:
-                        break
-
-        # DOI
-        doi = None
-        doi_selectors = [
-            'a[href*="doi.org"]',
-            '[class*="doi"]',
-        ]
-
-        for selector in doi_selectors:
-            doi_elem = elem.query_selector(selector)
-            if doi_elem:
-                # Intentar obtener del href
-                href = doi_elem.get_attribute('href')
-                if href and 'doi.org' in href:
-                    doi_match = re.search(r'10\.\d{4,}/[^\s&]+', href)
-                    if doi_match:
-                        doi = doi_match.group(0)
-                        break
-
-                # Intentar del texto
-                doi_text = doi_elem.inner_text().strip()
-                doi_match = re.search(r'10\.\d{4,}/[^\s]+', doi_text)
-                if doi_match:
-                    doi = doi_match.group(0)
-                    break
-
-        # Abstract
-        abstract = None
-        abstract_selectors = [
-            '[class*="abstract"]',
-            '[class*="Abstract"]',
-            '[class*="snippet"]',
-        ]
-
-        for selector in abstract_selectors:
-            abstract_elem = elem.query_selector(selector)
-            if abstract_elem:
-                abstract = abstract_elem.inner_text().strip()
-                if abstract:
-                    break
-
-        # URL - buscar link
-        url = None
-        link_elem = elem.query_selector('a[href*="/record/"]')
-        if not link_elem:
-            link_elem = elem.query_selector('h2 a, h3 a')
-
-        if link_elem:
-            href = link_elem.get_attribute('href')
-            if href:
-                if href.startswith('/'):
-                    url = f"https://www.scopus.com{href}"
-                elif href.startswith('http'):
-                    url = href
-
-        return self._normalize_result({
-            'title': title,
-            'authors': authors,
-            'year': year,
-            'doi': doi,
-            'abstract': abstract,
-            'url': url
-        })
-
-    def _parse_html(self, html: str) -> List[Dict[str, Any]]:
-        """
-        Parsea HTML de Scopus y extrae resultados.
-
-        Estrategias (en orden):
-        1. Buscar JSON embebido en <script>
-        2. Parsear elementos HTML directamente
-
-        Args:
-            html: HTML completo de la página
-
-        Returns:
-            Lista de artículos normalizados
-        """
-        soup = BeautifulSoup(html, 'html.parser')
-
-        # Estrategia 1: JSON embebido
-        results = self._extract_from_json(soup)
-        if results:
-            logger.debug(f"Extraídos {len(results)} resultados de JSON embebido")
-            return results
-
-        # Estrategia 2: HTML parsing
-        results = self._extract_from_html(soup)
-        if results:
-            logger.debug(f"Extraídos {len(results)} resultados de HTML")
-            return results
-
-        logger.warning("No se pudieron extraer resultados del HTML")
-        return []
-
-    def _extract_from_json(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
-        """
-        Extrae resultados de JSON embebido en <script> tags.
-
-        Args:
-            soup: BeautifulSoup del HTML
-
-        Returns:
-            Lista de artículos normalizados
-        """
-        script_tags = soup.find_all('script', type='application/json')
-
-        for tag in script_tags:
-            if not tag.string:
-                continue
-
-            try:
-                data = json.loads(tag.string)
-
-                # Buscar array de resultados
-                result_keys = ['searchResults', 'results', 'documents', 'entries', 'documentEntries']
-
-                for key in result_keys:
-                    if key in data and isinstance(data[key], list):
-                        logger.debug(f"Encontrado array '{key}' con {len(data[key])} elementos")
-                        return [self._normalize_result(item) for item in data[key]]
-
-            except json.JSONDecodeError:
-                continue
-
-        return []
-
-    def _extract_from_html(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
-        """
-        Extrae resultados parseando elementos HTML directamente.
-
-        Args:
-            soup: BeautifulSoup del HTML
-
-        Returns:
-            Lista de artículos normalizados
-        """
-        results = []
-
-        # Selectores posibles para items de resultado
-        selectors = [
-            'div.result-item',
-            'article',
-            'li.result-item',
-            'div[class*="ResultItem"]',
-            'div[class*="documentEntry"]',
-        ]
-
-        result_elements = []
-        for selector in selectors:
-            result_elements = soup.select(selector)
-            if result_elements:
-                logger.debug(f"Encontrados {len(result_elements)} elementos con selector: {selector}")
-                break
-
-        if not result_elements:
-            return []
-
-        # Extraer datos de cada elemento
-        for elem in result_elements:
-            try:
-                result = self._extract_from_element(elem)
-                if result:
-                    results.append(result)
-            except Exception as e:
-                logger.warning(f"Error extrayendo elemento: {e}")
-                continue
-
-        return results
-
-    def _extract_from_element(self, elem) -> Dict[str, Any]:
-        """
-        Extrae datos de un elemento HTML de resultado.
-
-        Args:
-            elem: BeautifulSoup element
-
-        Returns:
-            Dict con datos normalizados
-        """
-        # Título
-        title_elem = elem.select_one('h2, h3, h4, a[class*="title"], [class*="Title"]')
-        title = title_elem.get_text(strip=True) if title_elem else "N/A"
-
-        # Autores
-        authors_elem = elem.select_one('[class*="author"], [class*="Author"]')
-        authors_text = authors_elem.get_text(strip=True) if authors_elem else ""
-        authors = self._parse_authors(authors_text)
-
-        # Año
-        year_elem = elem.select_one('[class*="year"], [class*="date"]')
-        year_text = year_elem.get_text(strip=True) if year_elem else ""
-        year = self._extract_year(year_text)
-
-        # DOI
-        doi_elem = elem.select_one('[class*="doi"], a[href*="doi.org"]')
-        doi = None
-        if doi_elem:
-            doi_text = doi_elem.get_text(strip=True)
-            doi_match = re.search(r'10\.\d{4,}/[^\s]+', doi_text)
-            if doi_match:
-                doi = doi_match.group(0)
-
-        # Abstract
-        abstract_elem = elem.select_one('[class*="abstract"], [class*="Abstract"]')
-        abstract = abstract_elem.get_text(strip=True) if abstract_elem else None
-
-        # URL
-        link_elem = elem.select_one('a[href*="/record/"]')
-        url = None
-        if link_elem:
-            href = link_elem.get('href', '')
-            if href.startswith('/'):
-                url = f"https://www.scopus.com{href}"
-            else:
-                url = href
-
-        return self._normalize_result({
-            'title': title,
-            'authors': authors,
-            'year': year,
-            'doi': doi,
-            'abstract': abstract,
-            'url': url
-        })
-
-    def _normalize_result(self, raw_data: Dict) -> Dict[str, Any]:
-        """
-        Normaliza resultado al formato estándar.
-
-        Args:
-            raw_data: Datos crudos extraídos
+            entry: Entrada del response de búsqueda
+            abstract: Abstract obtenido
 
         Returns:
             Dict normalizado
         """
+        # Título
+        title = entry.get('dc:title', 'N/A')
+
+        # DOI
+        doi = entry.get('prism:doi')
+
+        # Año
+        year = None
+        cover_date = entry.get('prism:coverDate', '')
+        if cover_date:
+            year_match = re.search(r'\d{4}', cover_date)
+            if year_match:
+                year = int(year_match.group())
+
+        # Autores - API solo devuelve primer autor en dc:creator
+        authors = []
+        creator = entry.get('dc:creator')
+        if creator:
+            authors.append(creator)
+
+        # Link - construir desde Scopus ID o usar EID
+        link = None
+        eid = entry.get('eid', '')
+        identifier = entry.get('dc:identifier', '')
+
+        if eid:
+            link = f"https://www.scopus.com/record/display.uri?eid={eid}&origin=resultslist"
+        elif identifier:
+            scopus_id = identifier.replace('SCOPUS_ID:', '')
+            link = f"https://www.scopus.com/record/display.uri?origin=inward&partnerID=HzOxMe3b&scp={scopus_id}"
+
+        # Link alternativo del entry
+        entry_links = entry.get('link', [])
+        for entry_link in entry_links:
+            if entry_link.get('@ref') == 'scopus':
+                link = entry_link.get('@href', link)
+                break
+
         return {
-            'title': raw_data.get('title', 'N/A'),
-            'link': raw_data.get('url') or raw_data.get('link'),
-            'doi': raw_data.get('doi'),
+            'title': title,
+            'link': link,
+            'doi': doi,
             'source': 'Scopus',
-            'year': raw_data.get('year') or raw_data.get('publicationYear'),
-            'authors': raw_data.get('authors', []),
-            'abstract': raw_data.get('abstract')
+            'year': year,
+            'authors': authors,
+            'abstract': abstract,
+            # Campos adicionales del API
+            'cited_by': entry.get('citedby-count'),
+            'publication_name': entry.get('prism:publicationName'),
+            'eid': eid
         }
 
-    def _parse_authors(self, authors_text: str) -> List[str]:
+    def _search_via_playwright(
+        self,
+        query: str,
+        max_results: int
+    ) -> List[Dict[str, Any]]:
         """
-        Parsea string de autores a lista.
+        Fallback usando Playwright y APIs internas de Scopus.
 
         Args:
-            authors_text: String con autores (ej: "Smith, J.; Doe, A.")
+            query: Término de búsqueda
+            max_results: Máximo de resultados
 
         Returns:
-            Lista de nombres de autores
+            Lista de resultados normalizados
         """
-        if not authors_text:
-            return []
+        from .scopus_playwright_connector import ScopusPlaywrightConnector
 
-        # Separar por comas, punto y coma, etc.
-        separators = [';', ',']
-        for sep in separators:
-            if sep in authors_text:
-                authors = [a.strip() for a in authors_text.split(sep)]
-                return [a for a in authors if a]
+        connector = ScopusPlaywrightConnector(
+            username=self.username,
+            password=self.password,
+            headless=self.headless
+        )
 
-        return [authors_text.strip()]
-
-    def _extract_year(self, text: str) -> int:
-        """
-        Extrae año de un texto.
-
-        Args:
-            text: Texto que contiene año
-
-        Returns:
-            Año como entero, o None
-        """
-        if not text:
-            return None
-
-        # Buscar patrón de 4 dígitos entre 1900-2100
-        match = re.search(r'\b(19\d{2}|20\d{2}|21\d{2})\b', text)
-        if match:
-            return int(match.group(1))
-
-        return None
+        try:
+            return list(connector.search(query, max_results))
+        finally:
+            connector.close()
 
     def close(self):
-        """
-        Cierra recursos.
-
-        Nota: En esta implementación simple, no hay recursos persistentes.
-        """
+        """Cierra recursos."""
+        self.session.close()
         logger.info("ScopusConnector cerrado")

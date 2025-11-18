@@ -53,7 +53,8 @@ class DiscoveryService:
         self,
         strategy_id: str,
         translation_statuses: dict,
-        supported_sources: list[str]
+        supported_sources: list[str],
+        max_results_per_source: int = 25
     ) -> DiscoveryResult:
         """
         Execute the discovery process (FASE 4: con trazabilidad completa).
@@ -85,6 +86,7 @@ class DiscoveryService:
             translation_statuses: Dictionary with translation status for each source
                                   Format: {source: {"status": str, "query": Optional[str]}}
             supported_sources: List of sources to query
+            max_results_per_source: Maximum results to fetch from each source (default: 25)
 
         Returns:
             DiscoveryResult with unique studies (deduplicados) and summary completo con trazabilidad
@@ -133,7 +135,7 @@ class DiscoveryService:
 
         # 4. Consultar fuentes ejecutables (con manejo robusto de excepciones)
         all_studies, total_por_fuente = self._fetch_studies(
-            executable_sources, sane_statuses, no_ejecutadas
+            executable_sources, sane_statuses, no_ejecutadas, max_results_per_source
         )
 
         # 5. Deduplicar (dominio)
@@ -243,7 +245,8 @@ class DiscoveryService:
         self,
         executable_sources: list[str],
         translation_statuses: dict,
-        no_ejecutadas: dict[str, str]
+        no_ejecutadas: dict[str, str],
+        max_results: int = 25
     ) -> tuple[list[Study], dict[str, int]]:
         """
         Consultar cada fuente ejecutable con manejo robusto de excepciones.
@@ -255,6 +258,7 @@ class DiscoveryService:
             executable_sources: Fuentes a consultar
             translation_statuses: Estados de traducción
             no_ejecutadas: Dict para registrar fuentes que fallen (se modifica in-place)
+            max_results: Máximo de resultados por fuente
 
         Returns:
             (all_studies, total_por_fuente)
@@ -268,7 +272,7 @@ class DiscoveryService:
 
             try:
                 # PUNTO CRÍTICO: Aquí es donde puede fallar en producción
-                raw_results = list(connector.search(query))
+                raw_results = list(connector.search(query, max_results=max_results))
 
                 # Convertir resultados crudos (dicts) a entidades Study del dominio,
                 # respetando también conectores que ya retornan Study (mocks).

@@ -1,25 +1,18 @@
 """
-Scopus Connector v2 - API JSON Based usando Playwright.
+Scopus Playwright Connector - Scraping basado en APIs internas de Scopus.
 
-DIFERENCIAS CON V1:
-- V1: Playwright → HTML → BeautifulSoup (lento, frágil)
-- V2: Playwright → page.request API → JSON APIs (rápido, confiable)
+Este conector se usa como FALLBACK cuando el API oficial de Elsevier no está disponible.
+Usa Playwright para autenticar vía EZproxy y luego llama APIs JSON internas de Scopus.
 
 APIs USADAS:
-- POST /api/documents/search → Resultados (title, doi, authors, year, eid)
-- POST /gateway/documents/abstracts/retrieve → Abstracts
-
-VENTAJAS:
-- ✅ Más rápido (JSON vs HTML parsing)
-- ✅ Más confiable (no depende de selectores CSS)
-- ✅ Datos completos (DOI + Abstract)
+- POST /api/documents/search -> Resultados (title, doi, authors, year, eid)
+- POST /gateway/documents/abstracts/retrieve -> Abstracts
 
 NOTA: Las APIs de Scopus solo funcionan dentro del contexto de Playwright,
 no se pueden llamar con requests directamente (dan 403 Forbidden).
 """
 import logging
 import time
-import random
 import json
 import re
 from typing import Dict, List, Any, Generator
@@ -28,14 +21,16 @@ from playwright.sync_api import sync_playwright, Page
 logger = logging.getLogger(__name__)
 
 
-class ScopusConnectorV2:
+class ScopusPlaywrightConnector:
     """
     Conector para Scopus usando APIs JSON internas (vía Playwright).
+
+    Se usa como fallback cuando el API oficial de Elsevier no está disponible.
 
     Flujo:
     1. Abrir navegador con Playwright
     2. Autenticar vía EZproxy
-    3. Usar page.request.post() para llamar APIs JSON
+    3. Usar page.request.post() para llamar APIs JSON internas
     4. Normalizar y retornar
     """
 
@@ -66,19 +61,18 @@ class ScopusConnectorV2:
         max_results: int = 25
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Busca en Scopus usando APIs JSON.
+        Busca en Scopus usando APIs JSON internas.
 
         Args:
             query: Término de búsqueda
             max_results: Máximo de resultados
 
         Yields:
-            Dict normalizado
+            Dict normalizado con title, link, doi, source, year, authors, abstract
         """
-        logger.info(f"Buscando en Scopus: '{query}' (max: {max_results})")
+        logger.info(f"[Playwright] Buscando en Scopus: '{query}' (max: {max_results})")
 
         with sync_playwright() as p:
-            # Lanzar navegador
             browser = p.chromium.launch(
                 headless=self.headless,
                 args=['--disable-blink-features=AutomationControlled']
@@ -95,17 +89,16 @@ class ScopusConnectorV2:
                 # Autenticar
                 self._authenticate(page)
 
-                # Buscar usando API
+                # Buscar usando API interna
                 results = list(self._search_and_extract(page, query, max_results))
 
-                # Yield resultados
                 for result in results:
                     yield result
 
             finally:
                 browser.close()
 
-        logger.info("Búsqueda completada")
+        logger.info("[Playwright] Búsqueda completada")
 
     def _authenticate(self, page: Page) -> None:
         """
@@ -114,7 +107,7 @@ class ScopusConnectorV2:
         Args:
             page: Página de Playwright
         """
-        page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="networkidle", timeout=60000)
+        page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="load", timeout=60000)
         time.sleep(2)
 
         current_url = page.url
@@ -127,7 +120,6 @@ class ScopusConnectorV2:
         # Buscar formulario de login
         logger.info("Llenando formulario de login...")
 
-        # Buscar campo de usuario
         username_selectors = [
             'input[name="user"]',
             'input[name="username"]',
@@ -201,37 +193,27 @@ class ScopusConnectorV2:
 
             logger.debug(f"POST {self.SEARCH_API}")
 
-            # Hacer request usando Playwright's request API
             response = page.request.post(
                 self.SEARCH_API,
                 data=json.dumps(search_payload),
                 headers={"Content-Type": "application/json"}
             )
 
+            # Verificar respuesta
             headers = response.headers if isinstance(response.headers, dict) else response.headers()
             content_type = headers.get("content-type", "")
             status_code = response.status() if callable(getattr(response, "status", None)) else response.status
-            status_text = response.status_text() if callable(getattr(response, "status_text", None)) else response.status_text
+
             if not response.ok or "application/json" not in content_type.lower():
-                logger.error(f"Scopus: Respuesta inesperada. Status: {status_code}")
-                response_text = "ERROR AL LEER RESPUESTA"
+                logger.error(f"Scopus API interna: Error {status_code}")
                 try:
                     response_text = response.text()
-                    logger.error(f"Contenido (HTML?): {response_text[:1000]}...")
-                    try:
-                        with open("debug_scopus_error.html", "w", encoding="utf-8") as f:
-                            f.write(response_text)
-                        logger.info("Respuesta de error de Scopus guardada en debug_scopus_error.html")
-                    except Exception as file_error:
-                        logger.error(f"No se pudo guardar el archivo de debug Scopus: {file_error}")
-                except Exception as text_error:
-                    logger.error(f"No se pudo leer la respuesta de Scopus: {text_error}")
-                raise Exception(
-                    f"Search API error: {status_code} {status_text}. Contenido: {response_text[:200]}"
-                )
-
-            if not response.ok:
-                raise Exception(f"Search API error: {status_code} {status_text}")
+                    with open("debug_scopus_playwright_error.html", "w", encoding="utf-8") as f:
+                        f.write(response_text)
+                    logger.info("Error guardado en debug_scopus_playwright_error.html")
+                except Exception as e:
+                    logger.error(f"No se pudo guardar debug: {e}")
+                raise Exception(f"Search API error: {status_code}")
 
             data = response.json()
 
@@ -242,21 +224,23 @@ class ScopusConnectorV2:
             logger.info(f"✓ Obtenidos {len(items)} resultados (total: {total_count:,})")
 
             if not items:
-                logger.warning("No se encontraron resultados")
                 return []
 
             # Limitar a max_results
             items = items[:max_results]
 
-            # Obtener abstracts en batch
-            abstracts_map = self._fetch_abstracts(page, [item.get('eid') for item in items], scopus_query)
+            # Obtener abstracts
+            abstracts_map = self._fetch_abstracts(
+                page,
+                [item.get('eid') for item in items],
+                scopus_query
+            )
 
             # Normalizar resultados
             results = []
             for item in items:
                 eid = item.get('eid')
                 abstract = abstracts_map.get(eid)
-
                 result = self._normalize_result(item, abstract)
                 results.append(result)
 
@@ -281,10 +265,9 @@ class ScopusConnectorV2:
             query: Query original
 
         Returns:
-            Dict mapeando eid → abstract_text
+            Dict mapeando eid -> abstract_text
         """
         try:
-            # Payload para abstracts
             abstracts_payload = {
                 "eids": eids,
                 "query": query,
@@ -342,7 +325,7 @@ class ScopusConnectorV2:
         abstract: str = None
     ) -> Dict[str, Any]:
         """
-        Normaliza resultado de la API.
+        Normaliza resultado de la API interna.
 
         Args:
             item: Item del response
@@ -400,4 +383,4 @@ class ScopusConnectorV2:
 
     def close(self):
         """Cierra recursos."""
-        logger.info("ScopusConnectorV2 cerrado")
+        logger.info("ScopusPlaywrightConnector cerrado")

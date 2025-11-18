@@ -19,7 +19,11 @@ class IeeeSessionManager(SessionManager):
     IEEE_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://ieeexplore.ieee.org/Xplore/home.jsp"
     IEEE_PROXY_HOME = "https://bvirtual.epn.edu.ec:2097/Xplore/home.jsp"
 
-    # IEEE directo (para búsquedas con cookies)
+    # IEEE vía EZproxy (para búsquedas con cookies)
+    # Las cookies de EZproxy solo funcionan con el dominio del proxy
+    IEEE_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2097/rest/search"
+
+    # IEEE directo (fallback si estás en la red)
     IEEE_DIRECT_SEARCH = "https://ieeexplore.ieee.org/rest/search"
     IEEE_DIRECT_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
 
@@ -124,8 +128,8 @@ class IeeeSessionManager(SessionManager):
         """
         Prueba sesión con cookies guardadas.
 
-        Intenta acceder al endpoint de búsqueda de EZproxy con las cookies.
-        Si estás FUERA de la red y las cookies son válidas → 200
+        Las cookies de EZproxy solo funcionan con el dominio del proxy,
+        así que probamos contra la URL del proxy, no la directa.
         """
         payload = {
             "queryText": "test",
@@ -134,7 +138,7 @@ class IeeeSessionManager(SessionManager):
         }
 
         return self.session.post(
-            self.IEEE_DIRECT_SEARCH,  # Búsqueda DIRECTA con cookies
+            self.IEEE_PROXY_SEARCH,  # Búsqueda via proxy con cookies
             json=payload,
             timeout=10,
             allow_redirects=False

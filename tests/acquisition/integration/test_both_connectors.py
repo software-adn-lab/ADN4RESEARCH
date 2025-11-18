@@ -3,7 +3,7 @@ Test de integración completo usando DiscoveryService.
 
 Este test valida el flujo END-TO-END usando la arquitectura hexagonal:
 - DiscoveryService (Application Layer)
-- IeeeConnector + ScopusConnectorV2 (Infrastructure Layer)
+- IeeeConnector + ScopusConnector (Infrastructure Layer)
 - Deduplicator (Domain Layer)
 
 Flujo:
@@ -32,17 +32,21 @@ sys.path.insert(0, str(project_root))
 # ARQUITECTURA HEXAGONAL
 from apps.acquisition.discovery.application.discovery_service import DiscoveryService
 from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import IeeeConnector
-from apps.acquisition.discovery.adapters.outbound.connectors.scopus_connector_v2 import ScopusConnectorV2
+from apps.acquisition.discovery.adapters.outbound.connectors.scopus_connector import ScopusConnector
 
 # Cargar .env
 load_dotenv()
 
 username = os.getenv('EPN_USER')
 password = os.getenv('EPN_PASS')
+api_key = os.getenv('SCOPUS_API_KEY')  # API key de Elsevier
 
 if not username or not password:
     print("❌ ERROR: Configurar EPN_USER y EPN_PASS en .env")
     sys.exit(1)
+
+if not api_key:
+    print("⚠️  SCOPUS_API_KEY no configurada - usando solo fallback Playwright para Scopus")
 
 TEST_QUERY = "machine learning"
 MAX_RESULTS = 3
@@ -61,9 +65,9 @@ print("   DiscoveryService (Application)")
 print("      ↓")
 print("   IAcademicConnector (Port)")
 print("      ↙              ↘")
-print("   IeeeConnector    ScopusConnectorV2")
+print("   IeeeConnector    ScopusConnector")
 print("      ↓                   ↓")
-print("   API REST JSON    API REST JSON")
+print("   API REST JSON    API Elsevier / Playwright")
 print("      ↘                 ↙")
 print("         Deduplicator (Domain)")
 print("              ↓")
@@ -108,9 +112,14 @@ print("⏳ Creando IeeeConnector...")
 ieee_connector = IeeeConnector(username, password, headless=True)
 print("✅ IeeeConnector listo")
 
-print("⏳ Creando ScopusConnectorV2...")
-scopus_connector = ScopusConnectorV2(username, password, headless=True)
-print("✅ ScopusConnectorV2 listo")
+print("⏳ Creando ScopusConnector...")
+scopus_connector = ScopusConnector(
+    username=username,
+    password=password,
+    api_key=api_key,
+    headless=True
+)
+print(f"✅ ScopusConnector listo {'(API)' if api_key else '(Playwright fallback)'}")
 print()
 
 connectors = {

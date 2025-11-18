@@ -25,6 +25,7 @@ from playwright.sync_api import sync_playwright, Page, BrowserContext
 import time
 import json
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -234,49 +235,49 @@ class IeeePlaywrightConnector:
 
             logger.info(f"Buscando: '{query}' (max: {max_results})")
 
-            # Variable para capturar respuesta de /rest/search
-            captured_response = None
-
-            def handle_response(response):
-                nonlocal captured_response
-                if '/rest/search' in response.url and response.request.method == 'POST':
-                    try:
-                        captured_response = response.json()
-                        logger.info(f"✓ Capturado /rest/search: {len(captured_response.get('records', []))} resultados")
-                    except:
-                        pass
-
-            # Registrar listener para capturar respuestas
-            self._page.on('response', handle_response)
-
-            # Navegar a búsqueda
+            # Primero navegar a IEEE para establecer contexto
             search_url = f"{self.IEEE_SEARCH_URL}?queryText={query}"
             logger.info(f"Navegando a: {search_url}")
-
-            # 'networkidle' puede ser muy estricto y causar timeouts si la página
-            # mantiene conexiones abiertas; usamos 'load' para ser más tolerantes.
             self._page.goto(search_url, wait_until='load', timeout=self.timeout * 2)
+            time.sleep(2)
 
-            # Esperar a que se capture la respuesta
-            time.sleep(3)
+            # Intentar llamar directamente al API usando page.request
+            logger.info("Llamando a /rest/search API...")
+            try:
+                api_url = "https://ieeexplore.ieee.org/rest/search"
+                payload = {
+                    "queryText": query,
+                    "highlight": True,
+                    "returnFacets": ["ALL"],
+                    "returnType": "SEARCH",
+                    "matchPubs": True,
+                    "pageNumber": 1,
+                    "rowsPerPage": min(max_results, 100)
+                }
 
-            # Quitar listener
-            self._page.remove_listener('response', handle_response)
+                response = self._page.request.post(
+                    api_url,
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"}
+                )
 
-            # Procesar resultados
-            if captured_response and 'records' in captured_response:
-                records = captured_response['records']
-                logger.info(f"Procesando {len(records)} resultados...")
+                if response.ok:
+                    data = response.json()
+                    records = data.get('records', [])
+                    logger.info(f"✓ API: {len(records)} resultados (total: {data.get('totalRecords', 0)})")
 
-                for i, record in enumerate(records):
-                    if i >= max_results:
-                        break
+                    for i, record in enumerate(records):
+                        if i >= max_results:
+                            break
+                        yield self._normalize_record(record)
 
-                    yield self._normalize_record(record)
+                    logger.info(f"✓ Retornados {min(len(records), max_results)} resultados")
+                else:
+                    logger.warning(f"API falló: {response.status}")
+                    raise Exception(f"API error: {response.status}")
 
-                logger.info(f"✓ Retornados {min(len(records), max_results)} resultados")
-            else:
-                logger.warning("No se capturaron resultados de /rest/search")
+            except Exception as api_error:
+                logger.warning(f"API directa falló: {api_error}")
                 logger.warning("Intentando scraping HTML como fallback...")
 
                 # Fallback: scraping HTML
@@ -293,19 +294,49 @@ class IeeePlaywrightConnector:
         """Normaliza un registro de /rest/search al contrato esperado"""
         article_number = record.get('articleNumber', '')
 
+        # Extraer autores
+        authors = []
+        authors_data = record.get('authors', [])
+        for author in authors_data:
+            if isinstance(author, dict):
+                name = (
+                    author.get('preferredName') or
+                    author.get('fullName') or
+                    author.get('name') or
+                    author.get('normalizedName', '')
+                )
+                if name:
+                    authors.append(name)
+            elif isinstance(author, str):
+                authors.append(author)
+
         return {
             'title': record.get('articleTitle', 'N/A'),
             'link': f"https://ieeexplore.ieee.org/document/{article_number}" if article_number else '',
             'doi': record.get('doi'),
-            'source': 'IEEE Xplore'
+            'source': 'IEEE Xplore',
+            'year': record.get('publicationYear'),
+            'authors': authors,
+            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None
         }
 
     def _scrape_html_results(self, max_results: int) -> Iterable[Dict[str, Any]]:
         """Fallback: scraping HTML si /rest/search falla"""
         logger.info("Scraping HTML...")
 
-        # Buscar resultados en la página
+        # Esperar a que carguen los resultados
+        time.sleep(3)
+
+        # Buscar resultados en la página - múltiples selectores
         result_containers = self._page.query_selector_all('.List-results-items')
+
+        if not result_containers:
+            # Intentar selector alternativo
+            result_containers = self._page.query_selector_all('[class*="result-item"]')
+
+        if not result_containers:
+            # Otro selector
+            result_containers = self._page.query_selector_all('.result-item-align')
 
         count = 0
         for container in result_containers:
@@ -313,20 +344,76 @@ class IeeePlaywrightConnector:
                 break
 
             try:
-                title_elem = container.query_selector('a.fw-bold')
-                title = title_elem.inner_text() if title_elem else 'N/A'
+                # Título
+                title_elem = container.query_selector('a.fw-bold, h2 a, h3 a, .result-item-title a')
+                title = title_elem.inner_text().strip() if title_elem else 'N/A'
 
-                link_elem = container.query_selector('a.fw-bold')
-                link = 'https://ieeexplore.ieee.org' + link_elem.get_attribute('href') if link_elem else ''
+                # Link
+                link = ''
+                if title_elem:
+                    href = title_elem.get_attribute('href')
+                    if href:
+                        if href.startswith('/'):
+                            link = 'https://ieeexplore.ieee.org' + href
+                        else:
+                            link = href
 
-                doi_elem = container.query_selector('.col :text("DOI:")')
-                doi = doi_elem.inner_text().replace('DOI:', '').strip() if doi_elem else None
+                # DOI - buscar en múltiples lugares
+                doi = None
+                doi_selectors = [
+                    'a[href*="doi.org"]',
+                    '[class*="doi"]',
+                    ':text("DOI:")'
+                ]
+                for sel in doi_selectors:
+                    try:
+                        doi_elem = container.query_selector(sel)
+                        if doi_elem:
+                            doi_text = doi_elem.inner_text().strip()
+                            # Extraer DOI del texto
+                            doi_match = re.search(r'10\.\d{4,}/[^\s]+', doi_text)
+                            if doi_match:
+                                doi = doi_match.group(0)
+                                break
+                    except:
+                        continue
+
+                # Autores
+                authors = []
+                authors_elem = container.query_selector('.author, [class*="authors"]')
+                if authors_elem:
+                    authors_text = authors_elem.inner_text().strip()
+                    # Separar por ; o ,
+                    if ';' in authors_text:
+                        authors = [a.strip() for a in authors_text.split(';') if a.strip()]
+                    elif ',' in authors_text:
+                        authors = [a.strip() for a in authors_text.split(',') if a.strip()]
+                    else:
+                        authors = [authors_text] if authors_text else []
+
+                # Año
+                year = None
+                year_elem = container.query_selector('[class*="year"], [class*="date"]')
+                if year_elem:
+                    year_text = year_elem.inner_text().strip()
+                    year_match = re.search(r'\b(19\d{2}|20\d{2})\b', year_text)
+                    if year_match:
+                        year = int(year_match.group(1))
+
+                # Abstract (generalmente no está en la lista, pero intentamos)
+                abstract = None
+                abstract_elem = container.query_selector('[class*="abstract"], [class*="snippet"]')
+                if abstract_elem:
+                    abstract = abstract_elem.inner_text().strip()
 
                 yield {
                     'title': title,
                     'link': link,
                     'doi': doi,
-                    'source': 'IEEE Xplore'
+                    'source': 'IEEE Xplore',
+                    'year': year,
+                    'authors': authors,
+                    'abstract': abstract
                 }
 
                 count += 1
@@ -334,7 +421,7 @@ class IeeePlaywrightConnector:
                 logger.warning(f"Error scraping resultado: {e}")
                 continue
 
-        logger.info(f"✓ HTML: {count} resultados")
+        logger.info(f"✓ HTML scraping: {count} resultados")
 
     def close(self):
         """Cierra el navegador y libera recursos"""
