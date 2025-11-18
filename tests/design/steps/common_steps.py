@@ -13,6 +13,7 @@ def step_dado_proyecto_asignado(context):
 
 @step('el proyecto tiene como framework investigativo a {framework_name}')
 def step_y_proyecto_con_framework(context, framework_name):
+    project_id = context.project.id
     context.framework_name = framework_name
     context.framework = project_service.get_or_create_framework(framework_name, context.owner)
     project_service.asign_research_framework_to_project(
@@ -21,13 +22,3 @@ def step_y_proyecto_con_framework(context, framework_name):
     )
     assert context.project.research_framework == context.framework
 
-@step('la etapa "{stage_name}" está abierta')
-def step_etapa_abierta(context, stage_name):
-    context.stage = stage_service.get_or_create_stage(context.project, stage_name)
-    stage_service.open_stage(context.stage, context.owner)
-    assert stage_service.is_stage_opened(stage=context.stage)
-
-@step('la etapa se cerrará')
-def step_y_etapa_cerrada(context):
-    stage_service.close_stage(stage=context.stage, closed_by=context.owner)
-    assert not stage_service.is_stage_opened(stage=context.stage)

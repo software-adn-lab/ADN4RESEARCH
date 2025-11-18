@@ -1,5 +1,3 @@
-from typing import List
-
 from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
@@ -52,3 +50,6 @@ class SearchStrategyService:
             synonyms=synonyms
         )
         return project_keyword
+    
+    def get_strategy_for_question(self, question):
+        return SearchStrategy.objects.filter(research_question=question).first()

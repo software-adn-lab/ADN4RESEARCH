@@ -1,4 +1,5 @@
-from apps.design.research_question.models.research_question import ResearchFramework, ResearchQuestion
+from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.project.models import ResearchFramework
 from config.events import bus
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -47,24 +48,19 @@ class ResearchQuestionService:
         
         bus.publish("research_question_submitted", {
             "question_id": research_question.id,
-            "question_text": research_question.suggested_question
+            "question_text": research_question.question
         })
-        
-    def suggest_rejecting_question(self, research_question: ResearchQuestion, suggester, justification: str):
-        research_question.status = ResearchQuestion.Status.SUGGEST_REJECT
-        research_question.suggester = suggester
-        research_question.justification = justification
-        research_question.save(update_fields=['status', 'suggester', 'justification', 'modified_at'])
     
     def can_submit_question(self, research_question: ResearchQuestion) -> bool:
         return research_question.can_submit_for_review()
     
-    def add_research_question(self, project: Project, research_framework, suggested_question, motivation, researcher, framework_fields):
+    def add_research_question(self, project_id, research_framework, question, motivation, researcher, framework_fields):
         """Crear una nueva pregunta de investigación con todos los atributos necesarios."""
+        project = Project.objects.get(id=project_id)
         return ResearchQuestion.objects.create(
             project=project,
             research_framework=research_framework,
-            suggested_question=suggested_question,
+            suggested_question=question,
             motivation=motivation,
             researcher=researcher,
             framework_fields=framework_fields
@@ -75,7 +71,7 @@ class ResearchQuestionService:
         update_fields = []
         # Solo actualizar campos permitidos si se proporcionan
         if suggested_question is not None:
-            question.suggested_question = suggested_question
+            question.question = suggested_question
             update_fields.append('suggested_question')
         
         if motivation is not None:
@@ -94,9 +90,7 @@ class ResearchQuestionService:
     def autosave_question(self, data, user, project_id):
         question_id = data.get('id') or None
         framework_id = data.get('research_framework')
-        
         framework = self.get_framework_by_id(framework_id)
-        project = Project.objects.get(id=project_id)
         
         framework_fields_data = {
             key.replace('framework_fields[', '').replace(']', ''): value
@@ -113,11 +107,10 @@ class ResearchQuestionService:
                 framework_fields=framework_fields_data
             )
         else:
-            # Usar el método add_research_question
             question = self.add_research_question(
-                project=project,
+                project_id=project_id,
                 research_framework=framework,
-                suggested_question=data.get('suggested_question', ''),
+                question=data.get('suggested_question', ''),
                 motivation=data.get('motivation', ''),
                 researcher=user,
                 framework_fields=framework_fields_data

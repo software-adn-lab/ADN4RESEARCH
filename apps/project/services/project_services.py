@@ -1,6 +1,4 @@
-from apps.design.research_question.models.research_question import ResearchFramework
-from apps.project.models import Project, Stage
-
+from apps.project.models import Project, ResearchFramework
 
 class ProjectService:
     def add_member(self, project: Project, user, role):
@@ -19,35 +17,28 @@ class ProjectService:
         return None
 
     def asign_research_framework_to_project(self, project: Project, framework):
-        print("Assigning framework to project...", project, framework)
         project.research_framework = framework
         project.save()
-
-    def open_stage(self, stage: Stage, opened_by, due_time):
-        # Implementation to open a stage of the project
-        stage.opened_by = opened_by
-        stage.due_time = due_time
-        stage.status = "OPENED"
-        stage.save()
-
-    def close_stage(self, stage: Stage, closed_by):
-        # Implementation to close a stage of the project
-        stage.closed_by = closed_by
-        stage.status = "CLOSED"
-        stage.save()
-
-    def is_stage_opened(self, stage):
-        return stage.status == "OPENED"
 
     def get_project_members(self, project):
         return project.get_members()
 
-    def get_or_create_framework(self, framework_name, assigned_by) -> ResearchFramework:
-        research_framework, _created = ResearchFramework.objects.get_or_create(
+    def assign_framework_project(self, project_id, framework_name, fields_data, assigned_by) -> ResearchFramework:
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            raise ValueError(f"Project with id {project_id} does not exist")
+
+        research_framework, created = ResearchFramework.objects.get_or_create(
             name=framework_name,
-            defaults={
-                "is_global": framework_name in ["PICO", "PEO", "PCC"],
-                "assigned_by": assigned_by,
-            }
+            assigned_by=assigned_by,
+            fields_data=fields_data,
         )
+
+        if not created and fields_data:
+            research_framework.fields_data = fields_data
+            research_framework.save()
+
+        project.research_framework = research_framework
+        project.save()
         return research_framework

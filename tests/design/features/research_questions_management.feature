@@ -18,7 +18,6 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
             }
             """
         Entonces el sistema notificara la creacion al equipo investigador
-        Y la etapa se cerrará
         Ejemplos:
             | framework | fields                                                                                                           | suggested_question_text | motivation          |
             | "PICO"    | {"Population": "Students", "Intervention": "Gamification", "Context": "Online courses", "Outcome": "Motivation"} | "How does ...?"         | "To understand ..." |

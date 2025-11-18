@@ -91,8 +91,7 @@
                                         <button 
                                             class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
                                             title="View Search Strategy"
-                                            data-question-id="{{ question.id }}"
-                                            onclick="my_modal_3.showModal()">
+                                            data-question-id="{{ question.id }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
                                             </svg>
@@ -170,12 +169,17 @@
     </div>
 </div>
 <dialog id="my_modal_3" class="modal">
-  <div class="modal-box">
+  <div class="modal-box w-11/12 max-w-2xl">
     <form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
     </form>
-    <h3 class="text-lg font-bold">Hello!</h3>
-    <p class="py-4">Press ESC key or click on ✕ button to close</p>
+    <h3 id="modal-strategy-name" class="text-lg font-bold">Search Strategy</h3>
+    <div class="py-4">
+        <p class="font-semibold text-base-content/80">Generated Search String:</p>
+        <div id="modal-search-string" class="p-3 mt-2 bg-base-200 rounded-md text-sm font-mono break-words">
+            Loading...
+        </div>
+    </div>
   </div>
 </dialog>
 <script>
@@ -202,6 +206,7 @@
 </script>
 {% load static %}
 <script src="{% static 'scripts/project_keywords.js' %}"></script>
+<script src="{% static 'scripts/generate_search_string.js' %}"></script>
 
 <style>
     .editable-cell { min-height: 2rem; border: 1px solid transparent; transition: all 0.2s ease; }

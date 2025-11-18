@@ -78,7 +78,7 @@ def edit_research_question(request, question_id):
     
     question_data = {
         "id": question.id,
-        "suggested_question": question.suggested_question,
+        "suggested_question": question.question,
         "motivation": question.motivation,
         "framework_fields": question.framework_fields,
         "status": question.status,
@@ -123,7 +123,7 @@ def autosave_research_question(request):
 def get_framework_fields(request, framework_id):
     try:
         framework = research_question_service.get_framework_by_id(framework_id)
-        field_names = list(framework.fields.keys())
+        field_names = list(framework.fields_data.keys())
         return JsonResponse({'fields': field_names})
     except framework.DoesNotExist:
         return JsonResponse({'error': 'Framework not found'}, status=404)

@@ -9,6 +9,7 @@ from apps.design.search_strategy.services.search_strategy_service import SearchS
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 import logging
+import json
 fake = Faker()
 
 project_service = ProjectService()
@@ -21,23 +22,15 @@ acquisition_service = Mock()
 
 @given('que tengo la pregunta de investigación {pregunta_de_investigacion}')
 def step_dado_tengo_pregunta_investigacion(context, pregunta_de_investigacion):
-    fields = {
-        "P": "value1",
-        "I": "value2",
-        "C": "value2",
-        "O": "value2"
-    }
+    project_framework = context.project.research_framework
     context.research_question = research_question_service.add_research_question(
-        project=context.project,
-        research_framework=context.project.research_framework,
+        project_id=context.project.id,
+        research_framework=project_framework,
         suggested_question=pregunta_de_investigacion,
         motivation="Motivación de prueba",
         researcher=context.researcher,
         framework_fields=fields
     )
-    research_question_service.submit_research_question_for_review(research_question=context.research_question)
-    assert context.research_question.status == context.research_question.Status.SUGGESTED
-
 
 @when('el sistema procesa la pregunta para sugerir términos clave')
 def step_cuando_sistema_procesa_terminos_clave(context):
@@ -48,15 +41,6 @@ def step_cuando_sistema_procesa_terminos_clave(context):
     strategy = SearchStrategy.objects.get(research_question=context.research_question)
     context.strategy = strategy
     assert context.strategy is not None
-
-@then('la lista de términos clave sugeridos debe contener:')
-def step_entonces_obtendre_articulos_resultantes(context):
-    terminos_esperados_set = {row['termino_clave'] for row in context.table}
-    key_word_stored = keyword_processor_service.get_keywords_for_strategy(context.strategy)
-    terminos_obtenidos_set = set(key_word_stored)
-    logging.info(f"Términos esperados: {terminos_esperados_set}")
-    logging.info(f"Términos obtenidos: {terminos_obtenidos_set}")
-    assert terminos_esperados_set == terminos_obtenidos_set
 
 @given('que existe una pregunta de investigación en estado {estado}')
 def step_dado_existe_pregunta_investigacion(context, estado):
@@ -99,6 +83,34 @@ def step_entonces_estrategia_sugerida_sera(context):
     actual_string = context.strategy.final_search_string
     normalized_expected = " ".join(expected_string.split())
     normalized_actual = " ".join(actual_string.split())
-    logging.info(f"Expected Search String: {normalized_expected}")
-    logging.info(f"Actual Search String: {normalized_actual}")
     assert normalized_actual == normalized_expected
+    
+@given('que he identificado los campos {framework_fields} del framework {framework}')
+def step_dado_tengo_pregunta_investigacion(context, framework, framework_fields):
+    print("framework_fields", framework_fields)
+    fields = json.loads(framework_fields)
+    context.research_question = research_question_service.add_research_question(
+        project=context.project,
+        research_framework=context.project.research_framework,
+        suggested_question="¿Cuál es el impacto del desarrollo de software en la industria automotriz?",
+        motivation="Motivación de prueba",
+        researcher=context.researcher,
+        framework_fields=fields
+    )
+    research_question_service.submit_research_question_for_review(research_question=context.research_question)
+    assert context.research_question.status == context.research_question.Status.SUGGESTED
+    
+@step('el sistema procesa las oraciones para sugerir términos clave')
+def step_cuando_sistema_procesa_oraciones(context):
+    # Llama a tu función y captura el objeto SearchStrategy devuelto
+    keyword_processor_service.suggest_and_store_key_terms(research_question=context.research_question)
+    strategy = SearchStrategy.objects.get(research_question=context.research_question)
+    context.strategy = strategy
+    assert context.strategy is not None
+    
+@then('la lista de términos clave sugeridos debe contener {expected_terms}')
+def step_entonces_lista_terminos_clave(context, expected_terms):
+    #evitar duplicados
+    expected_terms_list = list(set(expected_terms.split(',')))
+    key_word_stored = keyword_processor_service.get_keywords_for_strategy(context.strategy)
+    assert set(expected_terms_list) == set(key_word_stored)

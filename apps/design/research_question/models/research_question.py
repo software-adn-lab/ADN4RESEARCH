@@ -1,48 +1,7 @@
 from django.db import models
 from django.conf import settings
 
-class ResearchFramework(models.Model):
-    """
-    Defines a research framework (either global like PICO/PEO/PCC or custom).
-    """
-    FRAMEWORK_CHOICES = [
-        ('PICO', 'PICO'),
-        ('PEO', 'PEO'),
-        ('PCC', 'PCC'),
-    ]
-
-    name = models.CharField(max_length=50)
-    is_global = models.BooleanField(default=False)
-    assigned_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='custom_frameworks',
-        null=True,
-        blank=True
-    )
-    total_fields = models.PositiveIntegerField(default=0)
-    fields = models.JSONField(default=dict, blank=True)
-
-    class Meta:
-        unique_together = ('name', 'assigned_by')  
-
-    @property
-    def fields_completed(self):
-        return sum(1 for f in self.fields.values() if f and str(f).strip())
-
-    @property
-    def is_complete(self):
-        return self.fields_completed == self.total_fields
-
-    def __str__(self):
-        prefix = "Global" if self.is_global else "Custom"
-        return f"{prefix} Framework: {self.name}"
-
-
 class ResearchQuestion(models.Model):
-    """
-    Represents a research question created under a specific framework and stage.
-    """
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
         READY_TO_SEND = 'READY_TO_SEND', 'Ready to Send'
@@ -50,25 +9,17 @@ class ResearchQuestion(models.Model):
         SUGGEST_REJECT = 'SUGGEST_REJECT', 'Suggest Reject'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
-        
-    research_framework = models.ForeignKey(ResearchFramework, on_delete=models.CASCADE, related_name='research_questions')
-    suggested_question = models.TextField(blank=True)
+
+    research_framework = models.ForeignKey('project.ResearchFramework', on_delete=models.CASCADE, related_name='research_questions')
+    question = models.TextField(blank=True)
     motivation = models.TextField(blank=True)
+    # Si estoy mandando solo el id. Asi si se define una relacion uno a muchos (El modelo de "muchos" se coloca como campo en el modelo "uno")
     project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
-    stage = models.ForeignKey('project.Stage', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
     researcher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        
         on_delete=models.SET_NULL,
         related_name='research_questions',
         null=True
-    )
-    suggester = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        related_name='suggested_questions',
-        null=True,
-        blank=True
     )
     justification = models.TextField(blank=True)
     status = models.CharField(
@@ -79,10 +30,9 @@ class ResearchQuestion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     framework_fields = models.JSONField(default=dict, blank=True)
-    
     @property
     def has_question_text(self):
-        return bool(self.suggested_question and self.suggested_question.strip())
+        return bool(self.question and self.question.strip())
 
     @property
     def has_motivation(self):
@@ -90,17 +40,12 @@ class ResearchQuestion(models.Model):
 
     @property
     def is_framework_complete(self):
-        required_field_names = self.research_framework.fields.keys()
-        print("what", required_field_names)
-        
+        required_field_names = self.research_framework.fields_data.keys()
         if not required_field_names:
-            return True # If the framework has no required fields, it's complete.
-
+            return True 
         for field_name in required_field_names:
-            # Check if the field exists in our data and has a non-empty value.
             if not self.framework_fields.get(field_name, '').strip():
-                return False # A required field is missing or empty.
-        
+                return False 
         return True
     
     def can_submit_for_review(self) -> bool:

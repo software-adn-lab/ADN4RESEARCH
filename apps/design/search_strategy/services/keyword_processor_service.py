@@ -2,6 +2,7 @@ from apps.design.research_question.models.research_question import ResearchQuest
 from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 import spacy
+import logging
 from typing import List
 
 class KeywordProcessorService:
@@ -9,7 +10,7 @@ class KeywordProcessorService:
     ["NOUN", "ADJ"],       # e.g., "industria automotriz"
     ["NOUN", "ADP", "NOUN"], # e.g., "desarrollo de software"
     ["NOUN", "NOUN"],      # e.g., "coche bomba"
-    ["NOUN"]
+    #["NOUN"] # e.g., "desarrollo"
     ]
     try:
         nlp = spacy.load("es_core_news_sm")
@@ -40,25 +41,20 @@ class KeywordProcessorService:
         return list(phrases)
     
     def suggest_and_store_key_terms(self, research_question: ResearchQuestion):
-        if not research_question.suggested_question or not research_question.suggested_question.strip():
-            SearchStrategy.objects.filter(research_question=research_question).delete()
-            return
-
         project = research_question.project
-        suggested_terms = self.process_key_terms(research_question.suggested_question)
-
-        # 1. Busca la estrategia para esta pregunta; si no existe, la crea. Es idempotente.
+        suggested_terms = set()
+        for field_name, field_value in research_question.framework_fields.items():
+            if field_value and field_value.strip():  # Solo procesar si el campo tiene contenido
+                terms_from_field = self.process_key_terms(field_value)
+                suggested_terms.update(terms_from_field)
         strategy, created = SearchStrategy.objects.update_or_create(
             research_question=research_question,
             defaults={
-                'name': f"Suggested Strategy for RQ-{research_question.id}",
+                'name': f"Suggested Strategy for '{research_question.question}'",
                 'status': SearchStrategy.Status.DRAFT
             }
         )
-
-        # 2. Antes de añadir nuevas keywords, elimina las que ya estaban asociadas a ESTA estrategia.
         strategy.keywords.all().delete()
-
         keywords_to_link = []
         for term in suggested_terms:
             project_keyword, created = ProjectKeyword.objects.get_or_create(
@@ -68,7 +64,6 @@ class KeywordProcessorService:
             keywords_to_link.append(
                 Keyword(strategy=strategy, project_keyword=project_keyword)
             )
-        
         if keywords_to_link:
             Keyword.objects.bulk_create(keywords_to_link)
             
