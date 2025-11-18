@@ -26,7 +26,7 @@ django-storages = ">=1.14.2"
 boto3 = ">=1.34.0"
 
 # Testing - BDD
-behave-django = ">=1.4.0"
+behave-django = ">=1.7.0"
 
 # Frontend - Tailwind CSS
 django-tailwind = ">=3.8.0"
@@ -38,6 +38,9 @@ python-decouple = ">=3.8"
 # Utilities
 pillow = ">=10.1.0"
 python-dateutil = ">=2.8.2"
+faker = "^37.12.0"
+dj-database-url = "^3.0.1"
+google-generativeai = "^0.8.5"
 
 # Web Scraping
 requests = ">=2.31.0"
@@ -64,3 +67,16 @@ paths = [
     "tests/selection/",
     "tests/acquisition/",
 ]
+
+[tool.pylint.MASTER]
+ignore-paths = '^tests/.*$'
+ignore-patterns = 'tests/.*$'
+
+[tool.pylint.main]
+# Use the same environment as the project
+init-hook = 'import sys; sys.path.append(".")'
+ignore-paths = ["^tests/.*$"]
+
+[tool.pylint.messages_control]
+# Disable specific warnings for behave decorators
+extension-pkg-whitelist = ["behave"]

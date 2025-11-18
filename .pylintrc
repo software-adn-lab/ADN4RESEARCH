@@ -1,6 +1,8 @@
 [MASTER]
 # Files or directories to be ignored. Add more if you use a different layout.
-ignore=venv,.venv,env,build,dist
+ignore=venv,.venv,env,build,dist,tests,migrations
+ignore-paths=tests/.*$,migrations/.*$
+ignore-patterns=tests/.*$,migrations/.*$
 
 [MESSAGES CONTROL]
 # Common noisy messages disabled to match project preference
@@ -11,6 +13,8 @@ disable=
     C0301,  # line-too-long
     R0201,  # no-self-use
     R0903,  # too-few-public-methods
+    E1101,  # no-member
+    W0718,  # no-else-return
 
 [FORMAT]
 # Keep a reasonable line length to play nice with tools/formatters

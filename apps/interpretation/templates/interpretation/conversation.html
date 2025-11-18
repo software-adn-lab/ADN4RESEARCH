@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Conversación Interpretativa · ADN4Research</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-custom': '#7B61FF',
+                        'secondary': '#5AB2E6',
+                        'third': '#875AE6',
+                        'principal-font': '#5B5B5B',
+                        'secondary-font': '#000000',
+                        'principal-bg': '#F6F6F6',
+                        'secondary-bg': '#FFFFFF'
+                    }
+                }
+            },
+        }
+    </script>
+</head>
+<body class="bg-principal-bg min-h-screen" onload="lucide.createIcons()">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <a href="{% url 'interpretation:index' %}" class="text-primary-custom hover:text-accent-custom transition font-medium flex items-center gap-2 mb-2">
+                        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                        Volver a temas
+                    </a>
+                    <h1 class="text-2xl font-bold text-secondary-font">{{ context.subtheme.name }}</h1>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-principal-font">
+                        <span class="font-semibold">Estado:</span>
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium {% if context.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                            <i data-lucide="{% if context.is_active %}check-circle{% else %}circle{% endif %}" style="width: 14px; height: 14px;"></i>
+                            {% if context.is_active %}Activo{% else %}Finalizado{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-6 py-8">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="mb-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Context Info -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-semibold text-secondary-font mb-4 flex items-center gap-2">
+                <i data-lucide="info" class="text-primary-custom" style="width: 20px; height: 20px;"></i>
+                Contexto de Investigación
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-principal-font font-medium mb-1">Tema principal</p>
+                    <p class="text-secondary-font">{{ context.theme_name }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-principal-font font-medium mb-1">Pregunta de investigación</p>
+                    <p class="text-secondary-font">{{ context.research_question }}</p>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-principal-font font-medium mb-2">Códigos centrales</p>
+                        {% if context.extractions_context.central_codes %}
+                            <div class="flex flex-wrap gap-2">
+                                {% for code in context.extractions_context.central_codes %}
+                                <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">{{ code }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-gray-400">No especificados</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="text-sm text-principal-font font-medium mb-2">Citas clave</p>
+                        {% if context.extractions_context.key_citations %}
+                            <ul class="text-sm text-secondary-font space-y-1">
+                                {% for citation in context.extractions_context.key_citations %}
+                                <li class="flex items-start gap-1"><span class="text-primary-custom">•</span> {{ citation }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-sm text-gray-400">No especificadas</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversation Trace: Opening Message and Future Interactions -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="message-square" class="text-primary-custom" style="width: 20px; height: 20px;"></i>
+                    <h2 class="text-lg font-semibold text-secondary-font">Traza de Conversación</h2>
+                </div>
+                <div class="text-right text-xs text-principal-font">
+                    <p class="font-medium">Estructura del mensaje:</p>
+                    <p class="text-gray-500">Title • Body • Tags</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                {% for t in traces %}
+                    <div class="{% if t.role == 'COPILOT' %}bg-purple-50 border-l-4 border-primary-custom{% else %}bg-blue-50 border-l-4 border-secondary-custom{% endif %} rounded-lg p-5 shadow-sm">
+                        <!-- Title Section -->
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="{% if t.role == 'COPILOT' %}bot{% else %}user{% endif %}" class="{% if t.role == 'COPILOT' %}text-primary-custom{% else %}text-secondary-custom{% endif %}" style="width: 18px; height: 18px;"></i>
+                                <div>
+                                    <span class="text-xs text-principal-font uppercase tracking-wide">Title</span>
+                                    <h3 class="font-bold text-secondary-font">{{ t.title }}</h3>
+                                </div>
+                            </div>
+                            <span class="text-xs text-principal-font flex items-center gap-1">
+                                <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                                {{ t.created_at|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+
+                        <!-- Body Section -->
+                        <div class="mb-3">
+                            <span class="text-xs text-principal-font uppercase tracking-wide mb-1 block">Body</span>
+                            <div class="bg-white bg-opacity-50 rounded-lg p-3 border border-gray-200">
+                                <p class="text-secondary-font text-sm leading-relaxed">{{ t.body }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Tags Section -->
+                        {% if t.tags %}
+                        <div>
+                            <span class="text-xs text-principal-font uppercase tracking-wide mb-2 block">Tags</span>
+                            <div class="flex flex-wrap gap-2">
+                                {% for tag in t.get_tags_list %}
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-white text-primary-custom text-xs rounded-full border-2 border-primary-custom font-medium">
+                                        <i data-lucide="tag" style="width: 12px; height: 12px;"></i>
+                                        {{ tag }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="text-center py-12 text-principal-font">
+                        <i data-lucide="message-circle" class="mx-auto mb-3 text-gray-400" style="width: 48px; height: 48px;"></i>
+                        <p class="font-medium">No hay mensajes en la conversación aún.</p>
+                        <p class="text-sm text-gray-500 mt-1">El mensaje de apertura se generará al iniciar la asistencia.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Notice about Scenario 2 -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-6">
+            <div class="flex items-start gap-3">
+                <i data-lucide="info" class="text-blue-600 shrink-0 mt-1" style="width: 20px; height: 20px;"></i>
+                <div>
+                    <h3 class="font-semibold text-blue-900 mb-2">Funcionalidad en Desarrollo</h3>
+                    <p class="text-blue-800 text-sm">
+                        La asistencia conversacional ha sido iniciada exitosamente. Las funcionalidades de generación de proposiciones, refinamiento iterativo y finalización de hallazgos estarán disponibles cuando se active el Escenario 2 en las especificaciones de la funcionalidad.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-6xl mx-auto px-6 py-8 text-center text-sm text-principal-font border-t border-gray-200 mt-12">
+        <p>ADN4Research · Sistema de asistencia para revisiones sistemáticas de literatura</p>
+    </footer>
+</body>
+</html>

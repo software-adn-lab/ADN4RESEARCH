@@ -1,0 +1,2 @@
+1. ¿Cómo se pueden identificar anti patrones en un proyecto de software?
+2. ¿Qué induce la aparición de anti patrones en un proyecto de software?

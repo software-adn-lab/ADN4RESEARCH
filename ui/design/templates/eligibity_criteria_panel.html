@@ -1,0 +1,194 @@
+{% extends 'base_tabs.html' %}
+{% load static %}
+{% block eligibility_criteria_content %}
+
+<div class="p-4" data-project-id="{{ project.id }}">
+    {% csrf_token %}
+    <div class="text-xs justify-end flex">
+        <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: FECHAA</span>
+    </div>
+    <!-- Title -->
+    <div class="flex justify-center items-center">
+        <h1 class="text-2xl font-bold text-base-content">Eligibility Criteria Panel</h1>
+    </div>
+
+    <!-- Header / Filter -->
+    <div class="flex justify-end items-center p-4 space-x-4">
+        <div class="form-control">
+            <select id="status-filter" class="select select-bordered select-sm w-48">
+                <option value="">Filter by status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="space-y-8">
+        <!-- Inclusion Criteria -->
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2">
+                Inclusion Criteria
+            </h2>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                        <tr>
+                            <th class="w-1/4">Description</th>
+                            <th class="w-1/4">Motivation</th>
+                            <th class="w-1/6 text-center">Status</th>
+                            <th class="w-1/6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inclusion-table-body" class="text-sm">
+                        {% for criterion in inclusion_criteria %}
+                        <tr data-id="{{ criterion.id }}" class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter description">{{ criterion.description }}</div>
+                            </td>
+                            <td class="p-2">
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
+                            </td>
+                            <td class="p-2 text-center">
+                                {% if criterion.status == 'APPROVED' %}
+                                <span class="badge badge-success text-xs">Approved</span>
+                                {% elif criterion.status == 'REJECTED' %}
+                                <span class="badge badge-error text-xs">Rejected</span>
+                                {% else %}
+                                <span class="badge badge-ghost text-xs">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-center">
+                                <div class="flex justify-center gap-2">
+                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn" title="Approve">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn" title="Reject">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" /></svg>
+                                    </button>
+                                </div>
+                                <div class="autosave-status text-xs h-4 mt-1"></div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Add inclusion -->
+                <a id="add-inclusion-btn" href="#"
+                    class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add inclusion criterion
+                </a>
+            </div>
+        </div>
+
+        <!-- Exclusion Criteria -->
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2 mt-8">
+                Exclusion Criteria
+            </h2>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                        <tr>
+                            <th class="w-1/4">Description</th>
+                            <th class="w-1/4">Motivation</th>
+                            <th class="w-1/6 text-center">Status</th>
+                            <th class="w-1/6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exclusion-table-body" class="text-sm">
+                        {% for criterion in exclusion_criteria %}
+                        <tr data-id="{{ criterion.id }}" class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter description">{{ criterion.description }}</div>
+                            </td>
+                            <td class="p-2">
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
+                            </td>
+                            <td class="p-2 text-center">
+                                {% if criterion.status == 'APPROVED' %}
+                                <span class="badge badge-success text-xs">Approved</span>
+                                {% elif criterion.status == 'REJECTED' %}
+                                <span class="badge badge-error text-xs">Rejected</span>
+                                {% else %}
+                                <span class="badge badge-ghost text-xs">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-center">
+                                <div class="flex justify-center gap-2">
+                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn" title="Approve">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn" title="Reject">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" /></svg>
+                                    </button>
+                                </div>
+                                <div class="autosave-status text-xs h-4 mt-1"></div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Add exclusion -->
+                <a id="add-exclusion-btn" href="#"
+                    class="p-3 border-t border-base-300 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add exclusion criterion
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- JS -->
+<script>
+    // Pass Django URLs to the external JavaScript file
+    const URLS = {
+        create: "{% url 'design:create_criterion' project.id %}",
+        update: "{% url 'design:update_criterion' 9999 %}",
+        approve: "{% url 'design:approve_criterion' 9999 %}",
+        reject: "{% url 'design:reject_criterion' 9999 %}",
+        delete: "{% url 'design:delete_criterion' 9999 %}",
+    };
+</script>
+<script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
+
+<style>
+    .editable-cell {
+        min-height: 2rem;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .editable-cell:hover {
+        background-color: hsl(var(--b2) / 0.3);
+    }
+
+    .editable-cell:focus {
+        background-color: hsl(var(--b1));
+    }
+
+    .editable-cell:empty:before {
+        content: attr(data-placeholder);
+        color: #afafaf;
+        /* Placeholder más opaco */
+    }
+</style>
+
+{% endblock eligibility_criteria_content %}

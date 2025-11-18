@@ -6,6 +6,13 @@ class Project(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_projects')
+    research_framework = models.ForeignKey(
+        'design.ResearchFramework', 
+        on_delete=models.PROTECT, 
+        related_name='projects', 
+        null=True, 
+        blank=True
+    )
 
     def __str__(self):
         return self.name
@@ -17,6 +24,9 @@ class Project(models.Model):
                 Membership.objects.create(project=self, user=user, role=role)
         except Exception as e:
             print(f"Error adding member: {e}")
+    
+    def get_members(self):
+        return Membership.objects.filter(project=self)
 
         
 class Membership(models.Model):
@@ -34,7 +44,15 @@ class Membership(models.Model):
         unique_together = ('project', 'user')
 
 class Stage(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='stages')
+    class Status(models.TextChoices):
+        INACTIVE = 'INACTIVE', 'Inactive'
+        OPENED = 'OPENED', 'Opened'
+        CLOSED = 'CLOSED', 'Closed'
+
+    opened_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='opened_stages')
+    closed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='closed_stages')
+    due_time = models.DateTimeField(null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='stages', default=None, null=True, blank=True)
     name = models.CharField(max_length=100)
     status = models.CharField(max_length=50)
 

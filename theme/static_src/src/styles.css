@@ -3,6 +3,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer components {
+  .parent {
+    @apply grid grid-cols-5 grid-rows-5 gap-2;
+  }
+    
+  .hamburguer-menu {
+    @apply row-span-5;
+  }
+
+  .header-menu {
+    @apply col-span-4;
+  }
+
+  .body-content {
+    @apply col-span-4 row-span-4 col-start-2 row-start-2;
+  }
+}
 
 /**
   * A catch-all path to Django template files, JavaScript, and Python files

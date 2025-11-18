@@ -1,0 +1,46 @@
+{% extends 'base_tabs.html'%}
+{% block questions_history_content %}
+<div class="p-6 space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-center">
+            Research Questions History
+        </h1>
+        <a href="{% url 'design:create_research_question' project.id %}" class="btn btn-primary mt-4 ">Create New Question</a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="table">
+            <!-- head -->
+            <thead>
+                <tr>
+                    <th>N°</th>
+                    <th>Suggested Question</th>
+                    <th>Framework</th>
+                    <th>Motivation</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for question in questions %}
+                <tr>
+                    <th>{{ forloop.counter }}</th>
+                    <td>{{ question.suggested_question|truncatechars:50 }}</td>
+                    <td>{{ question.research_framework.name }}</td>
+                    <td>{{ question.motivation|truncatechars:50 }}</td>
+                    <td><span class="badge badge-ghost badge-sm">{{ question.get_status_display }}</span></td>
+                    <td>
+                        <a href="{% url 'design:edit_research_question' question.id %}" class="btn btn-xs btn-outline bg-primary-custom">Edit</a>
+                        <a href="{% url 'design:delete_research_question' question.id %}" class="btn btn-xs btn-outline">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">You have not created any questions yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock questions_history_content %}

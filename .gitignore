@@ -53,6 +53,7 @@ tests/TESTS-*.xml
 # Claude / MCP (archivos locales, no versionar)
 .claude/
 .claude/**
+claude/
 
 .mcp.json
 *.mcp.json
@@ -69,7 +70,9 @@ tests/TESTS-*.xml
 *_response.json
 *_response.html
 *.png
-captured_*.json# Archivos JSON de test/debug
+captured_*.json
+
+# Archivos JSON de test/debug
 *_results.json
 *_api_candidate_*.json
 combined_results.json

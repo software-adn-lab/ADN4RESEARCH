@@ -1,0 +1,31 @@
+{% extends 'base.html'%}
+{% block content %}
+
+<div class="tabs tabs-lift p-5 pt-0">
+  <a href="{% url 'design:questions_history' project.id %}"
+    class="tab {% if active_tab == 'questions_history' %}tab-active{% endif %}">
+    Research Question History
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block questions_history_content %}
+    {% endblock questions_history_content %}
+  </div>
+
+  <a href="{% url 'design:eligibility_criteria_panel' project.id %}"
+    class="tab {% if active_tab == 'eligibility_criteria_panel' %}tab-active{% endif %}">
+    Eligibility Criteria Panel
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block eligibility_criteria_content %}
+    {% endblock eligibility_criteria_content %}
+  </div>
+
+  <a href="#" class="tab {% if active_tab == 'search_string' %}tab-active{% endif %}">
+    Search String Builder
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block search_string_content %}
+    {% endblock search_string_content %}
+  </div>
+</div>
+{% endblock %}
