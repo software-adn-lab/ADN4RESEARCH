@@ -1,5 +1,5 @@
 from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.design.search_strategy.models.keyword import Keyword
+from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 import spacy
 from typing import List
@@ -9,6 +9,7 @@ class KeywordProcessorService:
     ["NOUN", "ADJ"],       # e.g., "industria automotriz"
     ["NOUN", "ADP", "NOUN"], # e.g., "desarrollo de software"
     ["NOUN", "NOUN"],      # e.g., "coche bomba"
+    ["NOUN"]
     ]
     try:
         nlp = spacy.load("es_core_news_sm")
@@ -38,33 +39,56 @@ class KeywordProcessorService:
                             
         return list(phrases)
     
-    def suggest_and_store_key_terms(self, research_question: ResearchQuestion) -> SearchStrategy:
+    def suggest_and_store_key_terms(self, research_question: ResearchQuestion):
+        if not research_question.suggested_question or not research_question.suggested_question.strip():
+            SearchStrategy.objects.filter(research_question=research_question).delete()
+            return
 
-        # 1. Obtener la lista de strings (como ya tenías)
+        project = research_question.project
         suggested_terms = self.process_key_terms(research_question.suggested_question)
-        # 2. Crear el objeto "contenedor" principal
-        new_strategy = SearchStrategy.objects.create(
+
+        # 1. Busca la estrategia para esta pregunta; si no existe, la crea. Es idempotente.
+        strategy, created = SearchStrategy.objects.update_or_create(
             research_question=research_question,
-            name="Estrategia Sugerida (v1)", # Puedes hacer este nombre más dinámico
-            status=SearchStrategy.Status.DRAFT
+            defaults={
+                'name': f"Suggested Strategy for RQ-{research_question.id}",
+                'status': SearchStrategy.Status.DRAFT
+            }
         )
-        # 3. Preparar los objetos Keyword para la base de datos
-        keywords_to_create = [
-            Keyword(
-                strategy=new_strategy,
-                term=term,
-                synonyms=""  # Se deja vacío para llenado manual, como definimos
+
+        # 2. Antes de añadir nuevas keywords, elimina las que ya estaban asociadas a ESTA estrategia.
+        strategy.keywords.all().delete()
+
+        keywords_to_link = []
+        for term in suggested_terms:
+            project_keyword, created = ProjectKeyword.objects.get_or_create(
+                project=project,
+                term=term
             )
-            for term in suggested_terms
-        ]
+            keywords_to_link.append(
+                Keyword(strategy=strategy, project_keyword=project_keyword)
+            )
         
-        if keywords_to_create:
-            Keyword.objects.bulk_create(keywords_to_create)
-        return new_strategy
+        if keywords_to_link:
+            Keyword.objects.bulk_create(keywords_to_link)
+            
     
     def get_keywords_for_strategy(self, strategy: SearchStrategy) -> List[str]:
         """
         Retorna una lista de términos clave asociados a una estrategia de búsqueda dada.
         """
-        keywords = Keyword.objects.filter(strategy=strategy)
-        return [kw.term for kw in keywords]
+        keywords = Keyword.objects.filter(strategy=strategy).select_related('project_keyword')
+        return [kw.project_keyword.term for kw in keywords]
+    
+    def get_keywords_for_questions(self, questions: List[ResearchQuestion]):
+        """
+        Dada una lista de preguntas de investigación, retorna los términos clave asociados a ellas.
+        """
+        # Devuelve los ProjectKeyword únicos asociados a las preguntas.
+        return ProjectKeyword.objects.filter(keyword__strategy__research_question__in=questions).distinct()
+
+    def get_project_keywords(self, project):
+        """
+        Obtiene todos los ProjectKeyword ("banco de términos") para un proyecto específico.
+        """
+        return ProjectKeyword.objects.filter(project=project).order_by('term')

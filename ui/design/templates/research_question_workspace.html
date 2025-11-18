@@ -5,11 +5,8 @@
     <div class="text-xs justify-end flex">
         <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: FECHAA</span>
     </div>
-    <!-- Title -->
-    <div class="flex justify-center items-center">
-        <h1 class="text-2xl font-bold text-base-content p-4">Research Question Workspace</h1>
-    </div>
-    <div class="flex justify-end items-center p-1 space-x-4">
+    <div class="flex justify-between items-center p-1 space-x-4">
+        <h1 class="text-xl font-bold text-base-content p-1">Research Question Workspace</h1>
         <form method="GET" action="">
             <div class="form-control">
                 <select name="status" id="status-filter" class="select select-bordered select-sm w-48" onchange="this.form.submit()">
@@ -21,105 +18,196 @@
             </div>
         </form>
     </div>
-    <div class="space-y-8">
-        <div class="space-y-3">
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
-                <table class="table w-full table-fixed">
-                    <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
-                        <tr>
-                            <th class="w-1/4">Suggested Question</th>
-                            <th class="w-1/4">Motivation</th>
-                            <th class="w-1/6 text-center">Framework</th>
-                            <th class="w-1/6 text-center">Status</th>
-                            <th class="w-1/6 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="question-table-body" class="text-sm">
-                        {% for question in questions %}
-                        <tr data-id="{{ question.id }}"
-                            data-status="{{ question.status }}"
-                            data-href="{% url 'design:edit_research_question' question.id %}"
-                            class="hover:bg-base-200 transition-colors cursor-pointer">
-                            <td class="p-2">
-                                <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
-                                    title="{{ question.suggested_question }}">
-                                    {% if question.suggested_question %}
-                                        {{ question.suggested_question }}
-                                    {% else %}
-                                    <span class="text-base-content/50 italic">No suggested question provided</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="p-2">
-                                <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
-                                    title="{{ question.motivation }}">
-                                    {% if question.motivation %}
-                                        {{ question.motivation }}
-                                    {% else %}
-                                    <span class="text-base-content/50 italic">No motivation provided</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="p-2">
-                                <div class="focus:outline-none w-full p-1 rounded text-center">{{ project.research_framework.name }}</div>
-                            </td>
-                            <td class="p-2 text-center">
-                                <div class="p-1 text-center badge badge-ghost badge-sm">{{ question.get_status_display }}</div>
-                            </td>
+    <div class="space-y-5">
+        <div class="space-y-8">
+            <div class="space-y-3">
+                <div class="overflow-x-auto border border-base-300 rounded-lg">
+                    <table class="table w-full table-fixed">
+                        <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                            <tr>
+                                <th class="w-1/4">Suggested Question</th>
+                                <th class="w-1/4">Motivation</th>
+                                <th class="w-1/6 text-center">Framework</th>
+                                <th class="w-1/6 text-center">Status</th>
+                                <th class="w-1/6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="question-table-body" class="text-sm">
+                            {% for question in questions %}
+                            <tr data-id="{{ question.id }}"
+                                data-status="{{ question.status }}"
+                                data-href="{% url 'design:edit_research_question' question.id %}"
+                                class="hover:bg-base-200 transition-colors cursor-pointer">
+                                <td class="p-2">
+                                    <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
+                                        title="{{ question.suggested_question }}">
+                                        {% if question.suggested_question %}
+                                            {{ question.suggested_question }}
+                                        {% else %}
+                                        <span class="text-base-content/50 italic">No suggested question provided</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="p-2">
+                                    <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
+                                        title="{{ question.motivation }}">
+                                        {% if question.motivation %}
+                                            {{ question.motivation }}
+                                        {% else %}
+                                        <span class="text-base-content/50 italic">No motivation provided</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="p-2">
+                                    <div class="focus:outline-none w-full p-1 rounded text-center">{{ project.research_framework.name }}</div>
+                                </td>
+                                <td class="p-2 text-center">
+                                    <div class="p-1 text-center badge badge-ghost badge-sm">{{ question.get_status_display }}</div>
+                                </td>
 
-                            <td class="p-2 text-center">
-                                <div class="flex justify-center gap-2">
-                                    <!--- Edit Button  with pen icon-->
-                                    <a href="{% url 'design:edit_research_question' question.id %}"
-                                        class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 edit-btn"
-                                        title="Edit">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </a>
-                                    <a href="{% url 'design:delete_research_question' question.id %}"
-                                        class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
-                                        title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
-                                        </svg>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <td class="p-2 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <!--- Edit Button  with pen icon-->
+                                        <a href="{% url 'design:edit_research_question' question.id %}"
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 edit-btn"
+                                            title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                        <a href="{% url 'design:delete_research_question' question.id %}"
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
+                                            title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </a>
+                                        <!-- Search Strategy Button (NEW) -->
+                                        {% if question.suggested_question %}
+                                        <button 
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
+                                            title="View Search Strategy"
+                                            data-question-id="{{ question.id }}"
+                                            onclick="my_modal_3.showModal()">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
 
-                <!-- Add inclusion -->
-                <a id="add-question-btn" href="{% url 'design:create_research_question' project.id %}"
-                    class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Research Question
-                </a>
+                    <!-- Add inclusion -->
+                    <a id="add-question-btn" href="{% url 'design:create_research_question' project.id %}"
+                        class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Research Question
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-1">
+            <div>
+                <h1 class="text-xl font-bold text-base-content p-1">Project Key Terms</h1>
+            </div>
+            <div class="space-y-3">
+                <div class="overflow-x-auto border border-base-300 rounded-lg">
+                    <table class="table w-full table-fixed">
+                        <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                            <tr>
+                                <th class="w-1/2">Key term</th>
+                                <th class="w-1/2">Synonyms</th>
+                                <th class="w-1/6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keyword-table-body" class="text-sm">
+                            {% for keyword in keywords %}
+                            <tr data-id="{{ keyword.id }}" class="hover:bg-base-200 transition-colors">
+                                <td class="p-2">
+                                    <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter key term">{{ keyword.term }}</div>
+                                </td>
+                                <td class="p-2">
+                                    <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}</div>
+                                </td>
+                                <td class="p-2 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-keyword-btn"
+                                            title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="autosave-status text-xs h-4 mt-1"></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Add keyword -->
+                    <a id="add-keyword-btn" href="#" class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New keyword
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
+<dialog id="my_modal_3" class="modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    <h3 class="text-lg font-bold">Hello!</h3>
+    <p class="py-4">Press ESC key or click on ✕ button to close</p>
+  </div>
+</dialog>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const tableBody = document.getElementById('question-table-body');
         if (tableBody) {
             tableBody.addEventListener('click', (e) => {
                 const row = e.target.closest('tr[data-href]');
-                if (row && !e.target.closest('.edit-btn, .delete-btn')) {
+                // Añade .view-strategy-btn a la lista de exclusiones
+                if (row && !e.target.closest('.edit-btn, .delete-btn, .view-strategy-btn')) {
                     window.location.href = row.dataset.href;
                 }
             });
         }
     });
 </script>
+
+<script>
+    const KEYWORD_URLS = {
+        create: "{% url 'design:create_project_keyword' project.id %}",
+        update: "{% url 'design:update_project_keyword' 9999 %}",
+        delete: "{% url 'design:delete_project_keyword' 9999 %}",
+    };
+</script>
+{% load static %}
+<script src="{% static 'scripts/project_keywords.js' %}"></script>
+
+<style>
+    .editable-cell { min-height: 2rem; border: 1px solid transparent; transition: all 0.2s ease; }
+    .editable-cell:hover { background-color: hsl(var(--b2) / 0.3); }
+    .editable-cell:focus { background-color: hsl(var(--b1)); }
+    .editable-cell:empty:before { content: attr(data-placeholder); color: #afafaf; }
+</style>
 
 {% endblock questions_history_content %}

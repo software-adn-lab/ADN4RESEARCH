@@ -1,9 +1,12 @@
 import json
+from django.contrib import messages
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth import get_user_model
+from apps.design.exceptions.research_question_exceptions import QuestionSubmissionError
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
 from apps.project.models import Project
 from apps.project.services.project_services import ProjectService
 
@@ -11,6 +14,8 @@ from apps.project.services.project_services import ProjectService
 
 research_question_service = ResearchQuestionService()
 project_service = ProjectService()
+keyword_processor_service = KeywordProcessorService()
+
 
 
 # Obtén el modelo de Usuario activo en tu proyecto
@@ -21,6 +26,28 @@ def hello(request):
     return render(request, 'base_tabs.html', {
         'project': project
     })
+def open_questions_workspace_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    status_filter = request.GET.get('status', None)
+    if status_filter in [ResearchQuestion.Status.DRAFT, ResearchQuestion.Status.READY_TO_SEND, ResearchQuestion.Status.SUGGESTED]:
+        questions = research_question_service.get_research_questions_by_status(
+            project=project, 
+            status=status_filter
+        )
+    else:
+        questions = research_question_service.get_all_questions_by_user_and_project(
+            user=request.user, 
+            project_id=project_id
+        )
+    project_keywords = keyword_processor_service.get_project_keywords(project)
+    
+    context = {
+        'project': project, # Añadir el proyecto al contexto
+        'questions': questions,
+        'keywords': project_keywords,
+        'active_tab': 'questions_history', 
+    }
+    return render(request, 'research_question_workspace.html', context)
 
 def create_research_question(request, project_id):
     project = get_object_or_404(Project, id=project_id)
@@ -34,12 +61,16 @@ def create_research_question(request, project_id):
 def send_research_question_for_review(request, question_id):
     try:
         question = research_question_service.get_research_question_by_id(question_id, request.user)
-        research_question_service.submit_research_question_for_review(question)
-        # Obtener el project_id de la pregunta y pasarlo al redirect
-        project_id = question.project.id
-        return redirect('design:questions_history', project_id=project_id)
-    except ResearchQuestion.DoesNotExist:  # Cambiado de question.DoesNotExist
+    except ResearchQuestion.DoesNotExist:
         raise Http404("Research question not found")
+    project_id = question.project.id
+    try:
+        research_question_service.submit_research_question_for_review(question)
+        messages.success(request, "La pregunta ha sido enviada para revisión.")
+    except QuestionSubmissionError as e:
+        messages.warning(request, str(e))
+    
+    return redirect('design:questions_history', project_id=project_id)
     
 def edit_research_question(request, question_id):
     question = get_object_or_404(ResearchQuestion, id=question_id)
@@ -70,27 +101,6 @@ def delete_research_question(request, question_id):
     except ResearchQuestion.DoesNotExist:  # Cambiado de question.DoesNotExist
         raise Http404("Research question not found")
     
-def questions_history_view(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
-    status_filter = request.GET.get('status', None)
-    if status_filter in [ResearchQuestion.Status.DRAFT, ResearchQuestion.Status.READY_TO_SEND, ResearchQuestion.Status.SUGGESTED]:
-        questions = research_question_service.get_research_questions_by_status(
-            project=project, 
-            status=status_filter
-        )
-    else:
-        # Si no, obtén todas las preguntas para el usuario y proyecto.
-        questions = research_question_service.get_all_questions_by_user_and_project(
-            user=request.user, 
-            project_id=project_id
-        )
-    context = {
-        'project': project, # Añadir el proyecto al contexto
-        'questions': questions,
-        'active_tab': 'questions_history', 
-    }
-    return render(request, 'research_question_workspace.html', context)
-    
 def autosave_research_question(request):
     if request.method == 'POST':
         try:
@@ -99,6 +109,7 @@ def autosave_research_question(request):
                 raise ValueError("Project ID is missing.")
             
             question = research_question_service.autosave_question(request.POST, request.user, project_id)
+            keyword_processor_service.suggest_and_store_key_terms(research_question = question)
             current_status = research_question_service.define_status(question)
             # Return the new ID and status, as expected by the frontend script
             return JsonResponse({'id': question.id, 'status': question.status, 'can_submit': research_question_service.can_submit_question(question)})

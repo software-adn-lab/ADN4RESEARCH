@@ -19,7 +19,7 @@ eligibility_service = EligibilityCriterionService()
 acquisition_service = Mock()  
 
 
-@given('que tengo la pregunta de investigación {pregunta_de_investigacion} en estado SUGGESTED')
+@given('que tengo la pregunta de investigación {pregunta_de_investigacion}')
 def step_dado_tengo_pregunta_investigacion(context, pregunta_de_investigacion):
     fields = {
         "P": "value1",
@@ -42,23 +42,20 @@ def step_dado_tengo_pregunta_investigacion(context, pregunta_de_investigacion):
 @when('el sistema procesa la pregunta para sugerir términos clave')
 def step_cuando_sistema_procesa_terminos_clave(context):
     # Llama a tu función y captura el objeto SearchStrategy devuelto
-    nueva_estrategia = keyword_processor_service.suggest_and_store_key_terms(
+    keyword_processor_service.suggest_and_store_key_terms(
         context.research_question
     )
-    
-    # Guarda esta estrategia en el contexto para que el 'then' la use
-    context.strategy = nueva_estrategia
+    strategy = SearchStrategy.objects.get(research_question=context.research_question)
+    context.strategy = strategy
     assert context.strategy is not None
 
 @then('la lista de términos clave sugeridos debe contener:')
 def step_entonces_obtendre_articulos_resultantes(context):
     terminos_esperados_set = {row['termino_clave'] for row in context.table}
-    # 2. Obtener los términos reales (de la DB)
-    # ¡Usamos la 'strategy' guardada en el context por el paso @when!
     key_word_stored = keyword_processor_service.get_keywords_for_strategy(context.strategy)
-    # 3. Convertir los objetos Keyword de la DB a un set de strings
     terminos_obtenidos_set = set(key_word_stored)
-    
+    logging.info(f"Términos esperados: {terminos_esperados_set}")
+    logging.info(f"Términos obtenidos: {terminos_obtenidos_set}")
     assert terminos_esperados_set == terminos_obtenidos_set
 
 @given('que existe una pregunta de investigación en estado {estado}')
@@ -102,4 +99,6 @@ def step_entonces_estrategia_sugerida_sera(context):
     actual_string = context.strategy.final_search_string
     normalized_expected = " ".join(expected_string.split())
     normalized_actual = " ".join(actual_string.split())
+    logging.info(f"Expected Search String: {normalized_expected}")
+    logging.info(f"Actual Search String: {normalized_actual}")
     assert normalized_actual == normalized_expected

@@ -2,8 +2,7 @@
 Característica: Validar preguntas de investigación de los investigadores    
     Como owner de un proyecto de investigación
     Quiero validar las preguntas de investigación sugeridas por los investigadores
-    Para asegurar una guía apropiada al proyecto de investigación
-
+    Para asegurar una guía apropiada de mi revisión sistemática
         
     Escenario: Aprobar el estado de las preguntas de investigación
         Dado la etapa de "discusión de preguntas de investigación" está abierta
