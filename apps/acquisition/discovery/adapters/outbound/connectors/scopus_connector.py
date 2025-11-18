@@ -21,6 +21,7 @@ import time
 import random
 import re
 from typing import Dict, List, Any, Generator, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import requests
 
@@ -170,11 +171,13 @@ class ScopusConnector:
 
         while len(results) < max_results:
             # Parámetros de búsqueda
+            # Intentar view='COMPLETE' para obtener abstracts directamente
+            # Si la API key no tiene permisos, caemos a STANDARD + fetch individual
             params = {
                 'query': scopus_query,
                 'start': start,
                 'count': count,
-                'view': 'STANDARD'
+                'view': 'COMPLETE'  # Incluye abstract en respuesta
             }
 
             url = f"{self.ELSEVIER_BASE_URL}{self.SEARCH_ENDPOINT}"
@@ -205,14 +208,22 @@ class ScopusConnector:
             if not entries:
                 break
 
-            # Obtener abstracts para estos resultados
-            scopus_ids = []
+            # Con view='COMPLETE', el abstract puede venir en dc:description
+            # Solo buscamos abstracts faltantes en paralelo
+            entries_without_abstract = []
             for entry in entries:
-                identifier = entry.get('dc:identifier', '')
-                if identifier.startswith('SCOPUS_ID:'):
-                    scopus_ids.append(identifier.replace('SCOPUS_ID:', ''))
+                # Verificar si ya tiene abstract
+                if not entry.get('dc:description'):
+                    identifier = entry.get('dc:identifier', '')
+                    if identifier.startswith('SCOPUS_ID:'):
+                        scopus_id = identifier.replace('SCOPUS_ID:', '')
+                        entries_without_abstract.append((entry, scopus_id))
 
-            abstracts_map = self._fetch_abstracts_batch(scopus_ids)
+            # Fetch abstracts faltantes EN PARALELO (no secuencial)
+            abstracts_map = {}
+            if entries_without_abstract:
+                scopus_ids = [sid for _, sid in entries_without_abstract]
+                abstracts_map = self._fetch_abstracts_parallel(scopus_ids)
 
             # Normalizar resultados
             for entry in entries:
@@ -221,7 +232,9 @@ class ScopusConnector:
 
                 identifier = entry.get('dc:identifier', '')
                 scopus_id = identifier.replace('SCOPUS_ID:', '') if identifier.startswith('SCOPUS_ID:') else ''
-                abstract = abstracts_map.get(scopus_id)
+
+                # Usar abstract del entry (COMPLETE view) o del fetch individual
+                abstract = entry.get('dc:description') or abstracts_map.get(scopus_id)
 
                 result = self._normalize_api_result(entry, abstract)
                 results.append(result)
@@ -237,15 +250,15 @@ class ScopusConnector:
 
         return results
 
-    def _fetch_abstracts_batch(
+    def _fetch_abstracts_parallel(
         self,
         scopus_ids: List[str]
     ) -> Dict[str, str]:
         """
-        Obtiene abstracts para múltiples documentos.
+        Obtiene abstracts para múltiples documentos EN PARALELO.
 
-        Nota: Cada abstract requiere una llamada individual al API.
-        Para no agotar la cuota, limitamos a los primeros N.
+        OPTIMIZACIÓN: Usa ThreadPoolExecutor para hacer todas las llamadas
+        simultáneamente en lugar de secuencialmente.
 
         Args:
             scopus_ids: Lista de Scopus IDs
@@ -255,23 +268,32 @@ class ScopusConnector:
         """
         abstracts_map = {}
 
+        if not scopus_ids:
+            return abstracts_map
+
         # Limitar para no agotar cuota
         max_abstracts = min(len(scopus_ids), 10)
+        ids_to_fetch = scopus_ids[:max_abstracts]
 
-        for scopus_id in scopus_ids[:max_abstracts]:
-            try:
-                abstract = self._fetch_single_abstract(scopus_id)
-                if abstract:
-                    abstracts_map[scopus_id] = abstract
+        logger.debug(f"Fetching {len(ids_to_fetch)} abstracts en paralelo...")
 
-                # Rate limit entre abstracts
-                time.sleep(0.2)
+        # Ejecutar EN PARALELO
+        with ThreadPoolExecutor(max_workers=min(5, len(ids_to_fetch))) as executor:
+            future_to_id = {
+                executor.submit(self._fetch_single_abstract, sid): sid
+                for sid in ids_to_fetch
+            }
 
-            except Exception as e:
-                logger.debug(f"No se pudo obtener abstract para {scopus_id}: {e}")
-                continue
+            for future in as_completed(future_to_id):
+                scopus_id = future_to_id[future]
+                try:
+                    abstract = future.result()
+                    if abstract:
+                        abstracts_map[scopus_id] = abstract
+                except Exception as e:
+                    logger.debug(f"No se pudo obtener abstract para {scopus_id}: {e}")
 
-        logger.debug(f"Obtenidos {len(abstracts_map)} abstracts")
+        logger.debug(f"Obtenidos {len(abstracts_map)} abstracts en paralelo")
         return abstracts_map
 
     def _fetch_single_abstract(self, scopus_id: str) -> Optional[str]:

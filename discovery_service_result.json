@@ -2,110 +2,631 @@
   "metadata": {
     "strategy_id": "integration-test-001",
     "query": "machine learning",
-    "timestamp": "2025-11-14T15:40:56.910519",
-    "duration_seconds": 33.925657
+    "timestamp": "2025-11-18T12:35:11.999292",
+    "duration_seconds": 46.262233
   },
   "summary": {
     "id_estrategia": "integration-test-001",
-    "resultado": "partial",
-    "total_bruto": 10,
-    "total_unicos": 10,
+    "resultado": "complete",
+    "total_bruto": 50,
+    "total_unicos": 50,
     "total_por_fuente": {
-      "IEEE Xplore": 10
+      "Scopus": 25,
+      "IEEE Xplore": 25
     },
-    "no_ejecutadas": {
-      "Scopus": "connection_error: Exception: Search API error: 200 OK. Contenido: <!DOCTYPE html><html class=\"micro-ui-namespace\" lang=\"en-US\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head="
-    }
+    "no_ejecutadas": {}
   },
   "studies": [
     {
+      "title": "In-depth exploration of optoelectronic and PV characteristics in lead-free Ca3BiF3 perovskite solar cells: numerical simulations and machine learning approaches",
+      "authors": [
+        "Biswas B.C."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01079-5",
+      "abstract": "Calcium bismuth fluoride (Ca<inf>3</inf>BiF<inf>3</inf>)-based hybrid perovskite solar cells (HPSCs) represent a promising lead-free alternative for next-generation photovoltaics, integrating advantageous semiconducting properties with the potential for cost-effective and environmentally sustainable energy conversion. This study presents an integrated computational framework that combines density functional theory (DFT), SCAPS-1D device modeling, and machine learning (ML) to enhance the design and optimization of Ca<inf>3</inf>BiF<inf>3</inf>-based solar cells. Intrinsic electronic and optical parameters derived from DFT informed SCAPS-1D simulations, which systematically investigated absorber thickness, defect density, doping concentration, and transport layer selection to analyze carrier dynamics, generation-recombination processes, and band alignment effects. Optimization demonstrated that P3HT-based HTL architecture (Al/FTO/TiO<inf>2</inf>/Ca<inf>3</inf>BiF<inf>3</inf>/P3HT/Ni) attains enhanced performance, achieving a power conversion efficiency (PCE) of 20.53%, a short-circuit current density (J<inf>SC</inf>) of 15.159 mA/cm<sup>2</sup>, an open-circuit voltage (V<inf>OC</inf>) of 1.511 V, and a fill factor (FF) of 89.60%, surpassing traditional CuI-based structures. The machine learning model developed using SCAPS data achieved a predictive accuracy of 95.2%, highlighting the significance of AI-driven tools in material evaluation and performance prediction. This work establishes a transparent pipeline that integrates quantum-level calculations, device simulations, and machine learning-guided predictions. It validates Ca<inf>3</inf>BiF<inf>3</inf> as a promising lead-free absorber and offers a scalable methodology for enhancing the development of efficient, stable, and sustainable thin-film solar cells for practical applications.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020241477&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Ternary hybrid nanofluids: synthesis, thermal properties, machine learning insights, and emerging applications",
+      "authors": [
+        "Pandian A."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01072-y",
+      "abstract": "Ternary hybrid nanofluids (THNFs), made of three different nanoparticles in a base fluid, are emerging as advanced heat transfer fluids with great potential for thermal management. Compared to mono and binary nanofluids, THNFs exhibit superior thermal conductivity, stability, and viscosity control, making them suitable for applications in electronics cooling, renewable energy, automotive engines, and biomedical devices. However, challenges persist in optimizing their synthesis, ensuring long-term stability, and accurately evaluating their thermophysical properties under various conditions. Recently, machine learning (ML) models have been utilized to predict and enhance THNF performance, improving accuracy and reducing experimental costs. This review explores THNF synthesis methods, thermal property analysis, and practical applications, while assessing the role of ML in predictive modeling. It also addresses key challenges and provides future directions for developing stable, scalable, and application-ready THNFs. The strength of this work lies in extracting insights from experimental data and computational intelligence, offering a comprehensive framework for researchers and engineers to accelerate THNF implementation in next-generation thermal systems.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105019507485&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Machine learning-based prediction of strength characteristics of cement-stabilised soil incorporating construction and demolition waste and polypropylene fibres",
+      "authors": [
+        "Sivakumar V."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01086-6",
+      "abstract": "This study presents a novel approach to improving the mechanical performance and durability of cement-stabilised soil by incorporating construction and demolition (C&D) waste, polypropylene (PP) fibres, and sodium sulphate. While cement-stabilised soil is cost-effective for construction, its limited strength poses challenges for structural applications. To address this, 81 laboratory experiments were conducted to assess compressive and flexural strength across 5, 10, and 25-day curing periods. The inclusion of PP fibres significantly enhanced flexural strength, while C&D waste and sodium sulphate markedly improved compressive strength. To predict strength outcomes, advanced machine learning models—a posterior broadcast neural network (PBNN) and random forest (RF)—were employed. Model parameters were optimised using the beetle antennae search algorithm with ten-fold cross-validation. The models demonstrated strong predictive performance, with R² values of 0.95–0.97 for PBNN and 0.93–0.99 for RF, and lower RMSEs compared to k-nearest neighbour, logistic regression, and multiple linear regression models Among the models tested, the Random Forest (RF) model demonstrated superior predictive accuracy, achieving a higher correlation coefficient (R = 0.99) and lower RMSE compared to the Backpropagation Neural Network (BPNN). This highlights the RF model’s effectiveness in capturing complex interactions in the dataset, making it more reliable for strength prediction of cement-stabilized soil composites. The integration of ML with experimental material design offers a data-driven strategy for developing sustainable, high-strength cement-stabilised soils.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020665191&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Performance analysis of concrete-filled aluminum tubes confined with aramid fiber sheets under axial loading: a combined numerical and machine learning approach",
+      "authors": [
+        "Qader D.N."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01082-w",
+      "abstract": "This study presents a comprehensive investigation into the axial performance of concrete-filled aluminum tubular (CFAT) columns externally confined with aramid fiber-reinforced polymer (AFRP) sheets, using an integrated finite element analysis (FEA) and machine learning (ML) framework. While CFAT columns offer significant advantages such as reduced weight, high corrosion resistance, and architectural appeal, their structural performance is often limited by the lower stiffness and yield strength of aluminum. To overcome these limitations, this research explores the use of AFRP confinement to enhance load-bearing capacity and ductility. A validated FEA model was developed in ABAQUS based on 23 experimental CFAT stub column tests, showing strong agreement with results (where PEXP/PFEA, the ratio of experimental to FEA-predicted load capacities, ranged from 0.85 to 1.14, confirming model accuracy). A detailed parametric analysis investigated the effects of AFRP layer count, concrete strength, and tube geometry (D/t ratio, the diameter-to-thickness ratio indicating slenderness), revealing that AFRP confinement significantly improves performance—particularly in thin-walled columns. Additionally, four ML models (SVR, RF, ANN, Meta-ANN) were trained on 113 datasets generated from numerical simulations to predict ultimate axial load capacity. The Meta-ANN model achieved the highest accuracy with a MAPE of 2.02% and R of 0.99. To interpret the predictions, SHAP (SHapley Additive exPlanations) analysis was used, identifying column diameter and concrete strength as the most influential parameters. This dual numerical–data-driven approach demonstrates the potential of combining AFRP confinement with AI-based prediction tools for the design and optimization of advanced composite columns.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105019699906&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Ensemble learning for CO2 footprint prediction of waste glass powder-based UHPC",
+      "authors": [
+        "Farouk A.I.B."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01085-7",
+      "abstract": "Accurate forecasting of the carbon dioxide footprint (CO<inf>2</inf>-FP) associated with ultra-high-performance concrete (UHPC) that incorporates waste glass powder (WGP) is crucial for the advancement of sustainable construction materials. This investigation proposes an ensemble learning framework that amalgamates gradient boosting, random forest, and extreme learning machine models to accurately estimate the CO<inf>2</inf>-FP of WGP-enriched UHPC mixtures, thereby enhancing both precision and stability. The ensemble model employs data-driven optimization techniques to elucidate complex nonlinear interrelationships between the constituents of the mix and various environmental impact indicators. The interpretability of the model is augmented through the application of SHAP and partial dependence analyses, which elucidate the roles of cement, WGP, and superplasticizer contents as the predominant factors influencing CO<inf>2</inf> emissions. The framework exhibits superior generalization capabilities in comparison to standalone models, thereby underscoring its robustness for both predictive and diagnostic purposes. In addition to its predictive prowess, the research introduces a systematic methodology that correlates material composition, binder optimization, and sustainability outcomes. The results yield actionable insights into mitigating embodied carbon in UHPC through the valorization of industrial glass waste, thereby contributing to practices aligned with the circular economy and the advancement of environmentally sustainable concrete design strategies.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020665871&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "High-Entropy Materials: A New Paradigm in the Design of Advanced Batteries",
+      "authors": [
+        "Xin Y."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s40820-025-01842-w",
+      "abstract": "The development history, characteristics and applications of high entropy alloys, high entropy oxides and high entropy MXenes are reviewed. High entropy materials as cathode, anode and electrolyte to improve batteries capacity, cycle life and cycle stability are introduced systematically. The latest progresses of employing machine learning in high entropy battery materialsare highlighted and discussed in details.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105010881019&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Mathematical modeling of unsealed shrinkage in ultra high-performance concrete: analyzing influential factors and model performance",
+      "authors": [
+        "Fan H."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01076-8",
+      "abstract": "Accurate prediction of concrete shrinkage is crucial for enhancing durability and reducing service-life issues in construction. Conventional empirical methods frequently fail to account for the intricate nonlinear interactions between material components and ambient variables that affect shrinkage behavior. This study utilized machine learning techniques to improve predictive accuracy, optimizing Support Vector Regression (SVR) and Decision Tree Regression (DTR) models with advanced metaheuristic algorithms, specifically the Arithmetic Optimization Algorithm (AOA) and Aquila Foraging Technique (AFT). This paradigm sought to equilibrate precision, interpretability, and computing efficiency. The collection included unsealed shrinkage measurements affected by mix composition and environmental factors. Recursive Feature Elimination was employed for feature selection, guaranteeing the retention of the most pertinent variables for modeling. The model’s performance was assessed using common measures, such as R² and RMSE, with independent validation and test sets utilized to reduce overfitting. The optimized models exhibited superior predictive capacity, with coefficients of determination surpassing 0.98 in the test data. The dual-tree AOA-based method had the maximum accuracy, but with increased computational expense. The comparison research revealed a trade-off between predictive effectiveness and efficiency, indicating that simpler models may be more beneficial for quick applications. These findings indicate that optimization-assisted machine learning can function as a dependable instrument for predicting shrinkage behavior. The practical consequences encompass aiding mix design decisions, directing shrinkage control tactics, and enhancing the durability, cost-effectiveness, and sustainability of construction processes.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105019492076&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Optimizing Exciton and Charge-Carrier Behavior in Thick-Film Organic Photovoltaics: A Comprehensive Review",
+      "authors": [
+        "Wei L."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s40820-025-01852-8",
+      "abstract": "Research progress summary: Provides a systematic review of recent advancements in thick-film organic photovoltaics (OPVs) with a focus on molecular design and device engineering strategies. Efficiency enhancement strategies: Explores the mechanisms limiting efficiency in thick-film devices, analyzes exciton and charge-carrier dynamics, and identifies effective approaches to improve device performance. Industrialization contributions and outlook: Summarizes the potential contributions of thick-film OPVs to industrial applications and offers insights into future development directions (in stability, cost, and machine learning aspects).",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105011359449&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Optimizing ML classifiers for superior intrusion detection in resource-constrained smart homes",
+      "authors": [
+        "Xu R."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.ijcce.2025.08.003",
+      "abstract": "Machine learning (ML) has indeed become essential to the enhancement of intrusion detection systems in different scenarios. It has become a critical barrier against various sophisticated cyber threats. Security vulnerabilities pose special challenges to smart homes, given that devices, sensors, and network connections make the ecosystem highly connected. Such systems improve convenience and efficiency but are generally based on hardware with limited processing power and storage capacity. Therefore, these are prone to a variety of potential attacks. To do so, an effective IDS would have to identify known and evolving threats at all the various vulnerable points, starting from network interfaces down to individual devices. This work tackles these challenges by designing and optimizing ML models that offer reliable intrusion detection tailored for resource-constrained smart home environments. This work argues for intrusion prediction in smart homes using the Extra Tree Classification (ETC) and Linear Discriminant Analysis Classification (LDAC). To strengthen these base models' predictive capability, this paper considered the use of 2 optimization algorithms: the Rider Optimization Algorithm (ROA) and the Aquila Optimizer (AO). The optimizers were integrated strategically with the base models for improved accuracy, thus giving rise to new hybrid models. The combination of ETC with AO provides the ETAO model, while ETC with ROA gives the ETRO model. In equal measure, the LDAC model combined with ROA gives the LDRO model, while that of the LDAC model combined with AO gives the LDAO model. Basically, these hybrid models aim to ensure better performance from a prediction perspective. In the test section, the ETAO model was head and shoulders above the others in this metric, with an excellent value of 0.984, while for the ETRO model, the second-best performing model achieved 0.975. Later on, looking at the entire section, the precision metric again scored highest with the ETAO model at 0.987, while the weakest performance was from the LDAO model, which had a value of 0.888.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105015043916&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Integrating artificial intelligence and quantum computing: A systematic literature review of features and applications",
+      "authors": [
+        "Pineda V.G."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.ijcce.2025.08.002",
+      "abstract": "Quantum Computing (QC) and Artificial Intelligence (AI) have emerged as key technologies in the evolution of Industry 6.0, driving advancements in automation and advanced analytics, and process optimization. Their integration holds the potential to revolutionize sectors such as data science, healthcare, finance, and cybersecurity by enabling faster and more efficient computations through qubits, superposition, and quantum entanglement. However, the lack of structured knowledge regarding specific QC methodologies and applications in AI hinders its optimal implementation and development. Consequently, this study aims to identify the applications and variables associated with QC-AI integration. To this end, a systematic literature review was conducted following the PRISMA 2020 methodology, drawing on studies from Scopus and Web of Science databases. This enabled the analysis of trends, limitations, and opportunities in this technological convergence. This study aims to systematically examine the intersection of quantum computing and artificial intelligence by identifying the key technological features, integration requirements, and sectoral applications that define the current state of the field. The review contributes by mapping existing research, highlighting methodological approaches, and revealing gaps that may guide targeted advancements in hybrid quantum AI systems. The insights generated have the potential to accelerate innovation in high-impact domains such as healthcare, finance, energy, and cybersecurity. The findings indicate that the main advances in QC applied to AI focus on quantum optimization, Quantum Machine Learning (QML), and post-quantum cryptography. Notably, sectors such as energy, healthcare, and finance have shown significant progress in adopting these technologies. For example, in healthcare, QML has been applied to simulate molecular interactions to accelerate drug discovery, and in finance, it enhances predictive models for market behavior. The study concludes that although QC demonstrates substantial potential to enhance AI, its broader adoption remains constrained by reliance on NISQ hardware, the need for effective error correction, and the limited scalability of hybrid quantum classical algorithms. Addressing these challenges will be essential to establishing QML as a cornerstone of technological innovation and digital transformation. Additionally, this review introduces an integrative framework that categorizes key AI QC convergence dimensions and proposes a classification of application areas based on technical requirements and algorithmic capabilities. These contributions aim to guide future experimental validations and hybrid model development.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105014601110&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Least square support vector regression analysis usage for estimating the uplift resistance of circular anchors in anisotropic clay",
+      "authors": [
+        "Li R."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01074-w",
+      "abstract": "The current research evaluates the performance of the presented models in forecasting the uplift resistance factor (F<inf>c</inf>) of circular anchors in clays that are both anisotropic and heterogeneous. The numerical data from prior scientific research, which was made public, were used to train the machine learning models. To achieve this goal, the Least Squares Support Vector Regression (LSSVR) algorithm was designed. To locate the appropriate set of parameters, the LSSVR is linked to the processes of the Coati Optimization (CO) and the Mountain Gazelle Optimizer (MGO), as hyperparameters are of utmost importance in this simulation. Three dimensionless parameters are used to identify the uplift resistance. These parameters are the normalized outcomes parameter, the ratio of embedment, strength, and anisotropy. The uplift resistance is then stated regarding the uplift resistance factor F<inf>c</inf>. The findings suggest that in anisotropic, heterogeneous clays, there is a strong likelihood that LSSVR, LSSVR (CO), and LSSVR (MGO) will provide accurate estimates of the F<inf>c</inf>. The projected performance measures clearly show that LSSVR (MGO) is a more accurate and reliable approach than LSSVR and LSSVR (CO). The difficulty of precisely calculating the uplift resistance of circular anchors in anisotropic and heterogeneous clays is addressed in this work. The suggested models produced extremely accurate predictions (R<sup>2</sup> up to 0.997) with the lowest error indices using LSSVR optimized with CO and MGO algorithms. The LSSVR–MGO framework is the most dependable and efficient way to anticipate uplift resistance, according to the results, and it performs better than other methods.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105019653385&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Sophisticated hybrid approaches for precise corrosion forecasting in oil and gas infrastructure",
+      "authors": [
+        "Zhong Y."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s41939-025-01077-7",
+      "abstract": "Pipeline corrosion poses a major problem in the oil and gas industry, as attempts at predictive modeling face significant hurdles in providing accurate predictions of corrosion rates. Empirical and stochastic models traditionally used prove ineffective in predicting the nonlinear and multifaceted nature of corrosion processes and hence result in low accuracy when applied to actual data. In an attempt to overcome these limitations, a novel hybrid model was presented that combines Support Vector Regression (SVR) and Random Forest (RF) with optimization techniques like the Sparrow Search Algorithm (SSA), Hunger Games Search (HGS), and Chaos Game Optimization (CGO) to improve the predictive power of pipeline corrosion. The proposed model is able to fill existing gaps in methods by taking into consideration a wide range of variables such as temperature, flow velocity, internal pressure, CO2 pressure, shear stress, and the effectiveness of corrosion inhibitors. Optimized hybrid models through metaheuristic methods show a better alternative compared to traditional methods. Empirical results from a comprehensive database of corrosion show the SVR-HGS model manifests much superior performance compared to other models, displaying high accuracy in corrosion rate prediction with a testing RMSE of 0.672 and an R² value of 0.685. These findings highlight the potential of hybrid machine learning models to improve predictions in terms of precision as well as optimize maintenance strategies in the oil and gas industry.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020185470&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Flexible Monolithic 3D-Integrated Self-Powered Tactile Sensing Array Based on Holey MXene Paste",
+      "authors": [
+        "Wang M."
+      ],
+      "year": 2026,
+      "doi": "10.1007/s40820-025-01924-9",
+      "abstract": "A flexible monolithic 3D-integrated tactile sensing system, inspired by the tactile perception mechanism of human skin, was developed based on a holey MXene paste. Large-scale device fabrication was achieved using blade-coating and imprinting methods, demonstrating excellent mechanical flexibility, low-power consumption, fast response, and stable long-term performance. The sensor array was integrated into a smart access control system, leveraging deep learning to achieve precise identification based on the unique pressing behaviors of users.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105016367226&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Development of a feature vector for accurate breast cancer detection in mammographic images",
+      "authors": [
+        "Ismailova A."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.ijcce.2025.08.001",
+      "abstract": "Breast cancer remains one of the leading causes of mortality among women, making early and accurate detection crucial for effective treatment. Despite the extensive use of deep learning models in mammographic image classification, existing approaches often lack interpretability. They are prone to diagnostic errors due to image heterogeneity, noise, and the limited availability of annotated datasets. This study addresses these challenges by proposing a novel hybrid model that integrates handcrafted texture and geometric features—such as entropy, eccentricity, mean intensity, and GLCM descriptors—directly into a modified Faster Region-based Convolutional Neural Network (Faster R-CNN) architecture. The primary objective is to improve both diagnostic accuracy and transparency in mammogram classification. Experiments were conducted on the publicly available VinDr-Mammo dataset, which includes 2136 annotated DICOM images with BI-RADS labels. The hybrid model demonstrated superior performance, achieving a 30% reduction in Total Loss, higher sensitivity (0.96), specificity (0.97), and ROC-AUC (0.96), compared to the baseline model without additional features. The integration of clinically interpretable descriptors enhances not only detection accuracy but also the explainability of the results, offering valuable insights for radiologists. These findings contribute to the development of AI-assisted diagnostic tools that are both robust and transparent, particularly in low-resource clinical environments.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105013573748&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Market dynamics and E-commerce satisfaction in China's aquatic food sector: Machine learning and data insights",
+      "authors": [
+        "Budhathoki M."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.aquaculture.2025.742904",
+      "abstract": "China's growing demand for aquatic foods, driven by the rapid expansion of e-commerce, is reshaping global seafood markets and influencing the broader sustainable food system. This transformation is altering domestic market dynamics and creating new challenges and opportunities in international trade, sustainable supply chains, and market competitiveness. This study investigates production trends, import reliance, and consumer e-commerce satisfaction in the aquatic food market, with a focus on implications for sustainable supply chain policy and management. By employing supervised machine learning technique, Support Vector Machines (SVM), along with Latent Dirichlet Allocation (LDA), Mann-Whitney U test, and logistic regression, the study uncovers critical insights into consumer preferences, including the factors driving e-commerce satisfaction, and supply chain dynamics, such as the impact of product freshness and delivery efficiency. The study highlights the growing reliance on imports in China's aquatic food market, despite expanding domestic production. Fresh and frozen products, particularly crustaceans and finfish, consistently receive higher consumer satisfaction on e-commerce platforms, primarily due to their quality and freshness. Domestic producers face increasing pressure to meet these high standards, particularly in freshness, quality control, and delivery efficiency. The findings point to challenges in meeting consumer expectations and suggest opportunities for policy interventions to enhance the competitiveness of domestic aquatic food products. The research highlights the transformative role of e-commerce platforms in shaping China's aquatic food market, providing actionable insights for policymakers, producers, and e-commerce stakeholders to navigate emerging trends, improve supply chain efficiency, and meet evolving consumer demands.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105009598983&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Enhanced deep OC-SORT with YOLOv8-seg for robust fry tracking and behavior analysis in aquaculture",
+      "authors": [
+        "Xi C."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.aquaculture.2025.742887",
+      "abstract": "Fast and accurate detection and tracking of fry (newly hatched fish) are critical for improving aquaculture efficiency and product quality. While multi-object tracking (MOT) algorithms have become effective for fry behavior analysis, they often struggle with occlusions, rapid movements, and maintaining consistent identities due to the small size and similar appearance of fry. To address these limitations, we propose an innovative method that combines detection, segmentation, and multi-object tracking. Our approach utilizes an improved YOLOv8-seg algorithm for detection and segmentation, enhanced with the STA attention mechanism, CFP centralized feature pyramid, and GSConv lightweight convolution technology. We augment Deep OC-SORT with a novel Segmentation-Enhanced Trajectory Interpolation method for multi-object tracking. This method incorporates mask-guided centroid interpolation, contour interpolation, and occlusion-aware adjustment, significantly improving tracking consistency during occlusions and rapid movements. The experimental results demonstrate that the improved YOLOv8-seg algorithm achieved detection accuracy on par with the original model while improving speed by 10 % and attained a mean average precision (mAP) of 94.3 % in fry segmentation, surpassing the original YOLOv8 algorithm by 1.8 %. The enhanced Deep OC-SORT tracking method attained 74.3 % MOTA with significantly reduced ID switches, outperforming common SOTA tracking algorithms (e.g., Deep SORT, OC-SORT, ByteTrack) and ensuring reliable individual fry tracking over time. In addition, we conducted a temperature control experiment studying the behavioral responses of Micropterus salmoides fry under different temperature conditions, providing a robust foundation for improved aquaculture management strategies. The source codes and pre-trained models are available at: https://github.com/Zeng832/Fry-Tracking.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105008955231&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Machine Learning Models for Predicting the Need for Early Packed Red Blood Cell Transfusion in Multiple Trauma Patients",
+      "authors": [
+        "Safari S."
+      ],
+      "year": 2026,
+      "doi": "10.22037/aaem.v14i1.2820",
+      "abstract": "Introduction: One of the preventable contributors to trauma mortality is hemorrhagic shock, which requires early recognition and immediate intervention. In this retrospective analysis, we aimed to develop and optimize machine learning (ML) algorithms to predict the need for packed red blood cell (PRBC) transfusion within 24 hours of injury in multiple trauma patients. Methods: This retrospective longitudinal study analyzed consecutive multiple trauma patients admitted to the emergency department. The outcome was transfusion of at least one unit of PRBC within the first 24 hours of traumatic injury. SHAP analysis was employed for feature selection, and the five key predictors were identified and entered in the models: Glasgow Coma Scale (GCS), hemoglobin (Hb), pulse rate (PR), systolic blood pressure (SBP), and pulse pressure. The dataset was split 80:20 for training/testing, and multiple machine learning algorithms were evaluated based on area under the receiver operating characteristic curve (AUC), F1 score, sensitivity, specificity, positive predictive value (PPV), and negative predictive value (NPV). Results: The study cohort consisted of 908 patients, with a median age of 34 years. PRBC transfusions were more common in older adults with lower GCS scores, higher PR, lower SBP, lower pulse pressure, and lower Hb levels on admission. Among the machine learning models, Random Forest performed best (AUC: 0.997, sensitivity: 0.938, specificity: 0.994), followed by K-Nearest Neighbors and Logistic Regression, both of which showed perfect specificity but lower sensitivity. Conclusion: Random Forest outperformed other ML algorithms, achieving high discriminative ability, sensitivity, and specificity. PR, GCS, Hb, SBP, and pulse pressure were the most influential predictors of the need for early transfusion. Despite promising results, further multicenter validation studies are needed to confirm the real-world applicability of these models.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020828066&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Comparing Machine Learning Models for Predicting Mortality after Myocardial Infarction: A Systematic Review and Meta-analysis",
+      "authors": [
+        "Khatami S."
+      ],
+      "year": 2026,
+      "doi": "10.22037/aaem.v14i1.2783",
+      "abstract": "Introduction: Accurate prediction of mortality following myocardial infarction (MI) is critical for timely identification of high-risk patients and optimization of interventions. Conventional statistical models are commonly used; however, advanced machine learning (ML) methods are being increasingly recognized. This meta-analysis aimed to systematically evaluate and compare the predictive performances of various ML models. Methods: A systematic search of the Medline (via PubMed), Embase, Scopus, and Web of Science databases was conducted up to January 9, 2025. A total of 14933 articles were identified, of which 330 underwent a full-text review and 69 met the inclusion criteria. The meta-analysis was conducted using a bivariate random-effects model in the ‘midas’ package of STATA 14. Subgroup analyses were conducted based on the follow-up duration and selected clinical features. The risk of bias was assessed using the QUAPAS. Publication bias and evidence certainty were assessed using Deeks’ funnel plots and GRADE framework, respectively. Results: Gradient Boosting Machines (GBM), Single Decision Tree Models, and Random Forest models yielded similarly high predictive accuracies. Advanced GBMs, particularly XGBoost (AUC = 0.90, 95% CI: 0.87-0.92; sensitivity = 0.78, 95% CI: 0.74-0.82; specificity = 0.87, 95% CI: 0.83-0.89), showed the highest evidence certainty due to precision and minimal publication bias. Across advanced GBMs, adding echocardiographic parameters increased the sensitivity from 0.77 to 0.83 and specificity from 0.85 to 0.90, indicating a clinically meaningful yet resource-dependent gain in discrimination. Conclusion: Advanced Gradient Boosting Machines, particularly XGBoost, currently provide the most reliable mortality predictions in patients with MI. Future research should emphasize external validation, transparent reporting of feature selection, detailed data preprocessing, and dedicated studies on populations with NSTEMI.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020836531&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Machine learning integration of single-cell and bulk transcriptomics identifies fibroblast-driven prognostic markers in colorectal cancer",
+      "authors": [
+        "Zhang N."
+      ],
+      "year": 2026,
+      "doi": "10.17305/bb.2025.12038",
+      "abstract": "Single-cell RNA sequencing (scRNA-seq) has significantly advanced our understanding of cellular heterogeneity and the complex interplay within the tumor microenvironment (TME) of colorectal cancer (CRC). However, translating these molecular insights into clinically actionable prognostic biomarkers and therapeutic strategies remains a considerable challenge. In this study, we conducted a comprehensive scRNA-seq analysis of 306 CRC samples comprising 448,255 cells to characterize the TME in depth. By constructing intercellular communication networks based on connection counts and communication probabilities, we identified fibroblasts as central regulatory hubs within the TME. Using Wilcoxon rank-sum tests and univariate survival analyses, we initially identified 23 prognostic fibroblast markers. These were refined to a seven-gene fibroblast-related prognostic signature via an integrated machine learning approach. The signature exhibited robust predictive performance in the The Cancer Genome Atlas-Colon Adenocarcinoma (TCGA-COAD) training cohort (n = 351; C-index = 0.65) and was successfully validated in the GSE17536 dataset (n = 177; C-index = 0.63). Functional enrichment analyses revealed that this signature is involved in immune regulation and multiple tumor-associated cellular pathways. Notably, high-risk patients displayed increased macrophage and NK cell infiltration, impaired immune function, and elevated immune rejection scores, while low-risk patients demonstrated heightened sensitivity to camptothecin and irinotecan. Together, our findings underscore the prognostic value of fibroblast-derived signatures in CRC and support their potential utility in risk stratification and the development of personalized therapeutic strategies, contributing to the advancement of precision oncology.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105017455994&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "A novel deep learning framework for automatic scoring of PD-L1 expression in non-small cell lung cancer",
+      "authors": [
+        "Kabir S."
+      ],
+      "year": 2026,
+      "doi": "10.17305/bb.2025.12056",
+      "abstract": "A critical predictive marker for anti-PD-1/PD-L1 therapy is programmed death-ligand 1 (PD-L1) expression, assessed by immunohistochemistry (IHC). This paper explores a novel automated framework using deep learning to accurately evaluate PD-L1 expression from whole slide images (WSIs) of non-small cell lung cancer (NSCLC), aiming to improve the precision and consistency of tumor proportion score (TPS) evaluation, which is essential for determining patient eligibility for immunotherapy. Automating TPS evaluation can enhance accuracy and consistency while reducing pathologists’ workload. The proposed automated framework encompasses three stages: identifying tumor patches, segmenting tumor areas, and detecting cell nuclei within these areas, followed by estimating the TPS based on the ratio of positively stained to total viable tumor cells. This study utilized a Reference Medicine (Phoenix, Arizona) dataset containing 66 NSCLC tissue samples, adopting a hybrid human–machine approach for annotating extensive WSIs. Patches of size 1000 × 1000 pixels were generated to train classification models, such as EfficientNet, Inception, and Vision Transformer models. Additionally, segmentation performance was evaluated across various UNet and DeepLabV3 architectures, and the pre-trained StarDist model was employed for nuclei detection, replacing traditional watershed techniques. PD-L1 expression was categorized into three levels based on TPS: negative expression (TPS < 1%), low expression (TPS 1%–49%), and high expression (TPS ≥ 50%). The Vision Transformer-based model excelled in classification, achieving an F1-score of 97.54%, while the modified DeepLabV3+ model led in segmentation, attaining a Dice Similarity Coefficient of 83.47%. The TPS predicted by the framework closelcorrelated with the pathologist’s TPS at 0.9635, and the framework’s three-level classification F1-score was 93.89%. The proposed deep learning framework for automatically evaluating the TPS of PD-L1 expression in NSCLC demonstrated promising performance. This framework presents a potential tool that could produce clinically significant results more efficiently and cost-effectively.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105017454391&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Harnessing Deep Belief Networks for Selective HDAC6 Inhibitors Identification",
+      "authors": [
+        "Çorbacı T."
+      ],
+      "year": 2026,
+      "doi": "10.1142/S2737416525500978",
+      "abstract": "Histone Deacetylases (HDACs) play crucial roles in maintaining normal body functions and are considered in targeted drug therapy, particularly for cancer treatment. While promising inhibitors for these enzymes have been developed and several drugs targeting this enzyme class are approved, their lack of selectivity across HDAC isoforms may result in dose-dependent side effects. Hence, the design and discovery of selective inhibitors, especially for the HDAC6 isoform, is desired and well explored, though without any approved selective drug as of yet. In this study, we utilized molecular modeling tools to discover selective HDAC6 inhibitors. We developed and evaluated multiple machine learning models to predict compound selectivity for HDAC6 over other common isoforms such as HDAC1 and HDAC4. Notably, deep learning-based Deep Belief Network (DBN) models, which demonstrated superior ranking performance, were employed in a virtual screening of a molecular library for potential HDAC6-selective compounds. Additionally, physics-based molecular simulation tools such as molecular dynamics studies were conducted to assess the interactions between selected hits from the library and the HDAC6 enzyme. Consequently, we identified three compounds predicted by DBN models to be selective, which showed favorable interactions with HDAC6, comparable to those of a known HDAC6 inhibitor.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105012376433&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Application of Machine Learning in Nano Research — A Review",
+      "authors": [
+        "Zohura F.T."
+      ],
+      "year": 2026,
+      "doi": "10.1142/S1793984425300067",
+      "abstract": "Within the field of nanotechnology, the incorporation of machine learning has introduced unparalleled prospects for breakthroughs at the atomic and molecular scale. This paper examines the intricate interplay between machine learning and nanoparticle research, highlighting the profound possibilities that arise from this synergistic partnership. Machine learning has revolutionized the field of nanoparticle research by providing an unprecedented level of accuracy in traversing the various intricacies associated with these particles. It accomplishes this by effectively recognizing and analyzing complicated patterns within extensive datasets. The applications of nanotechnology encompass a wide range of areas, such as the improvement of drug delivery systems and the advancement of catalytic processes. These applications have the potential to bring forth groundbreaking innovations by integrating computational capabilities with research conducted at the nanoscale. Nevertheless, there are several obstacles that need to be addressed in this context. One such challenge is the limited availability of annotated data in specific domains. Additionally, there is a requirement for robust models that can effectively understand the intricate nature of nanomaterials. In order to address these limitations, current endeavors are centered on enhancing the interpretability of models and augmenting the availability of annotated datasets. Machine learning could improve nanoparticle research and create new avenues. These advances include energy-efficient catalysts and tailored pharmaceutical delivery systems. In this review, machine learning applications in nanoparticle synthesis and characterization are critically examined. It outlines the obstacles and suggests more research. These undiscovered possibilities could lead to groundbreaking nanotechnology research.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105006612532&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "An Interpretable Hybrid Shapley Additive Explanations Brown Bear Optimization Algorithm Predictive Models for End Bearing Capacity of Rock Socketed Piles",
+      "authors": [
+        "Safaeian Hamzehkolaei N."
+      ],
+      "year": 2026,
+      "doi": "10.5829/ije.2025.39.08b.13",
+      "abstract": "This study develops an interpretable hybrid predictive framework that combines SHapley Additive exPlanations (SHAP) with the Brown-Bear Optimization Algorithm (BBOA) to enhance the prediction of end-bearing capacity (q<inf>u</inf>) of rock-socketed piles. BBOA is employed to optimize hyperparameters of four machine learning (ML) models—Artificial Neural Networks (ANN), Support Vector Regression (SVR), Adaptive Neuro-Fuzzy Inference Systems (ANFIS), and Multivariate Adaptive Regression Splines (MARS)—leading to significant improvements in accuracy. A novel, interpretable MARS-based predictive formula is also introduced. The model uses pile diameter (B), embedment depths in soil (H<inf>s</inf>) and rock (H<inf>r</inf>), rock uniaxial compressive strength (σ<inf>c</inf>), and Geological Strength Index (GSI) as inputs. Comprehensive evaluation using multiple statistical metrics (R², RMSE, MAE, U<inf>95</inf>) reveals that BBOA-ANFIS achieves the highest accuracy during training, while the optimized MARS model performs best in testing, with ANN consistently showing the weakest results. Compared to previous ML-based and empirical models, the proposed models, especially the MARS formula, demonstrate superior accuracy and reliability, with improvements of 11.3% in R², 16.6% in RMSE, and 19.2% in MAE over the best prior empirical model. Additionally, sensitivity analysis and SHAPE-based model interpretation identified key predictors, ranked by influence as σc > GSI > B > Hr > Hs, with σ<inf>c</inf> being the most influential variable and H<inf>s</inf> the least. This hybrid approach provides a robust and interpretable tool for accurate and cost-effective pile design in complex soil-rock environments.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105019321360&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Unraveling Genetic Markers in Breast Cancer: Bioinformatics Perspectives",
+      "authors": [
+        "Mutee A.F."
+      ],
+      "year": 2026,
+      "doi": "10.1142/S2737416525300019",
+      "abstract": "Breast cancer, the most prevalent malignancy in women globally, is a formidable challenge due to its molecular heterogeneity and the disparate clinical outcomes of luminal A, luminal B, HER2-enriched and triple-negative subtypes. The current review integrates bioinformatics approaches to decipher genetic markers in breast cancer, focusing on transcriptomics-based pipelines for discovering differentially expressed genes (DEGs) and key hub genes. Leveraging datasets from databases like TCGA and GEO, these pipelines cover data acquisition, preprocessing with packages such as DESeq2 and Scanpy, and advanced analyses including functional enrichment, protein–protein interaction network and machine learning algorithms for biomarker prioritization. Clinically relevant markers, validated through survival analysis and experimental validation, are used for informing diagnosis, prognosis and treatment strategies, with special reference to precision therapies such as PARP inhibitors and trastuzumab. Emerging technologies, such as liquid biopsy and single-cell multi-omics, enhance diagnostic precision by alleviating tumor heterogeneity and enabling noninvasive monitoring. However, unresolved issues persist, such as disparities in healthcare, dataset biases and the high cost of genomic profiling. Future directions for development include developing cost-effective tools, enhancing diverse datasets and integrating multi-omics with artificial intelligence for advancing equitable precision oncology. This comprehensive bioinformatics pipeline bridges molecular findings and clinical relevance, offering a promising strategy to alleviate the global breast cancer burden.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105010953929&origin=inward",
+      "source": "Scopus"
+    },
+    {
+      "title": "Deep learning-assisted tactile sensing platform for efficient object classification and password recognition",
+      "authors": [
+        "Liu S."
+      ],
+      "year": 2026,
+      "doi": "10.1016/j.jmst.2025.10.021",
+      "abstract": "Conventional tactile sensing platforms face persistent challenges in interpreting complex spatiotemporal tactile signals. Herein, we report a next-generation tactile system combining a mechanically adaptive pressure sensor array with a deep learning-based multimodal neural network. The pressure sensor is designed and fabricated by constructing a silver nanoparticles (AgNPs)/reduced graphene oxide (rGO) dual-conductive network on a compressible porous melamine foam (MF) via dip-coating and in-situ reduction. It exhibits tunable sensitivity (0.025 to 0.277 kPa<sup>−1</sup>) within a pressure range of 0–52.28 kPa, fast response (120 ms), and high durability with < 3 % signal fluctuations after 3000 cycles. Importantly, the platform features a dual intelligent decoding architecture: (1) a CNN-based spatial analyzer achieves 98.52 % classification accuracy for six object types, surpassing conventional thresholding methods; (2) a Bi-RNN temporal decoder enables 100 % authentication accuracy in haptic sequence-based password recognition. Unlike human haptic cognition which requires multisensory integration, our system leverages machine learning for efficient interpretation of tactile information. This work paves the way for advanced human-machine interfaces in assistive robotics and virtual reality, particularly enhancing tactile learning for visually impaired users.",
+      "link": "https://www.scopus.com/inward/record.uri?partnerID=HzOxMe3b&scp=105020264388&origin=inward",
+      "source": "Scopus"
+    },
+    {
       "title": "Machine Learning-Enabled Smart Transit: Real-Time Bus Tracking System for Enhanced Urban Mobility",
-      "authors": null,
-      "year": null,
-      "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/11007439/",
+      "authors": [
+        "Nadimpalli Madana Kailash Varma",
+        "Md. Irfan Ahmed",
+        "G. Madhusudhan",
+        "G. Rishab Babu",
+        "T. Shalini",
+        "Fatima Unnisa"
+      ],
+      "year": "2024",
+      "doi": "10.1109/ISML60050.2024.11007439",
+      "abstract": "In bustling urban cities, the efficiency of public transportation stands as a critical factor in alleviating traffic congestion and enhancing the daily commuter experience. This paper introduces a state-of-the-art Bus Tracking System that is meticulously designed to empower passengers by providing real-time updates on bus locations, availability, and estimated arrival and departure times. By lever...",
+      "link": "https://ieeexplore.ieee.org/document/11007439",
       "source": "IEEE Xplore"
     },
     {
       "title": "IEEE Draft Guide for Architectural Framework and Application of Federated Machine Learning",
-      "authors": null,
-      "year": null,
+      "authors": [],
+      "year": "2020",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/9134988/",
+      "abstract": "Federated [::machine::] [::learning::] defines a [::machine::] [::learning::] framework that allows a collective model to be constructed from data that is distributed across repositories owned by different organizations or devices. A blueprint for data usage and model building across organizations and devices while meeting applicable privacy, security and regulatory requirements is provided in thi...",
+      "link": "https://ieeexplore.ieee.org/document/9134988",
       "source": "IEEE Xplore"
     },
     {
       "title": "IEEE Approved Draft Guide for Architectural Framework and Application of Federated Machine Learning",
-      "authors": null,
-      "year": null,
+      "authors": [],
+      "year": "2020",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/9154804/",
+      "abstract": "Federated [::machine::] [::learning::] defines a [::machine::] [::learning::] framework that allows a collective model to be constructed from data that is distributed across repositories owned by different organizations or devices. A blueprint for data usage and model building across organizations and devices while meeting applicable privacy, security and regulatory requirements is provided in thi...",
+      "link": "https://ieeexplore.ieee.org/document/9154804",
       "source": "IEEE Xplore"
     },
     {
       "title": "Unveiling the Potential of Machine Learning: Harnessing Machine Learning for Enhanced Coronary Heart Disease Detection and Intervention",
-      "authors": null,
-      "year": null,
-      "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/10911700/",
+      "authors": [
+        "Harshali Hemant Vadher",
+        "Adla Aryan",
+        "Kuruva Vamshi",
+        "Ramojula Rajashekar",
+        "Degavath Ashish",
+        "Gagan Deep Arora"
+      ],
+      "year": "2024",
+      "doi": "10.1109/AECE62803.2024.10911700",
+      "abstract": "Coronary heart disease (CHD) remains a critical global health issue, necessitating effective predictive models to enhance early diagnosis and intervention. This study explores the application of various [::machine::] [::learning::] algorithms to CHD data to identify and predict the risk of developing the disease based on health indicators. We employed several algorithms, including Logistic Regress...",
+      "link": "https://ieeexplore.ieee.org/document/10911700",
       "source": "IEEE Xplore"
     },
     {
       "title": "Human-in-the-Loop Machine Learning: Active learning and annotation for human-centered AI",
-      "authors": null,
-      "year": null,
+      "authors": [
+        "Rob Munro"
+      ],
+      "year": "2021",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/10280384/",
+      "abstract": "Most [::machine::] [::learning::] systems that are deployed in the world today [::learn::] from human feedback. However, most [::machine::] [::learning::] courses focus almost exclusively on the algorithms, not the human-computer interaction part of the systems. This can leave a big knowledge gap for data scientists working in real-world [::machine::] [::learning::], where data scientists spend mo...",
+      "link": "https://ieeexplore.ieee.org/document/10280384",
       "source": "IEEE Xplore"
     },
     {
       "title": "Sentiment Analysis of Machine Learning Algorithms: A Transformer-Based Approach",
-      "authors": null,
-      "year": null,
-      "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/11007454/",
+      "authors": [
+        "Nadimpallli Madana Kailash Varma",
+        "Sudabathula Vijay Sai Kumar",
+        "Sri Harsh Mattaparty",
+        "Shifa Ismail",
+        "Marisetti Harshini",
+        "Syed Ahmeduddin"
+      ],
+      "year": "2024",
+      "doi": "10.1109/ISML60050.2024.11007454",
+      "abstract": "[::Machine::] [::learning::] algorithms have become pervasive in diverse applications, revolutionizing various domains. However, the abundance of algorithms, each designed for specific purposes, poses a challenge for both novice users and experts in selecting the most suitable model. This research addresses this issue through a comprehensive analysis, leveraging Natural Language Processing (NLP) t...",
+      "link": "https://ieeexplore.ieee.org/document/11007454",
       "source": "IEEE Xplore"
     },
     {
       "title": "Machine Learning for Business: Using Amazon SageMaker and Jupyter",
-      "authors": null,
-      "year": null,
+      "authors": [
+        "Richard Nichol",
+        "Doug Hudgeon"
+      ],
+      "year": "2019",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/10280365/",
+      "abstract": "Imagine predicting which customers are thinking about switching to a competitor or flagging potential process failures before they happen Think about the benefits of forecasting tedious business processes and back-office tasks Envision quickly gauging customer sentiment from social media content (even large volumes of it). Consider the competitive advantage of making decisions when you know the mo...",
+      "link": "https://ieeexplore.ieee.org/document/10280365",
       "source": "IEEE Xplore"
     },
     {
       "title": "Improving Software Defects Detection: An In-Depth Analysis of Machine Learning Methods and Static Analysis Tools for Greater Accuracy",
-      "authors": null,
-      "year": null,
-      "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/10968410/",
+      "authors": [
+        "Veer Bobade",
+        "Chetan Puri"
+      ],
+      "year": "2025",
+      "doi": "10.1109/ICMLAS64557.2025.10968410",
+      "abstract": "Enhancing software quality and reducing testing expenses requires better software fault detection. To guarantee the dependability and usability of software, Software Defect Prediction (SDP) uses [::machine::] [::learning::] approaches to anticipate and address any problems early in the development cycle. Numerous [::machine::] [::learning::] techniques, such as Support Vector [::Machines::] (SVM),...",
+      "link": "https://ieeexplore.ieee.org/document/10968410",
       "source": "IEEE Xplore"
     },
     {
       "title": "Machine Learning with TensorFlow, Second Edition",
-      "authors": null,
-      "year": null,
+      "authors": [
+        "Chris Mattmann"
+      ],
+      "year": "2020",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/10280532/",
+      "abstract": "Updated with new code, new projects, and new chapters, Machine Learning with TensorFlow, Second Edition gives readers a solid foundation in [::machine::]-[::learning::] concepts and the TensorFlow library. Written by NASA JPL Deputy CTO and Principal Data Scientist Chris Mattmann, all examples are accompanied by downloadable Jupyter Notebooks for a hands-on experience coding TensorFlow with Python...",
+      "link": "https://ieeexplore.ieee.org/document/10280532",
       "source": "IEEE Xplore"
     },
     {
       "title": "Unsupervised Machine Learning Methods for Artifact Removal in Electrodermal Activity",
-      "authors": null,
-      "year": null,
+      "authors": [
+        "Sandya Subramanian",
+        "Bryan Tseng",
+        "Riccardo Barbieri",
+        "Emery N Brown"
+      ],
+      "year": "2021",
+      "doi": "10.1109/EMBC46164.2021.9630535",
+      "abstract": "Artifact detection and removal is a crucial step in all data preprocessing pipelines for physiological time series data, especially when collected outside of controlled experimental settings. The fact that such artifact is often readily identifiable by eye suggests that unsupervised [::machine::] [::learning::] algorithms may be a promising option that do not require manually labeled training data...",
+      "link": "https://ieeexplore.ieee.org/document/9630535",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Predicting Urban Land Cover Using Classification: A Machine Learning Approach",
+      "authors": [
+        "Tanush Jadhav",
+        "Tanishq",
+        "Spoorthi Jagadish",
+        "Mayur Gaikwad",
+        "Shivali Wagle",
+        "Ruchi Jayaswal",
+        "Shruti Patil"
+      ],
+      "year": "2023",
+      "doi": "10.1109/R10-HTC57504.2023.10461930",
+      "abstract": "The classification of urban land cover is a crucial step in comprehending the evolution of the urban environment and its effects. We are providing a comparative analysis of [::machine::] [::learning::] methods for classifying urban land cover using remote sensing data in this research. The study utilises the Urban Land Cover dataset which is obtained from the UCI [::Machine::] [::Learning::] Repos...",
+      "link": "https://ieeexplore.ieee.org/document/10461930",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Unlocking Stock Market Potential: Machine Learning Predictions for NIFTY50's Most Profitable Companies",
+      "authors": [
+        "Preetham Sagar Sanda",
+        "Revanth Thota",
+        "Akhil Kodimala",
+        "Rishab Babu Gadari",
+        "Gagandeep Aurora",
+        "Naga Padmaja"
+      ],
+      "year": "2024",
+      "doi": "10.1109/AECE62803.2024.10911573",
+      "abstract": "The use of [::machine::] [::learning::] (ML) to recognize the stock market trend as well as companies, which are expected to provide the most profit with-in NIFTY50 index is a focus area work in the past 5 years of historical data. We use many ML models (linear regression, decision trees, and neural networks) to predict stock price movements in order to decide which are the top 5 companies with th...",
+      "link": "https://ieeexplore.ieee.org/document/10911573",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Machine Learning with R, the tidyverse, and mlr",
+      "authors": [
+        "Hefin Rhys"
+      ],
+      "year": "2020",
       "doi": null,
-      "abstract": null,
-      "link": "https://ieeexplore.ieee.org/document/9630535/",
+      "abstract": "[::Machine::] [::learning::] (ML) is a collection of programming techniques for discovering relationships in data. With ML algorithms, you can cluster and classify data for tasks like making recommendations or fraud detection and make predictions for sales trends, risk analysis, and other forecasts. Once the domain of academic data scientists, [::machine::] [::learning::] has become a mainstream b...",
+      "link": "https://ieeexplore.ieee.org/document/10280439",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "A Survey on Machine Learning Approaches and Its Techniques:",
+      "authors": [
+        "Thomas Rincy N",
+        "Roopam Gupta"
+      ],
+      "year": "2020",
+      "doi": "10.1109/SCEECS48394.2020.190",
+      "abstract": "With the data and information is available at a tremendous rate, there is a need for [::machine::] [::learning::] approaches. [::Machine::] [::learning::], it analyses the study and constructs the algorithms by making prediction on data. It builds model from the inputs to make the decisions or predictions. [::Machine::] [::learning::] algorithms it assists in bridging the gap of understanding. In ...",
+      "link": "https://ieeexplore.ieee.org/document/9087123",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "A Comprehensive Review of Various Machine Learning Techniques",
+      "authors": [
+        "Pooja Pathak",
+        "Parul Choudhary"
+      ],
+      "year": "2023",
+      "doi": "10.1002/9781394186570.ch1",
+      "abstract": "Summary The creation of an intelligent system that works like a human is due to Artificial intelligence (AI). It can be broadly classified into four techniques: [::machine::] [::learning::], [::machine::] vision, automation and Robotics and natural language processing. These domains can [::learn::] from data provided, identify the hidden pattern and make decisions with human intervention. There...",
+      "link": "https://ieeexplore.ieee.org/document/10951821",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Optimizing Marketing Strategies: Predicting Customer Personality using Advanced Machine Learning Models",
+      "authors": [
+        "Adla Aryan",
+        "Sada Preetham Sagar",
+        "Nadimpalli Madana Kailash Varma",
+        "Rangisetti Manikanta",
+        "Ramojula Rajashekar",
+        "Gagan Deep Arora"
+      ],
+      "year": "2024",
+      "doi": "10.1109/ICAICCIT64383.2024.10912234",
+      "abstract": "In the competition of modern marketing, it is highly important to foresee the correct personality profiles of customers because this may further improve the result of marketing campaigns. Therefore, in this research, three major models of [::machine::] [::learning::] are used, including Random Forest Classifier, Support Vector [::Machine::] (SVM), and Gradient Boosting Classifier, to discuss the c...",
+      "link": "https://ieeexplore.ieee.org/document/10912234",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Machine Learning for EEG Analysis",
+      "authors": [
+        "Saeid Sanei",
+        "Jonathon A. Chambers"
+      ],
+      "year": "2021",
+      "doi": "10.1002/9781119386957.ch7",
+      "abstract": "Summary [::Machine::] [::learning::], often including training and testing, refers to a combination of [::learning::] from data and data clustering or classification/prediction. Availability of multichannel electroencephalography (EEG) recordings enables both data/sensor fusion and data factorization when presented in the form of multiway data. Principal component analysis and independent compo...",
+      "link": "https://ieeexplore.ieee.org/document/10953832",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "A Machine Learning Approach to Predict Same-Day Discharge after Angiography Procedures",
+      "authors": [
+        "Santiago Villafuerte",
+        "Jairo A. Cadena",
+        "Vladimir Trujillo",
+        "Jorge E. Sabogal",
+        "Victor M. García",
+        "José F. Valencia"
+      ],
+      "year": "2024",
+      "doi": "10.1109/EMBC53108.2024.10782577",
+      "abstract": "Discharging patients from the hospital to care at home on the same day has been demonstrated to be as safe as overnight stays. The correct selection of patients who may undergo same-day discharge (SDD) is a significant challenge due to the large volume of variables that must be considered. This paper proposes a [::machine::]-[::learning::] approach to predict SDD after angiography procedures. Data...",
+      "link": "https://ieeexplore.ieee.org/document/10782577",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Research on Edge Network Topology Optimization Based on Machine Learning",
+      "authors": [
+        "Boyi Wang",
+        "Wei Zhang"
+      ],
+      "year": "2023",
+      "doi": "10.1109/ICAML60083.2023.00018",
+      "abstract": "Edge network topology optimization is an innovative structural design method that has made significant breakthroughs in the fields of aerospace and engineering. The use of data-driven network topology optimization has become the direction and trend of future structured topology research. At present, [::machine::] [::learning::] is fast, with greatly improved efficiency and accuracy; [::Machine::] ...",
+      "link": "https://ieeexplore.ieee.org/document/10457399",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Authenticating Signals Using Machine Learning",
+      "authors": [
+        "Aditya Anand",
+        "Aniket Khartade",
+        "Ankit Maurya",
+        "S.K. Moon"
+      ],
+      "year": "2024",
+      "doi": "10.1109/ISML60050.2024.11007392",
+      "abstract": "Signal authentication is an important frontier in the rapid evolution of digital security. This research explores the integration of [::machine::] [::learning::] and steganography techniques and highlights their important role in improving signal authentication. [::Machine::] [::learning::] algorithms enable the system to identify complex patterns in signals, making accurate identification possibl...",
+      "link": "https://ieeexplore.ieee.org/document/11007392",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "A Survey on Skin Lesion Detection and Classification using Machine Learning",
+      "authors": [
+        "Rashmi Yadav",
+        "Aruna Bhat"
+      ],
+      "year": "2024",
+      "doi": "10.1109/AIMLA59606.2024.10531571",
+      "abstract": "The research explores how dermatologists use [::machine::] [::learning::] to quickly and accurately identify and classify skin injury. Conventional diagnosis techniques depend on visual examination, but are subjective and have different interpretations. The ability to analyze data and recognize patterns is a possible remedy for ML. The paper examines the current technology of [::machine::] [::lear...",
+      "link": "https://ieeexplore.ieee.org/document/10531571",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "An overview of Machine Learning Technologies and their use in E-learning",
+      "authors": [
+        "Ramzi Farhat",
+        "Yosra Mourali",
+        "Mohamed Jemni",
+        "Houcine Ezzedine"
+      ],
+      "year": "2020",
+      "doi": "10.1109/OCTA49274.2020.9151758",
+      "abstract": "Thanks to new technologies, internet, connected objects we produce a phenomenal amount of data. Putting these data in context, organizing them to be able to perceive, understand and reflect them is very important. Traditionally, human have analyzed data. However, as the volume of data surpasses, human increasingly turn to automated systems that can imitate him. Those systems able to [::learn::] fr...",
+      "link": "https://ieeexplore.ieee.org/document/9151758",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Multimodal Representation Learning: Advances, Trends and Challenges",
+      "authors": [
+        "Su-Fang Zhang",
+        "Jun-Hai Zhai",
+        "Bo-Jun Xie",
+        "Yan Zhan",
+        "Xin Wang"
+      ],
+      "year": "2019",
+      "doi": "10.1109/ICMLC48188.2019.8949228",
+      "abstract": "Representation [::learning::] is the base and crucial for consequential tasks, such as classification, regression, and recognition. The goal of representation [::learning::] is to automatically [::learning::] good features with deep models. Multimodal representation [::learning::] is a special representation [::learning::], which automatically [::learns::] good features from multiple modalities, a...",
+      "link": "https://ieeexplore.ieee.org/document/8949228",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Machine learning protocol from ultrasound data for monitoring, predicting, and supporting the analysis of dam slopes",
+      "authors": [
+        "Werickson F C Rocha",
+        "Antônio U Lucena",
+        "Gabriel F Sarmanho",
+        "Rodrigo C Félix",
+        "Sandro A Miqueleti",
+        "Tiago C Dourado"
+      ],
+      "year": "2022",
+      "doi": "10.1109/ICMLA55696.2022.00084",
+      "abstract": "Dam monitoring can be used as an important indicator for dam risk management. In this study, a methodology based on [::machine::] [::learning::] and ultrasound for dam safety monitoring is presented. First, a prototype dam was built to simulate different environmental conditions. Second, ultrasound images were acquired in different areas of a prototype dam. Finally, various [::machine::] [::learni...",
+      "link": "https://ieeexplore.ieee.org/document/10069744",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Sentiment Analysis: A Machine Learning Perspective",
+      "authors": [
+        "Nadimpalli Madana Kailash Varma",
+        "Sri Harsh Mattaparty",
+        "Shifa Ismail",
+        "Joel Thaduri",
+        "Gagan Deep Arora",
+        "AnandKumar B"
+      ],
+      "year": "2024",
+      "doi": "10.1109/ICECSP61809.2024.10698402",
+      "abstract": "An essential part of natural language processing, sentiment analysis makes it possible to automatically extract sentiment from textual input. In this work, we examine how well different [::machine::] [::learning::] algorithms perform when used to analyze the sentiment of real-time Amazon reviews in the automobile niche. Leveraging a dataset comprising reviews from Amazon users, we employ SVM, KNN,...",
+      "link": "https://ieeexplore.ieee.org/document/10698402",
       "source": "IEEE Xplore"
     }
   ]
