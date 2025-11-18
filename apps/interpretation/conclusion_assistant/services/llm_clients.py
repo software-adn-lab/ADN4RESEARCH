@@ -8,6 +8,7 @@ This module defines a small interface and a couple of implementations:
 You can add adapters here for OpenAI, Anthropic, local LLMs, etc., following
 the same interface.
 """
+
 from typing import Dict
 import os
 import logging
@@ -25,13 +26,15 @@ class LLMClient:
     def generate_draft_proposition(self, context, instruction) -> str:
         raise NotImplementedError()
 
-    def generate_refined_proposition(self, original_text: str, refinement_instruction: str) -> str:
+    def generate_refined_proposition(
+        self, original_text: str, refinement_instruction: str
+    ) -> str:
         raise NotImplementedError()
-    
+
     def propose_code_normalization(self, codes_data: list) -> list:
         """Propose normalization of initial codes by merging similar ones."""
         raise NotImplementedError()
-    
+
     def propose_theme_structure(self, codes_data: list) -> list:
         """Propose high-level theme structure from normalized codes."""
         raise NotImplementedError()
@@ -79,7 +82,11 @@ class DefaultLLMClient(LLMClient):
             f"¿Cuál es la proposición preliminar o enfoque deseado?"
         )
 
-        return {"title": "Apertura conversacional del Copilot", "body": body, "tags": tags}
+        return {
+            "title": "Apertura conversacional del Copilot",
+            "body": body,
+            "tags": tags,
+        }
 
     def generate_draft_proposition(self, context, instruction) -> str:
         # Simple deterministic draft for testing/development
@@ -89,7 +96,9 @@ class DefaultLLMClient(LLMClient):
             "en un retraso crítico en los bucles de feedback de DevOps."
         )
 
-    def generate_refined_proposition(self, original_text: str, refinement_instruction: str) -> str:
+    def generate_refined_proposition(
+        self, original_text: str, refinement_instruction: str
+    ) -> str:
         # Deterministic refinement placeholder
         return (
             "La principal barrera organizacional identificada es la disrupción de la "
@@ -97,66 +106,81 @@ class DefaultLLMClient(LLMClient):
             "de zonas horarias geográficamente distribuidas, resultando en retrasos "
             "críticos en los bucles de feedback según el marco teórico de la SLR."
         )
-    
+
     def propose_code_normalization(self, codes_data: list) -> list:
         """Propose normalization of initial codes - deterministic placeholder."""
         # Group similar codes for demonstration
         proposals = []
-        
+
         # Merge repository mining codes
-        if any(c['code'] in ['#repository_mining', '#github'] for c in codes_data):
-            proposals.append({
-                'normalized_code': '#extracción_de_repositorios_SWH',
-                'original_codes': ['#repository_mining', '#github'],
-                'rationale': 'Ambos códigos se refieren al proceso de extracción de datos de repositorios.'
-            })
-        
+        if any(c["code"] in ["#repository_mining", "#github"] for c in codes_data):
+            proposals.append(
+                {
+                    "normalized_code": "#extracción_de_repositorios_SWH",
+                    "original_codes": ["#repository_mining", "#github"],
+                    "rationale": "Ambos códigos se refieren al proceso de extracción de datos de repositorios.",
+                }
+            )
+
         # Merge qualitative method codes
-        if any(c['code'] in ['#qualitative_method', '#thematic_analysis'] for c in codes_data):
-            proposals.append({
-                'normalized_code': '#análisis_temático_cualitativo',
-                'original_codes': ['#qualitative_method', '#thematic_analysis'],
-                'rationale': 'Estos códigos describen métodos cualitativos relacionados.'
-            })
-        
+        if any(
+            c["code"] in ["#qualitative_method", "#thematic_analysis"]
+            for c in codes_data
+        ):
+            proposals.append(
+                {
+                    "normalized_code": "#análisis_temático_cualitativo",
+                    "original_codes": ["#qualitative_method", "#thematic_analysis"],
+                    "rationale": "Estos códigos describen métodos cualitativos relacionados.",
+                }
+            )
+
         # Merge inheritance-related codes
-        if any(c['code'] in ['#vague_inheritance', '#inherited_debt'] for c in codes_data):
-            proposals.append({
-                'normalized_code': '#deuda_heredada_de_framework',
-                'original_codes': ['#vague_inheritance', '#inherited_debt'],
-                'rationale': 'Ambos códigos se relacionan con problemas de herencia y deuda técnica.'
-            })
-        
+        if any(
+            c["code"] in ["#vague_inheritance", "#inherited_debt"] for c in codes_data
+        ):
+            proposals.append(
+                {
+                    "normalized_code": "#deuda_heredada_de_framework",
+                    "original_codes": ["#vague_inheritance", "#inherited_debt"],
+                    "rationale": "Ambos códigos se relacionan con problemas de herencia y deuda técnica.",
+                }
+            )
+
         return proposals
-    
+
     def propose_theme_structure(self, codes_data: list) -> list:
         """Propose Level 1 theme structure - deterministic placeholder."""
         # Group codes by RQ focus
-        rq1_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ1')]
-        rq2_codes = [c for c in codes_data if c.get('rq_focus', '').startswith('RQ2')]
-        
+        rq1_codes = [c for c in codes_data if c.get("rq_focus", "").startswith("RQ1")]
+        rq2_codes = [c for c in codes_data if c.get("rq_focus", "").startswith("RQ2")]
+
         proposals = []
-        
+
         if rq1_codes:
-            proposals.append({
-                'theme_name': 'Métodos de Descubrimiento de Anti-Patrones',
-                'description': 'Técnicas y metodologías para identificar anti-patrones en software',
-                'rq_focus': 'RQ1',
-                'codes': [c['code'] for c in rq1_codes],
-                'subthemes': [],  # Level 1: No subthemes
-                'rationale': 'Agrupa los códigos relacionados con métodos de identificación'
-            })
-        
+            proposals.append(
+                {
+                    "theme_name": "Métodos de Descubrimiento de Anti-Patrones",
+                    "description": "Técnicas y metodologías para identificar anti-patrones en software",
+                    "rq_focus": "RQ1",
+                    "codes": [c["code"] for c in rq1_codes],
+                    "subthemes": [],  # Level 1: No subthemes
+                    "rationale": "Agrupa los códigos relacionados con métodos de identificación",
+                }
+            )
+
         if rq2_codes:
-            proposals.append({
-                'theme_name': 'Factores Determinantes de Anti-Patrones',
-                'description': 'Factores que causan o contribuyen a la aparición de anti-patrones',
-                'rq_focus': 'RQ2',
-                'codes': [c['code'] for c in rq2_codes],
-                'subthemes': [],  # Level 1: No subthemes
-                'rationale': 'Agrupa los códigos relacionados con causas de anti-patrones'
-            })
-        
+            proposals.append(
+                {
+                    "theme_name": "Factores Determinantes de Anti-Patrones",
+                    "description": "Factores que causan o contribuyen a la aparición de anti-patrones",
+                    "rq_focus": "RQ2",
+                    "codes": [c["code"] for c in rq2_codes],
+                    "subthemes": [],  # Level 1: No subthemes
+                    "rationale": "Agrupa los códigos relacionados con causas de anti-patrones",
+                }
+            )
+
         return proposals
 
 
@@ -188,9 +212,15 @@ class GeminiLLMClient(LLMClient):
     def _generate(self, prompt: str, max_output_tokens: int = 512) -> str:
         # Use the generate_text API; wrap errors into RuntimeError to keep service layering simple
         try:
-            resp = self.genai.generate_text(model=self.model, prompt=prompt, max_output_tokens=max_output_tokens)
+            resp = self.genai.generate_text(
+                model=self.model, prompt=prompt, max_output_tokens=max_output_tokens
+            )
             # The response object typically has a `text` attribute
-            text = getattr(resp, "text", None) or resp.get("output", {}).get("text") if isinstance(resp, dict) else None
+            text = (
+                getattr(resp, "text", None) or resp.get("output", {}).get("text")
+                if isinstance(resp, dict)
+                else None
+            )
             if not text:
                 # Fallback: try stringifying the whole response
                 text = str(resp)
@@ -201,8 +231,13 @@ class GeminiLLMClient(LLMClient):
 
     def generate_opening_message(self, subtheme) -> Dict[str, str]:
         tags = (
-            (subtheme.theme.name.lower().replace(" ", "_") + ", " + subtheme.name.lower().replace(" ", "_"))
-            if hasattr(subtheme, "theme") else "interpretation"
+            (
+                subtheme.theme.name.lower().replace(" ", "_")
+                + ", "
+                + subtheme.name.lower().replace(" ", "_")
+            )
+            if hasattr(subtheme, "theme")
+            else "interpretation"
         )
 
         prompt = (
@@ -216,7 +251,11 @@ class GeminiLLMClient(LLMClient):
         )
 
         body = self._generate(prompt, max_output_tokens=256)
-        return {"title": "Apertura conversacional del Copilot", "body": body, "tags": tags}
+        return {
+            "title": "Apertura conversacional del Copilot",
+            "body": body,
+            "tags": tags,
+        }
 
     def generate_draft_proposition(self, context, instruction) -> str:
         # Compose a prompt using context and the researcher's instruction
@@ -236,7 +275,9 @@ class GeminiLLMClient(LLMClient):
 
         return self._generate(prompt, max_output_tokens=256)
 
-    def generate_refined_proposition(self, original_text: str, refinement_instruction: str) -> str:
+    def generate_refined_proposition(
+        self, original_text: str, refinement_instruction: str
+    ) -> str:
         prompt = (
             "Refina la siguiente proposición interpretativa según la instrucción dada. Mantén la voz académica y la concisión.\n\n"
             f"Proposición original: {original_text}\n"
@@ -245,11 +286,13 @@ class GeminiLLMClient(LLMClient):
         )
 
         return self._generate(prompt, max_output_tokens=256)
-    
+
     def propose_code_normalization(self, codes_data: list) -> list:
         """Use Gemini to propose code normalization."""
-        codes_str = "\n".join([f"- {c['code']} (frecuencia: {c['frequency']})" for c in codes_data])
-        
+        codes_str = "\n".join(
+            [f"- {c['code']} (frecuencia: {c['frequency']})" for c in codes_data]
+        )
+
         prompt = (
             "Eres un experto en análisis cualitativo y codificación temática. "
             "Analiza los siguientes códigos (tags) de una revisión sistemática y propón fusiones "
@@ -262,25 +305,30 @@ class GeminiLLMClient(LLMClient):
             "]\n\n"
             "Devuelve solo el JSON, sin explicaciones adicionales."
         )
-        
+
         try:
             response_text = self._generate(prompt, max_output_tokens=512)
             # Parse JSON response
             import json
+
             proposals = json.loads(response_text)
             return proposals
         except Exception as e:
-            logger.warning(f"Failed to parse Gemini response for code normalization: {e}")
+            logger.warning(
+                f"Failed to parse Gemini response for code normalization: {e}"
+            )
             # Fallback to default implementation
             return DefaultLLMClient().propose_code_normalization(codes_data)
-    
+
     def propose_theme_structure(self, codes_data: list) -> list:
         """Use Gemini to propose Level 1 theme structure (no subthemes)."""
-        codes_str = "\n".join([
-            f"- {c['code']} (frecuencia: {c['frequency']}, RQ: {c.get('rq_focus', 'N/A')})"
-            for c in codes_data
-        ])
-        
+        codes_str = "\n".join(
+            [
+                f"- {c['code']} (frecuencia: {c['frequency']}, RQ: {c.get('rq_focus', 'N/A')})"
+                for c in codes_data
+            ]
+        )
+
         prompt = (
             "Eres un experto en Teoría Fundamentada y análisis temático cualitativo. "
             "A partir de los siguientes códigos normalizados de una revisión sistemática, "
@@ -289,23 +337,24 @@ class GeminiLLMClient(LLMClient):
             f"Códigos normalizados:\n{codes_str}\n\n"
             "Para cada tema, devuelve en formato JSON:\n"
             "[\n"
-            '  {\n'
+            "  {\n"
             '    "theme_name": "Nombre del Tema",\n'
             '    "description": "Descripción del tema",\n'
             '    "rq_focus": "RQ1 o RQ2",\n'
             '    "codes": ["codigo1", "codigo2"],\n'
             '    "subthemes": [],\n'
             '    "rationale": "Justificación de la agrupación"\n'
-            '  }\n'
+            "  }\n"
             "]\n\n"
             "IMPORTANTE: No incluyas subtemas, solo temas de Nivel 1 con sus códigos asociados.\n"
             "Devuelve solo el JSON, sin explicaciones adicionales."
         )
-        
+
         try:
             response_text = self._generate(prompt, max_output_tokens=1024)
             # Parse JSON response
             import json
+
             proposals = json.loads(response_text)
             return proposals
         except Exception as e:
@@ -327,7 +376,10 @@ def get_default_client() -> LLMClient:
         try:
             return GeminiLLMClient()
         except Exception as e:
-            logger.warning("Failed to instantiate GeminiLLMClient, falling back to DefaultLLMClient: %s", e)
+            logger.warning(
+                "Failed to instantiate GeminiLLMClient, falling back to DefaultLLMClient: %s",
+                e,
+            )
             return DefaultLLMClient()
     else:
         return DefaultLLMClient()

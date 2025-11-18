@@ -10,6 +10,7 @@
         <h1 class="text-2xl font-bold text-base-content">AI-Driven Theme Discovery</h1>
         <div class="text-xs text-base-content/80">
             <span class="font-medium">Project: {{ project.name }}</span>
+            {{normalization_proposals}}
         </div>
     </div>
 
@@ -35,18 +36,29 @@
         <div class="space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-base-content">Initial Codes (Tags)</h2>
-                <button id="normalize-codes-btn" class="btn btn-primary btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Normalize Codes with AI
-                </button>
+                <div class="flex gap-2">
+                    <button id="manual-normalize-btn" class="btn btn-outline btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Manual Normalization
+                    </button>
+                    <button id="normalize-codes-btn" class="btn btn-primary btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Normalize Codes with AI
+                    </button>
+                </div>
             </div>
 
             <div class="overflow-x-auto border border-base-300 rounded-lg">
                 <table class="table w-full">
                     <thead class="bg-primary text-primary-content text-sm font-semibold">
                         <tr>
+                            <th class="w-12">
+                                <input type="checkbox" id="select-all-codes" class="checkbox checkbox-sm" />
+                            </th>
                             <th class="w-2/3">Code</th>
                             <th class="w-1/3 text-center">Frequency</th>
                         </tr>
@@ -54,6 +66,10 @@
                     <tbody id="initial-codes-body" class="text-sm">
                         {% for code in initial_codes %}
                         <tr class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <input type="checkbox" class="checkbox checkbox-sm code-checkbox" 
+                                       data-code="{{ code.code }}" data-code-id="{{ code.id }}" />
+                            </td>
                             <td class="p-2">{{ code.code }}</td>
                             <td class="p-2 text-center">
                                 <span class="badge badge-ghost">{{ code.frequency }}</span>
@@ -61,7 +77,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-center p-4 text-base-content/60">
+                            <td colspan="3" class="text-center p-4 text-base-content/60">
                                 No initial codes loaded yet.
                             </td>
                         </tr>
@@ -129,8 +145,16 @@
             </div>
 
             <div class="flex justify-end gap-2 mt-4">
-                <button id="accept-all-btn" class="btn btn-success btn-sm">Accept All Proposals</button>
-                <button id="proceed-to-themes-btn" class="btn btn-primary btn-sm">Proceed to Theme Generation</button>
+                <button id="accept-all-btn" class="btn btn-success btn-sm">
+                    Accept All & Create Normalized Codes
+                </button>
+                <button id="proceed-to-themes-btn" class="btn btn-primary btn-sm">
+                    Proceed to Theme Generation →
+                </button>
+            </div>
+            <div class="alert alert-info text-sm mt-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span><strong>Note:</strong> Clicking individual Accept/Reject buttons only marks proposals. Click "Accept All & Create Normalized Codes" or "Proceed to Theme Generation" to create the final normalized codes.</span>
             </div>
         </div>
         {% endif %}
@@ -143,18 +167,37 @@
         <div class="space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-base-content">Normalized Codes (Final)</h2>
-                <button id="generate-themes-btn" class="btn btn-primary btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Generate Themes with AI
-                </button>
+                <div class="flex gap-2">
+                    <a href="?step=1" class="btn btn-ghost btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Step 1
+                    </a>
+                    {% if normalized_codes %}
+                    <button id="manual-theme-btn" class="btn btn-outline btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Manual Theme
+                    </button>
+                    <button id="generate-themes-btn" class="btn btn-primary btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Generate Themes with AI
+                    </button>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="overflow-x-auto border border-base-300 rounded-lg">
                 <table class="table w-full">
                     <thead class="bg-primary text-primary-content text-sm font-semibold">
                         <tr>
+                            <th class="w-12">
+                                <input type="checkbox" id="select-all-normalized-codes" class="checkbox checkbox-sm" />
+                            </th>
                             <th class="w-1/3">Code</th>
                             <th class="w-1/3">Research Question Focus</th>
                             <th class="w-1/3 text-center">Frequency</th>
@@ -164,6 +207,12 @@
                         {% for code in normalized_codes %}
                         <tr class="hover:bg-base-200 transition-colors">
                             <td class="p-2">
+                                <input type="checkbox" class="checkbox checkbox-sm normalized-code-checkbox" 
+                                       data-code="{{ code.code }}" 
+                                       data-code-id="{{ code.id }}"
+                                       data-rq="{{ code.research_question_focus }}" />
+                            </td>
+                            <td class="p-2">
                                 <span class="font-medium">{{ code.code }}</span>
                             </td>
                             <td class="p-2">
@@ -171,6 +220,25 @@
                             </td>
                             <td class="p-2 text-center">
                                 <span class="badge badge-ghost">{{ code.frequency }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center p-6">
+                                <div class="alert alert-warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    <div>
+                                        <h3 class="font-bold">No normalized codes created yet!</h3>
+                                        <div class="text-sm mt-2">
+                                            <p>You need to create normalized codes from your accepted proposals.</p>
+                                            <p class="mt-1">Go back to <a href="?step=1" class="link link-primary font-semibold">Step 1</a> and click:</p>
+                                            <ul class="list-disc list-inside mt-1 text-left inline-block">
+                                                <li>"Accept All & Create Normalized Codes", or</li>
+                                                <li>"Proceed to Theme Generation"</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -264,10 +332,132 @@
 
 </div>
 
+<!-- Manual Normalization Modal -->
+<dialog id="manual-normalization-modal" class="modal">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">Create Manual Normalization</h3>
+        
+        <form id="manual-normalization-form" class="space-y-4">
+            <!-- Normalized Code -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Normalized Code <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-normalized-code" 
+                       placeholder="Enter the normalized code name" 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Selected Original Codes -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Original Codes <span class="text-error">*</span></span>
+                </label>
+                <div id="selected-codes-display" class="p-3 border border-base-300 rounded-lg min-h-[60px] bg-base-200">
+                    <div id="selected-codes-list" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-base-content/60">Select codes from the table</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rationale -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Rationale <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-rationale" 
+                          placeholder="Explain why these codes should be normalized together..." 
+                          class="textarea textarea-bordered w-full h-24" required></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('manual-normalization-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Normalization</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Manual Theme Creation Modal -->
+<dialog id="manual-theme-modal" class="modal">
+    <div class="modal-box max-w-3xl">
+        <h3 class="font-bold text-lg mb-4">Create Manual Theme</h3>
+        
+        <form id="manual-theme-form" class="space-y-4">
+            <!-- Theme Name -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Theme Name <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-theme-name" 
+                       placeholder="Enter the theme name" 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Theme Description -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Theme Description <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-theme-description" 
+                          placeholder="Describe what this theme represents..." 
+                          class="textarea textarea-bordered w-full h-20" required></textarea>
+            </div>
+
+            <!-- Research Question Focus -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Research Question Focus <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-theme-rq" 
+                       placeholder="e.g., RQ1, RQ2, etc." 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Selected Codes -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Codes in this Theme <span class="text-error">*</span></span>
+                </label>
+                <div id="selected-theme-codes-display" class="p-3 border border-base-300 rounded-lg min-h-[60px] bg-base-200">
+                    <div id="selected-theme-codes-list" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-base-content/60">Select codes from the table</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rationale -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Rationale <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-theme-rationale" 
+                          placeholder="Explain why these codes form a coherent theme..." 
+                          class="textarea textarea-bordered w-full h-24" required></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('manual-theme-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Theme</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <!-- JS -->
 <script>
     const URLS = {
         normalizeyCodes: "{% url 'interpretation:normalize_codes' project.id %}",
+        createManualNormalization: "{% url 'interpretation:create_manual_normalization' project.id %}",
+        createManualTheme: "{% url 'interpretation:create_manual_theme' project.id %}",
         acceptProposal: "{% url 'interpretation:accept_normalization' 9999 %}",
         acceptAllProposals: "{% url 'interpretation:accept_all_normalizations' project.id %}",
         generateThemes: "{% url 'interpretation:generate_themes' project.id %}",

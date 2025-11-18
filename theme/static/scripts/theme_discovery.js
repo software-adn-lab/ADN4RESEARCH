@@ -2,10 +2,95 @@
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
+    console.log("Holaaaa")
+
+    // === Select All Codes ===
+    const selectAllCheckbox = document.getElementById('select-all-codes');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            const checkboxes = document.querySelectorAll('.code-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
+
+    // === Manual Normalization ===
+    const manualNormalizeBtn = document.getElementById('manual-normalize-btn');
+    const manualModal = document.getElementById('manual-normalization-modal');
+    
+    if (manualNormalizeBtn) {
+        manualNormalizeBtn.addEventListener('click', function () {
+            const selectedCheckboxes = document.querySelectorAll('.code-checkbox:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one code to normalize');
+                return;
+            }
+
+            // Update the selected codes display
+            const selectedCodesList = document.getElementById('selected-codes-list');
+            selectedCodesList.innerHTML = '';
+            
+            selectedCheckboxes.forEach(cb => {
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-primary';
+                badge.textContent = cb.dataset.code;
+                selectedCodesList.appendChild(badge);
+            });
+
+            manualModal.showModal();
+        });
+    }
+
+    // === Manual Normalization Form Submit ===
+    const manualForm = document.getElementById('manual-normalization-form');
+    if (manualForm) {
+        manualForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            
+            const selectedCheckboxes = document.querySelectorAll('.code-checkbox:checked');
+            const originalCodes = Array.from(selectedCheckboxes).map(cb => cb.dataset.code);
+            
+            const normalizedCode = document.getElementById('manual-normalized-code').value.trim();
+            const rationale = document.getElementById('manual-rationale').value.trim();
+
+            if (!normalizedCode || originalCodes.length === 0 || !rationale) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(URLS.createManualNormalization, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        normalized_code: normalizedCode,
+                        original_codes: originalCodes,
+                        rationale: rationale
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    manualModal.close();
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create normalization'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to create normalization');
+            }
+        });
+    }
+
     // === Normalize Codes ===
     const normalizeBtn = document.getElementById('normalize-codes-btn');
     if (normalizeBtn) {
         normalizeBtn.addEventListener('click', async function () {
+            console.log("Normalize codes button clicked")
             this.disabled = true;
             this.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Processing...';
 
@@ -84,8 +169,49 @@ document.addEventListener('DOMContentLoaded', function () {
     const acceptAllBtn = document.getElementById('accept-all-btn');
     if (acceptAllBtn) {
         acceptAllBtn.addEventListener('click', async function () {
+            console.log('[DEBUG] Accept All button clicked');
             this.disabled = true;
             this.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Processing...';
+
+            try {
+                console.log('[DEBUG] Sending request to:', URLS.acceptAllProposals);
+                const response = await fetch(URLS.acceptAllProposals, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                console.log('[DEBUG] Response status:', response.status);
+                const data = await response.json();
+                console.log('[DEBUG] Response data:', data);
+                
+                if (data.success) {
+                    console.log('[DEBUG] Success! Reloading page...');
+                    location.reload();
+                } else {
+                    console.error('[ERROR] Failed:', data.error);
+                    alert('Error: ' + (data.error || 'Failed to accept all proposals'));
+                    this.disabled = false;
+                    this.innerHTML = 'Accept All & Create Normalized Codes';
+                }
+            } catch (error) {
+                console.error('[ERROR] Exception:', error);
+                alert('Failed to accept all proposals: ' + error.message);
+                this.disabled = false;
+                this.innerHTML = 'Accept All & Create Normalized Codes';
+            }
+        });
+    }
+
+    // === Proceed to Theme Generation ===
+    const proceedBtn = document.getElementById('proceed-to-themes-btn');
+    if (proceedBtn) {
+        proceedBtn.addEventListener('click', async function () {
+            // First, accept all proposals to create normalized codes
+            this.disabled = true;
+            this.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Creating normalized codes...';
 
             try {
                 const response = await fetch(URLS.acceptAllProposals, {
@@ -98,22 +224,109 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const data = await response.json();
                 if (data.success) {
-                    location.reload();
+                    // Now proceed to step 2
+                    window.location.href = window.location.pathname + '?step=2';
                 } else {
-                    alert('Error: ' + (data.error || 'Failed to accept all proposals'));
+                    alert('Error: ' + (data.error || 'Failed to create normalized codes'));
+                    this.disabled = false;
+                    this.innerHTML = 'Proceed to Theme Generation';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to accept all proposals');
+                alert('Failed to proceed. Please try accepting proposals first.');
+                this.disabled = false;
+                this.innerHTML = 'Proceed to Theme Generation';
             }
         });
     }
 
-    // === Proceed to Theme Generation ===
-    const proceedBtn = document.getElementById('proceed-to-themes-btn');
-    if (proceedBtn) {
-        proceedBtn.addEventListener('click', function () {
-            window.location.href = window.location.pathname + '?step=2';
+    // === Select All Normalized Codes (Step 2) ===
+    const selectAllNormalizedCheckbox = document.getElementById('select-all-normalized-codes');
+    if (selectAllNormalizedCheckbox) {
+        selectAllNormalizedCheckbox.addEventListener('change', function () {
+            const checkboxes = document.querySelectorAll('.normalized-code-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
+
+    // === Manual Theme Creation ===
+    const manualThemeBtn = document.getElementById('manual-theme-btn');
+    const manualThemeModal = document.getElementById('manual-theme-modal');
+    
+    if (manualThemeBtn) {
+        manualThemeBtn.addEventListener('click', function () {
+            const selectedCheckboxes = document.querySelectorAll('.normalized-code-checkbox:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one normalized code for the theme');
+                return;
+            }
+
+            // Update the selected codes display
+            const selectedThemeCodesList = document.getElementById('selected-theme-codes-list');
+            selectedThemeCodesList.innerHTML = '';
+            
+            // Get RQ focus from first selected code (they should all be related)
+            const firstRQ = selectedCheckboxes[0].dataset.rq;
+            document.getElementById('manual-theme-rq').value = firstRQ;
+            
+            selectedCheckboxes.forEach(cb => {
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-primary';
+                badge.textContent = cb.dataset.code;
+                selectedThemeCodesList.appendChild(badge);
+            });
+
+            manualThemeModal.showModal();
+        });
+    }
+
+    // === Manual Theme Form Submit ===
+    const manualThemeForm = document.getElementById('manual-theme-form');
+    if (manualThemeForm) {
+        manualThemeForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            
+            const selectedCheckboxes = document.querySelectorAll('.normalized-code-checkbox:checked');
+            const codeIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.codeId));
+            
+            const themeName = document.getElementById('manual-theme-name').value.trim();
+            const themeDescription = document.getElementById('manual-theme-description').value.trim();
+            const researchQuestionFocus = document.getElementById('manual-theme-rq').value.trim();
+            const rationale = document.getElementById('manual-theme-rationale').value.trim();
+
+            if (!themeName || !themeDescription || !researchQuestionFocus || codeIds.length === 0 || !rationale) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(URLS.createManualTheme, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        theme_name: themeName,
+                        theme_description: themeDescription,
+                        research_question_focus: researchQuestionFocus,
+                        code_ids: codeIds,
+                        rationale: rationale
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    manualThemeModal.close();
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create theme'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to create theme');
+            }
         });
     }
 

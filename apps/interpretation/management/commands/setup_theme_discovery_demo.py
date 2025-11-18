@@ -10,6 +10,7 @@ from apps.project.models import Project
 from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
     ThemeDiscoveryService,
 )
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -18,7 +19,6 @@ class Command(BaseCommand):
     help = "Creates a demo project with initial codes for testing Theme Discovery UI"
 
     def handle(self, *args, **options):
-        from django.utils import timezone
         
         service = ThemeDiscoveryService()
 
