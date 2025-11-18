@@ -208,8 +208,30 @@ class ScopusConnectorV2:
                 headers={"Content-Type": "application/json"}
             )
 
+            headers = response.headers if isinstance(response.headers, dict) else response.headers()
+            content_type = headers.get("content-type", "")
+            status_code = response.status() if callable(getattr(response, "status", None)) else response.status
+            status_text = response.status_text() if callable(getattr(response, "status_text", None)) else response.status_text
+            if not response.ok or "application/json" not in content_type.lower():
+                logger.error(f"Scopus: Respuesta inesperada. Status: {status_code}")
+                response_text = "ERROR AL LEER RESPUESTA"
+                try:
+                    response_text = response.text()
+                    logger.error(f"Contenido (HTML?): {response_text[:1000]}...")
+                    try:
+                        with open("debug_scopus_error.html", "w", encoding="utf-8") as f:
+                            f.write(response_text)
+                        logger.info("Respuesta de error de Scopus guardada en debug_scopus_error.html")
+                    except Exception as file_error:
+                        logger.error(f"No se pudo guardar el archivo de debug Scopus: {file_error}")
+                except Exception as text_error:
+                    logger.error(f"No se pudo leer la respuesta de Scopus: {text_error}")
+                raise Exception(
+                    f"Search API error: {status_code} {status_text}. Contenido: {response_text[:200]}"
+                )
+
             if not response.ok:
-                raise Exception(f"Search API error: {response.status} {response.status_text}")
+                raise Exception(f"Search API error: {status_code} {status_text}")
 
             data = response.json()
 

@@ -268,13 +268,54 @@ class DiscoveryService:
 
             try:
                 # PUNTO CRÍTICO: Aquí es donde puede fallar en producción
-                studies = list(connector.search(query))
+                raw_results = list(connector.search(query))
 
-                # Éxito: acumular resultados
-                all_studies.extend(studies)
-                total_por_fuente[source] = len(studies)
+                # Convertir resultados crudos (dicts) a entidades Study del dominio,
+                # respetando también conectores que ya retornan Study (mocks).
+                converted: list[Study] = []
+                for item in raw_results:
+                    if isinstance(item, Study):
+                        converted.append(item)
+                        continue
 
-                logger.info(f"✓ {source}: {len(studies)} estudios obtenidos")
+                    if isinstance(item, dict):
+                        title = item.get("title")
+                        link = item.get("link")
+                        source_name = item.get("source") or source
+
+                        if not title or not link:
+                            logger.warning(
+                                f"{source}: Resultado descartado por falta de title/link: {item}"
+                            )
+                            continue
+
+                        study = Study.create_discovered(
+                            title=title,
+                            link=link,
+                            source=source_name,
+                            doi=item.get("doi"),
+                        )
+
+                        # Enriquecer con metadatos si existen
+                        if "authors" in item:
+                            study.authors = item.get("authors")
+                        if "abstract" in item:
+                            study.abstract = item.get("abstract")
+                        if "year" in item:
+                            study.year = item.get("year")
+
+                        converted.append(study)
+                        continue
+
+                    logger.warning(
+                        f"{source}: Tipo de resultado inesperado {type(item)}, se descarta"
+                    )
+
+                # Éxito: acumular resultados convertidos
+                all_studies.extend(converted)
+                total_por_fuente[source] = len(converted)
+
+                logger.info(f"✓ {source}: {len(converted)} estudios obtenidos")
 
             except Exception as e:
                 # NO detener todo el proceso por una fuente caída

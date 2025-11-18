@@ -1,18 +1,21 @@
 """
 Test rápido de Scopus V2 (API-based).
 """
+import json
+import os
 import sys
 from pathlib import Path
-import json
+
 from dotenv import load_dotenv
-import os
 
 # Fix encoding
 if sys.platform == 'win32':
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT_DIR = Path(__file__).resolve().parents[3]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from apps.acquisition.discovery.adapters.outbound.connectors.scopus_connector_v2 import ScopusConnectorV2
 

@@ -101,7 +101,21 @@ class IeeeConnector(IAcademicConnector):
             logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
 
             # Búsqueda vía /rest/search con requests (SIN browser)
-            results = self._search_via_api(query, max_results)
+            try:
+                api_results_iter = self._search_via_api(query, max_results)
+                results = list(api_results_iter)
+            except ValueError as api_error:
+                logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
+                # Fallback más robusto usando Playwright dentro del contexto del navegador real
+                from .ieee_playwright_connector import IeeePlaywrightConnector
+
+                with IeeePlaywrightConnector(
+                    username=self.username,
+                    password=self.password,
+                    headless=self.headless,
+                    rate_limit=self.rate_limit
+                ) as fallback_connector:
+                    results = list(fallback_connector.search(query, max_results=max_results))
 
             # Rate limiting con variación random (parecer más humano)
             # Evita patrones perfectamente rítmicos que activan detección
@@ -169,6 +183,21 @@ class IeeeConnector(IAcademicConnector):
                         json=payload,
                         timeout=30
                     )
+
+                content_type = response.headers.get("Content-Type", "")
+                is_json_response = response.status_code == 200 and "application/json" in content_type.lower()
+                if not is_json_response:
+                    logger.error(f"IEEE: Respuesta inesperada. Status: {response.status_code}")
+                    logger.error(f"Contenido (HTML?): {response.text[:1000]}...")
+                    try:
+                        with open("debug_ieee_error.html", "w", encoding="utf-8") as f:
+                            f.write(response.text)
+                        logger.info("Respuesta de error de IEEE guardada en debug_ieee_error.html")
+                    except Exception as file_error:
+                        logger.error(f"No se pudo guardar el archivo de debug: {file_error}")
+                    if response.status_code != 200:
+                        response.raise_for_status()
+                    raise ValueError("IEEE: La respuesta no es JSON, revisar debug_ieee_error.html")
 
                 response.raise_for_status()
                 data = response.json()

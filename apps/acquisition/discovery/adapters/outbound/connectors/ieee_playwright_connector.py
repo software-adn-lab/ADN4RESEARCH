@@ -253,7 +253,9 @@ class IeeePlaywrightConnector:
             search_url = f"{self.IEEE_SEARCH_URL}?queryText={query}"
             logger.info(f"Navegando a: {search_url}")
 
-            self._page.goto(search_url, wait_until='networkidle', timeout=self.timeout)
+            # 'networkidle' puede ser muy estricto y causar timeouts si la página
+            # mantiene conexiones abiertas; usamos 'load' para ser más tolerantes.
+            self._page.goto(search_url, wait_until='load', timeout=self.timeout * 2)
 
             # Esperar a que se capture la respuesta
             time.sleep(3)

@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "strategy_id": "integration-test-001",
+    "query": "machine learning",
+    "timestamp": "2025-11-14T15:40:56.910519",
+    "duration_seconds": 33.925657
+  },
+  "summary": {
+    "id_estrategia": "integration-test-001",
+    "resultado": "partial",
+    "total_bruto": 10,
+    "total_unicos": 10,
+    "total_por_fuente": {
+      "IEEE Xplore": 10
+    },
+    "no_ejecutadas": {
+      "Scopus": "connection_error: Exception: Search API error: 200 OK. Contenido: <!DOCTYPE html><html class=\"micro-ui-namespace\" lang=\"en-US\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head="
+    }
+  },
+  "studies": [
+    {
+      "title": "Machine Learning-Enabled Smart Transit: Real-Time Bus Tracking System for Enhanced Urban Mobility",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/11007439/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "IEEE Draft Guide for Architectural Framework and Application of Federated Machine Learning",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/9134988/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "IEEE Approved Draft Guide for Architectural Framework and Application of Federated Machine Learning",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/9154804/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Unveiling the Potential of Machine Learning: Harnessing Machine Learning for Enhanced Coronary Heart Disease Detection and Intervention",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/10911700/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Human-in-the-Loop Machine Learning: Active learning and annotation for human-centered AI",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/10280384/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Sentiment Analysis of Machine Learning Algorithms: A Transformer-Based Approach",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/11007454/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Machine Learning for Business: Using Amazon SageMaker and Jupyter",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/10280365/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Improving Software Defects Detection: An In-Depth Analysis of Machine Learning Methods and Static Analysis Tools for Greater Accuracy",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/10968410/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Machine Learning with TensorFlow, Second Edition",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/10280532/",
+      "source": "IEEE Xplore"
+    },
+    {
+      "title": "Unsupervised Machine Learning Methods for Artifact Removal in Electrodermal Activity",
+      "authors": null,
+      "year": null,
+      "doi": null,
+      "abstract": null,
+      "link": "https://ieeexplore.ieee.org/document/9630535/",
+      "source": "IEEE Xplore"
+    }
+  ]
+}

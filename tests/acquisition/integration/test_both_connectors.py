@@ -287,7 +287,7 @@ try:
     print("=" * 80)
     print()
     
-    # Serializar resultado
+    # Serializar resultado (usando tipos JSON-serializables)
     result_dict = {
         'metadata': {
             'strategy_id': TEST_STRATEGY_ID,
@@ -301,13 +301,13 @@ try:
                 'title': s.title,
                 'authors': s.authors,
                 'year': s.year,
-                'doi': s.doi,
+                'doi': s.doi.value if s.doi else None,
                 'abstract': s.abstract,
                 'link': s.link,
-                'source': s.source
+                'source': s.source.name if hasattr(s.source, "name") else str(s.source),
             }
             for s in result.studies
-        ]
+        ],
     }
     
     output_file = "discovery_service_result.json"
