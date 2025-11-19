@@ -36,13 +36,35 @@ class DOI:
     # Patrón regex para validar formato DOI: 10.xxxx/yyyyy
     DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[^\s]+$")
 
+    # Prefijos de URL comunes que deben removerse
+    DOI_PREFIXES = [
+        "https://doi.org/",
+        "http://doi.org/",
+        "https://dx.doi.org/",
+        "http://dx.doi.org/",
+        "doi.org/",
+        "dx.doi.org/",
+        "doi:",
+        "DOI:",
+    ]
+
     def __post_init__(self):
-        """Validar el formato del DOI."""
+        """Validar y normalizar el formato del DOI."""
         if not self.value or not self.value.strip():
             raise ValueError("DOI no puede estar vacío")
 
-        # Normalizar: remover espacios
-        normalized = self.value.strip()
+        # Normalizar: remover espacios y convertir a minúsculas
+        normalized = self.value.strip().lower()
+
+        # Remover prefijos de URL comunes
+        for prefix in self.DOI_PREFIXES:
+            prefix_lower = prefix.lower()
+            if normalized.startswith(prefix_lower):
+                normalized = normalized[len(prefix_lower):]
+                break
+
+        # Limpiar espacios restantes
+        normalized = normalized.strip()
 
         # Validar formato
         if not self.DOI_PATTERN.match(normalized):

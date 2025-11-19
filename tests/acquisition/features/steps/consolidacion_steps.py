@@ -230,9 +230,9 @@ def step_ingreso_manual(context):
         "abstract": "Manually entered abstract content."
     }
 
-    context.estudio_actualizado = service.update_study(
+    context.estudio_actualizado = service.edit_multiple(
         study=context.estudio_manual,
-        updates=user_input
+        edits=user_input
     )
 
 
