@@ -9,18 +9,18 @@ class ResearchQuestion(models.Model):
         SUGGEST_REJECT = 'SUGGEST_REJECT', 'Suggest Reject'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
-
-    research_framework = models.ForeignKey('project.ResearchFramework', on_delete=models.CASCADE, related_name='research_questions')
-    question = models.TextField(blank=True)
-    motivation = models.TextField(blank=True)
-    # Si estoy mandando solo el id. Asi si se define una relacion uno a muchos (El modelo de "muchos" se coloca como campo en el modelo "uno")
     project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
+    research_framework = models.ForeignKey('project.ResearchFramework', on_delete=models.CASCADE, related_name='research_questions')
+    # Si estoy mandando solo el id. Asi si se define una relacion uno a muchos (El modelo de "muchos" se coloca como campo en el modelo "uno")
     researcher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         related_name='research_questions',
         null=True
     )
+    question = models.TextField(blank=True)
+    motivation = models.TextField(blank=True)
+    
     justification = models.TextField(blank=True)
     status = models.CharField(
         max_length=20, 
@@ -29,7 +29,7 @@ class ResearchQuestion(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
-    framework_fields = models.JSONField(default=dict, blank=True)
+    framework_fields = models.JSONField(default=dict)
     @property
     def has_question_text(self):
         return bool(self.question and self.question.strip())

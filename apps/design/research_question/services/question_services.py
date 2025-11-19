@@ -1,4 +1,6 @@
+import logging
 from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.design.search_strategy.models.search_strategy import SearchStrategy
 from apps.project.models import ResearchFramework
 from config.events import bus
 from django.db.models import Q
@@ -54,17 +56,24 @@ class ResearchQuestionService:
     def can_submit_question(self, research_question: ResearchQuestion) -> bool:
         return research_question.can_submit_for_review()
     
-    def add_research_question(self, project_id, research_framework, question, motivation, researcher, framework_fields):
-        """Crear una nueva pregunta de investigación con todos los atributos necesarios."""
-        project = Project.objects.get(id=project_id)
-        return ResearchQuestion.objects.create(
-            project=project,
-            research_framework=research_framework,
-            suggested_question=question,
+    def add_research_question(self, project_id, question, motivation, researcher_id, framework_fields) -> ResearchQuestion:
+        # project fields no debe ser vacio {}
+        if not framework_fields:
+            raise ValueError("Framework fields cannot be empty")
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            raise ValueError(f"Project with id {project_id} does not exist")
+        question = ResearchQuestion.objects.create(
+            project_id=project_id, # o simplemente project_id
+            research_framework_id=project.research_framework_id,
+            researcher_id=researcher_id,
+            question=question,
             motivation=motivation,
-            researcher=researcher,
             framework_fields=framework_fields
         )
+        question.save()
+        return question
     
     def update_research_question(self, question_id, user, suggested_question=None, motivation=None, framework_fields=None):
         question = self.get_research_question_by_id(question_id, user=user)
@@ -89,14 +98,10 @@ class ResearchQuestionService:
     @transaction.atomic
     def autosave_question(self, data, user, project_id):
         question_id = data.get('id') or None
-        framework_id = data.get('research_framework')
-        framework = self.get_framework_by_id(framework_id)
-        
         framework_fields_data = {
             key.replace('framework_fields[', '').replace(']', ''): value
             for key, value in data.items() if key.startswith('framework_fields[')
         }
-        
         if question_id:
             # Usar el método update_research_question
             question = self.update_research_question(
@@ -109,10 +114,9 @@ class ResearchQuestionService:
         else:
             question = self.add_research_question(
                 project_id=project_id,
-                research_framework=framework,
                 question=data.get('suggested_question', ''),
                 motivation=data.get('motivation', ''),
-                researcher=user,
+                researcher_id=user.id, 
                 framework_fields=framework_fields_data
             )
         
@@ -124,12 +128,19 @@ class ResearchQuestionService:
             project__id=project_id
         ).order_by('-modified_at')
     
-    def get_research_questions_by_status(self, project, status):
+    def get_research_questions_by_status(self, project_id, status):
         return ResearchQuestion.objects.filter(
-            project=project,
+            project_id=project_id,
             status=status
         ).order_by('-modified_at')
     
     def get_frameworks(self, request):
         frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=request.user))
         return frameworks
+    
+    def get_strategy_by_question(self, research_question_id: int):
+        try:
+            strategy = SearchStrategy.objects.get(research_question_id=research_question_id)
+            return strategy
+        except SearchStrategy.DoesNotExist:
+            return None

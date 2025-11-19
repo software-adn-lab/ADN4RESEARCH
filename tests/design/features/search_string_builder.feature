@@ -8,27 +8,30 @@ Característica: Construir cadena de búsqueda
 
     Antecedentes:
         Dado que estoy asignado a un proyecto de investigación
-        Y el proyecto tiene como framework investigativo a "PICO"
+        Y el proyecto tiene como framework investigativo a PICO
 
     Esquema del escenario: Proveer términos clave a partir de campos del framework
-        Dado que he identificado los campos <framework_fields> del framework <framework>
-        Cuando el sistema procesa las oraciones para sugerir términos clave
-        Entonces la lista de términos clave sugeridos debe contener <expected_terms>
-
+        Dado que he creado la "<pregunta_investigacion>" con los siguientes campos <framework_fields>
+        Cuando el sistema procesa los campos del framework de la pregunta para sugerir términos clave
+        Entonces la lista de términos clave del proyecto debe contener <expected_terms>
         Ejemplos:
-        | framework | framework_fields                                                                                                                                           | expected_terms |
-        | PICO      | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |
-        | PEO       | {"Population": "adolescentes de 12 a 18 años", "Exposure": "uso de redes sociales por más de 4 horas diarias", "Outcome": "niveles de ansiedad y depresión"} | horas diarias,redes sociales,uso de redes,niveles de ansiedad |
-        | PCC       | {"Population": "enfermeras de cuidados intensivos", "Concept": "burnout laboral", "Context": "hospitales públicos durante la pandemia COVID-19"}           | cuidados intensivos,burnout laboral,hospitales públicos,cuidados intensivos,burnout laboral,enfermeras de cuidados |
+        | pregunta_investigacion | framework_fields                                                                                                                                           | expected_terms |
+        | ¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?      | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |
+        
             
-    Escenario: Generar sugerencia de estratégia de búsqueda
-        Dado que tengo la pregunta de investigación "¿Cuál es el impacto del desarrollo de software en la industria automotriz?"
-        Y se han identificado los siguientes términos clave con sus sinónimos:
+    Esquema del escenario: Generar sugerencia de estratégia de búsqueda de una pregunta de investigación
+        Dado que he creado la "<pregunta_investigacion>" con los siguientes campos <framework_fields>
+        Y he identificado los sinónimos de los términos clave:
         | termino_clave             | sinonimos                          |
-        | "industria automotriz"    | "automóviles", "sector automotor"  |
-        | "desarrollo de software"  |  ""                                |
+        | "medicación tradicional"  | tradición, medicina                |
+        | "terapia física"          | rehabilitación, recuperación       |
+        | "adultos mayores"         | ancianos, viejos                   |
+        | "mejora en movilidad"     |                                    |
         Cuando el sistema genere la sugerencia de estratégia de búsqueda
         Entonces la estratégia de búsqueda sugerida será:
         """
-            ("industria automotriz" OR "automóviles" OR "sector automotor") AND ("desarrollo de software")
+            ("medicación tradicional" OR "tradición" OR "medicina") AND ("terapia física" OR "rehabilitación" OR "recuperación") AND ("adultos mayores" OR "ancianos" OR "viejos") AND ("mejora en movilidad")
         """
+        Ejemplos:
+        | pregunta_investigacion | framework_fields                                                                                                                                           | expected_terms |
+        | ¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?      | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |

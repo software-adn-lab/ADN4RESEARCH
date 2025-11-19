@@ -11,14 +11,13 @@ search_strategy_service = SearchStrategyService()
 @require_POST
 def create_project_keyword(request, project_id):
     try:
-        project = get_object_or_404(Project, id=project_id)
         term = request.POST.get('term', '').strip()
         synonyms = request.POST.get('synonyms', '').strip()
 
         if not term:
             return JsonResponse({'error': 'Key term cannot be empty.'}, status=400)
 
-        keyword = search_strategy_service.create_project_keyword(project, term, synonyms)
+        keyword = search_strategy_service.get_or_create_project_keyword(project_id, term, synonyms)
         return JsonResponse({'status': 'success', 'keyword_id': keyword.id})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

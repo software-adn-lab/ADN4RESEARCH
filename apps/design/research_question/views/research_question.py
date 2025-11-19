@@ -16,8 +16,6 @@ research_question_service = ResearchQuestionService()
 project_service = ProjectService()
 keyword_processor_service = KeywordProcessorService()
 
-
-
 # Obtén el modelo de Usuario activo en tu proyecto
 User = get_user_model()
 
@@ -27,11 +25,10 @@ def hello(request):
         'project': project
     })
 def open_questions_workspace_view(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
     status_filter = request.GET.get('status', None)
     if status_filter in [ResearchQuestion.Status.DRAFT, ResearchQuestion.Status.READY_TO_SEND, ResearchQuestion.Status.SUGGESTED]:
         questions = research_question_service.get_research_questions_by_status(
-            project=project, 
+            project_id=project_id, 
             status=status_filter
         )
     else:
@@ -39,7 +36,8 @@ def open_questions_workspace_view(request, project_id):
             user=request.user, 
             project_id=project_id
         )
-    project_keywords = keyword_processor_service.get_project_keywords(project)
+    project_keywords = project_service.get_project_keyterms(project_id)
+    project = project_service.get_project_by_id(project_id)
     
     context = {
         'project': project, # Añadir el proyecto al contexto

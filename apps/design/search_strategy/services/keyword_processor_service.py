@@ -5,6 +5,8 @@ import spacy
 import logging
 from typing import List
 
+from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
+
 class KeywordProcessorService:
     PATTERNS = [
     ["NOUN", "ADJ"],       # e.g., "industria automotriz"
@@ -16,6 +18,8 @@ class KeywordProcessorService:
         nlp = spacy.load("es_core_news_sm")
     except IOError:
         nlp = None
+    
+    search_strategy_service = SearchStrategyService()
         
     def process_key_terms(self, sentence: str) -> List[str]:
         """
@@ -40,33 +44,21 @@ class KeywordProcessorService:
                             
         return list(phrases)
     
-    def suggest_and_store_key_terms(self, research_question: ResearchQuestion):
-        project = research_question.project
+    def suggest_and_store_key_terms(self, research_question_id:int):
+        research_question = ResearchQuestion.objects.get(id=research_question_id)
+        question_framework_fields_complete = research_question.framework_fields
+        # 1. Procesar cada campo del framework para extraer términos clave
         suggested_terms = set()
-        for field_name, field_value in research_question.framework_fields.items():
+        for field_value in research_question.framework_fields.values():
             if field_value and field_value.strip():  # Solo procesar si el campo tiene contenido
                 terms_from_field = self.process_key_terms(field_value)
                 suggested_terms.update(terms_from_field)
-        strategy, created = SearchStrategy.objects.update_or_create(
-            research_question=research_question,
-            defaults={
-                'name': f"Suggested Strategy for '{research_question.question}'",
-                'status': SearchStrategy.Status.DRAFT
-            }
+        # 2. Delegar la creación/sincronización de la estrategia al servicio correcto.
+        strategy = self.search_strategy_service.sync_suggested_terms_with_strategy(
+            research_question_id=research_question_id,
+            suggested_terms=list(suggested_terms)
         )
-        strategy.keywords.all().delete()
-        keywords_to_link = []
-        for term in suggested_terms:
-            project_keyword, created = ProjectKeyword.objects.get_or_create(
-                project=project,
-                term=term
-            )
-            keywords_to_link.append(
-                Keyword(strategy=strategy, project_keyword=project_keyword)
-            )
-        if keywords_to_link:
-            Keyword.objects.bulk_create(keywords_to_link)
-            
+        return strategy
     
     def get_keywords_for_strategy(self, strategy: SearchStrategy) -> List[str]:
         """

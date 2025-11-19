@@ -11,13 +11,13 @@ class SearchStrategy(models.Model):
         on_delete=models.CASCADE,
         related_name='search_strategies'
     )
-    name = models.CharField(max_length=255) # Ej: "Estrategia v1 - Sugerida", "v2 - Manual"
+    name = models.CharField(max_length=255)
     status = models.CharField(
         max_length=20, 
         choices=Status.choices,  
         default=Status.DRAFT     
     )
-    # Aquí es donde guardas la CADENA FINAL GENERADA
+    # Aquí se guarda la CADENA FINAL GENERADA!!!!!! pilas
     final_search_string = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

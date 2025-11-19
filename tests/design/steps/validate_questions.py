@@ -1,25 +1,14 @@
 from behave import step
 from faker import Faker
 from django.contrib.auth.models import User
-from apps.project.models import Stage
 from apps.project.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.research_question.models.research_question import ResearchFramework, ResearchQuestion
+from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.project.models import ResearchFramework
 
 project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 fake =Faker()
-
-@step('la etapa de {nombre_etapa} está abierta')
-def step_impl(context, nombre_etapa):
-    context.stage = Stage.objects.create(
-        project=context.project,
-        name=nombre_etapa,
-        status="INACTIVE"
-    )
-    project_service.open_stage(stage=context.stage, opened_by=context.owner, due_time=fake.future_datetime())
-    
-    assert project_service.is_stage_opened(stage=context.stage)
 
 @step('que existen preguntas de investigación sugeridas por los investigadores')
 def step_impl(context):

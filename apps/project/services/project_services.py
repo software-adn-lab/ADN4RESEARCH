@@ -1,6 +1,25 @@
+from apps.design.search_strategy.models.keyword import ProjectKeyword
 from apps.project.models import Project, ResearchFramework
+from typing import List
+from django.db import transaction
 
 class ProjectService:
+    @transaction.atomic
+    def create_project_with_framework(self, name, description, owner, framework_name, framework_fields):
+        framework, _ = ResearchFramework.objects.get_or_create(
+            name=framework_name,
+            assigned_by=owner,
+            defaults={'fields_data': framework_fields or {}}
+        )
+        project = Project.objects.create(
+            name=name,
+            description=description,
+            owner=owner,
+            research_framework=framework 
+        )
+        self.add_member(project, owner, role="OWNER")
+        return project
+    
     def add_member(self, project: Project, user, role):
         # Implementation to add a member to the project with a specific role
         project.add_member(user, role)
@@ -16,29 +35,12 @@ class ProjectService:
             return project.research_framework
         return None
 
-    def asign_research_framework_to_project(self, project: Project, framework):
-        project.research_framework = framework
-        project.save()
-
     def get_project_members(self, project):
         return project.get_members()
-
-    def assign_framework_project(self, project_id, framework_name, fields_data, assigned_by) -> ResearchFramework:
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            raise ValueError(f"Project with id {project_id} does not exist")
-
-        research_framework, created = ResearchFramework.objects.get_or_create(
-            name=framework_name,
-            assigned_by=assigned_by,
-            fields_data=fields_data,
-        )
-
-        if not created and fields_data:
-            research_framework.fields_data = fields_data
-            research_framework.save()
-
-        project.research_framework = research_framework
-        project.save()
-        return research_framework
+    
+    def get_project_keyterms(self, project_id: int) -> List[ProjectKeyword]:
+        return list(ProjectKeyword.objects.filter(project_id=project_id))
+    
+    def get_project_by_id(self, project_id: int) -> Project:
+        return Project.objects.get(id=project_id)
+        
