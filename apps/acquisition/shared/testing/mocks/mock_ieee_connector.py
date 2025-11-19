@@ -1,13 +1,19 @@
 """
 Mock IEEE connector for testing.
 
-FIXTURES DETERMINISTAS FASE 1:
+FIXTURES DETERMINISTAS:
+
+FASE 1 (Discovery - Feature 2):
 - 1 estudio con DOI compartido con Scopus (duplicado por DOI)
 - 1 estudio con título equivalente al de Scopus bajo normalización (duplicado por título, sin DOI)
 - 1 estudio único de IEEE
 - Total: 3 estudios (1 duplicado DOI + 1 duplicado título + 1 único)
+
+FASE 2 (Consolidation - Feature 3):
+- find_metadata(): Busca metadatos faltantes de un estudio por título
+- Retorna DOI y Abstract simulados
 """
-from typing import List
+from typing import List, Dict, Optional
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from apps.acquisition.shared.domain.entities.study import Study
@@ -65,3 +71,21 @@ class MockIeeeConnector(IAcademicConnector):
                 doi="10.1109/ase.2023.unique"
             ),
         ]
+
+    def find_metadata(self, title: str) -> Optional[Dict[str, str]]:
+        """
+        Mock metadata search for consolidation (Feature 3).
+
+        Simula la búsqueda de metadatos faltantes de un estudio específico.
+        En producción, esto consultaría la API de IEEE por título.
+
+        Args:
+            title: Título del estudio a buscar
+
+        Returns:
+            Dict con metadatos encontrados o None si no se encuentra.
+            Formato: {"doi": "...", "abstract": "..."}
+        """
+        # IEEE generalmente no encuentra los estudios de Scopus
+        # Retornamos None para simular que no se encontró
+        return None
