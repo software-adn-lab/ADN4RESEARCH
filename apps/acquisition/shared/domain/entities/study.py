@@ -82,6 +82,12 @@ class Study:
     downloaded_at: Optional[datetime] = None
     failure_reason: Optional[str] = None
 
+    # Consolidación de metadatos (Feature 3)
+    # Estado de calidad: "completo", "parcial", "fallido"
+    consolidation_status: Optional[str] = None
+    # Trazabilidad: origen de cada campo {"doi": "manual", "title": "discovery"}
+    field_origins: Dict[str, str] = field(default_factory=dict)
+
     def __post_init__(self):
         """Validar invariantes básicas."""
         if not self.title or not self.title.strip():
@@ -273,6 +279,9 @@ class Study:
             "enriched_at": self.enriched_at.isoformat() if self.enriched_at else None,
             "downloaded_at": self.downloaded_at.isoformat() if self.downloaded_at else None,
             "failure_reason": self.failure_reason,
+            # Campos de consolidación (Feature 3)
+            "consolidation_status": self.consolidation_status,
+            "field_origins": self.field_origins,
         }
 
     @classmethod
@@ -379,6 +388,9 @@ class Study:
             enriched_at=enriched_at,
             downloaded_at=downloaded_at,
             failure_reason=data.get("failure_reason"),
+            # Campos de consolidación (Feature 3)
+            consolidation_status=data.get("consolidation_status"),
+            field_origins=data.get("field_origins", {}),
         )
 
     def __repr__(self) -> str:

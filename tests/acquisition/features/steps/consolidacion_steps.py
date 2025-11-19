@@ -27,7 +27,7 @@ from apps.acquisition.shared.testing.mocks.mock_scopus_connector import MockScop
 from apps.acquisition.shared.testing.mocks.mock_ieee_connector import MockIeeeConnector
 
 # WISHFUL THINKING: Enum para estado de calidad de metadatos (AÚN NO EXISTE)
-# from apps.acquisition.consolidation.domain.value_objects import ConsolidationStatus
+# from apps.acquisition.metadata.domain.value_objects import ConsolidationStatus
 # Por ahora usamos strings literales que coincidirán con el Enum futuro
 STATUS_COMPLETO = "completo"
 STATUS_PARCIAL = "parcial"
@@ -94,7 +94,7 @@ def step_solicito_consolidar(context):
     Inyecta Mocks para simular respuestas exitosas de las APIs académicas.
     """
     # WISHFUL THINKING: Importamos el servicio que vamos a crear
-    from apps.acquisition.consolidation.application.consolidation_service import ConsolidationService
+    from apps.acquisition.metadata.application.consolidation_service import ConsolidationService
 
     # Usar los mocks existentes (ya tienen find_metadata() configurado)
     connectors = {
@@ -219,7 +219,7 @@ def step_estudio_fallido(context):
 def step_ingreso_manual(context):
     """El usuario envía los datos faltantes manualmente."""
     # WISHFUL THINKING: Servicio de edición manual
-    from apps.acquisition.consolidation.application.manual_edit_service import ManualEditService
+    from apps.acquisition.metadata.application.manual_edit_service import ManualEditService
 
     service = ManualEditService()
 
@@ -286,7 +286,7 @@ Cuando ejecutes `behave`, los imports fallarán y te indicarán qué crear.
 -----------------------------------------------------------------------------
 1. DOMINIO - Value Objects
 -----------------------------------------------------------------------------
-apps/acquisition/consolidation/domain/value_objects/consolidation_status.py
+apps/acquisition/metadata/domain/value_objects/consolidation_status.py
     class ConsolidationStatus(Enum):
         COMPLETO = "completo"
         PARCIAL = "parcial"
@@ -303,19 +303,19 @@ apps/acquisition/shared/domain/entities/study.py
 -----------------------------------------------------------------------------
 3. APPLICATION - Servicios
 -----------------------------------------------------------------------------
-apps/acquisition/consolidation/application/consolidation_service.py
+apps/acquisition/metadata/application/consolidation_service.py
     class ConsolidationService:
         def __init__(self, connectors: Dict[str, Any])
         def consolidate(self, studies: List[Study]) -> ConsolidationResult
 
-apps/acquisition/consolidation/application/manual_edit_service.py
+apps/acquisition/metadata/application/manual_edit_service.py
     class ManualEditService:
         def update_study(self, study: Study, updates: dict) -> Study
 
 -----------------------------------------------------------------------------
 4. DOMINIO - Entidades
 -----------------------------------------------------------------------------
-apps/acquisition/consolidation/domain/entities/consolidation_result.py
+apps/acquisition/metadata/domain/entities/consolidation_result.py
     class ConsolidationResult:
         studies: List[Study]
         summary: dict  # {"total_processed": 3, "successful": 2, "failed": 1}
@@ -323,17 +323,17 @@ apps/acquisition/consolidation/domain/entities/consolidation_result.py
 -----------------------------------------------------------------------------
 5. DOMINIO - Servicios
 -----------------------------------------------------------------------------
-apps/acquisition/consolidation/domain/services/metadata_enricher.py
+apps/acquisition/metadata/domain/services/metadata_enricher.py
     class MetadataEnricher:
         def enrich(self, study: Study, connectors: Dict) -> Study
 
-apps/acquisition/consolidation/domain/services/metadata_normalizer.py
+apps/acquisition/metadata/domain/services/metadata_normalizer.py
     class MetadataNormalizer:
         def normalize(self, study: Study) -> Study
         def normalize_doi(self, doi: str) -> str
         def normalize_authors(self, authors: List[str]) -> List[str]
 
-apps/acquisition/consolidation/domain/services/completeness_validator.py
+apps/acquisition/metadata/domain/services/completeness_validator.py
     class CompletenessValidator:
         def validate(self, study: Study) -> str  # completo/parcial/fallido
         def get_missing_fields(self, study: Study) -> List[str]
