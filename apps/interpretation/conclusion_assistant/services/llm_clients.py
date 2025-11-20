@@ -203,7 +203,9 @@ class GeminiLLMClient(LLMClient):
         # Configure the client
         self.genai.configure(api_key=key)
         self.model: str = (
-            model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash") or "gemini-1.5-flash"
+            model
+            or os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+            or "gemini-flash-latest"
         )
 
     def _generate(self, prompt: str, max_output_tokens: int = 512) -> str:
@@ -216,9 +218,59 @@ class GeminiLLMClient(LLMClient):
                     max_output_tokens=max_output_tokens,
                 ),
             )
-            return response.text
+
+            # Check if response has valid parts before accessing text
+            if not response.candidates:
+                logger.error(
+                    "Gemini response has no candidates. Prompt feedback: %s",
+                    getattr(response, "prompt_feedback", None),
+                )
+                raise RuntimeError(
+                    "Gemini API returned no candidates. The prompt may have been blocked by safety filters."
+                )
+
+            candidate = response.candidates[0]
+
+            # Check finish_reason
+            # finish_reason values: FINISH_REASON_UNSPECIFIED=0, STOP=1, MAX_TOKENS=2, SAFETY=3, RECITATION=4, OTHER=5
+            if candidate.finish_reason not in [
+                1,
+                2,
+            ]:  # STOP or MAX_TOKENS are acceptable
+                logger.error(
+                    "Gemini response blocked. Finish reason: %s, Safety ratings: %s",
+                    candidate.finish_reason,
+                    candidate.safety_ratings,
+                )
+                raise RuntimeError(
+                    f"Gemini API response blocked (finish_reason={candidate.finish_reason}). "
+                    "The content may have triggered safety filters or other restrictions."
+                )
+
+            # Check if candidate has content parts
+            if not candidate.content or not candidate.content.parts:
+                logger.error(
+                    "Gemini candidate has no content parts. Candidate: %s", candidate
+                )
+                raise RuntimeError(
+                    "Gemini API returned a candidate with no content parts."
+                )
+
+            # Extract text from parts
+            text_parts = []
+            for part in candidate.content.parts:
+                if hasattr(part, "text") and part.text:
+                    text_parts.append(part.text)
+
+            if not text_parts:
+                raise RuntimeError("Gemini API returned no text in response parts.")
+
+            return "".join(text_parts)
+
         except Exception as e:
             logger.exception("Error calling Gemini generate_content: %s", e)
+            if isinstance(e, RuntimeError):
+                raise
             raise RuntimeError("Error generating text with Gemini LLM: %s" % e) from e
 
     def generate_opening_message(self, subtheme) -> Dict[str, str]:
