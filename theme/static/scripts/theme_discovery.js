@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (finalizeBtn) {
         finalizeBtn.addEventListener('click', async function () {
             this.disabled = true;
-            this.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Creating...';
+            this.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Creating themes...';
 
             try {
                 const response = await fetch(URLS.finalizeThemes, {
@@ -450,15 +450,80 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const data = await response.json();
                 if (data.success) {
-                    location.reload();
+                    // Redirect to themes created page
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(`Successfully created ${data.created_count} themes!`);
+                        location.reload();
+                    }
                 } else {
                     alert('Error: ' + (data.error || 'Failed to finalize themes'));
+                    this.disabled = false;
+                    this.innerHTML = 'Finalize Themes';
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to finalize themes');
+                this.disabled = false;
+                this.innerHTML = 'Finalize Themes';
             }
         });
+    }
+
+    // === Editable RQ Focus for Normalized Codes ===
+    document.querySelectorAll('.rq-focus-input').forEach(input => {
+        let saveTimeout;
+
+        input.addEventListener('input', function () {
+            clearTimeout(saveTimeout);
+            const codeId = this.dataset.codeId;
+            const newValue = this.value.trim();
+
+            // Auto-save after 1 second of no typing
+            saveTimeout = setTimeout(async () => {
+                if (newValue) {
+                    await saveRQFocus(codeId, newValue);
+                }
+            }, 1000);
+        });
+
+        input.addEventListener('blur', async function () {
+            clearTimeout(saveTimeout);
+            const codeId = this.dataset.codeId;
+            const newValue = this.value.trim();
+            
+            if (newValue) {
+                await saveRQFocus(codeId, newValue);
+            }
+        });
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+    });
+
+    async function saveRQFocus(codeId, rqFocus) {
+        try {
+            const response = await fetch(URLS.updateRQFocus.replace('9999', codeId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ rq_focus: rqFocus })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                console.error('Failed to save RQ Focus:', data.error);
+            }
+        } catch (error) {
+            console.error('Error saving RQ Focus:', error);
+        }
     }
 
     // === Editable Theme Names (Reflexivity Tracking) ===

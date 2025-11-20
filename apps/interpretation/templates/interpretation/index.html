@@ -1,118 +1,121 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <title>Asistencia Interpretativa · ADN4Research</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-principal-bg min-h-screen" onload="lucide.createIcons()">
-<body class="bg-principal-bg min-h-screen">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200">
-        <div class="max-w-5xl mx-auto px-6 py-6">
-            <div class="flex items-center gap-3 mb-2">
-                <i data-lucide="brain" class="text-primary-custom" style="width: 32px; height: 32px;"></i>
-                <h1 class="text-3xl font-bold text-secondary-font">Asistencia Interpretativa</h1>
-            </div>
-            <p class="text-principal-font mt-2">Genera proposiciones interpretativas con ayuda de IA para tu revisión sistemática</p>
-        </div>
-    </header>
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
 
-    <!-- Main Content -->
-    <main class="max-w-5xl mx-auto px-6 py-8">
+<div class="p-4">
+    {% csrf_token %}
+    
+    <!-- Title -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-base-content">Asistencia Interpretativa</h1>
+        <div class="text-xs text-base-content/80">
+            <span class="font-medium">Genera proposiciones interpretativas con ayuda de IA</span>
+        </div>
+    </div>
+
+    <div class="space-y-6">
         {% if messages %}
             {% for message in messages %}
-            <div class="mb-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
-                {{ message }}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} text-sm mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span>{{ message }}</span>
             </div>
             {% endfor %}
         {% endif %}
 
         {% if not themes %}
-            <div class="bg-white rounded-xl shadow-sm p-12 text-center">
-                <i data-lucide="folder-open" class="text-principal-font mx-auto mb-4" style="width: 64px; height: 64px;"></i>
-                <h2 class="text-2xl font-semibold text-secondary-font mb-2">No hay temas disponibles</h2>
-                <p class="text-principal-font mb-6">Crea temas y subtemas para comenzar la asistencia interpretativa</p>
-                <a href="/admin/interpretation/theme/add/" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-custom text-white rounded-lg font-medium hover:bg-opacity-90 transition">
-                    <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
-                    Crear tema en Admin
-                </a>
+            <div class="card bg-base-100 border border-base-300">
+                <div class="card-body text-center">
+                    <div class="alert alert-warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        <div>
+                            <h3 class="font-bold">No hay temas disponibles</h3>
+                            <div class="text-sm mt-2">
+                                <p>Crea temas y subtemas para comenzar la asistencia interpretativa.</p>
+                                <p class="mt-2"><a href="/admin/interpretation/theme/add/" class="btn btn-primary btn-sm mt-2">Crear tema en Admin</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
         {% for theme in themes %}
-        <div class="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-            <!-- Theme Header -->
-            <div class="bg-linear-to-r from-primary-custom to-accent-custom p-6">
-                <div class="flex items-start gap-3 mb-2">
-                    <i data-lucide="book-open" class="text-white shrink-0" style="width: 24px; height: 24px;"></i>
-                    <h2 class="text-2xl font-bold text-white">{{ theme.name }}</h2>
-                </div>
-                <p class="text-white text-opacity-90 text-sm flex items-start gap-2">
-                    <i data-lucide="help-circle" class="shrink-0 mt-0.5" style="width: 16px; height: 16px;"></i>
-                    <span><span class="font-semibold">Pregunta de Investigación:</span> {{ theme.research_question }}</span>
-                </p>
-            </div>
+        <div class="space-y-3">
+            <div class="card bg-base-100 border border-base-300">
+                <div class="card-body">
+                    <h2 class="card-title text-base text-primary">{{ theme.name }}</h2>
+                    <p class="text-sm text-base-content/70">{{ theme.research_question }}</p>
 
-            <!-- Subthemes -->
-            <div class="p-6">
-                <h3 class="text-lg font-semibold text-secondary-font mb-4 flex items-center gap-2">
-                    <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
-                    Subtemas disponibles
-                </h3>
-                
-                {% if theme.subthemes.all %}
-                    <div class="space-y-3">
-                    {% for sub in theme.subthemes.all %}
-                        <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-custom hover:shadow-md transition">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-secondary-font mb-2">{{ sub.name }}</h4>
-                                    
-                                    {% if sub.central_codes %}
-                                    <div class="flex flex-wrap gap-2 mb-2">
-                                        {% for code in sub.central_codes %}
-                                        <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
-                                            {{ code }}
-                                        </span>
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <p class="text-sm text-principal-font">
-                                        Estado: 
-                                        <span class="font-medium {% if sub.status == 'PENDING' %}text-gray-600{% elif sub.status == 'IN_PROGRESS' %}text-yellow-600{% else %}text-green-600{% endif %}">
-                                            {{ sub.get_status_display }}
-                                        </span>
-                                    </p>
-                                </div>
-                                
-                                <form method="post" action="{% url 'interpretation:start_interpretation' sub.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="px-5 py-2.5 bg-primary-custom text-white rounded-lg font-medium hover:bg-opacity-90 transition whitespace-nowrap flex items-center gap-2">
-                                        <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
-                                        Iniciar asistencia
-                                    </button>
-                                </form>
-                            </div>
+                    
+                    <div class="mt-4">
+                        <h3 class="text-sm font-semibold text-base-content mb-3">Subtemas disponibles</h3>
+                        
+                        {% if theme.subthemes.all %}
+                        <div class="overflow-x-auto border border-base-300 rounded-lg">
+                            <table class="table w-full">
+                                <thead class="bg-primary text-primary-content text-sm font-semibold">
+                                    <tr>
+                                        <th class="w-1/3">Subtema</th>
+                                        <th class="w-1/3">Códigos Centrales</th>
+                                        <th class="w-1/6 text-center">Estado</th>
+                                        <th class="w-1/6 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                {% for sub in theme.subthemes.all %}
+                                    <tr class="hover:bg-base-200 transition-colors">
+                                        <td class="p-2">{{ sub.name }}</td>
+                                        <td class="p-2">
+                                            {% if sub.central_codes %}
+                                            <div class="flex flex-wrap gap-1">
+                                                {% for code in sub.central_codes %}
+                                                <span class="badge badge-sm badge-primary badge-outline">{{ code }}</span>
+                                                {% endfor %}
+                                            </div>
+                                            {% else %}
+                                            <span class="text-base-content/60 text-xs">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-2 text-center">
+                                            {% if sub.status == 'PENDING' %}
+                                            <span class="badge badge-ghost text-xs">{{ sub.get_status_display }}</span>
+                                            {% elif sub.status == 'IN_PROGRESS' %}
+                                            <span class="badge badge-warning text-xs">{{ sub.get_status_display }}</span>
+                                            {% else %}
+                                            <span class="badge badge-success text-xs">{{ sub.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-2 text-center">
+                                            <form method="post" action="{% url 'interpretation:start_interpretation' sub.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    Iniciar asistencia
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                    {% endfor %}
+                        {% else %}
+                        <div class="text-center py-6 text-base-content/60 text-sm">
+                            <p>No hay subtemas definidos para este tema</p>
+                        </div>
+                        {% endif %}
                     </div>
-                {% else %}
-                    <div class="text-center py-8 text-principal-font">
-                        <p>No hay subtemas definidos para este tema</p>
-                    </div>
-                {% endif %}
+                </div>
             </div>
         </div>
         {% endfor %}
-    </main>
+    </div>
 
-    <!-- Footer -->
-    <footer class="max-w-5xl mx-auto px-6 py-8 text-center text-sm text-principal-font">
-        <p>ADN4Research · Sistema de asistencia para revisiones sistemáticas de literatura</p>
-    </footer>
-</body>
-</html>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    lucide.createIcons();
+</script>
+
+{% endblock content %}

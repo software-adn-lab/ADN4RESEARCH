@@ -10,7 +10,6 @@
         <h1 class="text-2xl font-bold text-base-content">AI-Driven Theme Discovery</h1>
         <div class="text-xs text-base-content/80">
             <span class="font-medium">Project: {{ project.name }}</span>
-            {{normalization_proposals}}
         </div>
     </div>
 
@@ -205,18 +204,22 @@
                     </thead>
                     <tbody class="text-sm">
                         {% for code in normalized_codes %}
-                        <tr class="hover:bg-base-200 transition-colors">
+                        <tr class="hover:bg-base-200 transition-colors" data-code-id="{{ code.id }}">
                             <td class="p-2">
                                 <input type="checkbox" class="checkbox checkbox-sm normalized-code-checkbox" 
                                        data-code="{{ code.code }}" 
                                        data-code-id="{{ code.id }}"
-                                       data-rq="{{ code.research_question_focus }}" />
+                                       data-rq="{{ code.research_question_focus|default:'' }}" />
                             </td>
                             <td class="p-2">
                                 <span class="font-medium">{{ code.code }}</span>
                             </td>
                             <td class="p-2">
-                                <span class="badge badge-primary badge-sm">{{ code.research_question_focus }}</span>
+                                <input type="text" 
+                                       class="input input-bordered input-sm w-full rq-focus-input" 
+                                       data-code-id="{{ code.id }}"
+                                       value="{{ code.research_question_focus|default:'' }}" 
+                                       placeholder="e.g., RQ1, RQ2, etc." />
                             </td>
                             <td class="p-2 text-center">
                                 <span class="badge badge-ghost">{{ code.frequency }}</span>
@@ -458,6 +461,7 @@
         normalizeyCodes: "{% url 'interpretation:normalize_codes' project.id %}",
         createManualNormalization: "{% url 'interpretation:create_manual_normalization' project.id %}",
         createManualTheme: "{% url 'interpretation:create_manual_theme' project.id %}",
+        updateRQFocus: "{% url 'interpretation:update_rq_focus' 9999 %}",
         acceptProposal: "{% url 'interpretation:accept_normalization' 9999 %}",
         acceptAllProposals: "{% url 'interpretation:accept_all_normalizations' project.id %}",
         generateThemes: "{% url 'interpretation:generate_themes' project.id %}",

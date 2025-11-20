@@ -245,6 +245,25 @@ def create_manual_theme(request, project_id):
 
 
 @require_http_methods(["POST"])
+@login_required
+def update_rq_focus(request, code_id):
+    """Update the research question focus for a normalized code."""
+    normalized_code = get_object_or_404(NormalizedCode, id=code_id)
+
+    try:
+        data = json.loads(request.body)
+        rq_focus = data.get("rq_focus", "").strip()
+
+        normalized_code.research_question_focus = rq_focus
+        normalized_code.save(update_fields=["research_question_focus"])
+
+        return JsonResponse({"success": True})
+    except Exception as e:
+        print(f"[ERROR] Failed to update RQ focus: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
 def accept_theme(request, proposal_id):
     """Accept, reject, or modify a theme proposal."""
     proposal = get_object_or_404(ThemeDiscoveryProposal, id=proposal_id)
@@ -318,11 +337,41 @@ def finalize_themes(request, project_id):
             )
             all_created_themes.extend(created_themes)
 
+        # Store theme IDs in session for redirect
+        theme_ids = [theme.id for theme in all_created_themes]
+
         return JsonResponse(
             {
                 "success": True,
                 "created_count": len(all_created_themes),
+                "theme_ids": theme_ids,
+                "redirect_url": f"/interpretation/themes-created/?project_id={project_id}",
             }
         )
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def themes_created_view(request):
+    """Display created themes and option to start interpretation."""
+    project_id = request.GET.get("project_id")
+    
+    if project_id:
+        themes = Theme.objects.filter(
+            created_by=request.user
+        ).order_by("-created_at")[:10]  # Last 10 themes created by user
+    else:
+        themes = Theme.objects.filter(
+            created_by=request.user
+        ).order_by("-created_at")
+
+    return render(
+        request,
+        "interpretation/themes_created.html",
+        {
+            "themes": themes,
+            "project_id": project_id,
+        },
+    )
