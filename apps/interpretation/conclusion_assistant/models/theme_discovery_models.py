@@ -8,6 +8,8 @@ class ThemeDiscoveryProposal(models.Model):
     Representa una propuesta de estructura temática generada por IA.
     Agrupa códigos normalizados en temas y subtemas.
     """
+    id: int  # Django auto-generated field
+    
     class ProposalStatus(models.TextChoices):
         PENDING = 'PENDING', 'Pendiente de Revisión'
         ACCEPTED = 'ACCEPTED', 'Aceptada'

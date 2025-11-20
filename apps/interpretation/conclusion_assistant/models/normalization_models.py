@@ -32,6 +32,8 @@ class CodeNormalizationProposal(models.Model):
     Representa una propuesta de normalización de códigos generada por IA.
     Agrupa códigos similares y propone fusiones.
     """
+    id: int  # Django auto-generated field
+
     class ProposalStatus(models.TextChoices):
         PENDING = 'PENDING', 'Pendiente de Revisión'
         ACCEPTED = 'ACCEPTED', 'Aceptada por el Investigador'
@@ -65,7 +67,8 @@ class CodeNormalizationProposal(models.Model):
     modified_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.normalized_code} <- {', '.join(self.original_codes[:3])}"
+        codes = self.original_codes if isinstance(self.original_codes, list) else []
+        return f"{self.normalized_code} <- {', '.join(codes[:3])}"
 
 
 class NormalizedCode(models.Model):

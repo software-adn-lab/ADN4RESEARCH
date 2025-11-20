@@ -285,7 +285,7 @@ def accept_theme(request, proposal_id):
 
 
 @require_http_methods(["POST"])
-def accept_all_themes(request, project_id):
+def accept_all_themes(_request, project_id):
     """Accept all pending theme proposals."""
     project = get_object_or_404(Project, id=project_id)
 
