@@ -41,4 +41,8 @@ class AnalysisTrace(models.Model):
         verbose_name_plural = 'Analysis Traces'
 
     def __str__(self):
-        return f"{self.get_trace_type_display()} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        try:
+            trace_label = self.TraceType(self.trace_type).label
+        except Exception:
+            trace_label = self.trace_type or ''
+        return f"{trace_label} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"

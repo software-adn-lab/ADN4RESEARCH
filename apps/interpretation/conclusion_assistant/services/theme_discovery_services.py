@@ -1,10 +1,8 @@
 """Services for AI-driven theme discovery and code normalization."""
 
-from django.db import transaction
-from typing import List, Dict, Any, Optional
 import logging
-from .llm_clients import get_default_client
-
+from typing import List, Dict, Any, Optional
+from django.db import transaction
 from apps.interpretation.conclusion_assistant.models import (
     InitialCode,
     CodeNormalizationProposal,
@@ -13,6 +11,8 @@ from apps.interpretation.conclusion_assistant.models import (
     AnalysisTrace,
     Theme,
 )
+from .llm_clients import get_default_client
+
 
 logger = logging.getLogger(__name__)
 
@@ -129,10 +129,11 @@ class ThemeDiscoveryService:
         """
         # Accept both PENDING and already ACCEPTED proposals (but not create duplicates)
         proposals = CodeNormalizationProposal.objects.filter(
-            id__in=proposal_ids, status__in=[
+            id__in=proposal_ids,
+            status__in=[
                 CodeNormalizationProposal.ProposalStatus.PENDING,
-                CodeNormalizationProposal.ProposalStatus.ACCEPTED
-            ]
+                CodeNormalizationProposal.ProposalStatus.ACCEPTED,
+            ],
         )
 
         normalized_codes = []
@@ -140,10 +141,13 @@ class ThemeDiscoveryService:
             # Check if a normalized code already exists for this proposal
             existing_code = NormalizedCode.objects.filter(proposal=proposal).first()
             if existing_code:
-                logger.info("Normalized code already exists for proposal %d, skipping", proposal.id)
+                logger.info(
+                    "Normalized code already exists for proposal %d, skipping",
+                    proposal.id,
+                )
                 normalized_codes.append(existing_code)
                 continue
-            
+
             # Update proposal status
             proposal.status = CodeNormalizationProposal.ProposalStatus.ACCEPTED
             proposal.reviewed_by = reviewer

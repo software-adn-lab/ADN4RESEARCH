@@ -9,6 +9,7 @@ You can add adapters here for OpenAI, Anthropic, local LLMs, etc., following
 the same interface.
 """
 
+import json
 from typing import Dict
 import os
 import logging
@@ -200,34 +201,25 @@ class GeminiLLMClient(LLMClient):
             raise RuntimeError("GEMINI_API_KEY environment variable is not set")
 
         # Configure the client
-        try:
-            # The library exposes a configure helper
-            self.genai.configure(api_key=key)
-        except Exception:
-            # Some versions might require a different call; try setting env as fallback
-            os.environ.setdefault("GOOGLE_API_KEY", key)
-
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-1.0")
+        self.genai.configure(api_key=key)
+        self.model: str = (
+            model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash") or "gemini-1.5-flash"
+        )
 
     def _generate(self, prompt: str, max_output_tokens: int = 512) -> str:
-        # Use the generate_text API; wrap errors into RuntimeError to keep service layering simple
+        # Use the GenerativeModel API; wrap errors into RuntimeError to keep service layering simple
         try:
-            resp = self.genai.generate_text(
-                model=self.model, prompt=prompt, max_output_tokens=max_output_tokens
+            model_instance = self.genai.GenerativeModel(self.model)
+            response = model_instance.generate_content(
+                prompt,
+                generation_config=self.genai.types.GenerationConfig(
+                    max_output_tokens=max_output_tokens,
+                ),
             )
-            # The response object typically has a `text` attribute
-            text = (
-                getattr(resp, "text", None) or resp.get("output", {}).get("text")
-                if isinstance(resp, dict)
-                else None
-            )
-            if not text:
-                # Fallback: try stringifying the whole response
-                text = str(resp)
-            return text
+            return response.text
         except Exception as e:
-            logger.exception("Error calling Gemini generate_text: %s", e)
-            raise RuntimeError("Error generating text with Gemini LLM: %s" % e)
+            logger.exception("Error calling Gemini generate_content: %s", e)
+            raise RuntimeError("Error generating text with Gemini LLM: %s" % e) from e
 
     def generate_opening_message(self, subtheme) -> Dict[str, str]:
         tags = (
@@ -240,12 +232,16 @@ class GeminiLLMClient(LLMClient):
             else "interpretation"
         )
 
+        theme_name = ""
+        if hasattr(subtheme, "theme") and subtheme.theme:
+            theme_name = getattr(subtheme.theme, "name", "")
+
         prompt = (
             "Eres un asistente experto que ayuda a investigadores a redactar proposiciones interpretativas "
             "(conclusiones preliminares) para una revisión sistemática. Genera un breve texto de apertura que: "
             "1) Reconozca el tema y la pregunta de investigación; 2) Liste los códigos centrales y citas clave; "
             "3) Invite al investigador a suministrar la proposición preliminar o el enfoque deseado.\n\n"
-            f"Tema: {getattr(subtheme, 'theme', {}).name if hasattr(subtheme, 'theme') else ''}\n"
+            f"Tema: {theme_name}\n"
             f"Subtema: {getattr(subtheme, 'name', '')}\n"
             f"Códigos centrales: {', '.join(getattr(subtheme, 'central_codes', []) or [])}\n"
         )
@@ -265,7 +261,7 @@ class GeminiLLMClient(LLMClient):
             "Eres un asistente para síntesis interpretativa en revisiones sistemáticas. "
             "A partir del siguiente contexto (tema, subtema, códigos centrales y citas) y la instrucción del investigador, "
             "genera una proposición interpretativa clara y concisa (1-3 oraciones) que responda a la pregunta de investigación.\n\n"
-            f"Contexto del tema: {getattr(sub, 'theme',  '') if sub else ''}\n"
+            f"Contexto del tema: {getattr(sub, 'theme', '') if sub else ''}\n"
             f"Subtema: {getattr(sub, 'name', '') if sub else ''}\n"
             f"Códigos centrales: {', '.join(extractions.get('central_codes', []) or [])}\n"
             f"Citas clave: {', '.join(extractions.get('key_citations', []) or [])}\n\n"
@@ -315,7 +311,7 @@ class GeminiLLMClient(LLMClient):
             return proposals
         except Exception as e:
             logger.warning(
-                f"Failed to parse Gemini response for code normalization: {e}"
+                "Failed to parse Gemini response for code normalization: %s", e
             )
             # Fallback to default implementation
             return DefaultLLMClient().propose_code_normalization(codes_data)
@@ -353,7 +349,6 @@ class GeminiLLMClient(LLMClient):
         try:
             response_text = self._generate(prompt, max_output_tokens=1024)
             # Parse JSON response
-            import json
 
             proposals = json.loads(response_text)
             return proposals
@@ -364,7 +359,7 @@ class GeminiLLMClient(LLMClient):
 
 
 def get_default_client() -> LLMClient:
-    """Factory to return the default LLM client.
+    """Return the default LLM client based on configuration.
 
     Use the `INTERPRETATION_LLM` env var to select a backend, e.g.:
       INTERPRETATION_LLM=gemini

@@ -158,7 +158,7 @@ class InterpretationService:
         return self.llm_client.generate_draft_proposition(context, instruction)
 
     @transaction.atomic
-    def refine_proposition(self, proposition, refinement_instruction, researcher=None):
+    def refine_proposition(self, proposition, refinement_instruction, _=None):
         """
         Refina una proposición existente basada en nueva instrucción.
         """
