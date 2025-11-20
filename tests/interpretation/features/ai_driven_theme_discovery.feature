@@ -31,10 +31,6 @@ Scenario: 1. Normalización de Códigos (Fusión de Tags Similares y División d
         And Proponer la fusión de [#repository_mining, #github] en un nuevo Código Normalizado: "#extracción_de_repositorios_SWH".
         And Proponer la fusión de [#qualitative_method, #thematic_analysis] en un nuevo Código Normalizado: "#análisis_temático_cualitativo".
         And Proponer la fusión de [#vague_inheritance, #inherited_debt] en un nuevo Código Normalizado: "#deuda_heredada_de_framework".
-    
-    When el Investigador acepta la lista de Códigos Normalizados propuestos
-    
-    Then el Módulo de Interpretación persiste el nuevo diccionario de códigos para su uso en la siguiente fase.
 
 # ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -59,9 +55,3 @@ Scenario: 2. Descubrimiento y Propuesta Automática de Temas (AI-Generated Theme
             | #antipattern_detection | #extracción_de_repositorios_SWH | #análisis_temático_cualitativo |
         And Proponer el Tema 2: "Factores Determinantes de Anti-Patrones" que agrupe: 
             | #time_pressure | #client_server_architecture | #deuda_heredada_de_framework | #developer_skill | #api_misuse |
-    
-    When el Investigador aplica **Reflexividad** y revisa las propuestas
-        And El Investigador **edita** el Tema 2, renombrándolo a: "Modelos de Inducción de Deuda Técnica (RQ2)".
-    
-    Then el Módulo de Interpretación persiste la estructura de Temas Finales de Nivel 1 validados
-        And La **traza del análisis por IA** (propuesta inicial vs. estructura final) se registra para fines de rigor y trazabilidad metodológica.

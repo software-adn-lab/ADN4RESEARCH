@@ -1,18 +1,21 @@
 """Views for AI-Driven Theme Discovery feature."""
+
+import json
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
-import json
 
 from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
     ThemeDiscoveryService,
 )
-from apps.interpretation.conclusion_assistant.models.code_models import (
+from apps.interpretation.conclusion_assistant.models.normalization_models import (
     InitialCode,
     CodeNormalizationProposal,
     NormalizedCode,
+)
+from apps.interpretation.conclusion_assistant.models.theme_discovery_models import (
     ThemeDiscoveryProposal,
 )
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
@@ -43,7 +46,6 @@ def theme_discovery_view(request, project_id):
             project=project
         ).order_by("-created_at")
 
-
         context.update(
             {
                 "initial_codes": initial_codes,
@@ -61,9 +63,9 @@ def theme_discovery_view(request, project_id):
 
         # Get created themes - themes are created when proposals are accepted/modified
         # Since Theme doesn't have a FK to proposal, we get themes by created_by user
-        created_themes = Theme.objects.filter(
-            created_by=request.user
-        ).order_by("-created_at")
+        created_themes = Theme.objects.filter(created_by=request.user).order_by(
+            "-created_at"
+        )
 
         context.update(
             {
@@ -83,7 +85,9 @@ def normalize_codes(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
     try:
-        print(f"[DEBUG] Normalizing codes for project {project_id}, user: {request.user}")
+        print(
+            f"[DEBUG] Normalizing codes for project {project_id}, user: {request.user}"
+        )
         theme_discovery_service.propose_code_normalization(project)
         return JsonResponse({"success": True})
     except Exception as e:
@@ -153,7 +157,7 @@ def accept_all_normalizations(request, project_id):
 
     try:
         print(f"[DEBUG] Accept all normalizations for project {project_id}")
-        
+
         # Get all accepted or modified proposals
         proposals = CodeNormalizationProposal.objects.filter(
             project=project, status__in=["ACCEPTED", "PENDING"]
@@ -171,17 +175,18 @@ def accept_all_normalizations(request, project_id):
             proposal_ids=proposal_ids, reviewer=request.user
         )
         print(f"[DEBUG] Created {len(normalized_codes)} normalized codes")
-        
+
         return JsonResponse({"success": True, "created_count": len(normalized_codes)})
     except Exception as e:
         print(f"[ERROR] Failed to accept normalizations: {e}")
         import traceback
+
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
 
 @require_http_methods(["POST"])
-def generate_themes(request, project_id):
+def generate_themes(_, project_id):
     """Trigger AI theme generation."""
     project = get_object_or_404(Project, id=project_id)
 
@@ -206,7 +211,13 @@ def create_manual_theme(request, project_id):
         code_ids = data.get("code_ids", [])
         rationale = data.get("rationale", "").strip()
 
-        if not theme_name or not theme_description or not research_question_focus or not code_ids or not rationale:
+        if (
+            not theme_name
+            or not theme_description
+            or not research_question_focus
+            or not code_ids
+            or not rationale
+        ):
             return JsonResponse(
                 {"success": False, "error": "Missing required fields"}, status=400
             )

@@ -3,13 +3,13 @@ from .subtheme_models import SubTheme
 from .context_models import InterpretationContext
 from .conversation_models import ConversationTrace
 from .proposition_models import InterpretativeProposition
-from .code_models import (
+from .normalization_models import (
     InitialCode,
     CodeNormalizationProposal,
     NormalizedCode,
-    ThemeDiscoveryProposal,
-    AnalysisTrace,
 )
+from .theme_discovery_models import ThemeDiscoveryProposal
+from .trace_models import AnalysisTrace
 
 __all__ = [
     'Theme',
