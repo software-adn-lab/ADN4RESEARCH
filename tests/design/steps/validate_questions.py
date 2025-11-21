@@ -10,26 +10,29 @@ project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 fake =Faker()
 
-@step('que existen preguntas de investigación sugeridas por los investigadores')
-def step_impl(context):
-    context.framework_object = ResearchFramework.objects.create(
-        name="PICO",
-        fields={
-            "P": "Population details",
-            "I": "Intervention details",
-            "C": "Comparison details",
-            "O": "Outcome details",
-        },
+@given('que existen preguntas de investigación sugeridas por los investigadores')
+def step_dado_existen_preguntas_sugeridas(context):
+    fields = {
+            "Population": "Population details",
+            "Intervention": "Intervention details",
+            "Comparison": "Comparison details",
+            "Outcome": "Outcome details",
+        }
+    context.research_question_one = research_question_service.add_research_question(
+        project_id=context.project.id,
+        question="Ejemplo de pregunta sugerida",
+        motivation="Ejemplo de motivación para la pregunta",
+        researcher_id=context.researcher.id,
+        framework_fields=fields
     )
-    context.research_question = ResearchQuestion.objects.create(
-        research_framework =context.framework_object,
-        suggested_question="What is the effect of intervention X on population Y?",
-        motivation="This question is important because...",
-        stage=context.stage,
-        researcher=context.researcher,
-        project=context.project,
-        status="SUGGESTED"
+    context.research_question_two = research_question_service.add_research_question(
+        project_id=context.project.id,
+        question="Ejemplo de pregunta sugerida",
+        motivation="Ejemplo de motivación para la pregunta",
+        researcher_id=context.researcher.id,
+        framework_fields=fields
     )
+    
     research_questions = research_question_service.get_research_questions_by_status(
         project=context.project,
         status="SUGGESTED"

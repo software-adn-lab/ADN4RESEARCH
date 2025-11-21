@@ -22,6 +22,9 @@ class ResearchFramework(models.Model):
     @property
     def is_complete(self):
         return self.fields_completed == self.total_fields
+    
+    def get_allowed_keys(self):
+        return self.fields_data.keys()
 
     def __str__(self):
         prefix = "Global" if self.is_global else "Custom"

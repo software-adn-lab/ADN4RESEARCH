@@ -39,7 +39,9 @@ class ResearchQuestionService:
         return ResearchFramework.objects.get(id=framework_id)
     
     @transaction.atomic
-    def submit_research_question_for_review(self, research_question: ResearchQuestion):
+    def submit_research_question_for_review(self, research_question_id: int):
+        research_question = ResearchQuestion.objects.get(id=research_question_id)
+        
         if not self.can_submit_question(research_question):
             raise QuestionSubmissionError(
                 f"Question {research_question.id} cannot be submitted. "
@@ -64,8 +66,11 @@ class ResearchQuestionService:
             project = Project.objects.get(id=project_id)
         except Project.DoesNotExist:
             raise ValueError(f"Project with id {project_id} does not exist")
+
+        if not self._is_valid_framework_fields(project.research_framework, framework_fields):
+            raise ValueError("Invalid framework fields provided")
         question = ResearchQuestion.objects.create(
-            project_id=project_id, # o simplemente project_id
+            project_id=project_id, 
             research_framework_id=project.research_framework_id,
             researcher_id=researcher_id,
             question=question,
@@ -75,6 +80,13 @@ class ResearchQuestionService:
         question.save()
         return question
     
+    def _is_valid_framework_fields(self, framework, fields):
+        if not fields:
+            return True
+        allowed_keys = set(framework.get_allowed_keys())
+        input_keys = set(fields.keys())
+        return allowed_keys == input_keys
+        
     def update_research_question(self, question_id, user, suggested_question=None, motivation=None, framework_fields=None):
         question = self.get_research_question_by_id(question_id, user=user)
         update_fields = []
@@ -88,6 +100,7 @@ class ResearchQuestionService:
             update_fields.append('motivation')
         
         if framework_fields is not None:
+            self._is_valid_framework_fields(question.research_framework, framework_fields)
             question.framework_fields = framework_fields
             update_fields.append('framework_fields')
         if update_fields:
@@ -103,7 +116,7 @@ class ResearchQuestionService:
             for key, value in data.items() if key.startswith('framework_fields[')
         }
         if question_id:
-            # Usar el método update_research_question
+            # Actualizar la pregunta
             question = self.update_research_question(
                 question_id=question_id,
                 user=user,
@@ -112,6 +125,7 @@ class ResearchQuestionService:
                 framework_fields=framework_fields_data
             )
         else:
+            # crea la pregunta
             question = self.add_research_question(
                 project_id=project_id,
                 question=data.get('suggested_question', ''),
@@ -120,6 +134,13 @@ class ResearchQuestionService:
                 framework_fields=framework_fields_data
             )
         
+        return question
+    
+    def approve_research_question(self, question_id: int, justification: str) -> ResearchQuestion:
+        question = ResearchQuestion.objects.get(id=question_id)
+        question.status = ResearchQuestion.Status.APPROVED
+        question.justification = justification
+        question.save(update_fields=['status', 'justification', 'modified_at'])
         return question
     
     def get_all_questions_by_user_and_project(self, user, project_id: int):
@@ -133,6 +154,13 @@ class ResearchQuestionService:
             project_id=project_id,
             status=status
         ).order_by('-modified_at')
+    
+    def get_questions_available_for_approval(self, project_id, reviewer_id):
+        return ResearchQuestion.objects.filter(
+            project_id=project_id,
+            status=ResearchQuestion.Status.SUGGESTED,
+        ).exclude(
+        researcher_id=reviewer_id)
     
     def get_frameworks(self, request):
         frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=request.user))

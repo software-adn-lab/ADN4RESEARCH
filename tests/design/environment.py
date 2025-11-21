@@ -9,6 +9,7 @@ def before_scenario(context, scenario):
     project_service = ProjectService()
     context.owner = User.objects.create_user(username="owner_user")
     context.researcher = User.objects.create_user(username="researcher_user")
+    context.researcher_two = User.objects.create_user(username="researcher_user_two")
     context.project = project_service.create_project_with_framework(
         name = "Test Project", 
         description = "Description",
@@ -22,3 +23,6 @@ def before_scenario(context, scenario):
         }
         )
     project_service.add_member(context.project, context.researcher, role="RESEARCHER")
+    project_service.add_member(context.project, context.researcher_two, role="RESEARCHER")
+    context.project.save()
+

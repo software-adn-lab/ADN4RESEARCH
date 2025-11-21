@@ -55,7 +55,6 @@ def step_se_identifican_terminos_clave_con_sinonimos(context):
             research_question_id=context.research_question.id,
             keyword_data=keyword_data_list
         )
-    # TODO: verificar la lista de sinonimos con su termino clave, eso pruebo 
     assert context.strategy.keywords.count() == len(keyword_data_list)
     
 @when('el sistema genere la sugerencia de estratégia de búsqueda')

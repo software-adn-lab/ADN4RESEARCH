@@ -57,7 +57,8 @@ class ResearchQuestion(models.Model):
         return self.Status.DRAFT
 
     def save(self, *args, **kwargs):
-        if self.status != self.Status.SUGGESTED: self.status = self.calculate_status()
+        if self.status != self.Status.SUGGESTED and self.status != self.Status.APPROVED and self.status != self.Status.REJECTED and self.status != self.Status.SUGGEST_REJECT: 
+            self.status = self.calculate_status()
         super().save(*args, **kwargs)
         
     def get_status_display(self):

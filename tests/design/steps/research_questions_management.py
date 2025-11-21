@@ -1,46 +1,83 @@
 import json
+import logging
 from unittest.mock import Mock
 from behave import given, then, when, step
-from faker import Faker
-from django.contrib.auth.models import User
-
-from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.notification.models import Notification
-from apps.project.services.project_services import ProjectService
 
-
-fake = Faker()
-project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 notification_service = Mock()
 
+#El dado es un paso en comun, esta en common_steps.py
 
-@when('envie una pregunta de investigación para su revision:')
-def step_cuando_envio_pregunta_revision(context):
-    payload = json.loads(context.text)
-    context.fields = payload["fields"]
-    context.suggested_question = payload["suggested_question"]
-    context.motivation = payload["motivation"]
+@step('que esta pregunta está "{status_ready}"')
+def step_que_pregunta_esta_ready(context, status_ready):
+    context.research_question.status = status_ready
+    context.research_question.save()
+    assert context.research_question.status == status_ready
 
-    context.research_question = research_question_service.add_research_question(
-        project=context.project,
-        research_framework=context.framework,
-        suggested_question=context.suggested_question,
-        motivation=context.motivation,  
-        researcher=context.researcher,
-        framework_fields=context.fields
+@when('envíe la pregunta de investigación creada')
+def step_cuando_envio_pregunta_creada(context):
+    research_question_service.submit_research_question_for_review(research_question_id=context.research_question.id)
+    
+@then('la pregunta estará "{status_suggested}" para el proyecto')
+def step_entonces_sistema_cambia_estado(context, status_suggested):
+    context.research_question = research_question_service.get_research_question_by_id(
+        research_question_id=context.research_question.id,
+        user=context.researcher
     )
-    research_question_service.submit_research_question_for_review(research_question=context.research_question)
-    assert context.research_question.status == context.research_question.Status.SUGGESTED
+    assert context.research_question.status == status_suggested
 
-@then('el sistema notificara la creacion al equipo investigador')
+@step('el sistema notificará al equipo investigador')
 def step_entonces_sistema_notifica_equipo(context):
-    context.notification = Notification.objects.create(
-        type="RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW",
-        project=context.project,
-        sender=context.researcher
-    )
+    # Este lo hago aqui no mas por simular lo de la notificacion
+    context.notification = Mock()
     notification_service.send_notification.return_value = True
     notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
     assert len(notifications) > 0
+    
+@given('que existen preguntas de investigación "{status_suggested}" por los investigadores para el proyecto')
+def step_dado_existen_preguntas_sugeridas(context, status_suggested):
+    fields = {
+            "Population": "Population details",
+            "Intervention": "Intervention details",
+            "Comparison": "Comparison details",
+            "Outcome": "Outcome details",
+        }
+    context.research_question_one = research_question_service.add_research_question(
+        project_id=context.project.id,
+        question="Ejemplo de pregunta sugerida uno",
+        motivation="Ejemplo de motivación para la pregunta uno",
+        researcher_id=context.researcher.id,
+        framework_fields=fields
+    )
+    research_question_service.submit_research_question_for_review(research_question_id=context.research_question_one.id)
+    context.research_question_two = research_question_service.add_research_question(
+        project_id=context.project.id,
+        question="Ejemplo de pregunta sugerida dos",
+        motivation="Ejemplo de motivación para la pregunta dos",
+        researcher_id=context.researcher_two.id,
+        framework_fields=fields
+    )
+    research_question_service.submit_research_question_for_review(research_question_id=context.research_question_two.id)
+    research_questions_project = research_question_service.get_research_questions_by_status(
+        project_id=context.project.id,
+        status=status_suggested
+    )
+    assert len(research_questions_project) > 0
+
+@step('selecciono una pregunta que no haya sido sugerida por mí')
+def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
+    available_questions = research_question_service.get_questions_available_for_approval(
+        project_id=context.project.id,
+        reviewer_id=context.researcher.id
+    )
+    context.selected_question = available_questions.first() # Simulo que escogi una pregunta que no es mia (la primera)
+    assert context.selected_question.researcher != context.researcher
+
+@when('sugiera aprobar la pregunta de investigación seleccionada con una justificación de mi decisión')
+def step_cuando_sugiero_aprobar_pregunta(context):
+    context.approved_question = research_question_service.approve_research_question(question_id=context.selected_question.id, justification="Aprobada por cumplir con los criterios")
+    context.research_question = context.approved_question
+
+
+    
