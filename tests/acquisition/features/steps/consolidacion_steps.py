@@ -26,12 +26,13 @@ from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.testing.mocks.mock_scopus_connector import MockScopusConnector
 from apps.acquisition.shared.testing.mocks.mock_ieee_connector import MockIeeeConnector
 
-# WISHFUL THINKING: Enum para estado de calidad de metadatos (AÚN NO EXISTE)
-# from apps.acquisition.metadata.domain.value_objects import ConsolidationStatus
-# Por ahora usamos strings literales que coincidirán con el Enum futuro
-STATUS_COMPLETO = "completo"
-STATUS_PARCIAL = "parcial"
-STATUS_FALLIDO = "fallido"
+# Value Objects (YA EXISTEN)
+from apps.acquisition.metadata.domain.value_objects.consolidation_status import ConsolidationStatus
+
+# Constantes para los steps (usamos .value para obtener el string del Enum)
+STATUS_COMPLETO = ConsolidationStatus.COMPLETO.value
+STATUS_PARCIAL = ConsolidationStatus.PARCIAL.value
+STATUS_FALLIDO = ConsolidationStatus.FALLIDO.value
 
 
 # ============================================================================
