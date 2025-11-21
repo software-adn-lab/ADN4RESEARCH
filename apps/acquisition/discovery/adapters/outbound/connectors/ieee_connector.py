@@ -21,7 +21,7 @@ CARACTERÍSTICAS:
 - Retry automático con backoff exponencial
 - Paginación automática
 """
-from typing import Iterable, Dict, Any
+from typing import Iterable, Dict, Any, Optional
 import logging
 import time
 import random
@@ -283,6 +283,22 @@ class IeeeConnector(IAcademicConnector):
                 author_names.append(author)
 
         return author_names
+
+    def find_metadata(self, title: str) -> Optional[Dict[str, Any]]:
+        """
+        Busca metadatos de un estudio específico por título.
+
+        TODO: Implementar búsqueda específica en IEEE API.
+        Por ahora retorna None - usar CrossrefConnector para enrichment de IEEE.
+
+        Args:
+            title: Título del estudio
+
+        Returns:
+            None (pendiente de implementación)
+        """
+        logger.debug(f"find_metadata no implementado en IeeeConnector: {title}")
+        return None
 
     def close(self):
         """

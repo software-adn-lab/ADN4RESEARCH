@@ -247,6 +247,7 @@ class MetadataNormalizer:
         Normaliza texto general (títulos, abstracts).
 
         Reglas:
+        - Remover marcadores de IEEE [::Machine::], [::Automation::]
         - Remover espacios extras
         - Normalizar Unicode
         - Remover caracteres de control
@@ -260,8 +261,11 @@ class MetadataNormalizer:
         if not text:
             return ""
 
+        # Remover marcadores de IEEE (ej: [::Machine::], [::Deep Learning::])
+        clean = re.sub(r'\[::[^\]]*::\]', '', text)
+
         # Normalizar Unicode
-        clean = unicodedata.normalize("NFKC", text)
+        clean = unicodedata.normalize("NFKC", clean)
 
         # Remover caracteres de control excepto newlines
         clean = "".join(

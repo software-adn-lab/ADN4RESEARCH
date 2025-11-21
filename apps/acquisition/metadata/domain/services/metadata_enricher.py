@@ -40,15 +40,20 @@ class MetadataEnricher:
         """
         self.connectors = connectors or {}
 
+    # Orden de prioridad para enriquecimiento (costo-efectivo)
+    # Crossref: gratis, ilimitado
+    # Scopus: premium, limitado (gastar solo si es necesario)
+    ENRICHMENT_CASCADE = ["Crossref", "Scopus", "IEEE Xplore"]
+
     def enrich(self, study: Study) -> Study:
         """
         Intenta completar los metadatos faltantes de un estudio.
 
-        Proceso:
+        Estrategia en Cascada (Cost-Effective):
         1. Identifica campos faltantes
-        2. Busca en la fuente original del estudio
-        3. Si no encuentra, busca en otras fuentes
-        4. Actualiza el estudio y registra trazabilidad
+        2. Crossref primero (gratis, ilimitado)
+        3. Scopus después (premium, solo si falta algo crítico)
+        4. Nunca sobrescribe datos existentes
 
         Args:
             study: Estudio a enriquecer
@@ -58,36 +63,26 @@ class MetadataEnricher:
 
         Note:
             Es tolerante a fallos. Si una fuente falla, continúa con las otras.
-            Nunca sobrescribe datos existentes.
+            Usa cascada ordenada por costo: gratis → premium.
         """
         missing_fields = self._get_missing_enrichable_fields(study)
 
         if not missing_fields:
-            # No hay nada que enriquecer
             return study
 
-        # 1. Intentar con la fuente original del estudio
-        primary_source = study.source.name if study.source else None
-        if primary_source and primary_source in self.connectors:
-            metadata = self._fetch_metadata(primary_source, study)
+        # Estrategia en cascada: probar fuentes en orden de costo
+        for source_name in self.ENRICHMENT_CASCADE:
+            if source_name not in self.connectors:
+                continue
+
+            # Si ya no faltan campos, terminar
+            if not missing_fields:
+                break
+
+            metadata = self._fetch_metadata(source_name, study)
             if metadata:
-                self._apply_metadata(study, metadata, source="automatic")
-                # Actualizar lista de campos faltantes
+                self._apply_metadata(study, metadata, source=f"automatic_{source_name.lower()}")
                 missing_fields = self._get_missing_enrichable_fields(study)
-
-        # 2. Si aún faltan campos, intentar con otras fuentes
-        if missing_fields:
-            for source_name, connector in self.connectors.items():
-                if source_name == primary_source:
-                    continue  # Ya probamos esta
-
-                metadata = self._fetch_metadata(source_name, study)
-                if metadata:
-                    self._apply_metadata(study, metadata, source="automatic")
-                    missing_fields = self._get_missing_enrichable_fields(study)
-
-                    if not missing_fields:
-                        break  # Ya completamos todo
 
         return study
 
@@ -123,7 +118,7 @@ class MetadataEnricher:
         Consulta una fuente para obtener metadatos.
 
         Args:
-            source_name: Nombre de la fuente (ej: "Scopus")
+            source_name: Nombre de la fuente (ej: "Scopus", "Crossref")
             study: Estudio del que buscar metadatos
 
         Returns:
@@ -134,11 +129,19 @@ class MetadataEnricher:
             return None
 
         try:
-            # El conector debe tener método find_metadata(title) -> dict
-            if hasattr(connector, "find_metadata"):
-                return connector.find_metadata(study.title)
-            else:
+            if not hasattr(connector, "find_metadata"):
                 return None
+
+            # Crossref soporta validación multi-criterio (título + autores + año)
+            # Otros conectores solo usan título
+            if source_name == "Crossref":
+                return connector.find_metadata(
+                    title=study.title,
+                    authors=study.authors,
+                    year=study.year
+                )
+            else:
+                return connector.find_metadata(study.title)
 
         except Exception:
             # Tolerancia a fallos: si el conector falla, continuamos
