@@ -171,7 +171,11 @@ class ScopusConnector:
         count = min(max_results, 25)  # API acepta hasta 25 por página (default)
 
         # Construir query de Scopus
-        scopus_query = f"TITLE-ABS-KEY({query})"
+        # Si la query ya tiene TITLE-ABS-KEY, no envolver de nuevo
+        if query.strip().startswith("TITLE-ABS-KEY"):
+            scopus_query = query
+        else:
+            scopus_query = f"TITLE-ABS-KEY({query})"
 
         while len(results) < max_results:
             # Parámetros de búsqueda
