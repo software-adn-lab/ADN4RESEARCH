@@ -47,17 +47,22 @@ class CrossrefConnector(IAcademicConnector):
             print(metadata["authors"])
     """
 
-    def __init__(self, email: str = "researcher@epn.edu.ec", timeout: int = 10):
+    def __init__(self, username: str = None, timeout: int = 10):
         """
         Inicializa el conector Crossref.
 
         Args:
-            email: Email de contacto (opcional pero recomendado para polite pool)
+            username: Email institucional (o usa EPN_USER del env)
             timeout: Timeout en segundos para requests HTTP
         """
+        import os
+
         self.base_url = "https://api.crossref.org/works"
         self.timeout = timeout
         self.matcher = MetadataMatcher()
+
+        # Usar username, o EPN_USER del env, o default
+        email = username or os.getenv("EPN_USER") or "researcher@epn.edu.ec"
 
         # Crossref recomienda incluir email en User-Agent para mejor servicio
         self.headers = {
