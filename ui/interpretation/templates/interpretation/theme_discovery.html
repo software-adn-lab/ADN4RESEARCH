@@ -1,0 +1,498 @@
+{% extends 'base_tabs.html' %}
+{% load static %}
+{% block content %}
+
+<div class="p-4" data-project-id="{{ project.id }}">
+    {% csrf_token %}
+    
+    <!-- Title -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-base-content">AI-Driven Theme Discovery</h1>
+        <div class="text-xs text-base-content/80">
+            <span class="font-medium">Project: {{ project.name }}</span>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">1</div>
+                <span class="ml-2 font-medium">Code Normalization</span>
+            </div>
+            <div class="w-16 h-1 bg-base-300"></div>
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full {% if step == 2 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold">2</div>
+                <span class="ml-2 font-medium {% if step != 2 %}text-base-content/60{% endif %}">Theme Generation</span>
+            </div>
+        </div>
+    </div>
+
+    {% if step == 1 %}
+    <!-- Step 1: Code Normalization -->
+    <div class="space-y-6">
+        <!-- Initial Codes Section -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-base-content">Initial Codes (Tags)</h2>
+                <div class="flex gap-2">
+                    <button id="manual-normalize-btn" class="btn btn-outline btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Manual Normalization
+                    </button>
+                    <button id="normalize-codes-btn" class="btn btn-primary btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Normalize Codes with AI
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-12">
+                                <input type="checkbox" id="select-all-codes" class="checkbox checkbox-sm" />
+                            </th>
+                            <th class="w-2/3">Code</th>
+                            <th class="w-1/3 text-center">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="initial-codes-body" class="text-sm">
+                        {% for code in initial_codes %}
+                        <tr class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <input type="checkbox" class="checkbox checkbox-sm code-checkbox" 
+                                       data-code="{{ code.code }}" data-code-id="{{ code.id }}" />
+                            </td>
+                            <td class="p-2">{{ code.code }}</td>
+                            <td class="p-2 text-center">
+                                <span class="badge badge-ghost">{{ code.frequency }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center p-4 text-base-content/60">
+                                No initial codes loaded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Normalization Proposals Section -->
+        {% if normalization_proposals %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content">AI Normalization Proposals</h2>
+            
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-1/4">Normalized Code</th>
+                            <th class="w-1/4">Original Codes</th>
+                            <th class="w-1/3">Rationale</th>
+                            <th class="w-1/6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for proposal in normalization_proposals %}
+                        <tr data-proposal-id="{{ proposal.id }}" class="hover:bg-base-200 transition-colors">
+                            <td class="p-2">
+                                <span class="font-medium text-primary">{{ proposal.normalized_code }}</span>
+                            </td>
+                            <td class="p-2">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for code in proposal.original_codes %}
+                                    <span class="badge badge-sm badge-ghost">{{ code }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="p-2 text-xs text-base-content/80">
+                                {{ proposal.rationale }}
+                            </td>
+                            <td class="p-2 text-center">
+                                {% if proposal.status == 'PENDING' %}
+                                <div class="flex justify-center gap-2">
+                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 accept-proposal-btn" title="Accept">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-proposal-btn" title="Reject">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                {% elif proposal.status == 'ACCEPTED' %}
+                                <span class="badge badge-success text-xs">Accepted</span>
+                                {% else %}
+                                <span class="badge badge-error text-xs">Rejected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button id="accept-all-btn" class="btn btn-success btn-sm">
+                    Accept All & Create Normalized Codes
+                </button>
+                <button id="proceed-to-themes-btn" class="btn btn-primary btn-sm">
+                    Proceed to Theme Generation →
+                </button>
+            </div>
+            <div class="alert alert-info text-sm mt-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span><strong>Note:</strong> Clicking individual Accept/Reject buttons only marks proposals. Click "Accept All & Create Normalized Codes" or "Proceed to Theme Generation" to create the final normalized codes.</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% elif step == 2 %}
+    <!-- Step 2: Theme Generation -->
+    <div class="space-y-6">
+        <!-- Normalized Codes Section -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-base-content">Normalized Codes (Final)</h2>
+                <div class="flex gap-2">
+                    <a href="?step=1" class="btn btn-ghost btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Step 1
+                    </a>
+                    {% if normalized_codes %}
+                    <button id="manual-theme-btn" class="btn btn-outline btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Manual Theme
+                    </button>
+                    <button id="generate-themes-btn" class="btn btn-primary btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Generate Themes with AI
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border border-base-300 rounded-lg">
+                <table class="table w-full">
+                    <thead class="bg-primary text-primary-content text-sm font-semibold">
+                        <tr>
+                            <th class="w-12">
+                                <input type="checkbox" id="select-all-normalized-codes" class="checkbox checkbox-sm" />
+                            </th>
+                            <th class="w-1/3">Code</th>
+                            <th class="w-1/3">Research Question Focus</th>
+                            <th class="w-1/3 text-center">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for code in normalized_codes %}
+                        <tr class="hover:bg-base-200 transition-colors" data-code-id="{{ code.id }}">
+                            <td class="p-2">
+                                <input type="checkbox" class="checkbox checkbox-sm normalized-code-checkbox" 
+                                       data-code="{{ code.code }}" 
+                                       data-code-id="{{ code.id }}"
+                                       data-rq="{{ code.research_question_focus|default:'' }}" />
+                            </td>
+                            <td class="p-2">
+                                <span class="font-medium">{{ code.code }}</span>
+                            </td>
+                            <td class="p-2">
+                                <input type="text" 
+                                       class="input input-bordered input-sm w-full rq-focus-input" 
+                                       data-code-id="{{ code.id }}"
+                                       value="{{ code.research_question_focus|default:'' }}" 
+                                       placeholder="e.g., RQ1, RQ2, etc." />
+                            </td>
+                            <td class="p-2 text-center">
+                                <span class="badge badge-ghost">{{ code.frequency }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center p-6">
+                                <div class="alert alert-warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    <div>
+                                        <h3 class="font-bold">No normalized codes created yet!</h3>
+                                        <div class="text-sm mt-2">
+                                            <p>You need to create normalized codes from your accepted proposals.</p>
+                                            <p class="mt-1">Go back to <a href="?step=1" class="link link-primary font-semibold">Step 1</a> and click:</p>
+                                            <ul class="list-disc list-inside mt-1 text-left inline-block">
+                                                <li>"Accept All & Create Normalized Codes", or</li>
+                                                <li>"Proceed to Theme Generation"</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Theme Proposals Section -->
+        {% if theme_proposals %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-base-content">AI Theme Proposals (Level 1)</h2>
+            
+            {% for proposal in theme_proposals %}
+            <div class="card bg-base-100 border border-base-300">
+                <div class="card-body">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="card-title text-base" contenteditable="true" data-proposal-id="{{ proposal.id }}" id="theme-name-{{ proposal.id }}">
+                                {{ proposal.theme_name }}
+                            </h3>
+                            <p class="text-sm text-base-content/70 mt-2">{{ proposal.theme_description }}</p>
+                            <div class="mt-3">
+                                <span class="text-xs font-semibold text-base-content/60">Grouped Codes:</span>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    {% for code in proposal.codes_used.all %}
+                                    <span class="badge badge-sm badge-primary badge-outline">{{ code.code }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <span class="text-xs font-semibold text-base-content/60">RQ Focus:</span>
+                                <span class="badge badge-sm badge-ghost ml-2">{{ proposal.research_question_focus }}</span>
+                            </div>
+                            <div class="mt-2 text-xs text-base-content/60 italic">
+                                <strong>Rationale:</strong> {{ proposal.rationale }}
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            {% if proposal.status == 'PENDING' %}
+                            <button class="btn btn-success btn-sm accept-theme-btn" data-proposal-id="{{ proposal.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Accept
+                            </button>
+                            <button class="btn btn-error btn-sm reject-theme-btn" data-proposal-id="{{ proposal.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                            </button>
+                            {% elif proposal.status == 'ACCEPTED' or proposal.status == 'MODIFIED' %}
+                            <span class="badge badge-success">Accepted</span>
+                            {% else %}
+                            <span class="badge badge-error">Rejected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button id="accept-all-themes-btn" class="btn btn-success btn-sm">Accept All Themes</button>
+                <button id="finalize-themes-btn" class="btn btn-primary btn-sm">Finalize and Create Themes</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Created Themes Section -->
+        {% if created_themes %}
+        <div class="space-y-3">
+            <h2 class="text-lg font-semibold text-success">✓ Created Level 1 Themes</h2>
+            
+            {% for theme in created_themes %}
+            <div class="card bg-success/10 border border-success/30">
+                <div class="card-body">
+                    <h3 class="card-title text-base text-success">{{ theme.name }}</h3>
+                    <p class="text-sm text-base-content/70">{{ theme.description }}</p>
+                    <div class="mt-2">
+                        <span class="badge badge-success badge-sm">{{ theme.research_question }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Manual Normalization Modal -->
+<dialog id="manual-normalization-modal" class="modal">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">Create Manual Normalization</h3>
+        
+        <form id="manual-normalization-form" class="space-y-4">
+            <!-- Normalized Code -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Normalized Code <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-normalized-code" 
+                       placeholder="Enter the normalized code name" 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Selected Original Codes -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Original Codes <span class="text-error">*</span></span>
+                </label>
+                <div id="selected-codes-display" class="p-3 border border-base-300 rounded-lg min-h-[60px] bg-base-200">
+                    <div id="selected-codes-list" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-base-content/60">Select codes from the table</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rationale -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Rationale <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-rationale" 
+                          placeholder="Explain why these codes should be normalized together..." 
+                          class="textarea textarea-bordered w-full h-24" required></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('manual-normalization-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Normalization</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Manual Theme Creation Modal -->
+<dialog id="manual-theme-modal" class="modal">
+    <div class="modal-box max-w-3xl">
+        <h3 class="font-bold text-lg mb-4">Create Manual Theme</h3>
+        
+        <form id="manual-theme-form" class="space-y-4">
+            <!-- Theme Name -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Theme Name <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-theme-name" 
+                       placeholder="Enter the theme name" 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Theme Description -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Theme Description <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-theme-description" 
+                          placeholder="Describe what this theme represents..." 
+                          class="textarea textarea-bordered w-full h-20" required></textarea>
+            </div>
+
+            <!-- Research Question Focus -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Research Question Focus <span class="text-error">*</span></span>
+                </label>
+                <input type="text" id="manual-theme-rq" 
+                       placeholder="e.g., RQ1, RQ2, etc." 
+                       class="input input-bordered w-full" required />
+            </div>
+
+            <!-- Selected Codes -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Codes in this Theme <span class="text-error">*</span></span>
+                </label>
+                <div id="selected-theme-codes-display" class="p-3 border border-base-300 rounded-lg min-h-[60px] bg-base-200">
+                    <div id="selected-theme-codes-list" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-base-content/60">Select codes from the table</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rationale -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Rationale <span class="text-error">*</span></span>
+                </label>
+                <textarea id="manual-theme-rationale" 
+                          placeholder="Explain why these codes form a coherent theme..." 
+                          class="textarea textarea-bordered w-full h-24" required></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('manual-theme-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Theme</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- JS -->
+<script>
+    const URLS = {
+        normalizeyCodes: "{% url 'interpretation:normalize_codes' project.id %}",
+        createManualNormalization: "{% url 'interpretation:create_manual_normalization' project.id %}",
+        createManualTheme: "{% url 'interpretation:create_manual_theme' project.id %}",
+        updateRQFocus: "{% url 'interpretation:update_rq_focus' 9999 %}",
+        acceptProposal: "{% url 'interpretation:accept_normalization' 9999 %}",
+        acceptAllProposals: "{% url 'interpretation:accept_all_normalizations' project.id %}",
+        generateThemes: "{% url 'interpretation:generate_themes' project.id %}",
+        acceptTheme: "{% url 'interpretation:accept_theme' 9999 %}",
+        acceptAllThemes: "{% url 'interpretation:accept_all_themes' project.id %}",
+        finalizeThemes: "{% url 'interpretation:finalize_themes' project.id %}",
+    };
+    const PROJECT_ID = {{ project.id }};
+    const STEP = {{ step }};
+</script>
+<script src="{% static 'scripts/theme_discovery.js' %}"></script>
+
+<style>
+    [contenteditable="true"] {
+        min-height: 1.5rem;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    [contenteditable="true"]:hover {
+        background-color: hsl(var(--b2) / 0.3);
+        border-color: hsl(var(--bc) / 0.1);
+    }
+
+    [contenteditable="true"]:focus {
+        background-color: hsl(var(--b1));
+        border-color: hsl(var(--p) / 0.5);
+        outline: none;
+    }
+</style>
+
+{% endblock content %}

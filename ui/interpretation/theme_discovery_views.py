@@ -1,0 +1,345 @@
+"""UI container views for theme discovery feature."""
+
+import json
+from django.shortcuts import render, get_object_or_404
+from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
+    ThemeDiscoveryService,
+)
+from apps.interpretation.conclusion_assistant.models.normalization_models import (
+    InitialCode,
+    CodeNormalizationProposal,
+    NormalizedCode,
+)
+from apps.interpretation.conclusion_assistant.models.theme_discovery_models import (
+    ThemeDiscoveryProposal,
+)
+from apps.interpretation.conclusion_assistant.models.theme_models import Theme
+from apps.project.models import Project
+
+
+theme_discovery_service = ThemeDiscoveryService()
+
+
+@login_required
+@ensure_csrf_cookie
+def theme_discovery_view(request, project_id):
+    """Display theme discovery workflow."""
+    project = get_object_or_404(Project, id=project_id)
+    step = int(request.GET.get("step", 1))
+
+    context = {
+        "project": project,
+        "step": step,
+    }
+
+    if step == 1:
+        initial_codes = InitialCode.objects.filter(project=project).order_by(
+            "-frequency"
+        )
+        normalization_proposals = CodeNormalizationProposal.objects.filter(
+            project=project
+        ).order_by("-created_at")
+
+        context.update(
+            {
+                "initial_codes": initial_codes,
+                "normalization_proposals": normalization_proposals,
+            }
+        )
+    elif step == 2:
+        normalized_codes = NormalizedCode.objects.filter(project=project).order_by(
+            "research_question_focus", "code"
+        )
+        theme_proposals = ThemeDiscoveryProposal.objects.filter(
+            project=project
+        ).prefetch_related("codes_used")
+
+        created_themes = Theme.objects.filter(created_by=request.user).order_by(
+            "-created_at"
+        )
+
+        context.update(
+            {
+                "normalized_codes": normalized_codes,
+                "theme_proposals": theme_proposals,
+                "created_themes": created_themes,
+            }
+        )
+
+    return render(request, "interpretation/theme_discovery.html", context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def normalize_codes(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        print(
+            f"[DEBUG] Normalizing codes for project {project_id}, user: {request.user}"
+        )
+        theme_discovery_service.propose_code_normalization(project)
+        return JsonResponse({"success": True})
+    except Exception as e:
+        print(f"[ERROR] Failed to normalize codes: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def create_manual_normalization(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        data = json.loads(request.body)
+        normalized_code = data.get("normalized_code", "").strip()
+        original_codes = data.get("original_codes", [])
+        rationale = data.get("rationale", "").strip()
+
+        if not normalized_code or not original_codes or not rationale:
+            return JsonResponse(
+                {"success": False, "error": "Missing required fields"}, status=400
+            )
+
+        proposal = CodeNormalizationProposal.objects.create(
+            normalized_code=normalized_code,
+            original_codes=original_codes,
+            rationale=rationale,
+            project=project,
+            status=CodeNormalizationProposal.ProposalStatus.PENDING,
+            created_by_ai=False,
+            reviewed_by=request.user,
+        )
+
+        return JsonResponse({"success": True, "proposal_id": proposal.id})
+    except Exception as e:
+        print(f"[ERROR] Failed to create manual normalization: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def accept_normalization(request, proposal_id):
+    proposal = get_object_or_404(CodeNormalizationProposal, id=proposal_id)
+
+    try:
+        data = json.loads(request.body)
+        action = data.get("action", "accept")
+
+        if action == "accept":
+            proposal.status = "ACCEPTED"
+            proposal.save()
+        elif action == "reject":
+            proposal.status = "REJECTED"
+            proposal.save()
+
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def accept_all_normalizations(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        proposals = CodeNormalizationProposal.objects.filter(
+            project=project, status__in=["ACCEPTED", "PENDING"]
+        )
+        proposal_ids = list(proposals.values_list("id", flat=True))
+
+        # Mark pending proposals as accepted
+        proposals.filter(status="PENDING").update(status="ACCEPTED")
+
+        normalized_codes = theme_discovery_service.accept_normalization_proposals(
+            proposal_ids=proposal_ids, reviewer=request.user
+        )
+
+        return JsonResponse({"success": True, "created_count": len(normalized_codes)})
+    except Exception as e:
+        print(f"[ERROR] Failed to accept normalizations: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def generate_themes(_, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        theme_discovery_service.propose_theme_structure(project)
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def create_manual_theme(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        data = json.loads(request.body)
+        theme_name = data.get("theme_name", "").strip()
+        theme_description = data.get("theme_description", "").strip()
+        research_question_focus = data.get("research_question_focus", "").strip()
+        code_ids = data.get("code_ids", [])
+        rationale = data.get("rationale", "").strip()
+
+        if (
+            not theme_name
+            or not theme_description
+            or not research_question_focus
+            or not code_ids
+            or not rationale
+        ):
+            return JsonResponse(
+                {"success": False, "error": "Missing required fields"}, status=400
+            )
+
+        proposal = ThemeDiscoveryProposal.objects.create(
+            theme_name=theme_name,
+            theme_description=theme_description,
+            research_question_focus=research_question_focus,
+            rationale=rationale,
+            project=project,
+            status=ThemeDiscoveryProposal.ProposalStatus.PENDING,
+            created_by_ai=False,
+            reviewed_by=request.user,
+        )
+
+        codes = NormalizedCode.objects.filter(id__in=code_ids, project=project)
+        proposal.codes_used.set(codes)
+
+        return JsonResponse({"success": True, "proposal_id": proposal.id})
+    except Exception as e:
+        print(f"[ERROR] Failed to create manual theme: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def update_rq_focus(request, code_id):
+    normalized_code = get_object_or_404(NormalizedCode, id=code_id)
+
+    try:
+        data = json.loads(request.body)
+        rq_focus = data.get("rq_focus", "").strip()
+
+        normalized_code.research_question_focus = rq_focus
+        normalized_code.save(update_fields=["research_question_focus"])
+
+        return JsonResponse({"success": True})
+    except Exception as e:
+        print(f"[ERROR] Failed to update RQ focus: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def accept_theme(request, proposal_id):
+    proposal = get_object_or_404(ThemeDiscoveryProposal, id=proposal_id)
+
+    try:
+        data = json.loads(request.body)
+        action = data.get("action", "accept")
+
+        if action == "accept":
+            proposal.status = "ACCEPTED"
+            proposal.save()
+        elif action == "reject":
+            proposal.status = "REJECTED"
+            proposal.save()
+        elif action == "modify":
+            new_name = data.get("new_name")
+            original_name = data.get("original_name")
+
+            proposal.theme_name = new_name
+            proposal.status = "MODIFIED"
+            proposal.save()
+
+            if proposal.rationale:
+                proposal.rationale += (
+                    f"\n[Researcher modified: '{original_name}' → '{new_name}']"
+                )
+            else:
+                proposal.rationale = (
+                    f"[Researcher modified: '{original_name}' → '{new_name}']"
+                )
+            proposal.save()
+
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def accept_all_themes(_request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        proposals = ThemeDiscoveryProposal.objects.filter(
+            project=project, status="PENDING"
+        )
+        proposals.update(status="ACCEPTED")
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def finalize_themes(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        proposals = ThemeDiscoveryProposal.objects.filter(
+            project=project, status__in=["ACCEPTED", "MODIFIED"]
+        )
+
+        all_created_themes = []
+        for proposal in proposals:
+            created_themes = theme_discovery_service.accept_and_create_themes(
+                proposal_id=proposal.id, reviewer=request.user
+            )
+            all_created_themes.extend(created_themes)
+
+        theme_ids = [theme.id for theme in all_created_themes]
+
+        return JsonResponse(
+            {
+                "success": True,
+                "created_count": len(all_created_themes),
+                "theme_ids": theme_ids,
+                "redirect_url": f"/interpretation/themes-created/?project_id={project_id}",
+            }
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def themes_created_view(request):
+    project_id = request.GET.get("project_id")
+    
+    if project_id:
+        themes = Theme.objects.filter(
+            created_by=request.user
+        ).order_by("-created_at")[:10]
+    else:
+        themes = Theme.objects.filter(
+            created_by=request.user
+        ).order_by("-created_at")
+
+    return render(
+        request,
+        "interpretation/themes_created.html",
+        {
+            "themes": themes,
+            "project_id": project_id,
+        },
+    )
