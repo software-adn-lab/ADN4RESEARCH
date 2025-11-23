@@ -1,10 +1,11 @@
 import logging
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
-from apps.project.models import ResearchFramework
+from apps.project.models import ProjectPhase, ResearchFramework
 from config.events import bus
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import QuestionSubmissionError, QuestionNotFoundError
 from apps.project.models import Project
@@ -59,7 +60,6 @@ class ResearchQuestionService:
         return research_question.can_submit_for_review()
     
     def add_research_question(self, project_id, question, motivation, researcher_id, framework_fields) -> ResearchQuestion:
-        # project fields no debe ser vacio {}
         if not framework_fields:
             raise ValueError("Framework fields cannot be empty")
         try:
@@ -81,66 +81,87 @@ class ResearchQuestionService:
         return question
     
     def _is_valid_framework_fields(self, framework, fields):
+        # Si estan vacios los valores de cada campo del framework, se considera valido
         if not fields:
             return True
         allowed_keys = set(framework.get_allowed_keys())
         input_keys = set(fields.keys())
         return allowed_keys == input_keys
+    
+    #MEJORAR ESTE METODO VIBECODEADO
+    @transaction.atomic
+    def update_research_question(self, question_id, user, **data):
+        try:
+            question = ResearchQuestion.objects.select_related('project').get(id=question_id)
+        except ResearchQuestion.DoesNotExist:
+            raise ValidationError("Question not found.")
+        project = question.project
+        is_owner = (project.owner == user)
+        design_phase = project.phases.filter(phase_type=ProjectPhase.PhaseType.DESIGN).first()
+        if design_phase and design_phase.current_stage == ProjectPhase.Stage.FINISHED:
+            if not is_owner:
+                raise ValidationError("The project is in FINISHED stage. Only the owner can edit questions.")
+        if not is_owner and question.researcher != user:
+            raise ValidationError("You do not have permission to edit this question.")
+        allowed_fields = {'question', 'motivation', 'framework_fields', 'justification'} 
+        fields_to_update = []
         
-    def update_research_question(self, question_id, user, suggested_question=None, motivation=None, framework_fields=None):
-        question = self.get_research_question_by_id(question_id, user=user)
-        update_fields = []
-        # Solo actualizar campos permitidos si se proporcionan
-        if suggested_question is not None:
-            question.question = suggested_question
-            update_fields.append('suggested_question')
-        
-        if motivation is not None:
-            question.motivation = motivation
-            update_fields.append('motivation')
-        
-        if framework_fields is not None:
-            self._is_valid_framework_fields(question.research_framework, framework_fields)
-            question.framework_fields = framework_fields
-            update_fields.append('framework_fields')
-        if update_fields:
-            update_fields.extend(['status', 'modified_at'])
-            question.save(update_fields=update_fields)
+        for field, value in data.items():
+            if field not in allowed_fields:
+                continue
+            if field == 'framework_fields':
+                if not self._is_valid_framework_fields(question.research_framework, value):
+                    raise ValidationError("Framework fields are not valid according to the methodology.")
+            if getattr(question, field) != value:
+                setattr(question, field, value)
+                fields_to_update.append(field)
+        if fields_to_update:
+            fields_to_update.append('modified_at')
+            question.save(update_fields=fields_to_update)
         return question
     
+    # TODO: La limpieza de los datos es en el formulario, no en el servicio
     @transaction.atomic
-    def autosave_question(self, data, user, project_id):
-        question_id = data.get('id') or None
-        framework_fields_data = {
-            key.replace('framework_fields[', '').replace(']', ''): value
-            for key, value in data.items() if key.startswith('framework_fields[')
+    def autosave_question(self, cleaned_data, user, project_id, question_id) -> ResearchQuestion:
+        # Extraemos los datos ya limpios y tipados
+        framework_data = cleaned_data.get('framework_fields', {})
+        question_text = cleaned_data.get('question', '')
+        motivation = cleaned_data.get('motivation', '')
+        payload = {
+            'question': question_text,
+            'motivation': motivation,
+            'framework_fields': framework_data
         }
         if question_id:
-            # Actualizar la pregunta
-            question = self.update_research_question(
+            return self.update_research_question(
                 question_id=question_id,
                 user=user,
-                suggested_question=data.get('suggested_question', ''),
-                motivation=data.get('motivation', ''),
-                framework_fields=framework_fields_data
+                **payload
             )
         else:
-            # crea la pregunta
-            question = self.add_research_question(
+
+            return self.add_research_question(
                 project_id=project_id,
-                question=data.get('suggested_question', ''),
-                motivation=data.get('motivation', ''),
-                researcher_id=user.id, 
-                framework_fields=framework_fields_data
+                researcher_id=user.id,
+                **payload
             )
-        
-        return question
     
-    def approve_research_question(self, question_id: int, justification: str) -> ResearchQuestion:
+    def review_research_question(self, question_id: int, verdict: str, justification: str) -> ResearchQuestion:
+        allowed_verdicts = {
+            ResearchQuestion.Status.APPROVED, 
+            ResearchQuestion.Status.REJECTED,
+        }
+        
+        if verdict not in allowed_verdicts:
+            raise ValidationError(f"Estado no válido para una revisión: {verdict}")
+
         question = ResearchQuestion.objects.get(id=question_id)
-        question.status = ResearchQuestion.Status.APPROVED
+        question.status = verdict
         question.justification = justification
         question.save(update_fields=['status', 'justification', 'modified_at'])
+        
+        # Para la comunicacion, un ejemplo
+        # self.notification_service.notify_researcher(question)
         return question
     
     def get_all_questions_by_user_and_project(self, user, project_id: int):
@@ -172,3 +193,31 @@ class ResearchQuestionService:
             return strategy
         except SearchStrategy.DoesNotExist:
             return None
+        
+    @transaction.atomic
+    def consolidate_questions(self, project_id: int, user):
+        project = Project.objects.get(pk=project_id)
+        if project.owner != user:
+            raise ValidationError("Only the project owner can consolidate the discussion stage.")
+        # Las suggested deben ser rechazadas automáticamente
+        affected_rows = ResearchQuestion.objects.filter(
+            project_id=project_id,
+            status=ResearchQuestion.Status.SUGGESTED #
+        ).update(
+            status=ResearchQuestion.Status.REJECTED, #
+            justification="Rejected automatically during discussion stage consolidation."
+        )
+        
+        design_phase = project.phases.filter(phase_type='DESIGN').first() #
+        
+        if design_phase:
+            # Asumiendo que ProjectPhase.Stage.FINISHED es lo que activa tu bloqueo
+            design_phase.current_stage = 'FINISHED' 
+            design_phase.save()
+            
+        stats = {
+            "rejected_automatically": affected_rows,
+            "total_approved": ResearchQuestion.objects.filter(project_id=project_id, status=ResearchQuestion.Status.APPROVED).count()
+        }
+        
+        return stats

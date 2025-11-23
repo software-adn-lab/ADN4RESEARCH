@@ -21,10 +21,7 @@ def step_cuando_envio_pregunta_creada(context):
     
 @then('la pregunta estará "{status_suggested}" para el proyecto')
 def step_entonces_sistema_cambia_estado(context, status_suggested):
-    context.research_question = research_question_service.get_research_question_by_id(
-        research_question_id=context.research_question.id,
-        user=context.researcher
-    )
+    context.research_question.refresh_from_db()
     assert context.research_question.status == status_suggested
 
 @step('el sistema notificará al equipo investigador')
@@ -74,10 +71,18 @@ def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
     context.selected_question = available_questions.first() # Simulo que escogi una pregunta que no es mia (la primera)
     assert context.selected_question.researcher != context.researcher
 
-@when('sugiera aprobar la pregunta de investigación seleccionada con una justificación de mi decisión')
-def step_cuando_sugiero_aprobar_pregunta(context):
-    context.approved_question = research_question_service.approve_research_question(question_id=context.selected_question.id, justification="Aprobada por cumplir con los criterios")
-    context.research_question = context.approved_question
-
-
+@when('revise y sugiera {action} la pregunta de investigación seleccionada con la justificación de mi decisión')
+def step_cuando_sugiero_aprobar_pregunta(context, action):
+    action_map = {
+        "approve": "APPROVED",
+        "reject": "REJECTED"
+    }
+    target_status = action_map[action.lower()]
+    justification = f"Decisión tomada: {action} por criterios de prueba."
     
+    context.processed_question = research_question_service.review_research_question(
+        question_id=context.selected_question.id,
+        verdict=target_status,
+        justification=justification
+    )
+    context.research_question = context.processed_question # esto es por el paso siguiente

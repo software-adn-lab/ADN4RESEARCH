@@ -1,16 +1,13 @@
-from behave import step
-from faker import Faker
+from behave import given, when, then, step
 from django.contrib.auth.models import User
-from apps.project.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.project.models import ResearchFramework
+import logging
+from django.core.exceptions import ValidationError
 
-project_service = ProjectService()
 research_question_service = ResearchQuestionService()
-fake =Faker()
 
-@given('que existen preguntas de investigación sugeridas por los investigadores')
+@given('que existen las siguientes preguntas en el proyecto:')
 def step_dado_existen_preguntas_sugeridas(context):
     fields = {
             "Population": "Population details",
@@ -18,32 +15,65 @@ def step_dado_existen_preguntas_sugeridas(context):
             "Comparison": "Comparison details",
             "Outcome": "Outcome details",
         }
-    context.research_question_one = research_question_service.add_research_question(
+    for row in context.table:
+        desired_status = row['estado']
+        question_text = row['pregunta']
+        rq = research_question_service.add_research_question(
+            project_id=context.project.id,
+            question=question_text,
+            motivation="Setup automático",
+            researcher_id=context.researcher.id,
+            framework_fields=fields
+        )
+        # bypasseo de validaciones para setear el estado directamente
+        status_enum = getattr(ResearchQuestion.Status, desired_status)
+        rq.status = status_enum
+        rq.save()
+    # TypeError: '>' not supported between instances of 'QuerySet' and 'int'
+    assert context.project.research_questions.count() > 0
+    
+@when('consolide el estado de las preguntas de investigación de mi proyecto')
+def step_cuando_consolido_estado_preguntas(context):
+    stats = research_question_service.consolidate_questions(
         project_id=context.project.id,
-        question="Ejemplo de pregunta sugerida",
-        motivation="Ejemplo de motivación para la pregunta",
-        researcher_id=context.researcher.id,
-        framework_fields=fields
+        user=context.owner 
     )
-    context.research_question_two = research_question_service.add_research_question(
-        project_id=context.project.id,
-        question="Ejemplo de pregunta sugerida",
-        motivation="Ejemplo de motivación para la pregunta",
-        researcher_id=context.researcher.id,
-        framework_fields=fields
-    )
-    
-    research_questions = research_question_service.get_research_questions_by_status(
-        project=context.project,
-        status="SUGGESTED"
-    )
-    assert len(research_questions) > 0
-    
-@step('apruebe el estado general de las acciones sugeridas de las preguntas de investigación')
-def step_impl(context):
-    
-    pass
+    assert stats["total_approved"] > 0
 
-@step('se mostrarán las preguntas de investigación que fueron aprobadas')
-def step_impl(context):
-    pass
+@then('las preguntas de investigación "APPROVED" deben ser parte del protocolo de diseño del proyecto')
+def step_preguntas_approved_son_protocolo(context):
+    protocol_qs = context.project.protocol_questions
+    logging.info(f"Preguntas en el protocolo: {[q.question for q in protocol_qs]}")
+    assert protocol_qs.exists()
+
+@step('las preguntas "SUGGESTED" deben cambiar automáticamente a "REJECTED"')
+def step_preguntas_sugeridas_son_rechazadas(context):
+    suggested_questions = context.project.research_questions.filter(status=ResearchQuestion.Status.SUGGESTED)
+    logging.info(f"Preguntas rechazadas: {[q.question for q in suggested_questions]}")
+    assert suggested_questions.count() == 0
+
+@step('solo el owner del proyecto podrá editar las preguntas o su estado, bloqueando a los investigadores')
+def step_solo_owner_puede_editar_preguntas(context):
+    target_question = context.project.research_questions.first()
+    try:
+        # Intentamos editar usando al investigador
+        research_question_service.update_research_question(
+            question_id=target_question.id,
+            user=context.researcher,
+            question="Intento de edición", 
+            motivation="Intento de saltar el bloqueo"
+        )
+        assert False # Si es false entonces no se edito la pregunta por el investigador
+    except ValidationError:
+        pass 
+
+    texto_owner = "Edición autorizada del Owner"
+    try:
+        research_question_service.update_research_question(
+            question_id=target_question.id,
+            user=context.owner,
+            question=texto_owner,
+            motivation="Corrección post-consolidación"
+        )
+    except ValidationError as e:
+        assert False, f"FALLO DE ACCESO: El owner debería poder editar, pero recibió error: {e}"

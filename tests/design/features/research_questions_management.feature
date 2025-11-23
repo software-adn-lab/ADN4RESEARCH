@@ -12,6 +12,7 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
         Dado que estoy asignado a un proyecto de investigación
         Y el proyecto tiene como framework investigativo a PICO
     
+    # Dado que la etapa de creacion de preguntas de investigacion esta activa
     Esquema del escenario: Sugerir pregunta para el proyecto de investigación
         Dado que he redactado una pregunta de investigación completa para el proyecto:
             """
@@ -29,9 +30,14 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
             | framework_fields                                                                                                    |         question        | motivation          |
             | {"Population": "Students", "Intervention": "Gamification", "Comparison": "Online courses", "Outcome": "Motivation"} | "How does ...?"         | "To understand ..." |
 
-    Escenario: Sugerir aprobación de pregunta de investigación del proyecto
+    # Dada que la etapa de discusion de preguntas de investigacion esta activa
+    Esquema del escenario: Sugerir accion ante una pregunta de investigacion del proyecto
         Dado que existen preguntas de investigación "SUGGESTED" por los investigadores para el proyecto
         Y selecciono una pregunta que no haya sido sugerida por mí
-        Cuando sugiera aprobar la pregunta de investigación seleccionada con una justificación de mi decisión
-        Entonces la pregunta estará "APPROVED" para el proyecto
-        
+        Cuando revise y sugiera <action> la pregunta de investigación seleccionada con la justificación de mi decisión
+        Entonces la pregunta estará "<expected_status>" para el proyecto
+        Ejemplos:
+            | action   | expected_status |  
+            | approve  |     APPROVED    |
+            | reject   |     REJECTED    |
+
