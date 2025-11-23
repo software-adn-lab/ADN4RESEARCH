@@ -177,21 +177,27 @@ class FullTextService:
             pdf_path = self.downloader.download(study)
             if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
                 pdf_source = PdfSource.AUTOMATICO
+            else:
+                # Reset si el PDF descargado no es válido
+                pdf_path = None
 
         # 3. Si falló descarga directa, buscar en fuentes alternativas
         if not pdf_path:
             pdf_path = self.alternative_finder.find_and_download(study)
             if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
                 pdf_source = PdfSource.ALTERNATIVO
+            else:
+                # Reset si el PDF alternativo no es válido
+                pdf_path = None
 
         # 4. Actualizar el estudio según el resultado
-        if pdf_path:
-            # Éxito: se obtuvo el PDF
+        if pdf_path and pdf_source:
+            # Éxito: se obtuvo el PDF válido
             study.pdf_path = pdf_path
             study.pdf_source = pdf_source.value
             study.download_status = DownloadStatus.DISPONIBLE.value
         else:
-            # Fallo: no se pudo obtener el PDF
+            # Fallo: no se pudo obtener el PDF o no era válido
             study.download_status = DownloadStatus.NO_DISPONIBLE.value
 
         return study

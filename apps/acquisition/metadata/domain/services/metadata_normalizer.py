@@ -9,6 +9,12 @@ Reglas de normalización:
 - Autores: Title Case, formato "Apellido, Nombre"
 - Año: entero válido
 - Abstract: texto limpio sin espacios extras
+
+NOTA: Este normalizador es diferente de shared/normalizers.py:
+- shared/normalizers.py: Normalización AGRESIVA para deduplicación/comparación
+  (remueve acentos, puntuación, etc.)
+- Este servicio: Normalización CONSERVADORA para limpieza de datos
+  (preserva estructura, solo limpia)
 """
 
 import re
@@ -16,6 +22,8 @@ import unicodedata
 from typing import List, Any, Optional
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.value_objects.doi import DOI
+# Importar función de normalización compartida para DOI
+from apps.acquisition.shared.domain.normalizers import normalize_doi as normalize_doi_basic
 
 
 class MetadataNormalizer:
@@ -24,19 +32,11 @@ class MetadataNormalizer:
 
     Este servicio es idempotente: aplicarlo múltiples veces produce el mismo resultado.
     Es tolerante a fallos: si un campo no puede normalizarse, mantiene el valor original.
-    """
 
-    # Prefijos de DOI comunes que deben removerse
-    DOI_PREFIXES = [
-        "https://doi.org/",
-        "http://doi.org/",
-        "https://dx.doi.org/",
-        "http://dx.doi.org/",
-        "doi.org/",
-        "dx.doi.org/",
-        "doi:",
-        "DOI:",
-    ]
+    DELEGACIÓN:
+    - Normalización de DOI básica delegada a shared/normalizers.py
+    - Luego aplica limpieza adicional específica de metadatos
+    """
 
     def normalize(self, study: Study) -> Study:
         """
@@ -99,11 +99,15 @@ class MetadataNormalizer:
         """
         Normaliza un DOI según estándares.
 
+        Delega a la función básica de shared/normalizers.py y luego
+        aplica limpieza adicional de Unicode y caracteres de control.
+
         Reglas:
-        - Minúsculas
-        - Sin espacios al inicio/final
-        - Sin prefijos de URL (https://doi.org/, etc.)
-        - Sin caracteres de control
+        - Minúsculas (delegado a shared)
+        - Sin espacios al inicio/final (delegado a shared)
+        - Sin prefijos de URL (delegado a shared)
+        - Sin caracteres de control (adicional)
+        - Normalización Unicode (adicional)
 
         Args:
             doi: DOI en cualquier formato
@@ -120,24 +124,17 @@ class MetadataNormalizer:
         if not doi:
             return ""
 
-        # Limpieza básica
-        clean = doi.strip()
+        # 1. Aplicar normalización básica (delegada a shared kernel)
+        clean = normalize_doi_basic(doi)
 
-        # Remover caracteres de control y normalizar Unicode
+        # 2. Aplicar limpieza adicional específica de metadata
+        # Normalizar Unicode NFKC (compatibilidad)
         clean = unicodedata.normalize("NFKC", clean)
+
+        # Remover caracteres de control
         clean = "".join(c for c in clean if not unicodedata.category(c).startswith("C"))
 
-        # Convertir a minúsculas
-        clean = clean.lower()
-
-        # Remover prefijos comunes (case-insensitive ya aplicado)
-        for prefix in self.DOI_PREFIXES:
-            prefix_lower = prefix.lower()
-            if clean.startswith(prefix_lower):
-                clean = clean[len(prefix_lower):]
-                break
-
-        # Limpiar espacios restantes
+        # Trim final por si la limpieza Unicode generó espacios
         clean = clean.strip()
 
         return clean
