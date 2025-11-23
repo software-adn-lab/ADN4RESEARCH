@@ -108,24 +108,56 @@ def step_background_estudios_consolidados(context):
 
 @given('que un estudio tiene el texto completo de acceso público')
 def step_estudio_open_access(context):
-    """Selecciona el estudio OA de la lista creada en Background."""
+    """
+    Selecciona el estudio OA de la lista creada en Background.
+
+    GARANTIZA precondiciones verificables (NO es narrativo):
+    - Tiene DOI (necesario para consultar APIs de Open Access)
+    - Está consolidado (estado "completo")
+    """
     context.study = context.consolidated_studies["open_access"]
     context.original_source = context.study.source
+
+    # VERIFICAR precondiciones (garantiza que el estado es el correcto)
+    assert context.study.doi is not None, \
+        "El estudio debe tener DOI para verificar si es Open Access"
+    assert context.study.consolidation_status == "completo", \
+        "El estudio debe estar consolidado antes de intentar descargas"
 
 
 @given('que un estudio no tiene acceso público en su fuente original')
 def step_estudio_paywall(context):
-    """Selecciona el estudio paywall de la lista creada en Background."""
+    """
+    Selecciona el estudio paywall de la lista creada en Background.
+
+    GARANTIZA precondiciones verificables (NO es narrativo):
+    - Tiene DOI (necesario para buscar en fuentes alternativas)
+    - Está consolidado
+    """
     context.study = context.consolidated_studies["paywall"]
     context.original_source = context.study.source
+
+    # VERIFICAR precondiciones
+    assert context.study.doi is not None, \
+        "El estudio debe tener DOI para buscar en fuentes alternativas"
+    assert context.study.consolidation_status == "completo", \
+        "El estudio debe estar consolidado"
 
 
 @given('que un estudio no pudo obtenerse automáticamente en ninguna fuente')
 def step_estudio_failed_auto(context):
-    """Selecciona el estudio failed de la lista creada en Background."""
+    """
+    Selecciona el estudio failed de la lista creada en Background.
+
+    GARANTIZA que el estudio está en estado de descarga fallida (NO es narrativo).
+    """
     context.study = context.consolidated_studies["failed"]
     # WISHFUL THINKING: Atributo download_status en Study
     context.study.download_status = STATUS_NO_DISPONIBLE
+
+    # VERIFICAR que realmente está marcado como fallido
+    assert context.study.download_status == STATUS_NO_DISPONIBLE, \
+        "El estudio debe tener estado de descarga fallida"
 
 
 # ============================================================================
@@ -252,18 +284,6 @@ def step_verifica_origen(context, origen):
 
     assert context.result_study.pdf_source == expected, \
         f"Origen incorrecto. Esperado: {expected}, Actual: {context.result_study.pdf_source}"
-
-
-@then('busca automáticamente en fuentes alternativas utilizando el DOI')
-def step_busca_alternativas(context):
-    """
-    Verifica que el sistema intentó fuentes alternativas.
-
-    Evidencia: Si tiene PDF pero no es OA, vino de alternativa.
-    En el contexto del test, este step es principalmente narrativo.
-    La verificación real está en los siguientes steps.
-    """
-    pass
 
 
 @then('si encuentra el documento en una fuente alternativa, lo descarga')

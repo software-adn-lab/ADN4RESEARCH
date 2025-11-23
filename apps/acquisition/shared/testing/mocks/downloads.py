@@ -107,12 +107,22 @@ def build_fulltext_service_with_mocks():
     mock_alt_finder.find_and_download.side_effect = find_alternative_side_effect
 
     # ========================================================================
+    # Mock 4: File Validator (valida que el archivo sea PDF válido)
+    # ========================================================================
+    mock_validator = MagicMock()
+
+    # Para el happy path, todos los archivos son válidos
+    # Si en el futuro quieres probar archivos corruptos, creas otra factory
+    mock_validator.is_valid_pdf.return_value = True
+
+    # ========================================================================
     # Construir y retornar servicio con mocks inyectados
     # ========================================================================
     return FullTextService(
         oa_checker=mock_oa_checker,
         downloader=mock_downloader,
         alternative_finder=mock_alt_finder,
+        file_validator=mock_validator,
     )
 
 
