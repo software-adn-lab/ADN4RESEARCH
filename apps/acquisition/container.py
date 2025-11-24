@@ -54,6 +54,8 @@ from apps.acquisition.downloads.domain.services.file_validator import FileValida
 
 # Downloads - Conectores reales
 from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import UnpaywallChecker
+from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_access_checker import CrossrefOpenAccessChecker
+from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import ScopusInstitutionalChecker
 from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
 from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
 
@@ -90,6 +92,8 @@ class Container:
 
     # Downloads - Production connectors
     _unpaywall_checker = None
+    _crossref_checker = None
+    _scopus_oa_checker = None
     _http_downloader = None
     _alternative_finder = None
     _fulltext_service_production = None
@@ -251,7 +255,7 @@ class Container:
         - FileValidator para validar PDFs
 
         CONFIGURACIÓN REQUERIDA (.env):
-        - UNPAYWALL_EMAIL: Email para API de Unpaywall
+        - UNPAYWALL_EMAIL: Email para API de Unpaywall (reutilizado para Crossref User-Agent)
         - PAPERS_STORAGE_DIR: Directorio donde guardar PDFs (opcional, default: media/papers)
 
         Returns:
@@ -267,14 +271,21 @@ class Container:
             if not email:
                 raise ValueError(
                     "UNPAYWALL_EMAIL no configurado en .env. "
-                    "Esta variable es requerida para usar la API de Unpaywall."
+                    "Esta variable es requerida para usar la API de Unpaywall y Crossref."
                 )
 
             storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
+            scopus_api_key = os.getenv("SCOPUS_API_KEY")
 
             # Crear conectores
             if cls._unpaywall_checker is None:
                 cls._unpaywall_checker = UnpaywallChecker(email=email)
+
+            if cls._crossref_checker is None:
+                cls._crossref_checker = CrossrefOpenAccessChecker(email=email)
+
+            if cls._scopus_oa_checker is None and scopus_api_key:
+                cls._scopus_oa_checker = ScopusInstitutionalChecker(api_key=scopus_api_key)
 
             if cls._http_downloader is None:
                 cls._http_downloader = HttpDownloader(base_dir=storage_dir)
@@ -282,8 +293,12 @@ class Container:
             if cls._alternative_finder is None:
                 cls._alternative_finder = AlternativeSourceFinder()
 
-            # Ensamblar servicio con checker compuesto (Unpaywall primario, sin secundario por ahora)
-            oa_checker = CompositeOpenAccessChecker(primary_checker=cls._unpaywall_checker)
+            # Ensamblar servicio con checker compuesto (Unpaywall primario, Crossref secundario)
+            oa_checker = CompositeOpenAccessChecker(
+                primary_checker=cls._unpaywall_checker,
+                secondary_checker=cls._crossref_checker,
+                tertiary_checker=cls._scopus_oa_checker
+            )
 
             cls._fulltext_service_production = FullTextService(
                 oa_checker=oa_checker,

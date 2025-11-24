@@ -22,11 +22,18 @@ class CompositeOpenAccessChecker:
     1) Respeta el hint existente (study.is_open_access == True)
     2) Primer checker (ej. Unpaywall)
     3) Checker secundario opcional (ej. Crossref)
+    4) Checker terciario opcional (ej. Scopus institucional)
     """
 
-    def __init__(self, primary_checker: Any, secondary_checker: Optional[Any] = None):
-        self.primary_checker = primary_checker
-        self.secondary_checker = secondary_checker
+    def __init__(
+        self,
+        primary_checker: Any,
+        secondary_checker: Optional[Any] = None,
+        tertiary_checker: Optional[Any] = None,
+    ):
+        self.checkers = tuple(
+            checker for checker in (primary_checker, secondary_checker, tertiary_checker) if checker
+        )
 
     def is_open_access(self, doi: DOI, study: Optional[Study] = None) -> bool:
         """
@@ -42,8 +49,8 @@ class CompositeOpenAccessChecker:
         if not doi or not doi.value:
             return False
 
-        # Orden: primary -> secondary
-        for checker in (self.primary_checker, self.secondary_checker):
+        # Orden: primary -> secondary -> tertiary
+        for checker in self.checkers:
             if not checker:
                 continue
 
