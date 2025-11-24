@@ -83,7 +83,7 @@ class ProjectPhase(models.Model):
         RQ_DISCUSSION = 'RQ_DISCUSSION', 'Discussion'
         CRITERIA_DEFINITION = 'CRITERIA_DEFINITION', 'Eligibility Criteria Definition' 
         SEARCH_STRATEGY = 'SEARCH_STRATEGY', 'Search Strategy Building'
-        FINISHED = 'FINISHED', 'Finalizado'
+        FINISHED = 'FINISHED', 'Finalized'
 
     STAGES_FLOW = {
         PhaseType.DESIGN: [

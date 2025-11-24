@@ -117,11 +117,3 @@ def autosave_research_question(request):
             # Catch any other potential errors during save
             return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
     return JsonResponse({'error': 'Invalid request method.'}, status=405) # Method Not Allowed
-
-def get_framework_fields(request, framework_id):
-    try:
-        framework = research_question_service.get_framework_by_id(framework_id)
-        field_names = list(framework.fields_data.keys())
-        return JsonResponse({'fields': field_names})
-    except framework.DoesNotExist:
-        return JsonResponse({'error': 'Framework not found'}, status=404)

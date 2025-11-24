@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 
 research_question_service = ResearchQuestionService()
 
-@given('que existen las siguientes preguntas en el proyecto:')
+@given('que existen preguntas en el proyecto como:')
 def step_dado_existen_preguntas_sugeridas(context):
     fields = {
             "Population": "Population details",
@@ -29,7 +29,6 @@ def step_dado_existen_preguntas_sugeridas(context):
         status_enum = getattr(ResearchQuestion.Status, desired_status)
         rq.status = status_enum
         rq.save()
-    # TypeError: '>' not supported between instances of 'QuerySet' and 'int'
     assert context.project.research_questions.count() > 0
     
 @when('consolide el estado de las preguntas de investigación de mi proyecto')
@@ -43,13 +42,12 @@ def step_cuando_consolido_estado_preguntas(context):
 @then('las preguntas de investigación "APPROVED" deben ser parte del protocolo de diseño del proyecto')
 def step_preguntas_approved_son_protocolo(context):
     protocol_qs = context.project.protocol_questions
-    logging.info(f"Preguntas en el protocolo: {[q.question for q in protocol_qs]}")
-    assert protocol_qs.exists()
+    protocol_texts = [rq.question for rq in protocol_qs]
+    assert "Pregunta A" in protocol_texts
 
 @step('las preguntas "SUGGESTED" deben cambiar automáticamente a "REJECTED"')
 def step_preguntas_sugeridas_son_rechazadas(context):
     suggested_questions = context.project.research_questions.filter(status=ResearchQuestion.Status.SUGGESTED)
-    logging.info(f"Preguntas rechazadas: {[q.question for q in suggested_questions]}")
     assert suggested_questions.count() == 0
 
 @step('solo el owner del proyecto podrá editar las preguntas o su estado, bloqueando a los investigadores')
