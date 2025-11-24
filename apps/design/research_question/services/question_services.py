@@ -77,7 +77,6 @@ class ResearchQuestionService:
             motivation=motivation,
             framework_fields=framework_fields
         )
-        question.save()
         return question
     
     def _is_valid_framework_fields(self, framework, fields):
@@ -146,6 +145,7 @@ class ResearchQuestionService:
                 **payload
             )
     
+    @transaction.atomic
     def review_research_question(self, question_id: int, verdict: str, justification: str) -> ResearchQuestion:
         allowed_verdicts = {
             ResearchQuestion.Status.APPROVED, 
@@ -176,15 +176,20 @@ class ResearchQuestionService:
             status=status
         ).order_by('-modified_at')
     
-    def get_questions_available_for_approval(self, project_id, reviewer_id):
+    def get_questions_available_to_suggest_action(self, project_id, reviewer_id):
         return ResearchQuestion.objects.filter(
             project_id=project_id,
             status=ResearchQuestion.Status.SUGGESTED,
         ).exclude(
         researcher_id=reviewer_id)
+        
+    def select_question_to_suggest_action(self, question_id: int, researcher_id: int):
+        question = ResearchQuestion.objects.filter(
+            id=question_id)
+
     
-    def get_frameworks(self, request):
-        frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=request.user))
+    def get_frameworks(self, user):
+        frameworks = ResearchFramework.objects.filter(Q(is_global=True) | Q(assigned_by=user))
         return frameworks
     
     def get_strategy_by_question(self, research_question_id: int):

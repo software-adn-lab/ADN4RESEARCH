@@ -64,7 +64,8 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
 
 @step('selecciono una pregunta que no haya sido sugerida por mí')
 def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
-    available_questions = research_question_service.get_questions_available_for_approval(
+    selected_question = research_question_service.select_question_to_suggest_action(question_id = context.research_question_two.id, researcher_id = context.researcher.id) # Simulo que selecciono la pregunta del otro investigador
+    available_questions = research_question_service.get_questions_available_to_suggest_action(
         project_id=context.project.id,
         reviewer_id=context.researcher.id
     )
