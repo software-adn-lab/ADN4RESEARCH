@@ -50,6 +50,7 @@ from apps.acquisition.shared.adapters.outbound.repositories.django_study_reposit
 from apps.acquisition.downloads.application.fulltext_service import FullTextService
 from apps.acquisition.downloads.application.open_access_checker import CompositeOpenAccessChecker
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
+from apps.acquisition.downloads.application.manual_upload_app_service import ManualUploadAppService
 from apps.acquisition.downloads.domain.services.file_validator import FileValidator
 
 # Downloads - Conectores reales
@@ -58,6 +59,7 @@ from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_acces
 from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import ScopusInstitutionalChecker
 from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
 from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
+from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import LocalFileStorage
 
 
 class Container:
@@ -97,6 +99,8 @@ class Container:
     _http_downloader = None
     _alternative_finder = None
     _fulltext_service_production = None
+    _storage = None
+    _manual_upload_app_service = None
 
     # ========================================================================
     # REPOSITORIO
@@ -244,6 +248,31 @@ class Container:
         )
 
     @classmethod
+    def get_storage(cls) -> LocalFileStorage:
+        """
+        Obtener adaptador de storage local para PDFs.
+
+        Usa PAPERS_STORAGE_DIR como base (default: media/papers).
+        """
+        if cls._storage is None:
+            storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
+            cls._storage = LocalFileStorage(base_dir=storage_dir)
+        return cls._storage
+
+    @classmethod
+    def get_manual_upload_app_service(cls) -> ManualUploadAppService:
+        """
+        Servicio de aplicación para carga manual listo para usar desde vistas/APIs.
+        """
+        if cls._manual_upload_app_service is None:
+            cls._manual_upload_app_service = ManualUploadAppService(
+                repository=cls.get_repository(),
+                manual_upload_service=cls.get_manual_upload_service(),
+                storage=cls.get_storage(),
+            )
+        return cls._manual_upload_app_service
+
+    @classmethod
     def get_fulltext_service_production(cls) -> FullTextService:
         """
         Obtener servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
@@ -331,6 +360,10 @@ class Container:
         cls._crossref_connector = None
         cls._file_validator = None
         cls._unpaywall_checker = None
+        cls._crossref_checker = None
+        cls._scopus_oa_checker = None
         cls._http_downloader = None
         cls._alternative_finder = None
         cls._fulltext_service_production = None
+        cls._storage = None
+        cls._manual_upload_app_service = None
