@@ -45,11 +45,18 @@ class ScopusInstitutionalChecker:
                 "is_oa": bool,
                 "pdf_url": Optional[str],
                 "landing_url": Optional[str],
+                "oa_type": Optional[str],
                 "source": "Scopus"
             }
         """
         if not doi or not doi.value:
-            return {"is_oa": False, "pdf_url": None, "landing_url": None, "source": "Scopus"}
+            return {
+                "is_oa": False,
+                "pdf_url": None,
+                "landing_url": None,
+                "oa_type": None,
+                "source": "Scopus",
+            }
 
         try:
             url = f"{self.BASE_URL}/{doi.value}"
@@ -60,7 +67,13 @@ class ScopusInstitutionalChecker:
             resp = requests.get(url, headers=headers, timeout=10)
             if resp.status_code != 200:
                 logger.debug(f"Scopus OA HTTP {resp.status_code} para {doi.value}")
-                return {"is_oa": False, "pdf_url": None, "landing_url": None, "source": "Scopus"}
+                return {
+                    "is_oa": False,
+                    "pdf_url": None,
+                    "landing_url": None,
+                    "oa_type": None,
+                    "source": "Scopus",
+                }
 
             data = resp.json()
             # Estructura típica: abstracts-retrieval-response/coredata
@@ -73,6 +86,7 @@ class ScopusInstitutionalChecker:
             # Campo openaccess suele ser "1" o "0" (string)
             oa_flag = core.get("openaccess")
             is_oa = str(oa_flag) == "1"
+            oa_type = core.get("openaccessType") or None
 
             # Links disponibles
             links = core.get("link", []) or []
@@ -84,18 +98,28 @@ class ScopusInstitutionalChecker:
                 href = link.get("@href")
                 if not href:
                     continue
-                # link "@rel": "scidir" suele ser landing en ScienceDirect (con suscripción)
-                if rel == "scidir" and not landing_url:
-                    landing_url = href
-                # No suele venir PDF directo, pero por si acaso
-                if "pdf" in rel or (link.get("@type") or "").lower() == "application/pdf":
+
+                # Prioridad 1: enlaces explícitos de texto completo
+                if rel in {"full-text", "scopus-ft", "scopus-full-text"} and not pdf_url:
                     pdf_url = href
-                    break
+                    if not landing_url:
+                        landing_url = href
+                    continue
+
+                # Prioridad 2: landing institucional (visor)
+                if rel in {"scidir", "scopus"} and not landing_url:
+                    landing_url = href
+                    continue
+
+                # Prioridad 3: DOI como fallback de landing
+                if rel == "doi" and not landing_url:
+                    landing_url = href
 
             return {
                 "is_oa": is_oa,
                 "pdf_url": pdf_url,
                 "landing_url": landing_url,
+                "oa_type": oa_type,
                 "source": "Scopus",
             }
 

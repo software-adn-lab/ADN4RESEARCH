@@ -256,6 +256,7 @@ class Container:
 
         CONFIGURACIÓN REQUERIDA (.env):
         - UNPAYWALL_EMAIL: Email para API de Unpaywall (reutilizado para Crossref User-Agent)
+          (si no está, se intenta usar EPN_USER / IEEE_USERNAME como fallback)
         - PAPERS_STORAGE_DIR: Directorio donde guardar PDFs (opcional, default: media/papers)
 
         Returns:
@@ -267,11 +268,15 @@ class Container:
         """
         if cls._fulltext_service_production is None:
             # Leer configuración de entorno
-            email = os.getenv("UNPAYWALL_EMAIL")
+            email = (
+                os.getenv("UNPAYWALL_EMAIL")
+                or os.getenv("EPN_USER")
+                or os.getenv("IEEE_USERNAME")
+            )
             if not email:
                 raise ValueError(
                     "UNPAYWALL_EMAIL no configurado en .env. "
-                    "Esta variable es requerida para usar la API de Unpaywall y Crossref."
+                    "Proporciona UNPAYWALL_EMAIL o reutiliza EPN_USER/IEEE_USERNAME."
                 )
 
             storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
