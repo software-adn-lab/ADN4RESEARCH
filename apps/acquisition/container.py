@@ -51,6 +51,11 @@ from apps.acquisition.downloads.application.fulltext_service import FullTextServ
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
 from apps.acquisition.downloads.domain.services.file_validator import FileValidator
 
+# Downloads - Conectores reales
+from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import UnpaywallChecker
+from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
+from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
+
 
 class Container:
     """
@@ -81,6 +86,12 @@ class Container:
     _ieee_connector = None
     _crossref_connector = None
     _file_validator = None
+
+    # Downloads - Production connectors
+    _unpaywall_checker = None
+    _http_downloader = None
+    _alternative_finder = None
+    _fulltext_service_production = None
 
     # ========================================================================
     # REPOSITORIO
@@ -227,25 +238,58 @@ class Container:
             file_validator=cls.get_file_validator()
         )
 
-    # TODO: Cuando se implementen los conectores reales de downloads
-    # @classmethod
-    # def get_fulltext_service(cls) -> FullTextService:
-    #     """
-    #     Obtener servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
-    #
-    #     Returns:
-    #         FullTextService con conectores reales inyectados
-    #     """
-    #     from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_connector import UnpaywallConnector
-    #     from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
-    #     from apps.acquisition.downloads.adapters.outbound.connectors.alternative_finder import AlternativeSourceFinder
-    #
-    #     return FullTextService(
-    #         oa_checker=UnpaywallConnector(email=os.getenv("CROSSREF_EMAIL")),
-    #         downloader=HttpDownloader(),
-    #         alternative_finder=AlternativeSourceFinder(),
-    #         file_validator=cls.get_file_validator(),
-    #     )
+    @classmethod
+    def get_fulltext_service_production(cls) -> FullTextService:
+        """
+        Obtener servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
+
+        Usa conectores REALES:
+        - UnpaywallChecker para verificar Open Access
+        - HttpDownloader para descargar PDFs
+        - AlternativeSourceFinder (stub por ahora)
+        - FileValidator para validar PDFs
+
+        CONFIGURACIÓN REQUERIDA (.env):
+        - UNPAYWALL_EMAIL: Email para API de Unpaywall
+        - PAPERS_STORAGE_DIR: Directorio donde guardar PDFs (opcional, default: media/papers)
+
+        Returns:
+            FullTextService con conectores reales inyectados
+
+        Uso:
+            service = Container.get_fulltext_service_production()
+            result = service.obtain_fulltext(study)
+        """
+        if cls._fulltext_service_production is None:
+            # Leer configuración de entorno
+            email = os.getenv("UNPAYWALL_EMAIL")
+            if not email:
+                raise ValueError(
+                    "UNPAYWALL_EMAIL no configurado en .env. "
+                    "Esta variable es requerida para usar la API de Unpaywall."
+                )
+
+            storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
+
+            # Crear conectores
+            if cls._unpaywall_checker is None:
+                cls._unpaywall_checker = UnpaywallChecker(email=email)
+
+            if cls._http_downloader is None:
+                cls._http_downloader = HttpDownloader(base_dir=storage_dir)
+
+            if cls._alternative_finder is None:
+                cls._alternative_finder = AlternativeSourceFinder()
+
+            # Ensamblar servicio
+            cls._fulltext_service_production = FullTextService(
+                oa_checker=cls._unpaywall_checker,
+                downloader=cls._http_downloader,
+                alternative_finder=cls._alternative_finder,
+                file_validator=cls.get_file_validator(),
+            )
+
+        return cls._fulltext_service_production
 
     # ========================================================================
     # UTILIDADES
@@ -263,3 +307,7 @@ class Container:
         cls._ieee_connector = None
         cls._crossref_connector = None
         cls._file_validator = None
+        cls._unpaywall_checker = None
+        cls._http_downloader = None
+        cls._alternative_finder = None
+        cls._fulltext_service_production = None

@@ -95,3 +95,8 @@ discovery_service_result.json
 # Documentación de status (mover a docs/)
 SCOPUS_IEEE_STATUS.md
 SCOPUS_V2_FINAL_STATUS.md
+
+# Feature 4 - Downloads experiments
+scripts/experiments/
+temp_downloads/
+*.pdf

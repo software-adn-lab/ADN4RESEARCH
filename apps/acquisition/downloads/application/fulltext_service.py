@@ -164,17 +164,30 @@ class FullTextService:
             >>> result.download_status
             'no_disponible'
         """
-        # 1. Verificar si el estudio es Open Access
+        # 1. Verificar si el estudio es Open Access (usar hint de discovery si existe)
         is_oa = False
-        if study.doi:
+        if study.is_open_access is True:
+            is_oa = True
+        elif study.doi:
             is_oa = self.oa_checker.is_open_access(study.doi)
 
-        # 2. Intentar descarga directa si es OA
+        # Guardar el resultado para futuras fases si no se tenía
+        if study.is_open_access is None or (study.is_open_access is False and is_oa):
+            study.is_open_access = is_oa
+
         pdf_path = None
         pdf_source = None
 
-        if is_oa:
-            pdf_path = self.downloader.download(study)
+        # 2. Intentar descarga directa si es OA o tenemos URL directa confiable
+        has_pdf_hint = study.pdf_url if study.pdf_url else None
+        should_try_direct = is_oa or (has_pdf_hint and study.is_open_access is not False)
+
+        if should_try_direct:
+            if has_pdf_hint:
+                pdf_path = self.downloader.download_from_url(has_pdf_hint, study.id)
+            else:
+                pdf_path = self.downloader.download(study)
+
             if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
                 pdf_source = PdfSource.AUTOMATICO
             else:

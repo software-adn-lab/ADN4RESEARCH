@@ -376,6 +376,10 @@ class DiscoveryService:
                     study.abstract = item.get("abstract")
                 if "year" in item:
                     study.year = item.get("year")
+                if "is_open_access" in item:
+                    study.is_open_access = item.get("is_open_access")
+                if "pdf_url" in item:
+                    study.pdf_url = item.get("pdf_url")
 
                 converted.append(study)
                 continue

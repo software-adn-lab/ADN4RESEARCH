@@ -264,6 +264,8 @@ class IeeeConnector(IAcademicConnector):
         """
         article_number = record.get('articleNumber', '')
 
+        is_open_access, pdf_url = self._extract_access_info(record, article_number)
+
         return {
             'title': record.get('articleTitle', 'N/A'),
             'link': f"https://ieeexplore.ieee.org/document/{article_number}" if article_number else '',
@@ -272,7 +274,9 @@ class IeeeConnector(IAcademicConnector):
             # Campos adicionales opcionales
             'year': record.get('publicationYear'),
             'authors': self._extract_authors(record.get('authors', [])),
-            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None
+            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None,
+            'is_open_access': is_open_access,
+            'pdf_url': pdf_url,
         }
 
     def _extract_authors(self, authors_data: list) -> list:
@@ -297,6 +301,44 @@ class IeeeConnector(IAcademicConnector):
                 author_names.append(author)
 
         return author_names
+
+    def _extract_access_info(self, record: Dict[str, Any], article_number: str) -> tuple[Optional[bool], Optional[str]]:
+        """Inferir estado OA y posible URL directa al PDF desde el registro JSON."""
+        is_open_access: Optional[bool] = None
+        flag_fields = ["openAccessFlag", "isOa", "openAccess", "isOpenAccess"]
+        for field in flag_fields:
+            if field in record:
+                value = record.get(field)
+                if isinstance(value, str):
+                    normalized = value.lower()
+                    if "open" in normalized:
+                        is_open_access = True
+                    elif "denied" in normalized or "closed" in normalized or "subscription" in normalized:
+                        is_open_access = False
+                else:
+                    is_open_access = bool(value) if value is not None else None
+                if is_open_access is not None:
+                    break
+
+        access_type = record.get("accessType") or record.get("accessType_s") or record.get("accessTypeIcon")
+        if is_open_access is None and isinstance(access_type, str):
+            normalized = access_type.lower()
+            if "open" in normalized:
+                is_open_access = True
+            elif "denied" in normalized or "closed" in normalized or "subscription" in normalized:
+                is_open_access = False
+
+        pdf_url = record.get("pdfLink") or record.get("htmlLink") or record.get("fullTextLink")
+        if isinstance(pdf_url, list):
+            pdf_url = pdf_url[0] if pdf_url else None
+
+        if pdf_url and pdf_url.startswith('/'):
+            pdf_url = f"https://ieeexplore.ieee.org{pdf_url}"
+
+        if not pdf_url and article_number and is_open_access:
+            pdf_url = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={article_number}"
+
+        return is_open_access, pdf_url
 
     def find_metadata(self, title: str) -> Optional[Dict[str, Any]]:
         """
