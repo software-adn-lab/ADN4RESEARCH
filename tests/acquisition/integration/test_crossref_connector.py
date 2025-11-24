@@ -27,7 +27,7 @@ print("=" * 80)
 print()
 
 # Inicializar conector
-connector = CrossrefConnector(email="test@epn.edu.ec")
+connector = CrossrefConnector(username="test@epn.edu.ec")
 
 # Títulos de prueba (papers conocidos con metadatos para validación cruzada)
 TEST_PAPERS = [
