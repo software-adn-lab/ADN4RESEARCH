@@ -48,6 +48,7 @@ from apps.acquisition.shared.adapters.outbound.repositories.django_study_reposit
 
 # Downloads
 from apps.acquisition.downloads.application.fulltext_service import FullTextService
+from apps.acquisition.downloads.application.open_access_checker import CompositeOpenAccessChecker
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
 from apps.acquisition.downloads.domain.services.file_validator import FileValidator
 
@@ -281,9 +282,11 @@ class Container:
             if cls._alternative_finder is None:
                 cls._alternative_finder = AlternativeSourceFinder()
 
-            # Ensamblar servicio
+            # Ensamblar servicio con checker compuesto (Unpaywall primario, sin secundario por ahora)
+            oa_checker = CompositeOpenAccessChecker(primary_checker=cls._unpaywall_checker)
+
             cls._fulltext_service_production = FullTextService(
-                oa_checker=cls._unpaywall_checker,
+                oa_checker=oa_checker,
                 downloader=cls._http_downloader,
                 alternative_finder=cls._alternative_finder,
                 file_validator=cls.get_file_validator(),

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "sample-ieee-oa",
+    "title": "Edge AI for Fault Detection",
+    "link": "https://ieeexplore.ieee.org/document/10595117",
+    "source": "IEEE Xplore",
+    "doi": "10.1109/ACCESS.2024.10595117",
+    "status": "enriched",
+    "year": 2024,
+    "authors": ["A. Author", "B. Author"],
+    "abstract": "Sample abstract for an IEEE Open Access paper.",
+    "is_open_access": true,
+    "pdf_url": "https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10595117"
+  },
+  {
+    "id": "sample-ieee-closed",
+    "title": "Secure Software Testing in Cloud Platforms",
+    "link": "https://ieeexplore.ieee.org/document/11146035",
+    "source": "IEEE Xplore",
+    "doi": "10.1109/ICSE.2023.11146035",
+    "status": "enriched",
+    "year": 2023,
+    "authors": ["C. Author", "D. Author"],
+    "abstract": "Sample abstract for an IEEE paywalled paper.",
+    "is_open_access": false,
+    "pdf_url": null
+  },
+  {
+    "id": "sample-scopus",
+    "title": "Deep Learning for Software Defect Prediction",
+    "link": "https://example.com/paper1",
+    "source": "Scopus",
+    "doi": "10.1371/journal.pone.0000308",
+    "status": "enriched",
+    "year": 2008,
+    "authors": ["E. Author", "F. Author"],
+    "abstract": "Sample abstract for an open-access paper indexed in Scopus.",
+    "is_open_access": null,
+    "pdf_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000308&type=printable"
+  }
+]

@@ -169,7 +169,11 @@ class FullTextService:
         if study.is_open_access is True:
             is_oa = True
         elif study.doi:
-            is_oa = self.oa_checker.is_open_access(study.doi)
+            try:
+                # Algunos checkers aceptan (doi, study) para enriquecer pdf_url/is_open_access
+                is_oa = self.oa_checker.is_open_access(study.doi, study)  # type: ignore[arg-type]
+            except TypeError:
+                is_oa = self.oa_checker.is_open_access(study.doi)
 
         # Guardar el resultado para futuras fases si no se tenía
         if study.is_open_access is None or (study.is_open_access is False and is_oa):
@@ -194,7 +198,28 @@ class FullTextService:
                 # Reset si el PDF descargado no es válido
                 pdf_path = None
 
-        # 3. Si falló descarga directa, buscar en fuentes alternativas
+        # 3. Si no tenemos PDF directo, intentar obtener URL OA enriquecida (Unpaywall)
+        if not pdf_path and study.doi:
+            oa_info_getter = getattr(self.oa_checker, "get_oa_info", None)
+            if callable(oa_info_getter):
+                oa_info = oa_info_getter(study.doi)
+            else:
+                oa_info = None
+
+            if isinstance(oa_info, dict):
+                # Actualizar hint de OA si se descubre ahora
+                if study.is_open_access is None and oa_info.get("is_oa") is not None:
+                    study.is_open_access = bool(oa_info.get("is_oa"))
+
+                candidate_url = oa_info.get("pdf_url") or oa_info.get("landing_url")
+                if candidate_url:
+                    pdf_path = self.downloader.download_from_url(candidate_url, study.id)
+                    if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
+                        pdf_source = PdfSource.AUTOMATICO
+                    else:
+                        pdf_path = None
+
+        # 4. Si falló descarga directa, buscar en fuentes alternativas
         if not pdf_path:
             pdf_path = self.alternative_finder.find_and_download(study)
             if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
@@ -203,7 +228,7 @@ class FullTextService:
                 # Reset si el PDF alternativo no es válido
                 pdf_path = None
 
-        # 4. Actualizar el estudio según el resultado
+        # 5. Actualizar el estudio según el resultado
         if pdf_path and pdf_source:
             # Éxito: se obtuvo el PDF válido
             study.pdf_path = pdf_path
