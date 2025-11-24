@@ -40,9 +40,9 @@
                                 class="hover:bg-base-200 transition-colors cursor-pointer">
                                 <td class="p-2">
                                     <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
-                                        title="{{ question.suggested_question }}">
-                                        {% if question.suggested_question %}
-                                            {{ question.suggested_question }}
+                                        title="{{ question.question }}">
+                                        {% if question.question %}
+                                            {{ question.question }}
                                         {% else %}
                                         <span class="text-base-content/50 italic">No suggested question provided</span>
                                         {% endif %}
@@ -87,7 +87,7 @@
                                             </svg>
                                         </a>
                                         <!-- Search Strategy Button (NEW) -->
-                                        {% if question.suggested_question %}
+                                        {% if question.question %}
                                         <button 
                                             class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
                                             title="View Search Strategy"

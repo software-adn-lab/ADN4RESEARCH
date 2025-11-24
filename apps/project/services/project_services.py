@@ -44,8 +44,13 @@ class ProjectService:
     def get_project_keyterms(self, project_id: int) -> List[ProjectKeyword]:
         return list(ProjectKeyword.objects.filter(project_id=project_id))
 
-    def get_project_by_id(self, project_id: int) -> Project:
-        return Project.objects.get(id=project_id)
+    def get_project_by_id(self, project_id) -> Project:
+        try:
+            # Trae el proyecto Y su framework en UN solo viaje a la DB
+            return Project.objects.select_related('research_framework', 'owner').get(id=project_id)
+        except Project.DoesNotExist:
+            # 
+            pass
 
 
 class ProjectPhaseService:

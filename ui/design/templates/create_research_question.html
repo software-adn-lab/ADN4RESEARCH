@@ -17,7 +17,7 @@
         <hr class="my-4">
 
         <div id="fields-container" class="space-y-4">
-            {% for field_name in project.research_framework.fields.keys %}
+            {% for field_name in project.research_framework.fields_data.keys %}
             <fieldset class="form-control w-full max-w-xs">
                 <label class="label">
                     <span class="label-text">{{ field_name }}</span>
@@ -30,10 +30,10 @@
             </fieldset>
             {% endfor %}
             <div>
-                <label for="suggested_question" class="block mb-2 text-sm font-medium text-gray-900">Suggested Question</label>
-                <textarea id="suggested_question" name="suggested_question" rows="4" 
+                <label for="question" class="block mb-2 text-sm font-medium text-gray-900">Suggested Question</label>
+                <textarea id="question" name="question" rows="4" 
                           class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
-                          placeholder="Write your question here...">{{ question.suggested_question|default:'' }}</textarea>
+                          placeholder="Write your question here...">{{ question.question|default:'' }}</textarea>
             </div>
             <div>
                 <label for="motivation" class="block mb-2 text-sm font-medium text-gray-900">Motivation</label>

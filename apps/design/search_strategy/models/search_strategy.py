@@ -20,6 +20,7 @@ class SearchStrategy(models.Model):
     # Aquí se guarda la CADENA FINAL GENERADA!!!!!! pilas
     final_search_string = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL) # Opcional: Quién aprobó la estrategia
 
     def __str__(self):
         return f"Strategy '{self.name}' for RQ-{self.research_question.id}"

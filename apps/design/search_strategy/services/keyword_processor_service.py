@@ -1,11 +1,7 @@
 from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
-from apps.design.search_strategy.models.search_strategy import SearchStrategy
 import spacy
 import logging
 from spacy.matcher import Matcher
-from django.db import transaction
-from typing import List
 
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 logger = logging.getLogger(__name__)
@@ -18,6 +14,7 @@ class KeywordProcessorService:
     #["NOUN"] # e.g., "desarrollo"
     ]
     try:
+        # spacy install es_core_news_sm
         nlp = spacy.load("es_core_news_sm")
     except IOError:
         nlp = None
@@ -40,7 +37,6 @@ class KeywordProcessorService:
             span = doc[start:end]
             if span.text.strip():
                 phrases.add(span.text.lower())
-
         return list(phrases)
     
     def suggest_and_store_key_terms(self, research_question_id:int):

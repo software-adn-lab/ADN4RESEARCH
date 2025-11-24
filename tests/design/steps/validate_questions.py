@@ -43,25 +43,26 @@ def step_cuando_consolido_estado_preguntas(context):
 def step_preguntas_approved_son_protocolo(context):
     protocol_qs = context.project.protocol_questions
     protocol_texts = [rq.question for rq in protocol_qs]
-    assert "Pregunta A" in protocol_texts
+    approved_question_expected = "Pregunta A"
+    assert approved_question_expected in protocol_texts
 
 @step('las preguntas "SUGGESTED" deben cambiar automáticamente a "REJECTED"')
 def step_preguntas_sugeridas_son_rechazadas(context):
     suggested_questions = context.project.research_questions.filter(status=ResearchQuestion.Status.SUGGESTED)
     assert suggested_questions.count() == 0
 
-@step('solo el owner del proyecto podrá editar las preguntas o su estado, bloqueando a los investigadores')
-def step_solo_owner_puede_editar_preguntas(context):
+@step('solo el owner del proyecto podrá cambiar las preguntas o su estado, bloqueando a los investigadores')
+def step_solo_owner_puede_cambiar_preguntas(context):
     target_question = context.project.research_questions.first()
     try:
-        # Intentamos editar usando al investigador
+        # Intentamos cambiar una pregunta usando al investigador
         research_question_service.update_research_question(
             question_id=target_question.id,
             user=context.researcher,
             question="Intento de edición", 
             motivation="Intento de saltar el bloqueo"
         )
-        assert False # Si es false entonces no se edito la pregunta por el investigador
+        assert False # Si es false entonces no se cambio la pregunta por el investigador
     except ValidationError:
         pass 
 

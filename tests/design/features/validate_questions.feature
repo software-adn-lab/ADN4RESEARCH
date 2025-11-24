@@ -19,5 +19,4 @@ Característica: Validar preguntas de investigación de los investigadores
         Cuando consolide el estado de las preguntas de investigación de mi proyecto
         Entonces las preguntas de investigación "APPROVED" deben ser parte del protocolo de diseño del proyecto
         Y las preguntas "SUGGESTED" deben cambiar automáticamente a "REJECTED"
-        Y solo el owner del proyecto podrá editar las preguntas o su estado, bloqueando a los investigadores
-
+        Y solo el owner del proyecto podrá cambiar las preguntas o su estado, bloqueando a los investigadores

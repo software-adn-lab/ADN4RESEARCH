@@ -29,8 +29,7 @@ class ResearchFramework(models.Model):
         return self.fields_data.keys()
 
     def __str__(self):
-        prefix = "Global" if self.is_global else "Custom"
-        return f"{prefix} Framework: {self.name}"
+        return f"Framework: {self.name}"
     
 class Project(models.Model):
     name = models.CharField(max_length=100)

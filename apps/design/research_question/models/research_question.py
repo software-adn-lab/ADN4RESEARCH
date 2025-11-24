@@ -6,7 +6,6 @@ class ResearchQuestion(models.Model):
         DRAFT = 'DRAFT', 'Draft'
         READY_TO_SEND = 'READY_TO_SEND', 'Ready to Send'
         SUGGESTED = 'SUGGESTED', 'Suggested'
-        SUGGEST_REJECT = 'SUGGEST_REJECT', 'Suggest Reject'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
     project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
@@ -47,9 +46,6 @@ class ResearchQuestion(models.Model):
             if not self.framework_fields.get(field_name, '').strip():
                 return False 
         return True
-    
-    def can_submit_for_review(self) -> bool:
-        return self.status == self.Status.READY_TO_SEND
 
     def calculate_status(self):
         if self.is_framework_complete and self.has_question_text and self.has_motivation:
@@ -57,7 +53,7 @@ class ResearchQuestion(models.Model):
         return self.Status.DRAFT
 
     def save(self, *args, **kwargs):
-        if self.status != self.Status.SUGGESTED and self.status != self.Status.APPROVED and self.status != self.Status.REJECTED and self.status != self.Status.SUGGEST_REJECT: 
+        if self.status != self.Status.SUGGESTED and self.status != self.Status.APPROVED and self.status != self.Status.REJECTED and self.status: 
             self.status = self.calculate_status()
         super().save(*args, **kwargs)
         

@@ -8,9 +8,9 @@ app_name = 'design'
 
 urlpatterns = [
     path('', research_question.hello),
+    path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='questions_history'),
     path('create-research-question/<int:project_id>', research_question.create_research_question, name='create_research_question'),
     path('autosave-question/', research_question.autosave_research_question, name='autosave_research_question'),
-    path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='questions_history'),
     path('edit-research-question/<int:question_id>/', research_question.edit_research_question, name='edit_research_question'),
     path('delete-research-question/<int:question_id>/', research_question.delete_research_question, name='delete_research_question'),
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
