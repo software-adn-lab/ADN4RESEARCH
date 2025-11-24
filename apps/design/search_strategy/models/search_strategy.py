@@ -23,3 +23,24 @@ class SearchStrategy(models.Model):
 
     def __str__(self):
         return f"Strategy '{self.name}' for RQ-{self.research_question.id}"
+
+class SearchStrategyVersion(models.Model):
+    """ Este es el memento"""
+    strategy = models.ForeignKey(
+        'design.SearchStrategy',
+        on_delete=models.CASCADE,
+        related_name='versions'
+    )
+    version_number = models.PositiveIntegerField()
+    final_search_string = models.TextField()
+    
+    metadata_snapshot = models.JSONField(default=dict) 
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True) # Opcional: Saber quién hizo el cambio
+
+    class Meta:
+        ordering = ['-version_number']
+        unique_together = ('strategy', 'version_number')
+
+    def __str__(self):
+        return f"v{self.version_number} of Strategy {self.strategy_id}"

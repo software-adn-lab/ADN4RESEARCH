@@ -1,22 +1,15 @@
 from behave import given, then, when, step
-from faker import Faker
-from unittest.mock import Mock
 from django.contrib.auth.models import User
 from apps.project.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
-from apps.design.search_strategy.models.search_strategy import SearchStrategy
-from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 import logging
 import json
-fake = Faker()
 project_service = ProjectService()
 research_question_service = ResearchQuestionService()
 keyword_processor_service = KeywordProcessorService()
 search_strategy_service = SearchStrategyService()
-eligibility_service = EligibilityCriterionService()
-acquisition_service = Mock()  
 
 @given('que he creado la "{pregunta_investigacion}" con los siguientes campos {framework_fields}')
 def step_dado_creo_pregunta_investigacion(context, pregunta_investigacion, framework_fields):
@@ -68,4 +61,4 @@ def step_entonces_estrategia_sugerida_sera(context):
     actual_string = context.strategy.final_search_string
     normalized_expected = " ".join(expected_string.split())
     normalized_actual = " ".join(actual_string.split())
-    assert normalized_expected == normalized_actual, f"but got: {normalized_actual}"
+    assert normalized_expected == normalized_actual

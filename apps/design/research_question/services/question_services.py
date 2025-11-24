@@ -80,9 +80,6 @@ class ResearchQuestionService:
         return question
     
     def _is_valid_framework_fields(self, framework, fields):
-        # Si estan vacios los valores de cada campo del framework, se considera valido
-        if not fields:
-            return True
         allowed_keys = set(framework.get_allowed_keys())
         input_keys = set(fields.keys())
         return allowed_keys == input_keys
@@ -175,17 +172,20 @@ class ResearchQuestionService:
             project_id=project_id,
             status=status
         ).order_by('-modified_at')
-    
-    def get_questions_available_to_suggest_action(self, project_id, reviewer_id):
-        return ResearchQuestion.objects.filter(
-            project_id=project_id,
-            status=ResearchQuestion.Status.SUGGESTED,
-        ).exclude(
-        researcher_id=reviewer_id)
         
-    def select_question_to_suggest_action(self, question_id: int, researcher_id: int):
-        question = ResearchQuestion.objects.filter(
-            id=question_id)
+    def select_question_to_suggest_action(self, question_id: int, suggester_id: int):
+        try:
+        # Usamos .get() para obtener la instancia única
+            question = ResearchQuestion.objects.get(id=question_id)
+        except ResearchQuestion.DoesNotExist:
+            raise ValidationError("Question not found.")
+        # Asegurarse de que la pregunta no es del mismo usuario
+        if question.researcher_id == suggester_id:
+            # Error porque no puede seleccionar una accion sobre su propia pregunta
+            raise ValidationError("Cannot suggest action on your own question.")
+        return question 
+        
+        
 
     
     def get_frameworks(self, user):

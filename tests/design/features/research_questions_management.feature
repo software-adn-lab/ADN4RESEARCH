@@ -12,9 +12,9 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
         Dado que estoy asignado a un proyecto de investigación
         Y el proyecto tiene como framework investigativo a PICO
     
-    # Dado que la etapa de creacion de preguntas de investigacion esta activa
     Esquema del escenario: Sugerir pregunta para el proyecto de investigación
-        Dado que he redactado una pregunta de investigación completa para el proyecto:
+        Dado que la etapa de "creación" esta activa en la fase de diseño
+        Y que he redactado una pregunta de investigación completa para el proyecto:
             """
             {
                 "question": <question>,
@@ -30,11 +30,11 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
             | framework_fields                                                                                                    |         question        | motivation          |
             | {"Population": "Students", "Intervention": "Gamification", "Comparison": "Online courses", "Outcome": "Motivation"} | "How does ...?"         | "To understand ..." |
 
-    # Dada que la etapa de discusion de preguntas de investigacion esta activa
     Esquema del escenario: Sugerir accion ante una pregunta de investigacion del proyecto
-        Dado que existen preguntas de investigación "SUGGESTED" por los investigadores para el proyecto
+        Dado que la etapa de "discusión" esta activa en la fase de diseño
+        Y que existen preguntas de investigación "SUGGESTED" por los investigadores para el proyecto
         Y selecciono una pregunta que no haya sido sugerida por mí
-        Cuando revise y sugiera <action> la pregunta de investigación seleccionada con la justificación de mi decisión
+        Cuando la revise y sugiera <action> la pregunta de investigación seleccionada con la justificación de mi decisión
         Entonces la pregunta estará "<expected_status>" para el proyecto
         Ejemplos:
             | action   | expected_status |  

@@ -64,15 +64,11 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
 
 @step('selecciono una pregunta que no haya sido sugerida por mí')
 def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
-    selected_question = research_question_service.select_question_to_suggest_action(question_id = context.research_question_two.id, researcher_id = context.researcher.id) # Simulo que selecciono la pregunta del otro investigador
-    available_questions = research_question_service.get_questions_available_to_suggest_action(
-        project_id=context.project.id,
-        reviewer_id=context.researcher.id
-    )
-    context.selected_question = available_questions.first() # Simulo que escogi una pregunta que no es mia (la primera)
-    assert context.selected_question.researcher != context.researcher
+    # El researcher escoge una pregunta sugerida por otro researcher (researcher 2 xd)
+    context.selected_question = research_question_service.select_question_to_suggest_action(question_id = context.research_question_two.id, suggester_id = context.researcher.id)
+    assert context.selected_question.researcher != context.researcher 
 
-@when('revise y sugiera {action} la pregunta de investigación seleccionada con la justificación de mi decisión')
+@when('la revise y sugiera {action} la pregunta de investigación seleccionada con la justificación de mi decisión')
 def step_cuando_sugiero_aprobar_pregunta(context, action):
     action_map = {
         "approve": "APPROVED",
@@ -86,4 +82,4 @@ def step_cuando_sugiero_aprobar_pregunta(context, action):
         verdict=target_status,
         justification=justification
     )
-    context.research_question = context.processed_question # esto es por el paso siguiente
+    context.research_question = context.processed_question # esto es por el paso siguiente que me pide behave que se actualice la movida
