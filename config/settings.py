@@ -11,12 +11,17 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from typing import List
 from pathlib import Path
 from shutil import which
 import dj_database_url
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / ".env")
 
 # Configuración automática para cualquier SO
 NPM_BIN_PATH = which("npm") or which("npm.cmd") or which("nodeenv")
@@ -37,7 +42,7 @@ SECRET_KEY = "django-insecure-oxq-k)&z4v0ip6rtm)3c%44(-7q1@_ddfsk41+_)yg6zo9zo3i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: List[str] = []
 
 
 # Application definition
@@ -69,15 +74,15 @@ TAILWIND_APP_NAME = "theme"
 
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
-    'config.middleware.dev_middleware.DevUserMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
+    "config.middleware.dev_middleware.DevUserMiddleware",
 ]
 MIDDLEWARE += [
     "django_browser_reload.middleware.BrowserReloadMiddleware",
@@ -89,7 +94,8 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
-            BASE_DIR / 'ui' / "design" / "templates",
+            BASE_DIR / "ui" / "design" / "templates",
+            BASE_DIR / "ui" / "interpretation" / "templates",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -211,7 +217,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'ui' / 'design', 
+    BASE_DIR / "ui" / "design",
+    BASE_DIR / "ui" / "interpretation",
 ]
 
 STATIC_URL = "/static/"

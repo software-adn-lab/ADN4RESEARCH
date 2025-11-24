@@ -41,6 +41,15 @@ python-dateutil = ">=2.8.2"
 faker = "^37.12.0"
 dj-database-url = "^3.0.1"
 spacy = "^3.8.9"
+google-generativeai = "^0.8.5"
+
+# Web Scraping
+requests = ">=2.31.0"
+beautifulsoup4 = ">=4.12.0"
+lxml = ">=5.0.0"
+playwright = ">=1.40.0"
+python-dotenv = ">=1.0.0"
+tenacity = ">=8.2.3"
 
 [tool.poetry.group.dev.dependencies]
 # Development dependencies for linting and type checking
@@ -49,6 +58,8 @@ pylint = "*"
 flake8 = "*"
 flake8-docstrings = "*"
 flake8-bugbear = "*"
+django-stubs = "^5.2.7"
+django-stubs-ext = "^5.2.7"
 [tool.behave]
 junit = true
 junit_directory = "tests"

@@ -1,8 +1,12 @@
-from django.urls import path
-from . import views
+"""
+URL configuration for Acquisition module.
+"""
 
-app_name = 'acquisition'
+from django.urls import path
+
+app_name = "acquisition"
 
 urlpatterns = [
-    # Add your URL patterns here
+    # Add acquisition endpoints here when needed
+    # Example: path('search/', views.search, name='search'),
 ]

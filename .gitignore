@@ -49,3 +49,49 @@ htmlcov/
 
 # BDD Test results
 tests/TESTS-*.xml
+
+# Claude / MCP (archivos locales, no versionar)
+.claude/
+.claude/**
+claude/
+
+.mcp.json
+*.mcp.json
+
+# Archivos locales de configuración
+*settings.local.json
+*config.local.json
+*.local.json
+
+# Session files (cookies, authentication)
+.session/
+.sessions/
+*_session.json
+*_response.json
+*_response.html
+*.png
+captured_*.json
+
+# Archivos JSON de test/debug
+*_results.json
+*_api_candidate_*.json
+combined_results.json
+final_combined_results.json
+ieee_normalized_results.json
+scopus_test_results.json
+scopus_v2_results.json
+scopus_all_requests.json
+
+# Archivos HTML de debug
+scopus_*.html
+debug_*.html
+
+# Archivos temporales de Windows
+nul
+
+# Archivos de resultados de discovery service
+discovery_service_result.json
+
+# Documentación de status (mover a docs/)
+SCOPUS_IEEE_STATUS.md
+SCOPUS_V2_FINAL_STATUS.md

@@ -4,5 +4,13 @@
     ],
     "ignore": [
         "tests/**"
-    ]
+    ],
+    "reportAttributeAccessIssue": "warning",
+    "reportMissingModuleSource": "none",
+    "reportMissingTypeStubs": false,
+    "reportUnknownMemberType": "none",
+    "typeCheckingMode": "basic",
+    "pythonVersion": "3.13",
+    "stubPath": "",
+    "extraPaths": []
 }

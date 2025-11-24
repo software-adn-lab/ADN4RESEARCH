@@ -6,6 +6,7 @@ from apps.interpretation.conclusion_assistant.models import (
     ConversationTrace,
     InterpretativeProposition,
 )
+from . import llm_clients as _llm_mod
 
 
 class InterpretationService:
@@ -15,13 +16,11 @@ class InterpretationService:
 
     def __init__(self, llm_client=None):
         """Create a service instance.
-
         llm_client: optional object implementing the LLMClient interface.
         If None, a DefaultLLMClient (placeholder responses) is used.
         """
-        from . import llm_clients as _llm_mod
-
-        self.llm_client = llm_client or _llm_mod.DefaultLLMClient()
+        # Use the factory so the backend can be selected via env var (INTERPRETATION_LLM)
+        self.llm_client = llm_client or _llm_mod.get_default_client()
 
     def create_theme(self, name, research_question, description="", created_by=None):
         """Crea un nuevo tema de investigación."""
