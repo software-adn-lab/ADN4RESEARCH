@@ -371,6 +371,30 @@ class ScopusPlaywrightConnector:
             if eid:
                 link = f"https://www.scopus.com/record/display.uri?eid={eid}&origin=resultslist"
 
+        # Extraer información de Open Access
+        # Las APIs internas de Scopus también incluyen OA flags
+        is_open_access = None
+        openaccess_flag = item.get('openaccessFlag') or item.get('openAccessFlag')
+        openaccess_str = item.get('openaccess') or item.get('openAccess')
+
+        if isinstance(openaccess_flag, bool):
+            is_open_access = openaccess_flag
+        elif isinstance(openaccess_str, str):
+            normalized = openaccess_str.lower()
+            if normalized in ('1', 'true', 'yes'):
+                is_open_access = True
+            elif normalized in ('0', 'false', 'no'):
+                is_open_access = False
+        elif openaccess_str in (1, True):
+            is_open_access = True
+        elif openaccess_str in (0, False):
+            is_open_access = False
+
+        # PDF URL: Si es OA y tiene DOI, usar URL del DOI
+        pdf_url = None
+        if is_open_access and doi:
+            pdf_url = f"https://doi.org/{doi}"
+
         return {
             'title': title,
             'link': link,
@@ -378,7 +402,10 @@ class ScopusPlaywrightConnector:
             'source': 'Scopus',
             'year': year,
             'authors': authors,
-            'abstract': abstract
+            'abstract': abstract,
+            # Open Access (Feature 4 integration)
+            'is_open_access': is_open_access,
+            'pdf_url': pdf_url
         }
 
     def close(self):

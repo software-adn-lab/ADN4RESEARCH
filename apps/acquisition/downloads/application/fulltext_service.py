@@ -182,16 +182,10 @@ class FullTextService:
         pdf_path = None
         pdf_source = None
 
-        # 2. Intentar descarga directa si es OA o tenemos URL directa confiable
-        has_pdf_hint = study.pdf_url if study.pdf_url else None
-        should_try_direct = is_oa or (has_pdf_hint and study.is_open_access is not False)
-
-        if should_try_direct:
-            if has_pdf_hint:
-                pdf_path = self.downloader.download_from_url(has_pdf_hint, study.id)
-            else:
-                pdf_path = self.downloader.download(study)
-
+        # 2. Intentar descarga directa SOLO si tenemos URL confiable del discovery
+        # (IEEE/Scopus suelen proveer pdf_url directa cuando es OA)
+        if study.pdf_url:
+            pdf_path = self.downloader.download_from_url(study.pdf_url, study.id)
             if pdf_path and self.file_validator.is_valid_pdf(pdf_path):
                 pdf_source = PdfSource.AUTOMATICO
             else:

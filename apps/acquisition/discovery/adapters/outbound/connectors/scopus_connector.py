@@ -394,6 +394,28 @@ class ScopusConnector:
                 link = entry_link.get('@href', link)
                 break
 
+        # Extraer información de Open Access
+        # Scopus API usa Unpaywall como fuente de datos OA
+        is_open_access = None
+        openaccess_flag = entry.get('openaccessFlag')
+        openaccess_str = entry.get('openaccess')
+
+        if isinstance(openaccess_flag, bool):
+            is_open_access = openaccess_flag
+        elif isinstance(openaccess_str, str):
+            is_open_access = openaccess_str == '1'
+        elif openaccess_str == 1:
+            is_open_access = True
+        elif openaccess_str == 0:
+            is_open_access = False
+
+        # PDF URL: Si es OA, construir URL del documento
+        # Scopus no devuelve PDF directo, pero sí la landing page
+        pdf_url = None
+        if is_open_access and doi:
+            # La landing page de DOI redirige al PDF si es OA
+            pdf_url = f"https://doi.org/{doi}"
+
         return {
             'title': title,
             'link': link,
@@ -402,6 +424,9 @@ class ScopusConnector:
             'year': year,
             'authors': authors,
             'abstract': abstract,
+            # Open Access (Feature 4 integration)
+            'is_open_access': is_open_access,
+            'pdf_url': pdf_url,
             # Campos adicionales del API
             'cited_by': entry.get('citedby-count'),
             'publication_name': entry.get('prism:publicationName'),

@@ -268,6 +268,124 @@ print()
 print(f"Resultado: {checks_passed}/{checks_total} validaciones pasaron")
 print()
 
+# ============================================================================
+# FASE 5: DESCARGAS (Feature 4)
+# ============================================================================
+print("=" * 80)
+print("FASE 5: DESCARGAS DE TEXTO COMPLETO")
+print("=" * 80)
+print()
+
+# Verificar que tengamos email configurado para Unpaywall
+email_for_downloads = os.getenv("UNPAYWALL_EMAIL") or EPN_USER
+if not email_for_downloads:
+    print("WARN: UNPAYWALL_EMAIL no configurado, saltando descargas")
+    print()
+else:
+    try:
+        # Importar sin Django
+        from apps.acquisition.downloads.application.fulltext_service import FullTextService
+        from apps.acquisition.downloads.application.open_access_checker import CompositeOpenAccessChecker
+        from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import UnpaywallChecker
+        from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_access_checker import CrossrefOpenAccessChecker
+        from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import ScopusInstitutionalChecker
+        from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
+        from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
+        from apps.acquisition.downloads.domain.services.file_validator import FileValidator
+
+        print("Inicializando servicio de descargas (producción)...")
+
+        # Construir servicio manualmente (sin Container/Django)
+        unpaywall = UnpaywallChecker(email=email_for_downloads)
+        crossref = CrossrefOpenAccessChecker(email=email_for_downloads)
+        scopus_oa = ScopusInstitutionalChecker(api_key=SCOPUS_API_KEY) if SCOPUS_API_KEY else None
+
+        oa_checker = CompositeOpenAccessChecker(
+            primary_checker=unpaywall,
+            secondary_checker=crossref,
+            tertiary_checker=scopus_oa,
+            skip_tertiary_for_sources=['Scopus']
+        )
+
+        downloader = HttpDownloader(base_dir="media/papers")
+        alternative_finder = AlternativeSourceFinder()
+        file_validator = FileValidator()
+
+        download_service = FullTextService(
+            oa_checker=oa_checker,
+            downloader=downloader,
+            alternative_finder=alternative_finder,
+            file_validator=file_validator
+        )
+
+        print(f"  Email configurado: {email_for_downloads}")
+        print()
+
+        # Tomar solo estudios con DOI para intentar descarga
+        studies_with_doi = [s for s in result.studies if s.doi]
+        if not studies_with_doi:
+            print("⚠️  No hay estudios con DOI, usando primer estudio de prueba")
+            studies_to_download = result.studies[:1]
+        else:
+            # Tomar máximo 2 estudios para no saturar
+            studies_to_download = studies_with_doi[:2]
+
+        print(f"Intentando descargar {len(studies_to_download)} estudios...")
+        print()
+
+        download_results = {
+            "disponible": 0,
+            "no_disponible": 0,
+            "errores": 0
+        }
+
+        for study in studies_to_download:
+            print(f"  📄 {study.title[:50]}...")
+            print(f"     DOI: {study.doi.value if study.doi else 'N/A'}")
+
+            try:
+                result_study = download_service.obtain_fulltext(study)
+
+                if result_study.download_status == "texto_completo_disponible":
+                    print(f"     ✅ Descargado: {result_study.pdf_path}")
+                    print(f"        Fuente: {result_study.pdf_source}")
+                    download_results["disponible"] += 1
+                elif result_study.download_status == "no_disponible":
+                    print(f"     ⚠️  No disponible (requiere carga manual)")
+                    download_results["no_disponible"] += 1
+                else:
+                    print(f"     ⚠️  Estado desconocido: {result_study.download_status}")
+                    download_results["errores"] += 1
+
+            except Exception as e:
+                print(f"     ❌ ERROR: {e}")
+                download_results["errores"] += 1
+
+            print()
+
+        # Resumen de descargas
+        print("RESUMEN DE DESCARGAS:")
+        print(f"  Disponibles: {download_results['disponible']}")
+        print(f"  No disponibles: {download_results['no_disponible']}")
+        print(f"  Errores: {download_results['errores']}")
+        print()
+
+        # Validación adicional
+        checks_total += 1
+        if download_results["disponible"] > 0 or download_results["no_disponible"] > 0:
+            print("OK El servicio de descargas está operativo")
+            checks_passed += 1
+        else:
+            print("WARN: No se procesaron descargas exitosamente")
+
+        print()
+        print(f"Resultado actualizado: {checks_passed}/{checks_total} validaciones pasaron")
+        print()
+
+    except Exception as e:
+        print(f"ERROR en fase de descargas: {e}")
+        print()
+
 print("=" * 80)
 print("PIPELINE COMPLETADO")
 print("=" * 80)

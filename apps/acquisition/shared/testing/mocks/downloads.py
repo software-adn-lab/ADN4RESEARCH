@@ -51,6 +51,34 @@ def build_fulltext_service_with_mocks():
 
     mock_oa_checker.is_open_access.side_effect = is_open_access_side_effect
 
+    def get_oa_info_side_effect(doi):
+        """
+        Simula get_oa_info() del CompositeOpenAccessChecker.
+
+        Retorna dict con información enriquecida de OA (similar a Unpaywall API).
+
+        Args:
+            doi: DOI del estudio
+
+        Returns:
+            dict: Con campos is_oa, pdf_url, landing_url, source
+            None: Si no hay información OA
+        """
+        if doi is None:
+            return None
+
+        if doi.value == "10.1000/open.access":
+            return {
+                "is_oa": True,
+                "pdf_url": "https://example.com/oa/paper.pdf",
+                "landing_url": "https://example.com/oa",
+                "source": "Unpaywall"
+            }
+
+        return {"is_oa": False}
+
+    mock_oa_checker.get_oa_info.side_effect = get_oa_info_side_effect
+
     # ========================================================================
     # Mock 2: Downloader (simula descarga HTTP + escritura de archivo)
     # ========================================================================
@@ -76,6 +104,25 @@ def build_fulltext_service_with_mocks():
         return None
 
     mock_downloader.download.side_effect = download_side_effect
+
+    def download_from_url_side_effect(url, study_id):
+        """
+        Simula descarga desde URL específica (usado cuando hay pdf_url hint).
+
+        Args:
+            url: URL del PDF
+            study_id: ID del estudio
+
+        Returns:
+            str: Ruta simulada del PDF descargado
+            None: Si no se pudo descargar
+        """
+        # Si hay URL, simular descarga exitosa
+        if url and "http" in url:
+            return f"/tmp/downloads/{study_id}.pdf"
+        return None
+
+    mock_downloader.download_from_url.side_effect = download_from_url_side_effect
 
     # ========================================================================
     # Mock 3: Alternative Source Finder (simula scraping/repositorios)

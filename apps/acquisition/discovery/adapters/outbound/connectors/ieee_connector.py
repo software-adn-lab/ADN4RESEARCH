@@ -30,6 +30,7 @@ import requests
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from .ieee_session_manager import IeeeSessionManager
+from apps.acquisition.shared.infrastructure.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +81,20 @@ class IeeeConnector(IAcademicConnector):
             headless=headless
         )
 
+        # Circuit Breaker para tolerancia a fallos
+        # Si IEEE falla 5 veces en poco tiempo, no intentar más por 5 minutos
+        self.circuit_breaker = CircuitBreaker(
+            fail_max=5,
+            timeout_duration=300,  # 5 minutos
+            name="IEEE Xplore"
+        )
+
     def search(self, query: str, max_results: int = 10) -> Iterable[Dict[str, Any]]:
         """
         Busca en IEEE Xplore usando sesión persistente.
+
+        Protegido por Circuit Breaker: si IEEE falla repetidamente,
+        se detienen los intentos temporalmente (fail fast).
 
         Args:
             query: Término de búsqueda
@@ -94,15 +106,58 @@ class IeeeConnector(IAcademicConnector):
                 'title': str,
                 'link': str,
                 'doi': str | None,
-                'source': 'IEEE Xplore'
+                'source': 'IEEE Xplore',
+                'is_open_access': bool | None,
+                'pdf_url': str | None
             }
+
+        Raises:
+            CircuitBreakerOpenError: Si IEEE está marcado como caído
         """
         try:
-            logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
+            # Proteger la búsqueda con Circuit Breaker
+            results = self.circuit_breaker.call(self._search_protected, query, max_results)
+            return results
 
-            # Si prefer_playwright, ir directo sin intentar API
-            if self.prefer_playwright:
-                logger.info("Usando Playwright directamente (prefer_playwright=True)")
+        except CircuitBreakerOpenError as e:
+            # El servicio está caído, no intentar más
+            logger.error(f"❌ {e}")
+            return []  # Retornar lista vacía en lugar de explotar
+
+        except Exception as e:
+            logger.error(f"Error en búsqueda IEEE: {e}")
+            raise
+
+    def _search_protected(self, query: str, max_results: int) -> list:
+        """
+        Lógica de búsqueda protegida por Circuit Breaker.
+
+        Esta función se ejecuta solo si el Circuit Breaker está cerrado.
+        """
+        logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
+
+        # Si prefer_playwright, ir directo sin intentar API
+        if self.prefer_playwright:
+            logger.info("Usando Playwright directamente (prefer_playwright=True)")
+            from .ieee_playwright_connector import IeeePlaywrightConnector
+
+            with IeeePlaywrightConnector(
+                username=self.username,
+                password=self.password,
+                headless=self.headless,
+                rate_limit=self.rate_limit
+            ) as connector:
+                results = list(connector.search(query, max_results=max_results))
+        else:
+            # Estrategia original: API primero, Playwright como fallback
+            if not self.session_manager.ensure_authenticated():
+                raise Exception("No se pudo autenticar en IEEE Xplore")
+
+            try:
+                api_results_iter = self._search_via_api(query, max_results)
+                results = list(api_results_iter)
+            except ValueError as api_error:
+                logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
                 from .ieee_playwright_connector import IeeePlaywrightConnector
 
                 with IeeePlaywrightConnector(
@@ -110,38 +165,15 @@ class IeeeConnector(IAcademicConnector):
                     password=self.password,
                     headless=self.headless,
                     rate_limit=self.rate_limit
-                ) as connector:
-                    results = list(connector.search(query, max_results=max_results))
-            else:
-                # Estrategia original: API primero, Playwright como fallback
-                if not self.session_manager.ensure_authenticated():
-                    raise Exception("No se pudo autenticar en IEEE Xplore")
+                ) as fallback_connector:
+                    results = list(fallback_connector.search(query, max_results=max_results))
 
-                try:
-                    api_results_iter = self._search_via_api(query, max_results)
-                    results = list(api_results_iter)
-                except ValueError as api_error:
-                    logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
-                    from .ieee_playwright_connector import IeeePlaywrightConnector
+        # Rate limiting con variación random (parecer más humano)
+        delay = self.rate_limit + random.uniform(0.5, 1.5)
+        logger.debug(f"Rate limit: esperando {delay:.2f}s")
+        time.sleep(delay)
 
-                    with IeeePlaywrightConnector(
-                        username=self.username,
-                        password=self.password,
-                        headless=self.headless,
-                        rate_limit=self.rate_limit
-                    ) as fallback_connector:
-                        results = list(fallback_connector.search(query, max_results=max_results))
-
-            # Rate limiting con variación random (parecer más humano)
-            delay = self.rate_limit + random.uniform(0.5, 1.5)
-            logger.debug(f"Rate limit: esperando {delay:.2f}s")
-            time.sleep(delay)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Error en búsqueda IEEE: {e}")
-            raise
+        return results
 
     @retry(
         stop=stop_after_attempt(3),

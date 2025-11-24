@@ -328,10 +328,13 @@ class Container:
                 cls._alternative_finder = AlternativeSourceFinder()
 
             # Ensamblar servicio con checker compuesto (Unpaywall primario, Crossref secundario)
+            # OPTIMIZACIÓN: No consultar Scopus API si el estudio ya viene de Scopus
+            # (para no gastar cuota API dos veces, ya que Discovery ya lo consultó)
             oa_checker = CompositeOpenAccessChecker(
                 primary_checker=cls._unpaywall_checker,
                 secondary_checker=cls._crossref_checker,
-                tertiary_checker=cls._scopus_oa_checker
+                tertiary_checker=cls._scopus_oa_checker,
+                skip_tertiary_for_sources=['Scopus']  # Saltar Scopus si ya vino de Discovery
             )
 
             cls._fulltext_service_production = FullTextService(
