@@ -287,6 +287,8 @@ class Container:
         - UNPAYWALL_EMAIL: Email para API de Unpaywall (reutilizado para Crossref User-Agent)
           (si no está, se intenta usar EPN_USER / IEEE_USERNAME como fallback)
         - PAPERS_STORAGE_DIR: Directorio donde guardar PDFs (opcional, default: media/papers)
+        - ENABLE_SCIHUB: Habilitar LibGen y Sci-Hub (opcional, default: false)
+          ⚠️ LibGen y Sci-Hub operan en zona gris legal. Solo para investigación académica.
 
         Returns:
             FullTextService con conectores reales inyectados
@@ -325,7 +327,12 @@ class Container:
                 cls._http_downloader = HttpDownloader(base_dir=storage_dir)
 
             if cls._alternative_finder is None:
-                cls._alternative_finder = AlternativeSourceFinder()
+                # Leer configuración de fuentes alternativas (LibGen + Sci-Hub)
+                enable_scihub = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
+                cls._alternative_finder = AlternativeSourceFinder(
+                    enable_scihub=enable_scihub,
+                    base_dir=storage_dir
+                )
 
             # Ensamblar servicio con checker compuesto (Unpaywall primario, Crossref secundario)
             # OPTIMIZACIÓN: No consultar Scopus API si el estudio ya viene de Scopus
