@@ -29,7 +29,7 @@ urlpatterns = [
     # SLR Module URLs
     path('design/', include('apps.design.urls')),
     path('interpretation/', include('apps.interpretation.urls')),
-    path('extraction/', include('apps.extraction.urls')),
+    #path('extraction/', include('apps.extraction.urls')),
     path('selection/', include('apps.selection.urls')),
     path('acquisition/', include('apps.acquisition.urls')),
 ]
