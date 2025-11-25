@@ -39,7 +39,8 @@ class Project(models.Model):
         ResearchFramework, 
         on_delete=models.PROTECT, 
         related_name='projects', 
-        default=None
+        null=True,
+        blank=True
     )
     
     @property

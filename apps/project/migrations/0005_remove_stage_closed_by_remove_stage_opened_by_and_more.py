@@ -39,6 +39,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='project',
             name='research_framework',
-            field=models.ForeignKey(default=None, on_delete=django.db.models.deletion.PROTECT, related_name='projects', to='project.researchframework'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='projects', to='project.researchframework'),
         ),
     ]
