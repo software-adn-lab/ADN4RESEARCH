@@ -42,7 +42,6 @@ class ScopusPlaywrightConnector:
     4. Normalizar y retornar
     """
 
-    # URLs
     SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com/"
     DEFAULT_PROXY_BASE = "https://bvirtual.epn.edu.ec:2057"
     SEARCH_PATH = "/api/documents/search/facets"
@@ -117,14 +116,10 @@ class ScopusPlaywrightConnector:
 
             page = context.new_page()
 
-            # Aplicar stealth scripts para ocultar automatización
             self._apply_stealth_scripts(page)
 
             try:
-                # Autenticar (o validar cookies preloaded)
                 self._authenticate(page)
-
-                # Buscar usando API interna
                 results = list(self._search_and_extract(page, query, max_results))
 
                 for result in results:
@@ -181,16 +176,13 @@ class ScopusPlaywrightConnector:
                 continue
 
         if not username_field:
-            # Guardar screenshot para debug
             page.screenshot(path="debug_login_page.png")
             logger.error("Screenshot guardado en debug_login_page.png")
             raise Exception("No se encontró campo de usuario. Verifica debug_login_page.png")
 
-        # Simular comportamiento humano: click en el campo primero
         username_field.click()
         self._human_delay(0.3, 0.6)
 
-        # Llenar credenciales con typing gradual
         username_field.type(self.username, delay=random.randint(50, 150))
         self._human_delay(0.5, 1.0)
 

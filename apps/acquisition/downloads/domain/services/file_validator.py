@@ -42,13 +42,10 @@ class FileValidator:
 
         Ejemplos:
             >>> validator = FileValidator()
-            >>> # Archivo real existente
             >>> validator.is_valid_pdf("/real/path/paper.pdf")
             True
-            >>> # Ruta mock (no existe pero es .pdf) - ACEPTA para testing
             >>> validator.is_valid_pdf("/tmp/downloads/mock_paper.pdf")
             True
-            >>> # Archivo con extensión incorrecta
             >>> validator.is_valid_pdf("/path/to/document.txt")
             False
         """
@@ -57,11 +54,9 @@ class FileValidator:
 
         path = Path(file_path)
 
-        # Si el archivo NO existe, validar solo extensión (modo testing/MVP)
         if not path.exists():
             return file_path.endswith(".pdf")
 
-        # Si el archivo EXISTE, validar estrictamente
         return self._validate_existing_file(path)
 
     def _validate_existing_file(self, path: Path) -> bool:
@@ -74,23 +69,14 @@ class FileValidator:
         Returns:
             True si es un PDF válido, False en caso contrario
         """
-        # Verificar que sea un archivo (no directorio)
         if not path.is_file():
             return False
 
-        # Verificar extensión
         if path.suffix.lower() != ".pdf":
             return False
 
-        # Verificar que tenga contenido
         if path.stat().st_size == 0:
             return False
-
-        # TODO (Producción): Verificar magic bytes
-        # with open(path, 'rb') as f:
-        #     header = f.read(4)
-        #     if header != b'%PDF':
-        #         return False
 
         return True
 
@@ -110,7 +96,7 @@ class FileValidator:
         Ejemplos:
             >>> validator = FileValidator()
             >>> validator.validate_existing_file_only("/tmp/mock.pdf")
-            False  # Rechaza rutas mock
+            False
         """
         if not file_path:
             return False
@@ -135,7 +121,6 @@ class FileValidator:
         Ejemplos:
             >>> validator = FileValidator()
             >>> validator.validate_or_raise("/path/to/paper.pdf")
-            # No lanza excepción
             >>> validator.validate_or_raise("/path/to/document.txt")
             ValueError: El archivo no es un PDF válido: /path/to/document.txt
         """

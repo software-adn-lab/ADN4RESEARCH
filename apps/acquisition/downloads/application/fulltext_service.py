@@ -18,9 +18,7 @@ from apps.acquisition.downloads.domain.value_objects.pdf_source import PdfSource
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# PORTS (Interfaces para Hexagonal Architecture)
-# ============================================================================
+
 
 class IOpenAccessChecker(Protocol):
     """Port para verificar si un estudio es Open Access."""
@@ -86,9 +84,7 @@ class IFileValidator(Protocol):
         ...
 
 
-# ============================================================================
-# SERVICIO DE APLICACIÓN
-# ============================================================================
+
 
 class FullTextService:
     """
@@ -151,14 +147,11 @@ class FullTextService:
             >>> study.download_status
             'texto_completo_disponible'
         """
-        # 1. Recuperar estudio
         study = self._get_study_or_raise(study_id)
 
-        # 2. Intentar descarga (lógica pura)
         logger.info(f"Intentando descarga automática para estudio {study_id}...")
         self._obtain_fulltext_in_place(study)
 
-        # 3. Persistir cambios
         saved_study = self.repository.save(study)
 
         logger.info(
@@ -237,7 +230,6 @@ class FullTextService:
                 logger.error(f"Error descargando estudio {study_id}: {e}", exc_info=True)
                 stats["errors"] += 1
 
-        # 6. Persistir todos los cambios en batch
         if studies_to_save:
             logger.info(f"Persistiendo {len(studies_to_save)} estudios actualizados...")
             self.repository.save_batch(studies_to_save)
@@ -282,10 +274,6 @@ class FullTextService:
                 logger.warning(f"Estudio no encontrado: {study_id}")
 
         return results
-
-    # ==========================================================================
-    # HELPERS PRIVADOS (lógica pura en memoria)
-    # ==========================================================================
 
     def _get_study_or_raise(self, study_id: str) -> Study:
         """Recupera estudio o lanza excepción."""

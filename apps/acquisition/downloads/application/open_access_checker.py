@@ -75,12 +75,10 @@ class CompositeOpenAccessChecker:
         if not doi or not doi.value:
             return False
 
-        # Orden: primary -> secondary -> tertiary (con optimización)
         for i, checker in enumerate(self.checkers):
             if not checker:
                 continue
 
-            # OPTIMIZACIÓN: Saltar tertiary_checker si el estudio viene de fuente excluida
             is_tertiary = (i == 2 and checker is self.tertiary_checker)
             if is_tertiary and study and study.source.name in self.skip_tertiary_for_sources:
                 logger.info(

@@ -31,12 +31,8 @@ def build_fulltext_service_with_mocks():
         service = build_fulltext_service_with_mocks()
         result_study = service.obtain_fulltext(study)
     """
-    # WISHFUL THINKING: Import del servicio de aplicación
     from apps.acquisition.downloads.application.fulltext_service import FullTextService
 
-    # ========================================================================
-    # Mock 1: Open Access Checker (simula Unpaywall API)
-    # ========================================================================
     mock_oa_checker = MagicMock()
 
     def is_open_access_side_effect(doi):
@@ -79,9 +75,6 @@ def build_fulltext_service_with_mocks():
 
     mock_oa_checker.get_oa_info.side_effect = get_oa_info_side_effect
 
-    # ========================================================================
-    # Mock 2: Downloader (simula descarga HTTP + escritura de archivo)
-    # ========================================================================
     mock_downloader = MagicMock()
 
     def download_side_effect(study):
@@ -98,7 +91,6 @@ def build_fulltext_service_with_mocks():
             None: Si no se pudo descargar
         """
         if study.doi and "open.access" in study.doi.value:
-            # Simula ruta de archivo descargado
             safe_doi = study.doi.value.replace("/", "_")
             return f"/tmp/downloads/{safe_doi}.pdf"
         return None
@@ -117,16 +109,12 @@ def build_fulltext_service_with_mocks():
             str: Ruta simulada del PDF descargado
             None: Si no se pudo descargar
         """
-        # Si hay URL, simular descarga exitosa
         if url and "http" in url:
             return f"/tmp/downloads/{study_id}.pdf"
         return None
 
     mock_downloader.download_from_url.side_effect = download_from_url_side_effect
 
-    # ========================================================================
-    # Mock 3: Alternative Source Finder (simula scraping/repositorios)
-    # ========================================================================
     mock_alt_finder = MagicMock()
 
     def find_alternative_side_effect(study):
@@ -147,24 +135,14 @@ def build_fulltext_service_with_mocks():
             None: Si no se encontró en ninguna fuente alternativa
         """
         if study.doi and "paywall" in study.doi.value:
-            # Simula que encontró el PDF en una fuente alternativa
             return "/tmp/downloads/alternative_source.pdf"
         return None
 
     mock_alt_finder.find_and_download.side_effect = find_alternative_side_effect
 
-    # ========================================================================
-    # Mock 4: File Validator (valida que el archivo sea PDF válido)
-    # ========================================================================
     mock_validator = MagicMock()
-
-    # Para el happy path, todos los archivos son válidos
-    # Si en el futuro quieres probar archivos corruptos, creas otra factory
     mock_validator.is_valid_pdf.return_value = True
 
-    # ========================================================================
-    # Construir y retornar servicio con mocks inyectados
-    # ========================================================================
     return FullTextService(
         oa_checker=mock_oa_checker,
         downloader=mock_downloader,
@@ -196,20 +174,8 @@ def build_manual_upload_service_with_mocks():
         service = build_manual_upload_service_with_mocks()
         result_study = service.attach_file(study, "/path/to/file.pdf")
     """
-    # WISHFUL THINKING: Import del servicio de aplicación
     from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
     from apps.acquisition.downloads.domain.services.file_validator import FileValidator
 
-    # ========================================================================
-    # Usar FileValidator REAL (no mockeado)
-    # ========================================================================
-    # FileValidator es lógica interna que:
-    # - Lee magic bytes (%PDF)
-    # - Valida estructura básica del PDF
-    # - No tiene dependencias externas
     validator = FileValidator()
-
-    # ========================================================================
-    # Construir y retornar servicio
-    # ========================================================================
     return ManualUploadService(file_validator=validator)

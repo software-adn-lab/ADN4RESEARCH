@@ -50,7 +50,7 @@ def get_live_connectors() -> dict:
         "IEEE Xplore": IeeeConnector(
             username=username,
             password=password,
-            headless=True,  # Sin ventana visible
+            headless=True,
             rate_limit=2.0
         ),
         "Scopus": ScopusConnector(
@@ -95,18 +95,14 @@ def execute_live_discovery(
     logger.info("DISCOVERY SERVICE - MODO REAL (Scrapers)")
     logger.info("=" * 70)
 
-    # Inicializar conectores reales
     connectors = get_live_connectors()
 
-    # Filtrar por fuentes solicitadas
     if sources:
         connectors = {k: v for k, v in connectors.items() if k in sources}
         logger.info(f"Fuentes solicitadas: {sources}")
 
-    # Crear servicio
     service = DiscoveryService(connectors=connectors)
 
-    # Ejecutar búsqueda
     logger.info(f"Ejecutando búsqueda...")
     logger.info(f"Estrategia: {strategy.to_dict()}")
 
@@ -123,18 +119,11 @@ def execute_live_discovery(
     return result
 
 
-# Ejemplo de uso
 if __name__ == "__main__":
-    """
-    Ejemplo standalone para probar discovery con scrapers reales.
-
-    Uso:
-        python -m apps.acquisition.discovery.adapters.tasks.discovery_live_tasks
-    """
+    """Ejemplo standalone para probar discovery con scrapers reales."""
     import sys
     from pathlib import Path
 
-    # Setup Django
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
     sys.path.insert(0, str(project_root))
 
@@ -145,7 +134,6 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    # Crear estrategia de ejemplo
     from apps.acquisition.search_strategy.domain.models import SearchStrategy
 
     strategy = SearchStrategy(
@@ -161,7 +149,7 @@ if __name__ == "__main__":
     try:
         result = execute_live_discovery(
             strategy=strategy,
-            sources=["IEEE Xplore"]  # Solo IEEE por ahora
+            sources=["IEEE Xplore"]
         )
 
         print()
@@ -171,7 +159,7 @@ if __name__ == "__main__":
 
         for source, studies in result.get('sources', {}).items():
             print(f"{source}: {len(studies)} estudios")
-            for i, study in enumerate(studies[:3], 1):  # Mostrar 3 primeros
+            for i, study in enumerate(studies[:3], 1):
                 print(f"  {i}. {study['title']}")
 
         print()

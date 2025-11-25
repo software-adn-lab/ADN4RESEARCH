@@ -1,15 +1,5 @@
 """
 ConsolidationService - Servicio de aplicación para consolidación de metadatos.
-
-Este es el punto de entrada principal para el Feature 3.
-Orquesta los servicios de dominio en un pipeline coherente:
-    Enriquecimiento → Normalización → Validación
-
-Responsabilidades:
-- Coordinar el flujo de consolidación
-- Manejar errores a nivel de estudio (no falla todo por uno)
-- Generar métricas del proceso
-- Marcar trazabilidad inicial de campos
 """
 
 import logging
@@ -26,50 +16,23 @@ logger = logging.getLogger(__name__)
 
 
 class ConsolidationService:
-    """
-    Servicio de Aplicación para la consolidación automática de metadatos.
-
-    Orquesta el flujo completo:
-    1. Enriquecimiento: Buscar datos faltantes en fuentes externas
-    2. Normalización: Estandarizar formatos (DOI, autores, etc.)
-    3. Validación: Determinar estado final (completo/parcial/fallido)
-
-    Principios:
-    - Tolerante a fallos: Un estudio que falla no detiene el proceso
-    - Idempotente: Puede ejecutarse múltiples veces sin efectos adversos
-    - Trazable: Registra el origen de cada dato
-    """
+    """Servicio de Aplicación para la consolidación automática de metadatos."""
 
     def __init__(
         self,
         connectors: Dict[str, Any],
         repository: Optional[IStudyRepository] = None
     ):
-        """
-        Inicializa el servicio con conectores externos.
-
-        Args:
-            connectors: Diccionario de conectores por fuente
-                       {"Scopus": ScopusConnector, "IEEE Xplore": IeeeConnector}
-            repository: Repositorio de estudios (opcional, para métodos con persistencia)
-        """
+        """Inicializa el servicio con conectores externos."""
         self.connectors = connectors
         self.repository = repository
-
-        # Servicios de dominio
         self.enricher = MetadataEnricher(connectors)
         self.normalizer = MetadataNormalizer()
         self.validator = CompletenessValidator()
 
     def enrich_studies(self, study_ids: List[str]) -> ConsolidationResult:
         """
-        Enriquecer metadatos de estudios por IDs (CON PERSISTENCIA).
-
-        Flujo:
-        1. Recuperar estudios del repositorio
-        2. Ejecutar consolidación (enriquecimiento + normalización + validación)
-        3. Persistir estudios enriquecidos en batch
-        4. Retornar resultado con estadísticas
+        Enriquecer metadatos de estudios por IDs con persistencia.
 
         Args:
             study_ids: Lista de IDs de estudios a enriquecer
@@ -79,18 +42,11 @@ class ConsolidationService:
 
         Raises:
             ValueError: Si no se encuentran estudios
-
-        Ejemplo:
-            >>> service = Container.get_consolidation_service()
-            >>> result = service.enrich_studies(["uuid-1", "uuid-2"])
-            >>> result.summary["enriched_fields"]
-            15
         """
         if not study_ids:
             logger.warning("enrich_studies llamado con lista vacía")
             return ConsolidationResult(studies=[], summary=self._create_empty_summary())
 
-        # 1. Recuperar estudios del repositorio
         studies = []
         for study_id in study_ids:
             study = self.repository.find_by_id(study_id)
@@ -103,11 +59,8 @@ class ConsolidationService:
             raise ValueError(f"No se encontró ningún estudio con los IDs proporcionados")
 
         logger.info(f"Consolidando {len(studies)} estudios...")
-
-        # 2. Ejecutar consolidación automática (lógica pura)
         result = self._consolidate_list(studies)
 
-        # 3. Persistir estudios enriquecidos (bulk para performance)
         if result.studies:
             logger.info(f"Persistiendo {len(result.studies)} estudios enriquecidos...")
             self.repository.save_batch(result.studies)
@@ -122,7 +75,7 @@ class ConsolidationService:
 
     def enrich_single_study(self, study_id: str) -> Study:
         """
-        Enriquecer metadatos de un único estudio por ID (CON PERSISTENCIA).
+        Enriquecer metadatos de un único estudio por ID con persistencia.
 
         Args:
             study_id: ID del estudio a enriquecer
@@ -132,27 +85,11 @@ class ConsolidationService:
 
         Raises:
             ValueError: Si el estudio no existe
-
-        Ejemplo:
-            >>> service = Container.get_consolidation_service()
-            >>> study = service.enrich_single_study("uuid-1")
-            >>> study.consolidation_status
-            'completo'
         """
-        # 1. Recuperar estudio
         study = self._get_study_or_raise(study_id)
-
-        # 2. Consolidar (lógica pura)
         enriched_study = self._consolidate_single(study)
-
-        # 3. Persistir
         saved_study = self.repository.save(enriched_study)
-
         return saved_study
-
-    # ==========================================================================
-    # HELPERS PRIVADOS (lógica pura en memoria)
-    # ==========================================================================
 
     def _get_study_or_raise(self, study_id: str) -> Study:
         """Recupera estudio o lanza excepción."""
@@ -162,20 +99,7 @@ class ConsolidationService:
         return study
 
     def _consolidate_list(self, studies: List[Study]) -> ConsolidationResult:
-        """
-        Ejecuta el pipeline de consolidación sobre una lista de estudios (en memoria).
-
-        Args:
-            studies: Lista de estudios descubiertos
-
-        Returns:
-            ConsolidationResult con estudios procesados y métricas
-
-        Note:
-            - Trabaja sobre los mismos objetos Study
-            - Cada estudio se procesa independientemente
-            - Los errores en un estudio no afectan a los demás
-        """
+        """Ejecuta el pipeline de consolidación sobre una lista de estudios."""
         if not studies:
             return ConsolidationResult(
                 studies=[],
@@ -196,7 +120,6 @@ class ConsolidationService:
                 processed_study = self._process_single_study(study, metrics)
                 processed_studies.append(processed_study)
             except Exception as e:
-                # Tolerancia a fallos: marcar como fallido y continuar
                 study.consolidation_status = ConsolidationStatus.FALLIDO.value
                 study.failure_reason = f"Error en consolidación: {str(e)}"
                 processed_studies.append(study)
@@ -209,42 +132,24 @@ class ConsolidationService:
         )
 
     def _process_single_study(self, study: Study, metrics: Dict[str, int]) -> Study:
-        """
-        Procesa un único estudio a través del pipeline.
-
-        Args:
-            study: Estudio a procesar
-            metrics: Diccionario de métricas a actualizar
-
-        Returns:
-            Estudio procesado con estado actualizado
-        """
-        # Marcar campos originales como "discovery" si no tienen origen
+        """Procesa un único estudio a través del pipeline."""
         self._mark_discovery_origins(study)
 
-        # Obtener estado inicial
         initial_status = self.validator.validate(study)
         initial_missing = set(self.validator.get_missing_fields(study))
 
-        # 1. ENRIQUECIMIENTO
-        # Solo si no está completo
         if initial_status != ConsolidationStatus.COMPLETO:
             self.enricher.enrich(study)
 
-        # Contar campos enriquecidos
         after_enrich_missing = set(self.validator.get_missing_fields(study))
         enriched_count = len(initial_missing - after_enrich_missing)
         metrics["enriched_fields"] += enriched_count
 
-        # 2. NORMALIZACIÓN
-        # Siempre se ejecuta para garantizar consistencia
         self.normalizer.normalize(study)
 
-        # 3. VALIDACIÓN FINAL
         final_status = self.validator.validate(study)
         study.consolidation_status = final_status.value
 
-        # Actualizar métricas
         metrics["total_processed"] += 1
         if final_status == ConsolidationStatus.FALLIDO:
             metrics["failed"] += 1
@@ -254,16 +159,7 @@ class ConsolidationService:
         return study
 
     def _mark_discovery_origins(self, study: Study) -> None:
-        """
-        Marca los campos existentes como provenientes del descubrimiento.
-
-        Solo marca campos que no tienen origen asignado previamente.
-        Esto establece la trazabilidad inicial antes del enriquecimiento.
-
-        Args:
-            study: Estudio a marcar
-        """
-        # Campos que pueden tener trazabilidad
+        """Marca los campos existentes como provenientes del descubrimiento."""
         field_checks = [
             ("title", study.title),
             ("link", study.link),
@@ -277,7 +173,6 @@ class ConsolidationService:
         ]
 
         for field_name, field_value in field_checks:
-            # Si el campo tiene valor y no tiene origen, marcarlo como discovery
             if field_value and field_name not in study.field_origins:
                 study.field_origins[field_name] = "discovery"
 
@@ -292,14 +187,6 @@ class ConsolidationService:
         }
 
     def _consolidate_single(self, study: Study) -> Study:
-        """
-        Consolida un único estudio (en memoria).
-
-        Args:
-            study: Estudio a consolidar
-
-        Returns:
-            Estudio consolidado
-        """
+        """Consolida un único estudio en memoria."""
         result = self._consolidate_list([study])
         return result.studies[0] if result.studies else study

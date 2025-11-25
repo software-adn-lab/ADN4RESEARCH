@@ -22,7 +22,6 @@ import unicodedata
 from typing import List, Any, Optional
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.value_objects.doi import DOI
-# Importar función de normalización compartida para DOI
 from apps.acquisition.shared.domain.normalizers import normalize_doi as normalize_doi_basic
 
 
@@ -52,25 +51,20 @@ class MetadataNormalizer:
             Esta operación es tolerante a fallos. Si un campo no puede
             normalizarse, se mantiene el valor original y se continúa.
         """
-        # 1. Normalizar DOI
         if study.doi:
             try:
                 normalized_doi_str = self.normalize_doi(study.doi.value)
                 if normalized_doi_str:
                     study.doi = DOI(normalized_doi_str)
             except Exception:
-                # Mantener DOI original si falla la normalización
                 pass
 
-        # 2. Normalizar Autores
         if study.authors:
             try:
                 study.authors = self.normalize_authors(study.authors)
             except Exception:
-                # Mantener autores originales si falla
                 pass
 
-        # 3. Normalizar Año
         if study.year is not None:
             try:
                 normalized_year = self.normalize_year(study.year)
@@ -79,14 +73,12 @@ class MetadataNormalizer:
             except Exception:
                 pass
 
-        # 4. Normalizar Abstract
         if study.abstract:
             try:
                 study.abstract = self.normalize_text(study.abstract)
             except Exception:
                 pass
 
-        # 5. Normalizar Título
         if study.title:
             try:
                 study.title = self.normalize_text(study.title)
@@ -124,17 +116,9 @@ class MetadataNormalizer:
         if not doi:
             return ""
 
-        # 1. Aplicar normalización básica (delegada a shared kernel)
         clean = normalize_doi_basic(doi)
-
-        # 2. Aplicar limpieza adicional específica de metadata
-        # Normalizar Unicode NFKC (compatibilidad)
         clean = unicodedata.normalize("NFKC", clean)
-
-        # Remover caracteres de control
         clean = "".join(c for c in clean if not unicodedata.category(c).startswith("C"))
-
-        # Trim final por si la limpieza Unicode generó espacios
         clean = clean.strip()
 
         return clean
@@ -200,7 +184,6 @@ class MetadataNormalizer:
         words = name.split()
 
         for i, word in enumerate(words):
-            # No corregir la primera palabra
             if i > 0 and word in particles:
                 words[i] = word.lower()
 
@@ -230,7 +213,6 @@ class MetadataNormalizer:
         try:
             year_int = int(float(str(year).strip()))
 
-            # Validar rango razonable (1900-2100)
             if 1900 <= year_int <= 2100:
                 return year_int
             else:

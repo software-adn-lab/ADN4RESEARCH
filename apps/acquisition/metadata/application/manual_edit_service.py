@@ -35,7 +35,6 @@ class ManualEditService:
     - Corregir cualquier error de la consolidación automática
     """
 
-    # Campos que pueden editarse manualmente
     EDITABLE_FIELDS = {
         "doi", "authors", "abstract", "year",
         "journal", "keywords", "title"
@@ -87,10 +86,8 @@ class ManualEditService:
             >>> study.field_origins["doi"]
             'manual'
         """
-        # 1. Recuperar estudio
         study = self._get_study_or_raise(study_id)
-
-        # 2. Aplicar edición (lógica pura)
+        
         self._edit_in_place(study, field_name, value, normalize)
 
         # 3. Persistir cambios

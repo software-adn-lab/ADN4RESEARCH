@@ -1,8 +1,5 @@
 """
 ManualStudyService - Servicio de aplicación para registro manual de estudios.
-
-Permite al usuario crear estudios manualmente (no descubiertos automáticamente).
-Incluye validación y persistencia.
 """
 
 from typing import Optional, List
@@ -13,27 +10,10 @@ from apps.acquisition.shared.domain.value_objects.doi import DOI
 
 
 class ManualStudyService:
-    """
-    Servicio de aplicación para crear estudios manualmente.
-
-    Responsabilidades:
-    1. Validar datos de entrada
-    2. Crear entidad Study con origen "Manual"
-    3. Persistir en repositorio
-
-    Use cases:
-    - Registrar estudios que no aparecen en bases de datos académicas
-    - Registrar literatura gris (informes técnicos, tesis, etc.)
-    - Corregir estudios que no se encontraron en discovery automático
-    """
+    """Servicio de aplicación para crear estudios manualmente."""
 
     def __init__(self, repository: IStudyRepository):
-        """
-        Inicializar el servicio.
-
-        Args:
-            repository: Repositorio de estudios
-        """
+        """Inicializar el servicio."""
         self.repository = repository
 
     def create_manual_study(
@@ -48,7 +28,7 @@ class ManualStudyService:
         keywords: Optional[List[str]] = None,
     ) -> Study:
         """
-        Crear un estudio manualmente (CON PERSISTENCIA).
+        Crear un estudio manualmente con persistencia.
 
         Args:
             title: Título del estudio (obligatorio)
@@ -65,29 +45,13 @@ class ManualStudyService:
 
         Raises:
             ValueError: Si faltan campos obligatorios o son inválidos
-
-        Ejemplo:
-            >>> service = Container.get_manual_study_service()
-            >>> study = service.create_manual_study(
-            ...     title="Manual Testing in Agile",
-            ...     link="https://example.com/paper",
-            ...     doi="10.1234/example",
-            ...     authors=["Smith, J.", "Doe, A."],
-            ...     year=2023
-            ... )
-            >>> study.source.name
-            'Manual'
-            >>> study.status
-            'descubierto'
         """
-        # 1. Validar campos obligatorios
         if not title or not title.strip():
             raise ValueError("El título es obligatorio")
 
         if not link or not link.strip():
             raise ValueError("El link es obligatorio")
 
-        # 2. Crear entidad Study con origen "Manual"
         doi_obj = None
         if doi:
             try:
@@ -102,7 +66,6 @@ class ManualStudyService:
             doi=doi_obj,
         )
 
-        # 3. Enriquecer con metadatos opcionales
         if authors:
             study.authors = authors
 
@@ -120,7 +83,6 @@ class ManualStudyService:
         if keywords:
             study.keywords = keywords
 
-        # 4. Marcar trazabilidad como "manual"
         study.field_origins["title"] = "manual"
         study.field_origins["link"] = "manual"
         study.field_origins["source"] = "manual"
@@ -138,7 +100,5 @@ class ManualStudyService:
         if keywords:
             study.field_origins["keywords"] = "manual"
 
-        # 5. Persistir
         saved_study = self.repository.save(study)
-
         return saved_study

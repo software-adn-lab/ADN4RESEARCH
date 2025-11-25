@@ -24,10 +24,10 @@ class IUploadedFile(Protocol):
     """
 
     @property
-    def name(self) -> str:  # noqa: D401 - simple passthrough
+    def name(self) -> str:
         ...
 
-    def chunks(self, chunk_size: int = ...) -> BinaryIO:  # noqa: D401
+    def chunks(self, chunk_size: int = ...) -> BinaryIO:
         ...
 
 
@@ -67,16 +67,13 @@ class ManualUploadAppService:
         saved_path = self.storage.save(uploaded_file, relative_path)
 
         try:
-            # Usar attach_file del servicio de dominio para validar y marcar estado
             updated = self.manual_upload_service.attach_file(study=study, file_path=saved_path)
 
-            # Garantizar estado consistente (status de workflow + download_status)
             updated.attach_pdf(pdf_path=saved_path, pdf_source=PdfSource.MANUAL.value)
             updated.download_status = DownloadStatus.DISPONIBLE.value
 
             self.repository.save(updated)
             return updated
         except Exception:
-            # Rollback físico si la validación falla
             self.storage.delete(saved_path)
             raise

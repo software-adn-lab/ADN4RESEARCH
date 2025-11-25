@@ -46,55 +46,28 @@ class TranslationService:
             target: Base de datos destino ("Scopus" o "IEEE Xplore")
 
         Returns:
-            Diccionario con el siguiente contrato:
-            {
-                "query": str,               # Query traducida
-                "status": str,              # "Done" en caso exitoso
-                "warnings": List[str],      # Advertencias (puede estar vacía)
-                "trace": {
-                    "trace_id": str,        # ID único de esta traducción
-                    "target": str,          # Target de destino
-                    "steps_applied": List[str],  # Pasos ejecutados
-                    "rules_applied": List[str],  # Reglas aplicadas
-                    "timestamp": str        # ISO-8601
-                },
-                "target": str,              # Mismo target de entrada
-                "metadata": Dict[str, Any]  # Info adicional (ej: year_filter)
-            }
+            Diccionario con query traducida, warnings, trace y metadata
 
         Raises:
             InvalidTargetError: Si el target no es soportado
-            DomainValidationError: Si la estrategia es inválida (no debería pasar)
-
-        Ejemplo:
-            >>> service = TranslationService()
-            >>> result = service.translate(strategy, "Scopus")
-            >>> print(result["query"])
-            'TITLE-ABS-KEY(...) AND PUBYEAR > 2019'
         """
-        # 1. Validar precondiciones
         self._validate_target(target)
 
-        # 2. Seleccionar traductor según target
         if target == "Scopus":
             translator = ScopusTranslator()
         elif target == "IEEE Xplore":
             translator = IeeeTranslator()
         else:
-            # No debería llegar aquí (la validación ya filtró)
             raise InvalidTargetError(target, SUPPORTED_SOURCES)
 
-        # 3. Ejecutar traducción
         translation_result = translator.translate(strategy)
 
-        # 4. Armar trace
         trace = self._build_trace(
             target=target,
             steps=translation_result.steps_applied,
             rules=translation_result.rules_applied
         )
 
-        # 5. Armar respuesta final
         return {
             "query": translation_result.query,
             "status": "Done",
