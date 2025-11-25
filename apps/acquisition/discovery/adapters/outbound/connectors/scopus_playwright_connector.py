@@ -5,7 +5,7 @@ Este conector se usa como FALLBACK cuando el API oficial de Elsevier no está di
 Usa Playwright para autenticar vía EZproxy y luego llama APIs JSON internas de Scopus.
 
 APIs USADAS:
-- POST /api/documents/search -> Resultados (title, doi, authors, year, eid)
+- POST /api/documents/search/facets -> Resultados (title, doi, authors, year, eid)
 - POST /gateway/documents/abstracts/retrieve -> Abstracts
 
 NOTA: Las APIs de Scopus solo funcionan dentro del contexto de Playwright,
@@ -15,7 +15,9 @@ import logging
 import time
 import json
 import re
-from typing import Dict, List, Any, Generator
+from typing import Dict, List, Any, Generator, Tuple
+from urllib.parse import urlparse
+from urllib.parse import urlencode
 from playwright.sync_api import sync_playwright, Page
 
 logger = logging.getLogger(__name__)
@@ -35,9 +37,10 @@ class ScopusPlaywrightConnector:
     """
 
     # URLs
-    SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com"
-    SEARCH_API = "https://www.scopus.com/api/documents/search"
-    ABSTRACTS_API = "https://www.scopus.com/gateway/documents/abstracts/retrieve"
+    SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com/"
+    DEFAULT_PROXY_BASE = "https://bvirtual.epn.edu.ec:2057"
+    SEARCH_PATH = "/api/documents/search/facets"
+    ABSTRACTS_PATH = "/gateway/documents/abstracts/retrieve"
 
     def __init__(
         self,
@@ -155,9 +158,73 @@ class ScopusPlaywrightConnector:
 
         # Esperar redirección
         logger.info("Esperando autenticación...")
-        page.wait_for_url("**/scopus.com/**", timeout=30000)
+        page.wait_for_load_state("networkidle", timeout=60000)
+        current_url = page.url
+
+        if "login" in current_url:
+            raise Exception(
+                "Autenticación Scopus fallida o bloqueada por reCAPTCHA (sigues en la página de login)"
+            )
+
+        # Refrescar cookies clave que activa la API JSON (scopus-proxy)
+        parsed = urlparse(current_url)
+        if parsed.hostname and parsed.hostname.endswith("bvirtual.epn.edu.ec"):
+            base = f"{parsed.scheme}://{parsed.netloc}"
+            self._set_scopus_proxy_cookie(page, base)
 
         logger.info("✓ Autenticación exitosa")
+
+    def _set_scopus_proxy_cookie(self, page: Page, base: str) -> None:
+        """
+        Marca la cookie scopus-proxy=true (vista en tráfico real) para habilitar las APIs JSON.
+        """
+        try:
+            page.request.post(
+                f"{base}/cookies/set.uri",
+                data=urlencode(
+                    {
+                        "name": "scopus-proxy",
+                        "value": "true",
+                        "expiration": "86400000",  # 1 día en ms (mismo que tráfico capturado)
+                    }
+                ),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                },
+            )
+            logger.debug("✓ Cookie scopus-proxy configurada")
+        except Exception as e:
+            logger.debug(f"No se pudo setear scopus-proxy: {e}")
+
+    def _resolve_api_urls(self, page: Page) -> Tuple[str, str]:
+        """
+        Construye las URLs de API usando el host actual (incluye puerto de EZproxy).
+
+        Args:
+            page: Página autenticada
+
+        Returns:
+            (search_api_url, abstracts_api_url)
+        """
+        parsed = urlparse(page.url)
+        base = self.DEFAULT_PROXY_BASE
+
+        if parsed.scheme and parsed.netloc:
+            hostname = parsed.hostname or ""
+
+            if hostname.endswith("bvirtual.epn.edu.ec"):
+                # Preferir el puerto proxy (2057) si no viene en la URL
+                base = self.DEFAULT_PROXY_BASE if parsed.port is None else f"{parsed.scheme}://{parsed.netloc}"
+            elif "scopus.com" in hostname:
+                # La sesión sigue autenticada vía EZproxy, pero las APIs responden en el host proxy
+                base = self.DEFAULT_PROXY_BASE
+            else:
+                base = f"{parsed.scheme}://{parsed.netloc}"
+
+        search_api = f"{base}{self.SEARCH_PATH}"
+        abstracts_api = f"{base}{self.ABSTRACTS_PATH}"
+
+        return search_api, abstracts_api
 
     def _search_and_extract(
         self,
@@ -178,7 +245,9 @@ class ScopusPlaywrightConnector:
         """
         try:
             # Construir query de Scopus
-            scopus_query = f"TITLE-ABS-KEY({query})"
+            scopus_query = query if "TITLE-ABS-KEY" in query else f"TITLE-ABS-KEY({query})"
+
+            search_api, abstracts_api = self._resolve_api_urls(page)
 
             # Payload para la búsqueda
             search_payload = {
@@ -187,24 +256,31 @@ class ScopusPlaywrightConnector:
                 "facetMaxCount": 7,
                 "includeFacets": [
                     "pubyr", "subjabbr", "subtype", "lang",
-                    "exactkeywords", "affilctry", "srctype"
-                ]
+                    "exactkeywords", "affilctry", "srctype",
+                    "exactsrctitle", "prefnameauid", "pubstage",
+                    "afid", "fundsponsor", "freetoread"
+                ],
+                "itemcount": max_results,
+                "offset": 0
             }
 
-            logger.debug(f"POST {self.SEARCH_API}")
+            logger.debug(f"POST {search_api}")
 
             response = page.request.post(
-                self.SEARCH_API,
+                search_api,
                 data=json.dumps(search_payload),
-                headers={"Content-Type": "application/json"}
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
             )
 
             # Verificar respuesta
             headers = response.headers if isinstance(response.headers, dict) else response.headers()
-            content_type = headers.get("content-type", "")
-            status_code = response.status() if callable(getattr(response, "status", None)) else response.status
+            content_type = (headers.get("content-type") or "").lower()
+            status_code = response.status if hasattr(response, "status") else None
 
-            if not response.ok or "application/json" not in content_type.lower():
+            if not response.ok or "json" not in content_type:
                 logger.error(f"Scopus API interna: Error {status_code}")
                 try:
                     response_text = response.text()
@@ -218,8 +294,14 @@ class ScopusPlaywrightConnector:
             data = response.json()
 
             # Extraer items
-            items = data.get('items', [])
-            total_count = data.get('metadata', {}).get('totalCount', 0)
+            items = (
+                data.get('items')
+                or data.get('documents')
+                or data.get('results', {}).get('documents')
+                or []
+            )
+            metadata = data.get('metadata') or data.get('results', {}).get('metadata') or {}
+            total_count = metadata.get('totalCount', 0) or len(items)
 
             logger.info(f"✓ Obtenidos {len(items)} resultados (total: {total_count:,})")
 
@@ -233,7 +315,8 @@ class ScopusPlaywrightConnector:
             abstracts_map = self._fetch_abstracts(
                 page,
                 [item.get('eid') for item in items],
-                scopus_query
+                scopus_query,
+                abstracts_api
             )
 
             # Normalizar resultados
@@ -254,7 +337,8 @@ class ScopusPlaywrightConnector:
         self,
         page: Page,
         eids: List[str],
-        query: str
+        query: str,
+        abstracts_api: str
     ) -> Dict[str, str]:
         """
         Obtiene abstracts usando API /gateway/documents/abstracts/retrieve.
@@ -282,7 +366,7 @@ class ScopusPlaywrightConnector:
             logger.debug(f"Fetching abstracts for {len(eids)} documents...")
 
             response = page.request.post(
-                self.ABSTRACTS_API,
+                abstracts_api,
                 data=json.dumps(abstracts_payload),
                 headers={"Content-Type": "application/json"}
             )

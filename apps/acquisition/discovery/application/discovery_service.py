@@ -196,6 +196,24 @@ class DiscoveryService:
 
         return translation_statuses
 
+    def _normalize_status(self, raw_status: str) -> str:
+        """
+        Normaliza el status de traducción para tolerar variaciones.
+
+        El Feature 1 retorna "Done" cuando la traducción fue exitosa, mientras
+        que Discovery espera "ready". Este método los mapea al mismo valor
+        para evitar que el pipeline se detenga aunque las traducciones estén
+        listas.
+        """
+        if not raw_status:
+            return ""
+
+        normalized = raw_status.strip().lower()
+        if normalized == "done":
+            return TRANSLATION_STATUS_READY
+
+        return normalized
+
     def _determine_execution_plan(
         self,
         supported_sources: list[str],
@@ -230,7 +248,7 @@ class DiscoveryService:
                 no_ejecutadas[source] = "not_supported"
                 continue
 
-            status = translation_statuses[source].get("status")
+            status = self._normalize_status(translation_statuses[source].get("status"))
             if status != TRANSLATION_STATUS_READY:
                 no_ejecutadas[source] = "not_supported"
                 continue

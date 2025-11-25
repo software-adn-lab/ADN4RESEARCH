@@ -327,9 +327,22 @@ class Container:
                 cls._http_downloader = HttpDownloader(base_dir=storage_dir)
 
             if cls._alternative_finder is None:
-                # Leer configuración de fuentes alternativas (LibGen + Sci-Hub)
+                # Leer configuración de fuentes alternativas (Sci-Hub con bypass anti-DDoS)
                 enable_scihub = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
+
+                # Usar SciHubDownloader con mejores prácticas anti-DDoS
+                from apps.acquisition.downloads.adapters.outbound.connectors.scihub_downloader import SciHubDownloader
+
+                scihub = SciHubDownloader(
+                    enabled=enable_scihub,
+                    base_dir=storage_dir,
+                    timeout=30,
+                    delay_range=(2.0, 5.0),  # Delays para evitar rate limiting
+                    use_cache=True  # Caché para evitar re-descargas
+                )
+
                 cls._alternative_finder = AlternativeSourceFinder(
+                    scihub_downloader=scihub,
                     enable_scihub=enable_scihub,
                     base_dir=storage_dir
                 )
