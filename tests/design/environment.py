@@ -1,30 +1,28 @@
-
-from faker import Faker
 from django.contrib.auth.models import User
-from apps.project.models import Project
+from tests.design.helpers.factories import create_project
 from apps.project.services.project_services import ProjectService
-from apps.design.research_question.services.question_services import ResearchQuestionService
-
-fake = Faker()
 
 def before_scenario(context, scenario):
     """
     this method sets up a default project, owner, and researcher.
     """
-    context.project_service = ProjectService()
+    project_service = ProjectService()
+    context.owner = User.objects.create_user(username="owner_user")
+    context.researcher = User.objects.create_user(username="researcher_user")
+    context.researcher_two = User.objects.create_user(username="researcher_user_two")
+    context.project = project_service.create_project_with_framework(
+        name = "Test Project", 
+        description = "Description",
+        owner=context.owner, 
+        framework_name="PICO", 
+        framework_fields={
+            "Population": "",
+            "Intervention": "",
+            "Comparison": "",
+            "Outcome": ""
+        }
+        )
+    project_service.add_member(context.project, context.researcher, role="RESEARCHER")
+    project_service.add_member(context.project, context.researcher_two, role="RESEARCHER")
+    context.project.save()
 
-
-    # Create users
-    context.owner = User.objects.create_user(username=fake.user_name(), email=fake.email())
-    context.researcher = User.objects.create_user(username=fake.user_name(), email=fake.email())
-
-    # Create a Project
-    context.project = Project.objects.create(
-        name="Test Project",
-        description="This is a test project description",
-        owner=context.owner
-    )
-
-    # Add members to the project
-    context.project_service.add_member(project=context.project, user=context.owner, role="OWNER")
-    context.project_service.add_member(project=context.project, user=context.researcher, role="RESEARCHER")

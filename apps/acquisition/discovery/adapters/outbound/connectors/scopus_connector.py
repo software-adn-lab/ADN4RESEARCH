@@ -24,6 +24,7 @@ from typing import Dict, List, Any, Generator, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import requests
+from apps.acquisition.shared.domain.services.metadata_matcher import MetadataMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,9 @@ class ScopusConnector:
             'Accept': 'application/json',
             'User-Agent': 'ADN4Research/1.0 (Academic Research Tool)'
         })
+
+        # Matcher para validación de resultados
+        self.matcher = MetadataMatcher()
 
         if api_key:
             self.session.headers['X-ELS-APIKey'] = api_key
@@ -167,7 +171,11 @@ class ScopusConnector:
         count = min(max_results, 25)  # API acepta hasta 25 por página (default)
 
         # Construir query de Scopus
-        scopus_query = f"TITLE-ABS-KEY({query})"
+        # Si la query ya tiene TITLE-ABS-KEY, no envolver de nuevo
+        if query.strip().startswith("TITLE-ABS-KEY"):
+            scopus_query = query
+        else:
+            scopus_query = f"TITLE-ABS-KEY({query})"
 
         while len(results) < max_results:
             # Parámetros de búsqueda
@@ -427,6 +435,90 @@ class ScopusConnector:
             return list(connector.search(query, max_results))
         finally:
             connector.close()
+
+    def find_metadata(
+        self,
+        title: str,
+        authors: Optional[List[str]] = None,
+        year: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Busca metadatos de un estudio específico por título.
+
+        Usa la API de Scopus con validación multi-criterio.
+
+        Args:
+            title: Título del estudio
+            authors: Lista opcional de autores para validación
+            year: Año opcional para validación
+
+        Returns:
+            Diccionario con metadatos o None si no encuentra
+        """
+        if not title or not title.strip():
+            return None
+
+        if not self.api_key:
+            logger.debug("find_metadata requiere API key de Scopus")
+            return None
+
+        try:
+            # Buscar por título en Scopus API
+            query = f'TITLE("{title.strip()}")'
+            url = f"{self.ELSEVIER_BASE_URL}{self.SEARCH_ENDPOINT}"
+
+            params = {
+                'query': query,
+                'count': 5,  # Traer varios para validar
+                'view': 'COMPLETE'
+            }
+
+            response = self.session.get(url, params=params, timeout=15)
+
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get('search-results', {}).get('entry', [])
+
+                if results and not isinstance(results[0], str):
+                    # Normalizar resultados para el matcher
+                    candidates = []
+                    for entry in results:
+                        if isinstance(entry, dict):
+                            normalized = self._normalize_api_result(entry)
+                            candidates.append(normalized)
+
+                    if candidates:
+                        # Usar MetadataMatcher para encontrar el mejor match
+                        result = self.matcher.find_best_match(
+                            candidates=candidates,
+                            search_title=title,
+                            search_authors=authors,
+                            search_year=year
+                        )
+
+                        if result.is_match:
+                            match = result.candidate.copy()
+                            match["match_score"] = result.score
+                            return match
+
+                logger.debug(f"No se encontró match válido en Scopus para: {title}")
+                return None
+
+            elif response.status_code == 429:
+                logger.warning("Scopus rate limit alcanzado")
+                return None
+
+            else:
+                logger.warning(f"Scopus error {response.status_code}")
+                return None
+
+        except requests.Timeout:
+            logger.warning(f"Timeout al consultar Scopus: {title}")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error en find_metadata Scopus: {e}")
+            return None
 
     def close(self):
         """Cierra recursos."""
