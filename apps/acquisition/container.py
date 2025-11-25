@@ -40,11 +40,17 @@ from apps.acquisition.shared.adapters.outbound.repositories.django_study_reposit
 # APPLICATION SERVICES
 # ============================================================================
 
+# Translation
+from apps.acquisition.translation.application.translation_service import TranslationService
+
 # Discovery
-# from apps.acquisition.discovery.application.discovery_service import DiscoveryService
+from apps.acquisition.discovery.application.discovery_service import DiscoveryService
 
 # Metadata
 # from apps.acquisition.metadata.application.consolidation_service import ConsolidationService
+
+# Orchestrator (Coordina todo el flujo)
+from apps.acquisition.shared.application.acquisition_orchestrator import AcquisitionOrchestrator
 
 # Downloads
 from apps.acquisition.downloads.application.fulltext_service import FullTextService
@@ -60,6 +66,11 @@ from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutiona
 from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
 from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
 from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import LocalFileStorage
+
+# Application Services (ahora con persistencia integrada)
+from apps.acquisition.discovery.application.manual_study_service import ManualStudyService
+from apps.acquisition.metadata.application.manual_edit_service import ManualEditService
+from apps.acquisition.metadata.application.consolidation_service import ConsolidationService
 
 
 class Container:
@@ -91,6 +102,16 @@ class Container:
     _ieee_connector = None
     _crossref_connector = None
     _file_validator = None
+
+    # Application Services
+    _translation_service = None
+    _discovery_service = None
+    _orchestrator = None
+
+    # Application Services (con persistencia integrada)
+    _manual_study_service = None
+    _manual_edit_service = None
+    _consolidation_service = None
 
     # Downloads - Production connectors
     _unpaywall_checker = None
@@ -184,6 +205,76 @@ class Container:
     # ========================================================================
     # APPLICATION SERVICES (ensamblados con dependencias)
     # ========================================================================
+
+    @classmethod
+    def get_translation_service(cls) -> TranslationService:
+        """
+        Obtener servicio de traducción de estrategias (Feature 1).
+
+        Returns:
+            TranslationService configurado
+        """
+        if cls._translation_service is None:
+            cls._translation_service = TranslationService()
+        return cls._translation_service
+
+    @classmethod
+    def get_discovery_service(cls) -> DiscoveryService:
+        """
+        Obtener servicio de descubrimiento de estudios (Feature 2).
+
+        Configura conectores para Scopus e IEEE Xplore.
+
+        Returns:
+            DiscoveryService con conectores inyectados
+        """
+        if cls._discovery_service is None:
+            from apps.acquisition.discovery.adapters.outbound.connectors.scopus_session_manager import (
+                ScopusSessionManager,
+            )
+            from apps.acquisition.discovery.adapters.outbound.connectors.ieee_session_manager import (
+                IEEESessionManager,
+            )
+
+            connectors = {
+                "Scopus": ScopusSessionManager(),
+                "IEEE Xplore": IEEESessionManager(),
+            }
+
+            cls._discovery_service = DiscoveryService(connectors=connectors)
+
+        return cls._discovery_service
+
+    @classmethod
+    def get_orchestrator(cls) -> AcquisitionOrchestrator:
+        """
+        Obtener orquestador principal de Acquisition.
+
+        El orquestador coordina:
+        - Traducción de estrategias
+        - Discovery en múltiples proveedores
+        - Persistencia con trazabilidad completa
+        - Integración con Design (ResearchQuestion)
+
+        Returns:
+            AcquisitionOrchestrator configurado con todos los servicios
+
+        Ejemplo:
+            >>> orchestrator = Container.get_orchestrator()
+            >>> result = orchestrator.execute_search_from_strategy(
+            ...     strategy_dict={"strategy_id": "...", ...},
+            ...     research_question_id=123
+            ... )
+            >>> print(f"Found {result.total_found} studies")
+        """
+        if cls._orchestrator is None:
+            cls._orchestrator = AcquisitionOrchestrator(
+                translation_service=cls.get_translation_service(),
+                discovery_service=cls.get_discovery_service(),
+                study_repository=cls.get_repository(),
+            )
+
+        return cls._orchestrator
 
     # @classmethod
     # def get_discovery_service(cls) -> DiscoveryService:
@@ -362,9 +453,90 @@ class Container:
                 downloader=cls._http_downloader,
                 alternative_finder=cls._alternative_finder,
                 file_validator=cls.get_file_validator(),
+                repository=cls.get_repository(),  # <-- Inyectar repository
             )
 
         return cls._fulltext_service_production
+
+    # ========================================================================
+    # APPLICATION SERVICES (con persistencia integrada)
+    # ========================================================================
+
+    @classmethod
+    def get_manual_study_service(cls) -> ManualStudyService:
+        """
+        Obtener servicio para registro manual de estudios.
+
+        Returns:
+            ManualStudyService configurado con repository
+
+        Ejemplo:
+            >>> service = Container.get_manual_study_service()
+            >>> study = service.create_manual_study(
+            ...     title="Manual Testing in Agile",
+            ...     link="https://example.com/paper",
+            ...     doi="10.1234/example"
+            ... )
+        """
+        if cls._manual_study_service is None:
+            cls._manual_study_service = ManualStudyService(
+                repository=cls.get_repository()
+            )
+        return cls._manual_study_service
+
+    @classmethod
+    def get_manual_edit_service(cls) -> ManualEditService:
+        """
+        Obtener servicio para edición manual de metadatos.
+
+        Returns:
+            ManualEditService configurado con repository
+
+        Ejemplo:
+            >>> service = Container.get_manual_edit_service()
+            >>> study = service.edit(
+            ...     study_id="uuid-123",
+            ...     field_name="doi",
+            ...     value="10.1234/example"
+            ... )
+        """
+        if cls._manual_edit_service is None:
+            cls._manual_edit_service = ManualEditService(
+                repository=cls.get_repository()
+            )
+        return cls._manual_edit_service
+
+    @classmethod
+    def get_consolidation_service(cls) -> ConsolidationService:
+        """
+        Obtener servicio para consolidación automática de metadatos.
+
+        NOTA: Requiere conectores externos configurados.
+        Por ahora retorna un servicio sin conectores (para testing).
+        En producción, inyectar conectores reales.
+
+        Returns:
+            ConsolidationService configurado con repository
+
+        Ejemplo:
+            >>> service = Container.get_consolidation_service()
+            >>> result = service.enrich_studies(["uuid-1", "uuid-2"])
+            >>> result.summary["enriched_fields"]
+            15
+        """
+        if cls._consolidation_service is None:
+            # TODO: Descomentar cuando los conectores estén disponibles
+            # connectors = {
+            #     "Scopus": cls.get_scopus_connector(),
+            #     "IEEE Xplore": cls.get_ieee_connector(),
+            #     "Crossref": cls.get_crossref_connector(),
+            # }
+            connectors = {}  # Por ahora vacío
+            cls._consolidation_service = ConsolidationService(
+                connectors=connectors,
+                repository=cls.get_repository()  # <-- Inyectar repository
+            )
+        return cls._consolidation_service
 
     # ========================================================================
     # UTILIDADES
@@ -382,6 +554,9 @@ class Container:
         cls._ieee_connector = None
         cls._crossref_connector = None
         cls._file_validator = None
+        cls._translation_service = None
+        cls._discovery_service = None
+        cls._orchestrator = None
         cls._unpaywall_checker = None
         cls._crossref_checker = None
         cls._scopus_oa_checker = None
@@ -390,3 +565,6 @@ class Container:
         cls._fulltext_service_production = None
         cls._storage = None
         cls._manual_upload_app_service = None
+        cls._manual_study_service = None
+        cls._manual_edit_service = None
+        cls._consolidation_service = None

@@ -179,7 +179,9 @@ def step_solicito_obtener(context):
     """
     # WISHFUL THINKING: Servicio de aplicación
     service = build_fulltext_service_with_mocks()
-    context.result_study = service.obtain_fulltext(context.study)
+    # Usar el helper privado para testing con objetos en memoria
+    service._obtain_fulltext_in_place(context.study)
+    context.result_study = context.study
 
 
 @when('el sistema intenta obtener el texto completo')

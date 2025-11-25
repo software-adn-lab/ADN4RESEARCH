@@ -7,11 +7,15 @@ Orquesta la estrategia de tres niveles para obtener textos completos:
 3. Marcado como no disponible (requiere carga manual)
 """
 
-from typing import Protocol, Optional
+import logging
+from typing import Protocol, Optional, List, Dict, Any
 
 from apps.acquisition.shared.domain.entities.study import Study
+from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
 from apps.acquisition.downloads.domain.value_objects.download_status import DownloadStatus
 from apps.acquisition.downloads.domain.value_objects.pdf_source import PdfSource
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -110,6 +114,7 @@ class FullTextService:
         downloader: IDownloader,
         alternative_finder: IAlternativeSourceFinder,
         file_validator: IFileValidator,
+        repository: Optional[IStudyRepository] = None,
     ):
         """
         Inicializar el servicio con sus dependencias.
@@ -119,15 +124,179 @@ class FullTextService:
             downloader: Downloader para descargar PDFs
             alternative_finder: Finder para buscar en fuentes alternativas
             file_validator: Validador de archivos PDF
+            repository: Repositorio de estudios (opcional, para métodos con persistencia)
         """
         self.oa_checker = oa_checker
         self.downloader = downloader
         self.alternative_finder = alternative_finder
         self.file_validator = file_validator
+        self.repository = repository
 
-    def obtain_fulltext(self, study: Study) -> Study:
+    def download_fulltext(self, study_id: str) -> Study:
         """
-        Obtener el texto completo de un estudio.
+        Descargar texto completo de un estudio (CON PERSISTENCIA).
+
+        Args:
+            study_id: ID del estudio
+
+        Returns:
+            Study con pdf_path y download_status actualizados y persistido
+
+        Raises:
+            ValueError: Si el estudio no existe
+
+        Ejemplo:
+            >>> service = Container.get_fulltext_service_production()
+            >>> study = service.download_fulltext("uuid-1")
+            >>> study.download_status
+            'texto_completo_disponible'
+        """
+        # 1. Recuperar estudio
+        study = self._get_study_or_raise(study_id)
+
+        # 2. Intentar descarga (lógica pura)
+        logger.info(f"Intentando descarga automática para estudio {study_id}...")
+        self._obtain_fulltext_in_place(study)
+
+        # 3. Persistir cambios
+        saved_study = self.repository.save(study)
+
+        logger.info(
+            f"Descarga completada para {study_id}: "
+            f"status={saved_study.download_status}, "
+            f"source={saved_study.pdf_source}"
+        )
+
+        return saved_study
+
+    def download_batch(self, study_ids: List[str]) -> Dict[str, Any]:
+        """
+        Descargar textos completos de múltiples estudios (CON PERSISTENCIA).
+
+        Args:
+            study_ids: Lista de IDs de estudios
+
+        Returns:
+            Dict con estadísticas del proceso:
+            {
+                "total": int,
+                "downloaded": int,
+                "already_available": int,
+                "not_available": int,
+                "errors": int
+            }
+
+        Ejemplo:
+            >>> service = Container.get_fulltext_service_production()
+            >>> result = service.download_batch(["uuid-1", "uuid-2"])
+            >>> result["downloaded"]
+            2
+        """
+        if not study_ids:
+            logger.warning("download_batch llamado con lista vacía")
+            return self._create_empty_stats()
+
+        stats = {
+            "total": len(study_ids),
+            "downloaded": 0,
+            "already_available": 0,
+            "not_available": 0,
+            "errors": 0,
+        }
+
+        studies_to_save = []
+
+        for study_id in study_ids:
+            try:
+                # 1. Recuperar estudio
+                study = self.repository.find_by_id(study_id)
+                if study is None:
+                    logger.warning(f"Estudio no encontrado: {study_id}")
+                    stats["errors"] += 1
+                    continue
+
+                # 2. Verificar si ya tiene PDF
+                if study.pdf_path:
+                    logger.info(f"Estudio {study_id} ya tiene PDF: {study.pdf_path}")
+                    stats["already_available"] += 1
+                    continue
+
+                # 3. Intentar descarga (lógica pura)
+                self._obtain_fulltext_in_place(study)
+
+                # 4. Acumular para batch save
+                studies_to_save.append(study)
+
+                # 5. Actualizar estadísticas
+                if study.pdf_path:
+                    stats["downloaded"] += 1
+                else:
+                    stats["not_available"] += 1
+
+            except Exception as e:
+                logger.error(f"Error descargando estudio {study_id}: {e}", exc_info=True)
+                stats["errors"] += 1
+
+        # 6. Persistir todos los cambios en batch
+        if studies_to_save:
+            logger.info(f"Persistiendo {len(studies_to_save)} estudios actualizados...")
+            self.repository.save_batch(studies_to_save)
+
+        logger.info(
+            f"Descarga batch completada: {stats['downloaded']} descargados, "
+            f"{stats['already_available']} ya disponibles, "
+            f"{stats['not_available']} no disponibles, "
+            f"{stats['errors']} errores"
+        )
+
+        return stats
+
+    def get_download_status(self, study_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Obtener estado de descarga de múltiples estudios.
+
+        Args:
+            study_ids: Lista de IDs de estudios
+
+        Returns:
+            Lista de dicts con info de descarga por estudio
+
+        Ejemplo:
+            >>> service = Container.get_fulltext_service_production()
+            >>> statuses = service.get_download_status(["uuid-1", "uuid-2"])
+            >>> statuses[0]["download_status"]
+            'texto_completo_disponible'
+        """
+        results = []
+        for study_id in study_ids:
+            study = self.repository.find_by_id(study_id)
+            if study:
+                results.append({
+                    "study_id": study.id,
+                    "title": study.title,
+                    "download_status": study.download_status,
+                    "pdf_path": study.pdf_path,
+                    "pdf_source": study.pdf_source,
+                })
+            else:
+                logger.warning(f"Estudio no encontrado: {study_id}")
+
+        return results
+
+    # ==========================================================================
+    # HELPERS PRIVADOS (lógica pura en memoria)
+    # ==========================================================================
+
+    def _get_study_or_raise(self, study_id: str) -> Study:
+        """Recupera estudio o lanza excepción."""
+        study = self.repository.find_by_id(study_id)
+        if study is None:
+            raise ValueError(f"Estudio no encontrado: {study_id}")
+        return study
+
+    def _obtain_fulltext_in_place(self, study: Study) -> None:
+        """
+        Obtener el texto completo de un estudio (en memoria, sin persistir).
 
         Implementa la estrategia de tres niveles:
         1. Verificar si es OA y descargar desde fuente legítima
@@ -232,4 +401,12 @@ class FullTextService:
             # Fallo: no se pudo obtener el PDF o no era válido
             study.download_status = DownloadStatus.NO_DISPONIBLE.value
 
-        return study
+    def _create_empty_stats(self) -> Dict[str, Any]:
+        """Crear estadísticas vacías."""
+        return {
+            "total": 0,
+            "downloaded": 0,
+            "already_available": 0,
+            "not_available": 0,
+            "errors": 0,
+        }
