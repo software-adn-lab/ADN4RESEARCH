@@ -45,16 +45,19 @@ print()
 # Verificar configuración
 print("Verificando credenciales...")
 SCOPUS_API_KEY = os.getenv("SCOPUS_API_KEY")
+SCOPUS_COOKIES = os.getenv("SCOPUS_COOKIES")
 EPN_USER = os.getenv("EPN_USER")
 EPN_PASS = os.getenv("EPN_PASS")
 # IEEE puede usar las mismas credenciales EPN que Scopus
 IEEE_USERNAME = os.getenv("IEEE_USERNAME") or EPN_USER
 IEEE_PASSWORD = os.getenv("IEEE_PASSWORD") or EPN_PASS
 
-scopus_available = SCOPUS_API_KEY or (EPN_USER and EPN_PASS)
+scopus_available = SCOPUS_API_KEY or (EPN_USER and EPN_PASS) or SCOPUS_COOKIES
 ieee_available = IEEE_USERNAME and IEEE_PASSWORD
 
 print(f"  Scopus: {'✓ Configurado' if scopus_available else '✗ No configurado'}")
+if SCOPUS_COOKIES:
+    print(f"    → Con cookies preloaded (bypass reCAPTCHA)")
 print(f"  IEEE: {'✓ Configurado' if ieee_available else '✗ No configurado'}")
 print()
 
@@ -70,7 +73,8 @@ if scopus_available:
     connectors["Scopus"] = CompositeScopusConnector(
         api_key=SCOPUS_API_KEY,
         username=EPN_USER,
-        password=EPN_PASS
+        password=EPN_PASS,
+        preloaded_cookies=SCOPUS_COOKIES
     )
 
 if ieee_available:
@@ -103,7 +107,7 @@ translation_statuses = {}
 if "Scopus" in connectors:
     translation_statuses["Scopus"] = {
         "status": "ready",
-        "query": '(TITLE-ABS-KEY("machine learning") OR TITLE-ABS-KEY("deep learning")) AND PUBYEAR > 2020'
+        "query": 'TITLE-ABS-KEY("machine learning")'
     }
 
 if "IEEE Xplore" in connectors:

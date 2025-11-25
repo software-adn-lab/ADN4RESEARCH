@@ -48,22 +48,25 @@ class CompositeScopusConnector(IAcademicConnector):
         api_key: Optional[str] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        headless: bool = True,
-        rate_limit: float = 1.0
+        headless: bool = False,
+        rate_limit: float = 1.0,
+        preloaded_cookies: Optional[str] = None
     ):
         """
         Args:
             api_key: API key de Elsevier (para API oficial)
             username: Usuario EPN (para fallback Playwright)
             password: Contraseña EPN (para fallback Playwright)
-            headless: Navegador sin interfaz (para Playwright)
+            headless: Navegador sin interfaz. Default False (evita detección de bot)
             rate_limit: Segundos entre peticiones
+            preloaded_cookies: Cookies JSON exportadas (opcional, para bypass reCAPTCHA)
         """
         self.api_key = api_key
         self.username = username
         self.password = password
         self.headless = headless
         self.rate_limit = rate_limit
+        self.preloaded_cookies = preloaded_cookies
 
         # Conectores individuales
         self.api_connector = None
@@ -82,16 +85,20 @@ class CompositeScopusConnector(IAcademicConnector):
         else:
             logger.warning("⚠️ Sin API key de Scopus. Solo fallback Playwright disponible.")
 
-        # Inicializar Playwright connector si hay credenciales
-        if username and password:
+        # Inicializar Playwright connector si hay credenciales O cookies preloaded
+        if (username and password) or preloaded_cookies:
             self.playwright_connector = ScopusPlaywrightConnector(
-                username=username,
-                password=password,
-                headless=headless
+                username=username or "",
+                password=password or "",
+                headless=headless,
+                preloaded_cookies=preloaded_cookies
             )
-            logger.info("✅ Scopus Playwright (fallback) habilitado")
+            if preloaded_cookies:
+                logger.info("✅ Scopus Playwright (fallback) habilitado con cookies preloaded (bypass reCAPTCHA)")
+            else:
+                logger.info("✅ Scopus Playwright (fallback) habilitado")
         else:
-            logger.warning("⚠️ Sin credenciales EPN. Fallback Playwright no disponible.")
+            logger.warning("⚠️ Sin credenciales EPN ni cookies preloaded. Fallback Playwright no disponible.")
 
         # Circuit Breaker para la API (proteger cuota)
         self.api_circuit_breaker = CircuitBreaker(

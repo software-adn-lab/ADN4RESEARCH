@@ -8,6 +8,11 @@ APIs USADAS:
 - POST /api/documents/search/facets -> Resultados (title, doi, authors, year, eid)
 - POST /gateway/documents/abstracts/retrieve -> Abstracts
 
+ANTI-DETECCIÓN:
+- Stealth mode para evadir detección de automatización
+- Headers realistas y configuración de navegador completa
+- Delays humanos entre acciones
+
 NOTA: Las APIs de Scopus solo funcionan dentro del contexto de Playwright,
 no se pueden llamar con requests directamente (dan 403 Forbidden).
 """
@@ -15,10 +20,11 @@ import logging
 import time
 import json
 import re
+import random
 from typing import Dict, List, Any, Generator, Tuple
 from urllib.parse import urlparse
 from urllib.parse import urlencode
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import sync_playwright, Page, BrowserContext
 
 logger = logging.getLogger(__name__)
 
@@ -46,17 +52,21 @@ class ScopusPlaywrightConnector:
         self,
         username: str,
         password: str,
-        headless: bool = True
+        headless: bool = False,
+        preloaded_cookies: str = None
     ):
         """
         Args:
             username: Usuario EPN
             password: Contraseña EPN
-            headless: Navegador sin interfaz
+            headless: Navegador sin interfaz. Default False para evitar detección de bot.
+                     Si reCAPTCHA aparece, el usuario puede resolverlo manualmente.
+            preloaded_cookies: Cookies JSON exportadas (opcional, para bypass total)
         """
         self.username = username
         self.password = password
         self.headless = headless
+        self.preloaded_cookies = preloaded_cookies
 
     def search(
         self,
@@ -76,20 +86,42 @@ class ScopusPlaywrightConnector:
         logger.info(f"[Playwright] Buscando en Scopus: '{query}' (max: {max_results})")
 
         with sync_playwright() as p:
+            # Configuración anti-detección mejorada
             browser = p.chromium.launch(
                 headless=self.headless,
-                args=['--disable-blink-features=AutomationControlled']
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-web-security',
+                    '--disable-features=IsolateOrigins,site-per-process',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
             )
 
-            context = browser.new_context(
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                viewport={'width': 1920, 'height': 1080}
-            )
+            # Context con configuración realista
+            context = self._create_stealth_context(browser)
+
+            # Si hay cookies preloaded, cargarlas antes de abrir página
+            if self.preloaded_cookies:
+                try:
+                    cookies = json.loads(self.preloaded_cookies)
+                    context.add_cookies(cookies)
+                    logger.info("✓ Cookies preloaded cargadas")
+                except Exception as e:
+                    logger.warning(f"No se pudieron cargar cookies preloaded: {e}")
 
             page = context.new_page()
 
+            # Aplicar stealth scripts para ocultar automatización
+            self._apply_stealth_scripts(page)
+
             try:
-                # Autenticar
+                # Autenticar (o validar cookies preloaded)
                 self._authenticate(page)
 
                 # Buscar usando API interna
@@ -105,68 +137,130 @@ class ScopusPlaywrightConnector:
 
     def _authenticate(self, page: Page) -> None:
         """
-        Autentica en Scopus vía EZproxy.
+        Autentica en Scopus vía EZproxy con comportamiento humano.
 
         Args:
             page: Página de Playwright
         """
-        page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="load", timeout=60000)
-        time.sleep(2)
+        logger.info("Navegando a EZProxy...")
+        page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="domcontentloaded", timeout=60000)
+        self._human_delay(1.0, 2.0)
 
         current_url = page.url
 
         # Si ya estamos en Scopus, no necesitamos autenticar
-        if "scopus.com" in current_url:
-            logger.info("✓ Ya autenticado (acceso directo)")
+        if "scopus.com" in current_url or ("bvirtual.epn.edu.ec" in current_url and "/login" not in current_url):
+            logger.info("✓ Ya autenticado (cookies o acceso directo)")
+            # Asegurar que la cookie scopus-proxy esté configurada
+            parsed = urlparse(current_url)
+            if parsed.hostname and parsed.hostname.endswith("bvirtual.epn.edu.ec"):
+                base = f"{parsed.scheme}://{parsed.netloc}"
+                self._set_scopus_proxy_cookie(page, base)
             return
 
         # Buscar formulario de login
-        logger.info("Llenando formulario de login...")
+        logger.info("Detectado formulario de login...")
 
         username_selectors = [
             'input[name="user"]',
             'input[name="username"]',
             'input[type="email"]',
-            'input[id="username"]'
+            'input[id="username"]',
+            'input[placeholder*="usuario" i]',
+            'input[placeholder*="email" i]'
         ]
 
         username_field = None
         for selector in username_selectors:
             try:
-                username_field = page.query_selector(selector)
+                username_field = page.wait_for_selector(selector, timeout=3000, state="visible")
                 if username_field:
+                    logger.debug(f"Campo de usuario encontrado: {selector}")
                     break
             except:
                 continue
 
         if not username_field:
-            raise Exception("No se encontró campo de usuario")
+            # Guardar screenshot para debug
+            page.screenshot(path="debug_login_page.png")
+            logger.error("Screenshot guardado en debug_login_page.png")
+            raise Exception("No se encontró campo de usuario. Verifica debug_login_page.png")
 
-        # Llenar credenciales
-        username_field.fill(self.username)
-        time.sleep(0.5)
+        # Simular comportamiento humano: click en el campo primero
+        username_field.click()
+        self._human_delay(0.3, 0.6)
+
+        # Llenar credenciales con typing gradual
+        username_field.type(self.username, delay=random.randint(50, 150))
+        self._human_delay(0.5, 1.0)
 
         password_field = page.query_selector('input[type="password"]')
         if not password_field:
-            raise Exception("No se encontró campo de contraseña")
+            page.screenshot(path="debug_login_page.png")
+            logger.error("Screenshot guardado en debug_login_page.png")
+            raise Exception("No se encontró campo de contraseña. Verifica debug_login_page.png")
 
-        password_field.fill(self.password)
-        time.sleep(0.5)
+        password_field.click()
+        self._human_delay(0.3, 0.6)
+        password_field.type(self.password, delay=random.randint(50, 150))
+        self._human_delay(0.8, 1.5)
+
+        # Esperar reCAPTCHA si existe (máximo 5 segundos)
+        try:
+            logger.info("Verificando si hay reCAPTCHA...")
+            page.wait_for_selector('iframe[src*="recaptcha"]', timeout=5000)
+            logger.warning("⚠️ reCAPTCHA detectado. Esperando resolución manual...")
+            logger.warning("   Si estás en headless=True, cambia a headless=False")
+            logger.warning("   El navegador se pausará por 30 segundos para resolución manual")
+
+            # En modo no-headless, el usuario puede resolver manualmente
+            if not self.headless:
+                time.sleep(30)  # Dar tiempo para resolución manual
+            else:
+                # En headless, intentar continuar de todos modos
+                logger.warning("   Modo headless detectado, intentando continuar...")
+                time.sleep(5)
+        except:
+            logger.debug("No se detectó reCAPTCHA visible")
 
         # Submit
+        logger.info("Enviando credenciales...")
         password_field.press('Enter')
 
-        # Esperar redirección
-        logger.info("Esperando autenticación...")
-        page.wait_for_load_state("networkidle", timeout=60000)
+        # Esperar redirección con timeout largo (puede tomar tiempo con reCAPTCHA)
+        logger.info("Esperando redirección...")
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=90000)
+            self._human_delay(2.0, 3.0)
+        except Exception as e:
+            logger.warning(f"Timeout esperando redirección: {e}")
+
         current_url = page.url
 
-        if "login" in current_url:
+        # Verificar si seguimos en login
+        if "login" in current_url.lower():
+            page.screenshot(path="debug_login_failed.png")
+            logger.error("Screenshot del error guardado en debug_login_failed.png")
+
+            # Verificar si hay mensaje de error
+            error_msg = "desconocido"
+            try:
+                error_elem = page.query_selector('.error, .alert, [class*="error" i], [class*="alert" i]')
+                if error_elem:
+                    error_msg = error_elem.inner_text()
+            except:
+                pass
+
             raise Exception(
-                "Autenticación Scopus fallida o bloqueada por reCAPTCHA (sigues en la página de login)"
+                f"Autenticación fallida. Posibles causas:\n"
+                f"  1. Credenciales incorrectas\n"
+                f"  2. reCAPTCHA bloqueando (usa headless=False)\n"
+                f"  3. Error de servidor EZProxy\n"
+                f"  Mensaje de error: {error_msg}\n"
+                f"  Verifica debug_login_failed.png"
             )
 
-        # Refrescar cookies clave que activa la API JSON (scopus-proxy)
+        # Configurar cookie scopus-proxy
         parsed = urlparse(current_url)
         if parsed.hostname and parsed.hostname.endswith("bvirtual.epn.edu.ec"):
             base = f"{parsed.scheme}://{parsed.netloc}"
@@ -271,7 +365,8 @@ class ScopusPlaywrightConnector:
                 data=json.dumps(search_payload),
                 headers={
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
+                    "X-Source": "scopus-frontend"  # Header visto en tráfico real
                 }
             )
 
@@ -491,6 +586,113 @@ class ScopusPlaywrightConnector:
             'is_open_access': is_open_access,
             'pdf_url': pdf_url
         }
+
+    def _create_stealth_context(self, browser) -> BrowserContext:
+        """
+        Crea un contexto de navegador con configuración anti-detección.
+
+        Args:
+            browser: Instancia de navegador Playwright
+
+        Returns:
+            BrowserContext configurado con propiedades realistas
+        """
+        # User agents realistas (Windows 10 + Chrome reciente)
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+        ]
+
+        context = browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            user_agent=random.choice(user_agents),
+            locale='es-EC',
+            timezone_id='America/Guayaquil',
+            permissions=['geolocation'],
+            geolocation={'latitude': -0.1807, 'longitude': -78.4678},  # Quito, Ecuador
+            color_scheme='light',
+            extra_http_headers={
+                'Accept-Language': 'es-EC,es;q=0.9,en;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0'
+            }
+        )
+
+        return context
+
+    def _apply_stealth_scripts(self, page: Page) -> None:
+        """
+        Inyecta scripts JavaScript para ocultar propiedades de automatización.
+
+        Args:
+            page: Página de Playwright
+        """
+        # Script para sobrescribir navigator.webdriver
+        stealth_js = """
+        () => {
+            // Ocultar webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+
+            // Sobrescribir plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+
+            // Sobrescribir languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['es-EC', 'es', 'en-US', 'en']
+            });
+
+            // Chrome runtime
+            window.chrome = {
+                runtime: {}
+            };
+
+            // Permissions
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+
+            // Agregar propiedades de navegador real
+            Object.defineProperty(navigator, 'platform', {
+                get: () => 'Win32'
+            });
+
+            Object.defineProperty(navigator, 'vendor', {
+                get: () => 'Google Inc.'
+            });
+        }
+        """
+
+        try:
+            page.add_init_script(stealth_js)
+            logger.debug("✓ Scripts anti-detección aplicados")
+        except Exception as e:
+            logger.warning(f"No se pudieron aplicar scripts stealth: {e}")
+
+    def _human_delay(self, min_seconds: float = 0.5, max_seconds: float = 1.5) -> None:
+        """
+        Delay aleatorio para simular comportamiento humano.
+
+        Args:
+            min_seconds: Mínimo de segundos a esperar
+            max_seconds: Máximo de segundos a esperar
+        """
+        delay = random.uniform(min_seconds, max_seconds)
+        time.sleep(delay)
 
     def close(self):
         """Cierra recursos."""

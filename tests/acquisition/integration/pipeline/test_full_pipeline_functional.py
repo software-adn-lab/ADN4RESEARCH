@@ -63,6 +63,7 @@ print()
 # Verificar configuración
 print("Verificando configuración...")
 SCOPUS_API_KEY = os.getenv("SCOPUS_API_KEY")
+SCOPUS_COOKIES = os.getenv("SCOPUS_COOKIES")
 EPN_USER = os.getenv("EPN_USER")
 EPN_PASS = os.getenv("EPN_PASS")
 # IEEE puede usar las mismas credenciales EPN
@@ -71,10 +72,12 @@ IEEE_PASSWORD = os.getenv("IEEE_PASSWORD") or EPN_PASS
 UNPAYWALL_EMAIL = os.getenv("UNPAYWALL_EMAIL") or EPN_USER or IEEE_USERNAME
 ENABLE_SCIHUB = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
 
-scopus_available = SCOPUS_API_KEY or (EPN_USER and EPN_PASS)
+scopus_available = SCOPUS_API_KEY or (EPN_USER and EPN_PASS) or SCOPUS_COOKIES
 ieee_available = IEEE_USERNAME and IEEE_PASSWORD
 
 print(f"  Scopus: {'✓' if scopus_available else '✗'}")
+if SCOPUS_COOKIES:
+    print(f"    → Con cookies preloaded (bypass reCAPTCHA)")
 print(f"  IEEE: {'✓' if ieee_available else '✗'}")
 print(f"  Unpaywall: {'✓' if UNPAYWALL_EMAIL else '✗'}")
 print(f"  Sci-Hub: {'✓ Habilitado' if ENABLE_SCIHUB else '✗ Deshabilitado'}")
@@ -154,7 +157,8 @@ if scopus_available:
     connectors["Scopus"] = CompositeScopusConnector(
         api_key=SCOPUS_API_KEY,
         username=EPN_USER,
-        password=EPN_PASS
+        password=EPN_PASS,
+        preloaded_cookies=SCOPUS_COOKIES
     )
 if ieee_available:
     connectors["IEEE Xplore"] = IeeeConnector(
