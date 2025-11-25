@@ -60,6 +60,9 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
         project_id=context.project.id,
         status=status_suggested
     )
+    suggested_questions_project = research_question_service.get_suggested_research_questions_by_project(
+        project_id=context.project.id
+    )
     assert len(research_questions_project) > 0
 
 @step('selecciono una pregunta que no haya sido sugerida por mí')

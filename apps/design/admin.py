@@ -7,7 +7,6 @@ from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
 # Register your models here.
 admin.site.register(ResearchQuestion)
-
 admin.site.register(EligibilityCriterion)
 admin.site.register(Keyword)
 admin.site.register(ExclusionTerm)

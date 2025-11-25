@@ -1,20 +1,25 @@
 from django import forms
-import json
+import re
 
 class ResearchQuestionAutosaveForm(forms.Form):
-    # Campos requeridos o opcionales según tu modelo
     question = forms.CharField(required=False, max_length=500) 
     motivation = forms.CharField(required=False, widget=forms.Textarea)
-    # Recibimos el JSON string del frontend y lo convertimos a Dict
-    framework_fields = forms.JSONField(required=False, initial=dict)
+    framework_fields = forms.JSONField(required=False) 
     
-    # IDs necesarios para el ruteo, pero no se guardan en el modelo Question directamente
     project_id = forms.IntegerField(required=True)
-    question_id = forms.IntegerField(required=False) # Puede ser nulo si es nuevo
+    question_id = forms.IntegerField(required=False)
 
-    def clean_framework_fields(self):
-        data = self.cleaned_data.get('framework_fields')
-        # Si viene como string vacío o None, devolvemos dict vacío
-        if not data:
-            return {}
-        return data
+    def clean(self):
+        cleaned_data = super().clean()
+        framework_data = {}
+        pattern = re.compile(r'^framework_fields\[(.*?)\]$')
+        
+        for key, value in self.data.items():
+            match = pattern.match(key)
+            if match:
+                field_name = match.group(1)
+                framework_data[field_name] = value 
+
+        cleaned_data['framework_fields'] = framework_data
+        
+        return cleaned_data

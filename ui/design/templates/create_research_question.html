@@ -6,7 +6,7 @@
     action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
     class="form p-6 space-y-6">
     {% csrf_token %}
-    <input type="hidden" id="research-question-id" name="id" value="{{ question.id|default:'' }}">
+    <input type="hidden" id="research-question-id" name="question_id" value="{{ question.id|default:'' }}">
     <input type="hidden" id="project-id" name="project_id" value="{{ project.id }}">
     
     {% if project.research_framework %}
@@ -30,7 +30,7 @@
             </fieldset>
             {% endfor %}
             <div>
-                <label for="question" class="block mb-2 text-sm font-medium text-gray-900">Suggested Question</label>
+                <label for="question" class="block mb-2 text-sm font-medium text-gray-900">Question</label>
                 <textarea id="question" name="question" rows="4" 
                           class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
                           placeholder="Write your question here...">{{ question.question|default:'' }}</textarea>

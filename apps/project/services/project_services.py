@@ -30,6 +30,10 @@ class ProjectService:
     def get_members(self, project: Project):
         return project.get_members()
 
+    def get_questions_for_project(self, project_id: int):
+        project = Project.objects.get(id=project_id)
+        return project.research_questions.all().order_by('-created_at')
+    
     def get_project_framework(self, request):
         # Implementation to get the research framework associated with the project
         user = request.user

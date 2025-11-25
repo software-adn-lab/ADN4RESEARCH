@@ -66,10 +66,16 @@ class ResearchQuestionService:
             project__id=project_id
         ).order_by('-modified_at')
 
-    def get_research_questions_by_status(self, project_id, status):
+    def get_research_questions_by_project_and_status(self, project_id, status):
         return ResearchQuestion.objects.filter(
             project_id=project_id,
             status=status
+        ).order_by('-modified_at')
+        
+    def get_discussion_research_questions_by_project(self, project_id: int):
+        return ResearchQuestion.objects.filter(
+            project_id=project_id,
+            status__in=ResearchQuestion.DISCUSSION_PHASE_STATUSES
         ).order_by('-modified_at')
 
     # Logica de negocio

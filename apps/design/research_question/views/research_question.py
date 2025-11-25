@@ -56,7 +56,6 @@ def send_research_question_for_review(request, question_id):
     project_id = question.project.id
     try:
         research_question_service.submit_research_question_for_review(question_id)
-        messages.success(request, "La pregunta ha sido enviada para revisión.")
     except QuestionSubmissionError as e:
         messages.warning(request, str(e))
     
@@ -93,9 +92,6 @@ def delete_research_question(request, question_id):
 
 @require_POST
 def autosave_research_question(request):
-    """
-    Vista encargada de limpiar los datos mediante Form y orquestar el autosave.
-    """
     form = ResearchQuestionAutosaveForm(request.POST)
     if form.is_valid():
         try:
@@ -120,3 +116,18 @@ def autosave_research_question(request):
             return JsonResponse({'error': f'Internal Error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'errors': form.errors}, status=400)
+
+def get_research_questions_by_status(request, project_id, status):
+    questions = research_question_service.get_research_questions_by_project_and_status(project_id=project_id, status=status)
+    questions_data = [
+        {
+            'id': q.id,
+            'question': q.question,
+            'motivation': q.motivation,
+            'status': q.status,
+            'created_at': q.created_at,
+            'modified_at': q.modified_at,
+        }
+        for q in questions
+    ]
+    return JsonResponse({'questions': questions_data}, status=200)

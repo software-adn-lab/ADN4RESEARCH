@@ -8,6 +8,12 @@ class ResearchQuestion(models.Model):
         SUGGESTED = 'SUGGESTED', 'Suggested'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
+    
+    DISCUSSION_PHASE_STATUSES = [
+        Status.SUGGESTED,
+        Status.APPROVED,
+        Status.REJECTED,
+    ]
     project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='research_questions', default=None, null=True, blank=True)
     research_framework = models.ForeignKey('project.ResearchFramework', on_delete=models.CASCADE, related_name='research_questions')
     # Si estoy mandando solo el id. Asi si se define una relacion uno a muchos (El modelo de "muchos" se coloca como campo en el modelo "uno")
@@ -53,7 +59,7 @@ class ResearchQuestion(models.Model):
         return self.Status.DRAFT
 
     def save(self, *args, **kwargs):
-        if self.status != self.Status.SUGGESTED and self.status != self.Status.APPROVED and self.status != self.Status.REJECTED and self.status: 
+        if self.status not in self.DISCUSSION_PHASE_STATUSES: 
             self.status = self.calculate_status()
         super().save(*args, **kwargs)
         

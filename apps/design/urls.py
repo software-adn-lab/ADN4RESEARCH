@@ -3,17 +3,25 @@ from django.urls import path
 from apps.design.eligibility_criteria.views import eligibility_criterion
 from apps.design.research_question.views import research_question
 from apps.design.search_strategy.views import project_keyword, search_strategy
+from apps.design.research_question.views import question_discussion
 
 app_name = 'design'
 
 urlpatterns = [
     path('', research_question.hello),
+    # Lo que se relaciona con Research Questions
     path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='questions_history'),
     path('create-research-question/<int:project_id>', research_question.create_research_question, name='create_research_question'),
     path('autosave-question/', research_question.autosave_research_question, name='autosave_research_question'),
     path('edit-research-question/<int:question_id>/', research_question.edit_research_question, name='edit_research_question'),
     path('delete-research-question/<int:question_id>/', research_question.delete_research_question, name='delete_research_question'),
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
+    path('get-strategy/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
+    
+    path('discussion/<int:project_id>/', question_discussion.question_discussion_panel_view, name='question_discussion_panel'),
+    path('discussion/review/', question_discussion.review_research_question_action, name='review_research_question_action'),
+    path('discussion/consolidate/<int:project_id>/', question_discussion.consolidate_discussion_stage_action, name='consolidate_discussion_stage'),
+    
     path('eligibility-criteria-panel/<int:project_id>/', eligibility_criterion.open_eligibility_criteria_panel, name='eligibility_criteria_panel'),
     path('create-criterion/<int:project_id>/', eligibility_criterion.create_eligibility_criterion, name='create_criterion'),
     path('update-criterion/<int:criterion_id>/', eligibility_criterion.update_eligibility_criterion, name='update_criterion'),
@@ -24,7 +32,5 @@ urlpatterns = [
     path('project-keyword/create/<int:project_id>/', project_keyword.create_project_keyword, name='create_project_keyword'),
     path('project-keyword/update/<int:keyword_id>/', project_keyword.update_project_keyword, name='update_project_keyword'),
     path('project-keyword/delete/<int:keyword_id>/', project_keyword.delete_project_keyword, name='delete_project_keyword'),
-    path('get-strategy/project/<int:project_id>/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
-
-
+    
 ]

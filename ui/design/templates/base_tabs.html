@@ -11,6 +11,15 @@
     {% endblock questions_history_content %}
   </div>
 
+  <a href="{% url 'design:question_discussion_panel' project.id %}"
+    class="tab {% if active_tab == 'question_discussion_panel' %}tab-active{% endif %}">
+    Research Question Discussion Panel
+  </a>
+  <div class="tab-content bg-base-100 border-base-300 p-6">
+    {% block discusion_panel_content %}
+    {% endblock discusion_panel_content %}
+  </div>
+
   <a href="{% url 'design:eligibility_criteria_panel' project.id %}"
     class="tab {% if active_tab == 'eligibility_criteria_panel' %}tab-active{% endif %}">
     Eligibility Criteria Panel

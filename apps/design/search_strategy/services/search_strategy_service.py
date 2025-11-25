@@ -16,7 +16,6 @@ class SearchStrategyService:
             return strategy
         or_groups = []
         for kw in keywords:
-            # Acceder a los datos a través del objeto project_keyword relacionado
             pk = kw.project_keyword
             terms = [f'"{pk.term}"']
             if pk.synonyms and pk.synonyms.strip():
@@ -110,6 +109,6 @@ class SearchStrategyService:
             version_number=new_version_number,
             final_search_string=strategy.final_search_string,
             metadata_snapshot=snapshot_data,
-            created_by=user_id
+            created_by_id=user_id
         )
         return new_version_number
