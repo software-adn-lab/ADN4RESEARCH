@@ -12,15 +12,23 @@ from typing import Literal
 # FUENTES ACADÉMICAS SOPORTADAS
 # ============================================================================
 
-# Lista canónica de fuentes soportadas
-# ÚNICA FUENTE DE VERDAD para literales de fuentes
-SUPPORTED_SOURCES: list[str] = [
+# Fuentes para DISCOVERY automático (tienen conector de búsqueda)
+DISCOVERY_SOURCES: list[str] = [
     "Scopus",
     "IEEE Xplore"
 ]
 
+# Lista canónica de fuentes soportadas para ESTUDIOS
+# Incluye fuentes de discovery + fuentes de enriquecimiento + manual
+SUPPORTED_SOURCES: list[str] = [
+    "Scopus",
+    "IEEE Xplore",
+    "Crossref",      # Para enriquecimiento y estudios importados
+    "Manual"         # Para estudios agregados manualmente por el usuario
+]
+
 # Type hint para validación estática
-SupportedSource = Literal["Scopus", "IEEE Xplore"]
+SupportedSource = Literal["Scopus", "IEEE Xplore", "Crossref", "Manual"]
 
 
 # ============================================================================

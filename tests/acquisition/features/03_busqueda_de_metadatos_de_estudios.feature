@@ -1,27 +1,24 @@
 # language: es
-@modulo:busqueda @componente:metadatos @mvp
-Característica: Enriquecimiento de estudios con metadatos completos para análisis detallado
-  Como investigador 
-  Quiero obtener información detallada de cada estudio encontrado en el descubrimiento
-  Para poder evaluar su relevancia y aplicar criterios de inclusión/exclusión informados
+@modulo:busqueda @componente:consolidacion @mvp
+Característica: Consolidación y completado de metadatos de estudios
+  Como investigador
+  Quiero que los estudios descubiertos tengan metadatos completos y normalizados
+  Para poder aplicar criterios de inclusión/exclusión con información confiable
 
   Antecedentes:
-    Dado que existe un resultado de descubrimiento previo con un listado de estudios
-    Y cada estudio del listado incluye al menos: título, enlace y fuente de origen
+    Dado que existe un resultado de descubrimiento con estudios de múltiples fuentes
 
-  @metadatos @automatico
-  Escenario: Enriquecimiento automático de metadatos desde las fuentes académicas
-    Cuando solicito obtener los metadatos completos de los estudios
-    Entonces el sistema consulta automáticamente las fuentes académicas para cada estudio
-    Y genera un registro canónico con la información obtenida
-    Y cada estudio queda marcado según la completitud de su información
-    Y se registra la fuente de origen de cada metadato obtenido
-    Y el sistema proporciona un resumen del proceso indicando cuántos estudios fueron consolidados
+  @consolidacion @automatico
+  Escenario: Consolidación automática de estudios con metadatos faltantes
+    Cuando solicito consolidar los estudios descubiertos
+    Entonces el sistema completa los metadatos faltantes consultando las fuentes académicas
+    Y normaliza los formatos de DOI, autores y fechas
+    Y cada estudio queda marcado con su estado de consolidación: completo, parcial o fallido
+    Y se proporciona un resumen del proceso de consolidación
 
-  @metadatos @manual
-  Escenario: Completar metadatos manualmente cuando la obtención automática falla
-    Dado que algunos estudios no pudieron consolidarse automáticamente
-    Cuando ingreso manualmente la información faltante de un estudio
-    Entonces el sistema actualiza el registro con los metadatos proporcionados
-    Y el estudio queda marcado como consolidado
+  @consolidacion @manual
+  Escenario: Completar metadatos manualmente cuando la consolidación automática falla
+    Dado que un estudio no pudo consolidarse completamente de forma automática
+    Cuando ingreso manualmente los metadatos faltantes del estudio
+    Entonces el sistema actualiza el registro, valida el formato y marca el estudio como consolidado
     Y se mantiene trazabilidad indicando qué campos son automáticos y cuáles manuales

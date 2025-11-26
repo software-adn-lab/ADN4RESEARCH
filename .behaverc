@@ -1,2 +1,8 @@
 [behave]
-paths = tests/design
+django = true
+paths = tests
+default_format = pretty
+show_skipped = false
+stderr_capture = false
+stdout_capture = false
+junit = false

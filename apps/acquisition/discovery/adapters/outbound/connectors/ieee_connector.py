@@ -21,7 +21,7 @@ CARACTERÍSTICAS:
 - Retry automático con backoff exponencial
 - Paginación automática
 """
-from typing import Iterable, Dict, Any
+from typing import Iterable, Dict, Any, Optional
 import logging
 import time
 import random
@@ -55,7 +55,8 @@ class IeeeConnector(IAcademicConnector):
         username: str,
         password: str,
         headless: bool = True,
-        rate_limit: float = 2.0
+        rate_limit: float = 2.0,
+        prefer_playwright: bool = True  # Por defecto usa Playwright (más confiable)
     ):
         """
         Args:
@@ -63,11 +64,14 @@ class IeeeConnector(IAcademicConnector):
             password: Contraseña institucional
             headless: Ejecutar navegador sin ventana (solo para autenticación)
             rate_limit: Segundos de espera entre búsquedas
+            prefer_playwright: Si True, usa Playwright directamente (más lento pero confiable)
+                             Si False, intenta API REST primero
         """
         self.username = username
         self.password = password
         self.headless = headless
         self.rate_limit = rate_limit
+        self.prefer_playwright = prefer_playwright
 
         # Session manager (maneja autenticación y cookies)
         self.session_manager = IeeeSessionManager(
@@ -94,19 +98,11 @@ class IeeeConnector(IAcademicConnector):
             }
         """
         try:
-            # Asegurar autenticación (usa cookies si existen, autentica si no)
-            if not self.session_manager.ensure_authenticated():
-                raise Exception("No se pudo autenticar en IEEE Xplore")
-
             logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
 
-            # Búsqueda vía /rest/search con requests (SIN browser)
-            try:
-                api_results_iter = self._search_via_api(query, max_results)
-                results = list(api_results_iter)
-            except ValueError as api_error:
-                logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
-                # Fallback más robusto usando Playwright dentro del contexto del navegador real
+            # Si prefer_playwright, ir directo sin intentar API
+            if self.prefer_playwright:
+                logger.info("Usando Playwright directamente (prefer_playwright=True)")
                 from .ieee_playwright_connector import IeeePlaywrightConnector
 
                 with IeeePlaywrightConnector(
@@ -114,11 +110,29 @@ class IeeeConnector(IAcademicConnector):
                     password=self.password,
                     headless=self.headless,
                     rate_limit=self.rate_limit
-                ) as fallback_connector:
-                    results = list(fallback_connector.search(query, max_results=max_results))
+                ) as connector:
+                    results = list(connector.search(query, max_results=max_results))
+            else:
+                # Estrategia original: API primero, Playwright como fallback
+                if not self.session_manager.ensure_authenticated():
+                    raise Exception("No se pudo autenticar en IEEE Xplore")
+
+                try:
+                    api_results_iter = self._search_via_api(query, max_results)
+                    results = list(api_results_iter)
+                except ValueError as api_error:
+                    logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
+                    from .ieee_playwright_connector import IeeePlaywrightConnector
+
+                    with IeeePlaywrightConnector(
+                        username=self.username,
+                        password=self.password,
+                        headless=self.headless,
+                        rate_limit=self.rate_limit
+                    ) as fallback_connector:
+                        results = list(fallback_connector.search(query, max_results=max_results))
 
             # Rate limiting con variación random (parecer más humano)
-            # Evita patrones perfectamente rítmicos que activan detección
             delay = self.rate_limit + random.uniform(0.5, 1.5)
             logger.debug(f"Rate limit: esperando {delay:.2f}s")
             time.sleep(delay)
@@ -283,6 +297,22 @@ class IeeeConnector(IAcademicConnector):
                 author_names.append(author)
 
         return author_names
+
+    def find_metadata(self, title: str) -> Optional[Dict[str, Any]]:
+        """
+        Busca metadatos de un estudio específico por título.
+
+        TODO: Implementar búsqueda específica en IEEE API.
+        Por ahora retorna None - usar CrossrefConnector para enrichment de IEEE.
+
+        Args:
+            title: Título del estudio
+
+        Returns:
+            None (pendiente de implementación)
+        """
+        logger.debug(f"find_metadata no implementado en IeeeConnector: {title}")
+        return None
 
     def close(self):
         """

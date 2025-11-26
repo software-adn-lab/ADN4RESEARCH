@@ -1,0 +1,55 @@
+Característica: Administrar el ciclo de vida de las preguntas de investigación # tests/design/features/research_questions_management.feature:2
+  Como investigador
+  Quiero mantener control en la evolucion de mis preguntas de investigación
+  Para asegurar una apropiada validación de mi diseño en una RSL
+  Background:
+  Given el proyecto tiene framework "PICO"
+  And la etapa "Diseño" está abierta
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.1   # tests/design/features/research_questions_management.feature:28
+    Dado que estoy asignado a un proyecto de investigación                               # tests/design/steps/research_questions_management.py:21
+    Y el proyecto tiene como framework investigativo a "PICO"                            # tests/design/steps/common_steps.py:10
+    Y la etapa de "sugerencias de pregunta de investigación" está abierta                # tests/design/steps/common_steps.py:17
+    Cuando envie una pregunta de investigación para su revision:                         # tests/design/steps/research_questions_management.py:36
+      """
+      {
+          "framework": "PICO",
+          "fields": {"Population": "Students", "Intervention": "Gamification", "Context": "Online courses", "Outcome": "Motivation"},
+          "suggested_question": "How does ...?",
+          "motivation": "To understand ..."
+      }
+      """
+    Entonces el sistema notificara la creacion al equipo investigador                    # tests/design/steps/research_questions_management.py:64
+    Y la etapa se cerrará                                                                # tests/design/steps/research_questions_management.py:76
+
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.2   # tests/design/features/research_questions_management.feature:29
+    Dado que estoy asignado a un proyecto de investigación                               # tests/design/steps/research_questions_management.py:21
+    Y el proyecto tiene como framework investigativo a "PEO"                             # tests/design/steps/common_steps.py:10
+    Y la etapa de "sugerencias de pregunta de investigación" está abierta                # tests/design/steps/common_steps.py:17
+    Cuando envie una pregunta de investigación para su revision:                         # tests/design/steps/research_questions_management.py:36
+      """
+      {
+          "framework": "PEO",
+          "fields": {"Population": "Nurses", "Exposure": "Night shifts", "Outcome": "Burnout levels"},
+          "suggested_question": "What is ...?",
+          "motivation": "To improve ..."
+      }
+      """
+    Entonces el sistema notificara la creacion al equipo investigador                    # tests/design/steps/research_questions_management.py:64
+    Y la etapa se cerrará                                                                # tests/design/steps/research_questions_management.py:76
+
+  Esquema del escenario: Enviar una pregunta de investigación para su revision -- @1.3   # tests/design/features/research_questions_management.feature:30
+    Dado que estoy asignado a un proyecto de investigación                               # tests/design/steps/research_questions_management.py:21
+    Y el proyecto tiene como framework investigativo a "PCC"                             # tests/design/steps/common_steps.py:10
+    Y la etapa de "sugerencias de pregunta de investigación" está abierta                # tests/design/steps/common_steps.py:17
+    Cuando envie una pregunta de investigación para su revision:                         # tests/design/steps/research_questions_management.py:36
+      """
+      {
+          "framework": "PCC",
+          "fields": {"Population": "Remote workers", "Concept": "Digital nomadism", "Context": "Post-pandemic"},
+          "suggested_question": "What are the ...?",
+          "motivation": "Exploring new ..."
+      }
+      """
+    Entonces el sistema notificara la creacion al equipo investigador                    # tests/design/steps/research_questions_management.py:64
+    Y la etapa se cerrará                                                                # tests/design/steps/research_questions_management.py:76
+

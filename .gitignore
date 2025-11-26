@@ -84,9 +84,13 @@ scopus_all_requests.json
 
 # Archivos HTML de debug
 scopus_*.html
+debug_*.html
 
 # Archivos temporales de Windows
 nul
+
+# Archivos de resultados de discovery service
+discovery_service_result.json
 
 # Documentación de status (mover a docs/)
 SCOPUS_IEEE_STATUS.md

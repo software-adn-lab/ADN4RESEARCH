@@ -212,21 +212,34 @@ class GeminiLLMClient(LLMClient):
         # Use the GenerativeModel API; wrap errors into RuntimeError to keep service layering simple
         try:
             model_instance = self.genai.GenerativeModel(self.model)
+            
+            # Configure safety settings to be less restrictive
+            safety_settings = {
+                self.genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                self.genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                self.genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                self.genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            }
+            
             response = model_instance.generate_content(
                 prompt,
                 generation_config=self.genai.types.GenerationConfig(
                     max_output_tokens=max_output_tokens,
+                    temperature=0.7,
                 ),
+                safety_settings=safety_settings,
             )
 
             # Check if response has valid parts before accessing text
             if not response.candidates:
+                prompt_feedback = getattr(response, "prompt_feedback", None)
                 logger.error(
                     "Gemini response has no candidates. Prompt feedback: %s",
-                    getattr(response, "prompt_feedback", None),
+                    prompt_feedback,
                 )
                 raise RuntimeError(
-                    "Gemini API returned no candidates. The prompt may have been blocked by safety filters."
+                    "Gemini API returned no candidates. The prompt may have been blocked by safety filters. "
+                    f"Feedback: {prompt_feedback}"
                 )
 
             candidate = response.candidates[0]
@@ -240,7 +253,7 @@ class GeminiLLMClient(LLMClient):
                 logger.error(
                     "Gemini response blocked. Finish reason: %s, Safety ratings: %s",
                     candidate.finish_reason,
-                    candidate.safety_ratings,
+                    candidate.safety_ratings if hasattr(candidate, 'safety_ratings') else 'N/A',
                 )
                 raise RuntimeError(
                     f"Gemini API response blocked (finish_reason={candidate.finish_reason}). "
@@ -248,12 +261,26 @@ class GeminiLLMClient(LLMClient):
                 )
 
             # Check if candidate has content parts
-            if not candidate.content or not candidate.content.parts:
+            if not candidate.content:
                 logger.error(
-                    "Gemini candidate has no content parts. Candidate: %s", candidate
+                    "Gemini candidate has no content. Candidate: %s, Finish reason: %s",
+                    candidate,
+                    candidate.finish_reason,
                 )
                 raise RuntimeError(
-                    "Gemini API returned a candidate with no content parts."
+                    "Gemini API returned a candidate with no content. "
+                    f"Finish reason: {candidate.finish_reason}"
+                )
+
+            if not candidate.content.parts:
+                logger.error(
+                    "Gemini candidate has no content parts. Content: %s, Finish reason: %s",
+                    candidate.content,
+                    candidate.finish_reason,
+                )
+                raise RuntimeError(
+                    "Gemini API returned a candidate with no content parts. "
+                    f"Finish reason: {candidate.finish_reason}"
                 )
 
             # Extract text from parts
@@ -263,7 +290,14 @@ class GeminiLLMClient(LLMClient):
                     text_parts.append(part.text)
 
             if not text_parts:
-                raise RuntimeError("Gemini API returned no text in response parts.")
+                logger.error(
+                    "Gemini candidate parts have no text. Parts: %s",
+                    candidate.content.parts,
+                )
+                raise RuntimeError(
+                    "Gemini API returned no text in response parts. "
+                    "The response may be empty or in an unexpected format."
+                )
 
             return "".join(text_parts)
 
@@ -298,7 +332,15 @@ class GeminiLLMClient(LLMClient):
             f"Códigos centrales: {', '.join(getattr(subtheme, 'central_codes', []) or [])}\n"
         )
 
-        body = self._generate(prompt, max_output_tokens=256)
+        try:
+            body = self._generate(prompt, max_output_tokens=256)
+        except Exception as e:
+            logger.warning(
+                "Failed to generate opening message with Gemini, using fallback: %s", e
+            )
+            # Fallback to default client
+            return DefaultLLMClient().generate_opening_message(subtheme)
+
         return {
             "title": "Apertura conversacional del Copilot",
             "body": body,
@@ -321,7 +363,14 @@ class GeminiLLMClient(LLMClient):
             "Devuelve solo la proposición, sin explicaciones adicionales."
         )
 
-        return self._generate(prompt, max_output_tokens=256)
+        try:
+            return self._generate(prompt, max_output_tokens=256)
+        except Exception as e:
+            logger.warning(
+                "Failed to generate draft proposition with Gemini, using fallback: %s", e
+            )
+            # Fallback to default client
+            return DefaultLLMClient().generate_draft_proposition(context, instruction)
 
     def generate_refined_proposition(
         self, original_text: str, refinement_instruction: str
@@ -333,7 +382,16 @@ class GeminiLLMClient(LLMClient):
             "Devuelve solo la proposición refinada."
         )
 
-        return self._generate(prompt, max_output_tokens=256)
+        try:
+            return self._generate(prompt, max_output_tokens=256)
+        except Exception as e:
+            logger.warning(
+                "Failed to generate refined proposition with Gemini, using fallback: %s", e
+            )
+            # Fallback to default client
+            return DefaultLLMClient().generate_refined_proposition(
+                original_text, refinement_instruction
+            )
 
     def propose_code_normalization(self, codes_data: list) -> list:
         """Use Gemini to propose code normalization."""
@@ -357,8 +415,6 @@ class GeminiLLMClient(LLMClient):
         try:
             response_text = self._generate(prompt, max_output_tokens=512)
             # Parse JSON response
-            import json
-
             proposals = json.loads(response_text)
             return proposals
         except Exception as e:

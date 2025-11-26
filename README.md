@@ -20,6 +20,10 @@ Plataforma Django para gestion de **Systematic Literature Reviews (SLR)** dividi
 - **Frontend:** TailwindCSS + DaisyUI
 - **Testing:** Behave (BDD)
 - **Container:** Docker + Docker Compose
+- **Extra Dependency for spaCy:** download the spanish model with "python -m spacy download es_core_news_sm" command
+
+---
+
 
 ## Inicio Rapido
 
