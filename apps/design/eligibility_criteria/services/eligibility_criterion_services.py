@@ -54,9 +54,19 @@ class EligibilityCriterionService:
             raise UpdateError(f"Validation error: {str(e)}")
         except DatabaseError as e:
             raise UpdateError(f"Error updating eligibility criterion: {str(e)}")
+    def get_inclusion_criteria(self, project_id):
+        return self.get_criterion_by_project_and_type(
+            project_id=project_id,
+            criteria_type=EligibilityCriterion.CriterionType.INCLUSION
+        )
+
+    def get_exclusion_criteria(self, project_id):
+        return self.get_criterion_by_project_and_type(
+            project_id=project_id,
+            criteria_type=EligibilityCriterion.CriterionType.EXCLUSION
+        )
 
     def reject_eligibility_criterion(self, criterion_id: int) -> EligibilityCriterion:
-        """Change the status of a criterion to REJECTED."""
         criterion = self.get_eligibility_criterion_by_id(criterion_id)
         criterion.status = EligibilityCriterion.CriterionStatus.REJECTED
         try:
@@ -89,3 +99,5 @@ class EligibilityCriterionService:
             project_id=project_id,
             status=status
         ).order_by('created_at'))
+
+    

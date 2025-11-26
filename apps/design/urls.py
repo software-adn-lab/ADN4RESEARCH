@@ -4,6 +4,7 @@ from apps.design.eligibility_criteria.views import eligibility_criterion
 from apps.design.research_question.views import research_question
 from apps.design.search_strategy.views import project_keyword, search_strategy
 from apps.design.research_question.views import question_discussion
+from apps.project import project_views
 
 app_name = 'design'
 
@@ -17,10 +18,13 @@ urlpatterns = [
     path('delete-research-question/<int:question_id>/', research_question.delete_research_question, name='delete_research_question'),
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
     path('get-strategy/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
+    #'design:design_stages' project.id
+    path('design-stages/<int:project_id>/', project_views.design_stages_view, name='design_stages'),
     
     path('discussion/<int:project_id>/', question_discussion.question_discussion_panel_view, name='question_discussion_panel'),
     path('discussion/review/', question_discussion.review_research_question_action, name='review_research_question_action'),
     path('discussion/consolidate/<int:project_id>/', question_discussion.consolidate_discussion_stage_action, name='consolidate_discussion_stage'),
+    path('discussion/select-question/<int:question_id>/<str:action_type>/', question_discussion.select_question_to_suggest_action, name='select_question_to_suggest_action'),
     
     path('eligibility-criteria-panel/<int:project_id>/', eligibility_criterion.open_eligibility_criteria_panel, name='eligibility_criteria_panel'),
     path('create-criterion/<int:project_id>/', eligibility_criterion.create_eligibility_criterion, name='create_criterion'),

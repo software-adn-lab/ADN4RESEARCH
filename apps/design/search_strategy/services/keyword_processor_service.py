@@ -11,7 +11,7 @@ class KeywordProcessorService:
     ["NOUN", "ADJ"],       # e.g., "industria automotriz"
     ["NOUN", "ADP", "NOUN"], # e.g., "desarrollo de software"
     ["NOUN", "NOUN"],      # e.g., "coche bomba"
-    ["NOUN"] # e.g., "desarrollo"
+    #["NOUN"] # e.g., "desarrollo"
     ]
     try:
         # spacy install es_core_news_sm

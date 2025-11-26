@@ -5,7 +5,7 @@ from config.events import bus
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionSubmissionError, QuestionNotFoundError
+from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError
 from apps.project.models import Project
 from django.contrib.auth.models import User
 # user de django
@@ -76,6 +76,12 @@ class ResearchQuestionService:
         return ResearchQuestion.objects.filter(
             project_id=project_id,
             status__in=ResearchQuestion.DISCUSSION_PHASE_STATUSES
+        ).order_by('-modified_at')
+        
+    def get_research_questions_by_status(self, project_id, status):
+        return ResearchQuestion.objects.filter(
+            project_id=project_id,
+            status=status
         ).order_by('-modified_at')
 
     # Logica de negocio
@@ -175,9 +181,30 @@ class ResearchQuestionService:
         try:
             question = ResearchQuestion.objects.get(id=question_id)
         except ResearchQuestion.DoesNotExist:
-            raise ValidationError("Question not found.")
+            raise QuestionReviewError("Question not found.")
         if question.researcher_id == suggester_id:  # La regla que le puse: si eres el autor no puedes sugerir acciones sobre tu misma pregunta
-            raise ValidationError("Cannot suggest action on your own question.")
+            raise QuestionReviewError("Cannot suggest action on your own question.")
+        return question
+    
+    def process_suggestion_action(self, question_id: int, user_id: int, action: str):
+        try:
+            question = ResearchQuestion.objects.get(id=question_id)
+        except ResearchQuestion.DoesNotExist:
+            # Lanzamos nuestra excepción propia para no exponer errores de ORM a la vista
+            raise QuestionReviewError("Question not found.")
+
+        # 1. Regla: No puedes revisarte a ti mismo
+        if question.researcher_id == user_id:
+            raise QuestionReviewError("Cannot suggest action on your own question.")
+
+        # 2. Validar acción
+        if action not in ['APPROVED', 'REJECTED']:
+            raise QuestionReviewError("Invalid action provided.")
+
+        # 3. Aplicar cambios
+        question.status = action # O el campo correspondiente
+        question.save()
+
         return question
 
     @transaction.atomic

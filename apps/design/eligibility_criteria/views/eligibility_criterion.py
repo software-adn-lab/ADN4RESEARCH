@@ -2,29 +2,25 @@ import json
 from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, UpdateError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
-from apps.project.models import Project
+from apps.project.services.project_services import ProjectService
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render
 
 eligibility_service = EligibilityCriterionService()
+project_service = ProjectService()
 
 def open_eligibility_criteria_panel(request, project_id):
     """Render the eligibility criteria panel for a project."""
-    project = get_object_or_404(Project, id=project_id)
-    
-    inclusion_criteria = eligibility_service.get_criterion_by_project_and_type(
-        project_id=project_id, 
-        criteria_type=EligibilityCriterion.CriterionType.INCLUSION
-    )
-    exclusion_criteria = eligibility_service.get_criterion_by_project_and_type(
-        project_id=project_id, 
-        criteria_type=EligibilityCriterion.CriterionType.EXCLUSION
-    )
+    project = project_service.get_project_by_id(project_id)
+    inclusion_criteria = eligibility_service.get_inclusion_criteria(project_id)
+    exclusion_criteria = eligibility_service.get_exclusion_criteria(project_id)
+    timeline_stages = project_service.get_design_timeline_context(project_id)
     
     context = {
         'project': project,
         'inclusion_criteria': inclusion_criteria,
         'exclusion_criteria': exclusion_criteria,
+        'timeline_stages': timeline_stages,
         'active_tab': 'eligibility_criteria_panel',
     }
     return render(request, 'eligibity_criteria_panel.html', context)
@@ -35,7 +31,7 @@ def create_eligibility_criterion(request, project_id):
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
     try:
-        project = get_object_or_404(Project, id=project_id)
+        project = project_service.get_project_by_id(project_id)
         description = request.POST.get('description', '').strip()
         motivation = request.POST.get('motivation', '').strip()
         criteria_type = request.POST.get('type', '')

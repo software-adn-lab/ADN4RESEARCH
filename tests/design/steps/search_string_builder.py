@@ -32,6 +32,8 @@ def step_entonces_lista_terminos_clave(context, expected_terms):
     expected_terms_list = list(set(expected_terms.split(',')))
     project_keywords = project_service.get_project_keyterms(context.project.id)
     project_keyword_list = {kw.term for kw in project_keywords}
+    logging.info(f"Expected terms: {expected_terms_list}")
+    logging.info(f"Project keywords: {project_keyword_list}")
     assert set(expected_terms_list) == set(project_keyword_list)
 
 @step('he identificado los sinónimos de los términos clave:')

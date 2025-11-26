@@ -32,10 +32,14 @@ def open_questions_workspace_view(request, project_id):
     project_keywords = project_service.get_project_keyterms(project_id)
     # Obtengo el proyecto para pasarle solo cosas necesarias al template, no el objeto entero al template
     project = project_service.get_project_by_id(project_id)
+    stage_end_date = project_service.get_current_stage_deadline(project_id)
+    timeline_stages = project_service.get_design_timeline_context(project_id)
     context = {
         'project': project,
         'questions': questions, # aqui si le mando todo porque son algunos atributos de las preguntas
         'keywords': project_keywords,
+        'stage_end_date': stage_end_date,
+        'timeline_stages': timeline_stages,
         'active_tab': 'questions_history', 
     }
     return render(request, 'rq_workspace.html', context)

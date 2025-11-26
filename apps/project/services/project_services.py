@@ -55,8 +55,52 @@ class ProjectService:
         except Project.DoesNotExist:
             # 
             pass
+    
+    def get_current_stage_deadline(self, project_id: int):
+        try:
+            phase = ProjectPhase.objects.get(
+                project_id=project_id, 
+                phase_type=ProjectPhase.PhaseType.DESIGN
+            )
+            return phase.end_date
+        except ProjectPhase.DoesNotExist:
+            return None
+    
+    def get_design_timeline_context(self, project_id):
+        """
+        Genera la estructura de datos para el Timeline (Completed, Current, Upcoming).
+        """
+        project = self.get_project_by_id(project_id)
+        phase = project.phases.filter(phase_type=ProjectPhase.PhaseType.DESIGN).first()
+        if not phase: return []
 
+        current_stage = phase.current_stage
+        design_flow = ProjectPhase.STAGES_FLOW[ProjectPhase.PhaseType.DESIGN]
+        
+        timeline_stages = []
+        is_past = True 
 
+        for stage_key in design_flow:
+            status = 'upcoming'
+            if stage_key == current_stage:
+                is_past = False
+                status = 'current'
+            elif stage_key == 'FINISHED':
+                status = 'finished'
+            elif is_past:
+                status = 'completed'
+
+            # Usamos el label del Enum para mostrar texto bonito
+            label = ProjectPhase.Stage(stage_key).label 
+
+            timeline_stages.append({
+                'key': stage_key,
+                'label': label,
+                'status': status
+            })
+        
+        return timeline_stages
+        
 class ProjectPhaseService:
     
     @transaction.atomic
@@ -70,3 +114,10 @@ class ProjectPhaseService:
             }
         )
         return phase
+
+    def get_phase_end_date(self, project_id: int, phase_type: str) -> str:
+        try:
+            phase = ProjectPhase.objects.get(project_id=project_id, phase_type=phase_type)
+            return phase.end_date
+        except ProjectPhase.DoesNotExist:
+            return None

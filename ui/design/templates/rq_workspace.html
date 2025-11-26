@@ -2,21 +2,22 @@
 {% block questions_history_content %}
 <div class="p-4" data-project-id="{{ project.id }}">
     {% csrf_token %}
-    <div class="text-xs justify-end flex">
-        <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ project.name }}</span>
-    </div>
     <div class="flex justify-between items-center p-1 space-x-4">
         <h1 class="text-xl font-bold text-base-content p-1">Research Question Workspace</h1>
-        <form method="GET" action="">
-            <div class="form-control">
-                <select name="status" id="status-filter" class="select select-bordered select-sm w-48" onchange="this.form.submit()">
-                    <option value="">Filter by status</option>
-                    <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
-                    <option value="READY_TO_SEND" {% if request.GET.status == 'READY_TO_SEND' %}selected{% endif %}>Ready to send</option>
-                    <option value="SUGGESTED" {% if request.GET.status == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
-                </select>
-            </div>
-        </form>
+        <div class="text-xs justify-end flex text-center items-center gap-4">
+            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            <form method="GET" action="">
+                <div class="form-control">
+                    <select name="status" id="status-filter" class="select select-bordered select-sm w-48" onchange="this.form.submit()">
+                        <option value="">Filter by status</option>
+                        <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                        <option value="READY_TO_SEND" {% if request.GET.status == 'READY_TO_SEND' %}selected{% endif %}>Ready to send</option>
+                        <option value="SUGGESTED" {% if request.GET.status == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        
     </div>
     <div class="space-y-5">
         <div class="space-y-8">
