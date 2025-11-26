@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="h-screen flex flex-col" data-extraction-id="{{ extraction.id }}">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="bg-base-100 border-b border-base-300 p-4">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'extraction:list' %}"
+                   class="btn btn-ghost btn-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Back
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold text-base-content">{{ extraction.study.title|truncatechars:50 }}</h1>
+                    <p class="text-xs text-base-content/60">Extraction #{{ extraction.id }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="badge badge-sm" id="quote-count">0 quotes</span>
+                <button id="toggle-sidebar" class="btn btn-ghost btn-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content: PDF + Sidebar -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- PDF Viewer Section -->
+        <div class="flex-1 flex flex-col bg-base-200">
+            <!-- PDF Controls -->
+            <div class="bg-base-100 border-b border-base-300 p-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <button id="prev-page" class="btn btn-sm btn-ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <input type="number"
+                               id="page-num"
+                               class="input input-sm input-bordered w-16 text-center"
+                               value="1"
+                               min="1" />
+                        <span class="text-sm text-base-content/60">/ <span id="page-count">0</span></span>
+                    </div>
+
+                    <button id="next-page" class="btn btn-sm btn-ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button id="zoom-out" class="btn btn-sm btn-ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"/>
+                        </svg>
+                    </button>
+                    <span class="text-sm text-base-content/60" id="zoom-level">100%</span>
+                    <button id="zoom-in" class="btn btn-sm btn-ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PDF Canvas Container -->
+            <div class="flex-1 overflow-auto bg-base-300 p-4" id="pdf-container">
+                <div class="relative inline-block" id="canvas-wrapper">
+                    <canvas id="pdf-canvas" class="shadow-2xl bg-white"></canvas>
+                    <div id="text-layer" class="absolute top-0 left-0 pointer-events-none"></div>
+                    <svg id="highlights-layer" class="absolute top-0 left-0 pointer-events-none" style="width: 100%; height: 100%;"></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Quotes & Tags -->
+        <div id="sidebar" class="w-96 bg-base-100 border-l border-base-300 flex flex-col transition-all duration-300">
+            <!-- Tabs -->
+            <div class="tabs tabs-boxed bg-base-200 p-2">
+                <a class="tab tab-active" data-tab="create">Create Quote</a>
+                <a class="tab" data-tab="quotes">Quotes (<span id="quotes-tab-count">0</span>)</a>
+            </div>
+
+            <!-- Tab: Create Quote -->
+            <div id="tab-create" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="alert alert-info text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Select text in the PDF to create a quote</span>
+                </div>
+
+                <form id="quote-form" class="space-y-4 hidden">
+                    <!-- Selected Text Preview -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Selected Text</span>
+                        </label>
+                        <div class="bg-base-200 p-3 rounded-lg border border-base-300">
+                            <p id="selected-text" class="text-sm text-base-content leading-relaxed max-h-32 overflow-y-auto"></p>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt">Page <span id="selected-page" class="font-semibold"></span></span>
+                        </label>
+                    </div>
+
+                    <!-- Tags Selection -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Tags <span class="text-error">*</span></span>
+                        </label>
+                        <div id="tags-container" class="space-y-2 max-h-48 overflow-y-auto p-2 border border-base-300 rounded-lg bg-base-200">
+                            <div class="text-center text-sm text-base-content/60 py-4">
+                                Loading tags...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Description (Optional) -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Location Description <span class="text-sm text-base-content/60">(Optional)</span></span>
+                        </label>
+                        <input type="text"
+                               id="location-description"
+                               class="input input-sm input-bordered"
+                               placeholder="e.g., Section 3.2, Introduction" />
+                    </div>
+
+                    <!-- Hidden fields for coordinates -->
+                    <input type="hidden" id="coord-x1" />
+                    <input type="hidden" id="coord-y1" />
+                    <input type="hidden" id="coord-x2" />
+                    <input type="hidden" id="coord-y2" />
+                    <input type="hidden" id="coord-page" />
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
+                        <button type="button" id="cancel-quote" class="btn btn-ghost btn-sm flex-1">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-sm flex-1">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Create Quote
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab: Quotes List -->
+            <div id="tab-quotes" class="flex-1 overflow-y-auto p-4 space-y-3 hidden">
+                <div id="quotes-list" class="space-y-3">
+                    <div class="text-center text-sm text-base-content/60 py-8">
+                        No quotes yet. Select text to create your first quote.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Global variables from Django context
+    const EXTRACTION_ID = {{ extraction.id }};
+    const PDF_URL = "{{ pdf_url|default:'' }}";
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // API URLs
+    const API_URLS = {
+        createQuote: "{% url 'extraction:quotes-list' %}",
+        listQuotes: `/api/extraction/quotes/extraction/${EXTRACTION_ID}/`,
+        availableTags: "{% url 'extraction:tags-available' %}",
+    };
+</script>
+<script src="{% static 'scripts/pdf_viewer.js' %}"></script>
+
+<style>
+    #text-layer {
+        opacity: 0.2;
+    }
+
+    .text-selection-highlight {
+        background-color: rgba(255, 255, 0, 0.3);
+        border: 2px dashed #f59e0b;
+    }
+
+    .quote-highlight {
+        fill: rgba(124, 58, 237, 0.2);
+        stroke: #7c3aed;
+        stroke-width: 2;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .quote-highlight:hover {
+        fill: rgba(124, 58, 237, 0.4);
+        stroke-width: 3;
+    }
+
+    #sidebar.collapsed {
+        width: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
