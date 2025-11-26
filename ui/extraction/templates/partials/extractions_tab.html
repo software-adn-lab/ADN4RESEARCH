@@ -1,0 +1,188 @@
+<!-- Extractions Tab -->
+<div>
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+        <h2 class="text-xl font-bold">Extracciones de Información</h2>
+        <div class="flex gap-2">
+            <div class="form-control">
+                <div class="input-group">
+                    <input type="text" 
+                           x-model="quotesFilter" 
+                           placeholder="Buscar en quotes..." 
+                           class="input input-bordered input-sm w-64" />
+                    <button class="btn btn-sm btn-square">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-sm btn-outline">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filtros
+                </label>
+                <div tabindex="0" class="dropdown-content z-[1] card card-compact w-64 p-2 shadow bg-base-100">
+                    <div class="card-body">
+                        <h4 class="font-bold">Filtrar por Tag</h4>
+                        <div class="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
+                            <template x-for="tag in tags" :key="tag.id">
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" class="hidden peer" :value="tag.id" />
+                                    <span class="badge badge-outline peer-checked:badge-primary" x-text="tag.name"></span>
+                                </label>
+                            </template>
+                        </div>
+                        <h4 class="font-bold mt-2">Filtrar por Paper</h4>
+                        <select class="select select-bordered select-sm w-full">
+                            <option value="">Todos los papers</option>
+                            <template x-for="paper in papers" :key="paper.id">
+                                <option :value="paper.id" x-text="paper.title"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">Total Extracciones</div>
+            <div class="stat-value" x-text="quotes.length"></div>
+            <div class="stat-desc">En todo el proyecto</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">Con Comentarios</div>
+            <div class="stat-value" x-text="quotes.filter(q => q.comment).length"></div>
+            <div class="stat-desc">Quotes comentadas</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">Tags Únicos Usados</div>
+            <div class="stat-value" x-text="[...new Set(quotes.flatMap(q => q.tags.map(t => t.id)))].length"></div>
+            <div class="stat-desc">De {{ tags|length }} disponibles</div>
+        </div>
+    </div>
+
+    <!-- Extractions Table -->
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
+                <tr>
+                    <th style="width: 35%">Fragmento de Texto</th>
+                    <th style="width: 15%">Documento</th>
+                    <th style="width: 20%">Tags</th>
+                    <th style="width: 20%">Comentario</th>
+                    <th style="width: 10%">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="quote in quotes.filter(q => 
+                    q.text_portion.toLowerCase().includes(quotesFilter.toLowerCase()) ||
+                    (q.comment && q.comment.toLowerCase().includes(quotesFilter.toLowerCase()))
+                )" :key="quote.id">
+                    <tr class="hover">
+                        <td>
+                            <div class="max-w-md">
+                                <p class="text-sm line-clamp-3 cursor-pointer hover:text-primary" 
+                                   @click="goToQuoteInPDF(quote)"
+                                   x-text="quote.text_portion"></p>
+                                <div class="text-xs text-base-content/50 mt-1" x-text="quote.location"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2 cursor-pointer hover:text-primary"
+                                 @click="goToQuoteInPDF(quote)">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span class="text-sm truncate max-w-[120px]" x-text="papers.find(p => p.extraction_id === quote.extraction_id)?.title || 'Unknown'"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-wrap gap-1">
+                                <template x-for="tag in quote.tags" :key="tag.id">
+                                    <span class="badge badge-sm tag-badge" 
+                                          :style="`background-color: ${tag.color || '#6b7280'}20; color: ${tag.color || '#6b7280'}; border-color: ${tag.color || '#6b7280'}`"
+                                          x-text="tag.name"></span>
+                                </template>
+                                {% if user.role == 'owner' %}
+                                <button class="btn btn-ghost btn-xs btn-circle" @click="editQuoteTags(quote)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <template x-if="quote.comment">
+                                <div class="max-w-xs">
+                                    <p class="text-sm text-base-content/70 line-clamp-2" x-text="quote.comment"></p>
+                                    {% if user.role == 'owner' %}
+                                    <button class="btn btn-ghost btn-xs mt-1" @click="editQuoteComment(quote)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Editar
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </template>
+                            <template x-if="!quote.comment">
+                                <span class="text-xs text-base-content/40">Sin comentario</span>
+                            </template>
+                        </td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button class="btn btn-ghost btn-xs" @click="goToQuoteInPDF(quote)" title="Ver en PDF">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                                {% if user.role == 'owner' %}
+                                <button class="btn btn-ghost btn-xs text-error" @click="deleteQuote(quote)" title="Eliminar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="quotes.length === 0">
+        <div class="text-center py-12">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-4 text-lg font-semibold">No hay extracciones</h3>
+            <p class="text-base-content/70">Los Researchers aún no han extraído información de los papers.</p>
+        </div>
+    </template>
+
+    <!-- Pagination -->
+    <div class="flex justify-center mt-6">
+        <div class="btn-group">
+            <button class="btn btn-sm">«</button>
+            <button class="btn btn-sm btn-active">1</button>
+            <button class="btn btn-sm">2</button>
+            <button class="btn btn-sm">3</button>
+            <button class="btn btn-sm">»</button>
+        </div>
+    </div>
+</div>
