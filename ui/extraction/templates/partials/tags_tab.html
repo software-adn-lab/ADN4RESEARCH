@@ -1,0 +1,233 @@
+<!-- Tags Tab -->
+<div>
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+        <h2 class="text-xl font-bold">Gestión de Tags</h2>
+        <div class="flex gap-2">
+            <div class="form-control">
+                <div class="input-group">
+                    <input type="text" 
+                           x-model="tagsFilter" 
+                           placeholder="Buscar tags..." 
+                           class="input input-bordered input-sm w-64" />
+                    <button class="btn btn-sm btn-square">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {% if user.role == 'owner' %}
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-tag-modal').showModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nuevo Tag
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-figure text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            </div>
+            <div class="stat-title">Total Tags</div>
+            <div class="stat-value text-primary" x-text="tags.length"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-figure text-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-title">Obligatorios</div>
+            <div class="stat-value text-success" x-text="tags.filter(t => t.is_mandatory).length"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-figure text-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-title">Pendientes</div>
+            <div class="stat-value text-warning" x-text="tags.filter(t => t.approval_status === 'pending').length"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+            <div class="stat-figure text-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <div class="stat-title">Inductivos</div>
+            <div class="stat-value text-info" x-text="tags.filter(t => t.type === 'inductive').length"></div>
+        </div>
+    </div>
+
+    <!-- Tags Table -->
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
+                <tr>
+                    <th>Tag</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Quotes</th>
+                    <th>PI Relacionada</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="tag in filteredTags" :key="tag.id">
+                    <tr class="hover">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <!-- Color picker -->
+                                <div class="relative">
+                                    <input type="color" 
+                                           :value="tag.color || '#6b7280'"
+                                           @change="updateTagColor(tag, $event.target.value)"
+                                           class="w-8 h-8 rounded cursor-pointer border-2 border-base-300"
+                                           {% if user.role != 'owner' %}disabled{% endif %} />
+                                </div>
+                                <div>
+                                    <span class="font-bold" x-text="tag.name"></span>
+                                    <template x-if="tag.is_mandatory">
+                                        <span class="badge badge-success badge-xs ml-1">Obligatorio</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge" :class="tag.type === 'deductive' ? 'badge-primary' : 'badge-secondary'" x-text="tag.type === 'deductive' ? 'Deductivo' : 'Inductivo'"></span>
+                        </td>
+                        <td>
+                            <span class="badge" :class="{
+                                'badge-success': tag.approval_status === 'approved',
+                                'badge-warning': tag.approval_status === 'pending',
+                                'badge-error': tag.approval_status === 'rejected'
+                            }">
+                                <span x-text="tag.approval_status === 'approved' ? 'Aprobado' : (tag.approval_status === 'pending' ? 'Pendiente' : 'Rechazado')"></span>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="badge badge-ghost" x-text="tag.quote_count || 0"></div>
+                        </td>
+                        <td>
+                            <template x-if="tag.question_id">
+                                <span class="text-sm text-primary" x-text="'PI #' + tag.question_id"></span>
+                            </template>
+                            <template x-if="!tag.question_id">
+                                <span class="text-sm text-base-content/50">-</span>
+                            </template>
+                        </td>
+                        <td>
+                            <div class="flex gap-1">
+                                {% if user.role == 'owner' %}
+                                <!-- Approve/Reject buttons for pending tags -->
+                                <template x-if="tag.approval_status === 'pending'">
+                                    <div class="flex gap-1">
+                                        <button class="btn btn-success btn-xs" @click="approveTag(tag)" title="Aprobar">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button class="btn btn-error btn-xs" @click="rejectTag(tag)" title="Rechazar">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                                
+                                <button class="btn btn-ghost btn-xs" @click="editTag(tag)" title="Editar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                                
+                                <!-- Link to PI -->
+                                <template x-if="!tag.question_id && tag.approval_status === 'approved'">
+                                    <button class="btn btn-ghost btn-xs" @click="linkTagToPI(tag)" title="Vincular a PI">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                        </svg>
+                                    </button>
+                                </template>
+                                
+                                <!-- Merge -->
+                                <button class="btn btn-ghost btn-xs" @click="openMergeModal(tag)" title="Fusionar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                </button>
+                                
+                                <!-- Delete -->
+                                <button class="btn btn-ghost btn-xs text-error" @click="deleteTag(tag)" title="Eliminar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                                {% else %}
+                                <span class="text-xs text-base-content/50">Solo lectura</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="filteredTags.length === 0">
+        <div class="text-center py-12">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <h3 class="mt-4 text-lg font-semibold">No hay tags</h3>
+            <p class="text-base-content/70">No se encontraron tags con los filtros aplicados.</p>
+        </div>
+    </template>
+</div>
+
+<!-- New Tag Modal -->
+<dialog id="new-tag-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Crear Nuevo Tag</h3>
+        <form method="dialog" class="mt-4">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Nombre del Tag</span>
+                </label>
+                <input type="text" placeholder="Ej: Metodología" class="input input-bordered" />
+            </div>
+            <div class="form-control mt-2">
+                <label class="label">
+                    <span class="label-text">Color</span>
+                </label>
+                <input type="color" value="#6366f1" class="w-full h-12 rounded cursor-pointer" />
+            </div>
+            <div class="form-control mt-2">
+                <label class="label">
+                    <span class="label-text">Pregunta de Investigación (opcional)</span>
+                </label>
+                <select class="select select-bordered">
+                    <option value="">Sin vincular</option>
+                    <option value="101">PI #101: ¿Cómo afecta TDD?</option>
+                    <option value="102">PI #102: ¿Cuáles son los costos?</option>
+                </select>
+            </div>
+            <div class="modal-action">
+                <button class="btn">Cancelar</button>
+                <button class="btn btn-primary">Crear Tag</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>

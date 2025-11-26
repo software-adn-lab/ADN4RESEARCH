@@ -1,0 +1,137 @@
+<!-- Tag Edit Modal -->
+<div x-show="showTagModal" 
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="display: none;">
+    
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/50" @click="showTagModal = false"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative bg-base-100 rounded-box shadow-2xl w-full max-w-md"
+         @click.stop>
+        <div class="px-6 py-4 border-b border-base-200 flex justify-between items-center">
+            <h3 class="text-xl font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Editar Tag
+            </h3>
+            <button class="btn btn-ghost btn-sm btn-circle" @click="showTagModal = false">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <template x-if="selectedTag">
+            <div class="p-6">
+                <!-- Tag Name -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Nombre del Tag</span>
+                    </label>
+                    <input type="text" 
+                           x-model="selectedTag.name"
+                           class="input input-bordered" />
+                </div>
+
+                <!-- Tag Color -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Color</span>
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input type="color" 
+                               x-model="selectedTag.color"
+                               class="w-16 h-16 rounded-lg cursor-pointer border-2 border-base-300" />
+                        <div class="flex-1">
+                            <input type="text" 
+                                   x-model="selectedTag.color"
+                                   class="input input-bordered input-sm w-full"
+                                   placeholder="#6366f1" />
+                            <div class="mt-2">
+                                <span class="text-sm">Vista previa:</span>
+                                <span class="badge ml-2" 
+                                      :style="`background-color: ${selectedTag.color}20; color: ${selectedTag.color}; border-color: ${selectedTag.color}`"
+                                      x-text="selectedTag.name"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tag Type Info -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tipo</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <span class="badge" :class="selectedTag.type === 'deductive' ? 'badge-primary' : 'badge-secondary'"
+                              x-text="selectedTag.type === 'deductive' ? 'Deductivo' : 'Inductivo'"></span>
+                        <template x-if="selectedTag.is_mandatory">
+                            <span class="badge badge-success">Obligatorio</span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Question Link -->
+                <template x-if="selectedTag.type === 'deductive' || selectedTag.approval_status === 'approved'">
+                    <div class="form-control mb-4">
+                        <label class="label">
+                            <span class="label-text font-semibold">Pregunta de Investigación Relacionada</span>
+                        </label>
+                        <select class="select select-bordered" x-model="selectedTag.question_id">
+                            <option value="">Sin vincular</option>
+                            <option value="101">PI #101: ¿Cómo afecta TDD a la eficiencia?</option>
+                            <option value="102">PI #102: ¿Cuáles son los costos de TDD?</option>
+                        </select>
+                        <label class="label">
+                            <span class="label-text-alt">Vincular a una PI hace el tag obligatorio</span>
+                        </label>
+                    </div>
+                </template>
+
+                <!-- Justification -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Justificación</span>
+                        <span class="label-text-alt">Opcional</span>
+                    </label>
+                    <textarea x-model="selectedTag.justification"
+                              class="textarea textarea-bordered h-20"
+                              placeholder="Describe por qué este tag es relevante..."></textarea>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats shadow w-full mb-4">
+                    <div class="stat">
+                        <div class="stat-title">Quotes asociadas</div>
+                        <div class="stat-value text-primary" x-text="selectedTag.quote_count || 0"></div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Creado por</div>
+                        <div class="stat-value text-sm" x-text="selectedTag.created_by_id ? `User #${selectedTag.created_by_id}` : 'Sistema'"></div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-base-200 flex justify-end gap-2">
+            <button class="btn btn-ghost" @click="showTagModal = false">
+                Cancelar
+            </button>
+            <button class="btn btn-primary" @click="saveTag()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
+</div>

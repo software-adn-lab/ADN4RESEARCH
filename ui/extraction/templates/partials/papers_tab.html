@@ -1,0 +1,138 @@
+<!-- Papers Tab -->
+<div>
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+        <h2 class="text-xl font-bold">Papers Asignados</h2>
+        <div class="flex gap-2">
+            <div class="form-control">
+                <div class="input-group">
+                    <input type="text" 
+                           x-model="papersFilter" 
+                           placeholder="Buscar papers..." 
+                           class="input input-bordered input-sm w-64" />
+                    <button class="btn btn-sm btn-square">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+            <thead>
+                <tr>
+                    <th class="cursor-pointer hover:bg-base-200" @click="sortPapers('title')">
+                        <div class="flex items-center gap-2">
+                            Título
+                            <template x-if="papersSort === 'title'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          :d="papersSortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                                </svg>
+                            </template>
+                        </div>
+                    </th>
+                    {% if user.role == 'owner' %}
+                    <th>Researcher</th>
+                    {% endif %}
+                    <th class="cursor-pointer hover:bg-base-200" @click="sortPapers('status')">
+                        <div class="flex items-center gap-2">
+                            Estado
+                            <template x-if="papersSort === 'status'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          :d="papersSortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                                </svg>
+                            </template>
+                        </div>
+                    </th>
+                    <th>Progreso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="paper in filteredPapers" :key="paper.id">
+                    <tr class="hover">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="avatar placeholder">
+                                    <div class="bg-neutral text-neutral-content rounded-lg w-12 h-12">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="font-bold" x-text="paper.title"></div>
+                                    <div class="text-sm opacity-50" x-text="paper.authors"></div>
+                                </div>
+                            </div>
+                        </td>
+                        {% if user.role == 'owner' %}
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <div class="avatar placeholder">
+                                    <div class="bg-primary text-primary-content rounded-full w-8">
+                                        <span class="text-xs" x-text="paper.researcher_name ? paper.researcher_name.charAt(0).toUpperCase() : '?'"></span>
+                                    </div>
+                                </div>
+                                <span x-text="paper.researcher_name || 'Sin asignar'"></span>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="badge" :class="getStatusBadgeClass(paper.status)" x-text="paper.status"></span>
+                        </td>
+                        <td>
+                            <div class="flex flex-col gap-1">
+                                <progress class="progress progress-primary w-32" 
+                                          :value="paper.progress?.extracted_tags_count || 0" 
+                                          :max="paper.progress?.mandatory_tags_count || 1"></progress>
+                                <span class="text-xs opacity-70" 
+                                      x-text="`${paper.progress?.extracted_tags_count || 0}/${paper.progress?.mandatory_tags_count || 0} tags`"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button class="btn btn-primary btn-sm" @click="openPaper(paper)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Ver
+                                </button>
+                                <div class="dropdown dropdown-end">
+                                    <label tabindex="0" class="btn btn-ghost btn-sm btn-square">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                        </svg>
+                                    </label>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                        <li><a @click="openPaper(paper)">Abrir en visor</a></li>
+                                        <li><a>Ver detalles</a></li>
+                                        {% if user.role == 'owner' %}
+                                        <li><a>Reasignar</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="filteredPapers.length === 0">
+        <div class="text-center py-12">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-4 text-lg font-semibold">No hay papers</h3>
+            <p class="text-base-content/70">No se encontraron papers con los filtros aplicados.</p>
+        </div>
+    </template>
+</div>
