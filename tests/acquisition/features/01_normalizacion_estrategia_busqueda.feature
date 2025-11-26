@@ -45,7 +45,7 @@ Característica: Traducción automática de estrategias de búsqueda según la b
     <consulta_traducida>
     """
     Y la consulta traducida preserva la lógica de mi estrategia original
-    Y el estado de la traducción es "Done"
+    Y el estado de la traducción es "ready"
     Y se registra la trazabilidad de la traducción
     Y <advertencias>
 

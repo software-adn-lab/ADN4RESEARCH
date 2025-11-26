@@ -38,7 +38,6 @@ class MainTerm:
 
         term = data["term"].strip() if isinstance(data["term"], str) else ""
 
-        # Normalización liviana: eliminar duplicados en synonyms
         raw_synonyms = data.get("synonyms", [])
         synonyms = list(dict.fromkeys(
             s.strip() for s in raw_synonyms if s and isinstance(s, str) and s.strip()
@@ -136,11 +135,9 @@ class NormalizedStrategy:
 
     def __post_init__(self):
         """Validar invariantes de dominio."""
-        # Validar strategy_id
         if not self.strategy_id or not self.strategy_id.strip():
             raise DomainValidationError("strategy_id", "No puede estar vacío")
 
-        # Validar main_terms
         if not self.main_terms:
             raise DomainValidationError("main_terms", "Debe tener al menos un término")
 
@@ -150,15 +147,7 @@ class NormalizedStrategy:
         Crear NormalizedStrategy desde diccionario.
 
         Args:
-            data: Diccionario con estructura:
-                {
-                    "strategy_id": str,
-                    "main_terms": [{"term": str, "synonyms": [str]}],
-                    "exclusions": [str],  # opcional
-                    "filters": {          # opcional
-                        "year": {"from": int, "to": int}
-                    }
-                }
+            data: Diccionario con estructura esperada
 
         Returns:
             NormalizedStrategy validada e inmutable
@@ -166,17 +155,14 @@ class NormalizedStrategy:
         Raises:
             DomainValidationError: Si alguna regla de negocio se viola
         """
-        # Validar campos obligatorios
         if "strategy_id" not in data:
             raise DomainValidationError("strategy_id", "El campo es obligatorio")
 
         if "main_terms" not in data:
             raise DomainValidationError("main_terms", "El campo es obligatorio")
 
-        # Normalización: trim de strategy_id
         strategy_id = data["strategy_id"].strip() if isinstance(data["strategy_id"], str) else ""
 
-        # Parsear main_terms
         main_terms_data = data.get("main_terms", [])
         if not isinstance(main_terms_data, list):
             raise DomainValidationError("main_terms", "Debe ser una lista")
@@ -184,23 +170,20 @@ class NormalizedStrategy:
         try:
             main_terms = [MainTerm.from_dict(item) for item in main_terms_data]
         except DomainValidationError:
-            raise  # Re-lanzar errores de validación
+            raise
         except Exception as e:
             raise DomainValidationError("main_terms", f"Error al parsear: {str(e)}")
 
-        # Parsear exclusions (opcional)
         exclusions_data = data.get("exclusions", [])
         if not isinstance(exclusions_data, list):
             raise DomainValidationError("exclusions", "Debe ser una lista")
 
-        # Normalización liviana: trim y eliminar vacíos
         exclusions = [
             exc.strip()
             for exc in exclusions_data
             if exc and isinstance(exc, str) and exc.strip()
         ]
 
-        # Parsear year_filter (opcional)
         year_filter = None
         filters_data = data.get("filters", {})
         if filters_data and "year" in filters_data:

@@ -9,11 +9,7 @@ class ApplicationException(Exception):
 
 
 class InvalidTargetError(ApplicationException):
-    """
-    Se lanza cuando el target de traducción no es soportado.
-
-    Targets válidos: "Scopus", "IEEE Xplore"
-    """
+    """Se lanza cuando el target de traducción no es soportado."""
 
     def __init__(self, target: str, valid_targets: list[str]):
         self.target = target

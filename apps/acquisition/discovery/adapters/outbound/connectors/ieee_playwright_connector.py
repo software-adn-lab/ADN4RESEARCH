@@ -293,6 +293,7 @@ class IeeePlaywrightConnector:
     def _normalize_record(self, record: Dict) -> Dict[str, Any]:
         """Normaliza un registro de /rest/search al contrato esperado"""
         article_number = record.get('articleNumber', '')
+        is_open_access, pdf_url = self._extract_access_info(record, article_number)
 
         # Extraer autores
         authors = []
@@ -317,7 +318,9 @@ class IeeePlaywrightConnector:
             'source': 'IEEE Xplore',
             'year': record.get('publicationYear'),
             'authors': authors,
-            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None
+            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None,
+            'is_open_access': is_open_access,
+            'pdf_url': pdf_url,
         }
 
     def _scrape_html_results(self, max_results: int) -> Iterable[Dict[str, Any]]:
@@ -357,6 +360,13 @@ class IeeePlaywrightConnector:
                             link = 'https://ieeexplore.ieee.org' + href
                         else:
                             link = href
+
+                # Article number (para reconstruir URLs)
+                article_number = ''
+                if link:
+                    match = re.search(r'/document/(\\d+)', link)
+                    if match:
+                        article_number = match.group(1)
 
                 # DOI - buscar en múltiples lugares
                 doi = None
@@ -406,6 +416,32 @@ class IeeePlaywrightConnector:
                 if abstract_elem:
                     abstract = abstract_elem.inner_text().strip()
 
+                # Open Access flag (icono en el listado)
+                is_open_access = None
+                access_elem = container.query_selector('.xpl-access-type-icon, [class*="access-type" i], [class*="open-access" i]')
+                if access_elem:
+                    access_text = (access_elem.inner_text() or "").lower()
+                    access_attr = (access_elem.get_attribute('title') or "").lower()
+                    combined = f"{access_text} {access_attr}"
+                    if 'open' in combined:
+                        is_open_access = True
+                    elif 'denied' in combined or 'closed' in combined or 'subscription' in combined:
+                        is_open_access = False
+
+                # URL directa al PDF si está visible en el listado
+                pdf_url = None
+                pdf_elem = container.query_selector('a[href*="stamp/stamp.jsp"], a[title*="PDF" i], a.icon-pdf, a[href*="/pdf/"]')
+                if pdf_elem:
+                    href = pdf_elem.get_attribute('href')
+                    if href:
+                        if href.startswith('/'):
+                            pdf_url = 'https://ieeexplore.ieee.org' + href
+                        else:
+                            pdf_url = href
+
+                if not pdf_url and article_number and is_open_access:
+                    pdf_url = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={article_number}"
+
                 yield {
                     'title': title,
                     'link': link,
@@ -413,7 +449,9 @@ class IeeePlaywrightConnector:
                     'source': 'IEEE Xplore',
                     'year': year,
                     'authors': authors,
-                    'abstract': abstract
+                    'abstract': abstract,
+                    'is_open_access': is_open_access,
+                    'pdf_url': pdf_url,
                 }
 
                 count += 1
@@ -434,3 +472,40 @@ class IeeePlaywrightConnector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager support"""
         self.close()
+
+    def _extract_access_info(self, record: Dict[str, Any], article_number: str) -> tuple[Optional[bool], Optional[str]]:
+        """Inferir OA y URL del PDF desde el registro devuelto por /rest/search."""
+        is_open_access: Optional[bool] = None
+        for field in ["openAccessFlag", "isOa", "openAccess", "isOpenAccess"]:
+            if field in record:
+                value = record.get(field)
+                if isinstance(value, str):
+                    normalized = value.lower()
+                    if "open" in normalized:
+                        is_open_access = True
+                    elif "denied" in normalized or "closed" in normalized or "subscription" in normalized:
+                        is_open_access = False
+                else:
+                    is_open_access = bool(value) if value is not None else None
+                if is_open_access is not None:
+                    break
+
+        access_type = record.get("accessType") or record.get("accessType_s") or record.get("accessTypeIcon") or record.get("accessType_x")
+        if is_open_access is None and isinstance(access_type, str):
+            normalized = access_type.lower()
+            if "open" in normalized:
+                is_open_access = True
+            elif "denied" in normalized or "closed" in normalized or "subscription" in normalized:
+                is_open_access = False
+
+        pdf_url = record.get("pdfLink") or record.get("htmlLink") or record.get("fullTextLink")
+        if isinstance(pdf_url, list):
+            pdf_url = pdf_url[0] if pdf_url else None
+
+        if pdf_url and isinstance(pdf_url, str) and pdf_url.startswith('/'):
+            pdf_url = f"https://ieeexplore.ieee.org{pdf_url}"
+
+        if not pdf_url and article_number and is_open_access:
+            pdf_url = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={article_number}"
+
+        return is_open_access, pdf_url

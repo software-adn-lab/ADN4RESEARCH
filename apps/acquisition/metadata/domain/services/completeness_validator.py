@@ -25,13 +25,8 @@ class CompletenessValidator:
     - Campos DESEABLES (no afectan estado): abstract, journal, keywords
     """
 
-    # Campos sin los cuales el estudio no es válido
     OBLIGATORY_FIELDS: Set[str] = {"title", "link", "source"}
-
-    # Campos necesarios para estar COMPLETO
     REQUIRED_FIELDS: Set[str] = {"doi", "year", "authors"}
-
-    # Campos deseables pero no obligatorios
     DESIRABLE_FIELDS: Set[str] = {"abstract", "journal", "keywords"}
 
     def validate(self, study: Study) -> ConsolidationStatus:
@@ -179,7 +174,6 @@ class CompletenessValidator:
         """Verifica si el estudio tiene autores válidos."""
         if not study.authors:
             return False
-        # Verificar que hay al menos un autor no vacío
         return any(author and author.strip() for author in study.authors)
 
     def _has_keywords(self, study: Study) -> bool:

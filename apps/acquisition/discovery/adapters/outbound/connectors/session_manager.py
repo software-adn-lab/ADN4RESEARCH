@@ -29,8 +29,6 @@ class SessionManager(ABC):
     - Proveer sesión de requests lista para usar
     """
 
-    # User-Agent consistente entre Playwright y requests
-    # IMPORTANTE: Debe ser idéntico para evitar detección por WAF
     USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
     def __init__(
@@ -81,20 +79,17 @@ class SessionManager(ABC):
         Returns:
             True si hay sesión válida (IP, cookies o recién autenticada)
         """
-        # 1. PRIMERO: Intentar acceso directo por IP (red universitaria)
         logger.info("🔍 Verificando acceso directo por IP (red universitaria)...")
         if self._has_direct_access():
             logger.info("✅ Acceso directo por IP detectado (estás en la red universitaria)")
             logger.info("   No se requiere autenticación ni cookies")
             return True
 
-        # 2. SEGUNDO: Intentar cargar cookies guardadas
         logger.info("⚠️  Sin acceso directo. Verificando cookies guardadas...")
         if self._has_valid_session():
             logger.info("✓ Sesión válida con cookies detectada")
             return True
 
-        # 3. TERCERO: Autenticar con Playwright
         logger.info("⚠️  No hay sesión válida, autenticando con Playwright...")
         return self._authenticate()
 
@@ -106,13 +101,10 @@ class SessionManager(ABC):
             True si se puede acceder sin cookies (IP autorizada)
         """
         try:
-            # Intentar request de prueba SIN cookies
             response = self._test_direct_access()
 
-            # Si responde 200, la IP está autorizada
             if response.status_code == 200:
                 logger.info("   ✓ Request de prueba exitoso sin cookies")
-                # Limpiar cookies viejas - no las necesitamos
                 self.session.cookies.clear()
                 logger.debug("   Cookies limpiadas (no necesarias con acceso por IP)")
                 return True
@@ -134,7 +126,6 @@ class SessionManager(ABC):
         if not self.session.cookies:
             return False
 
-        # Intentar request de prueba
         try:
             response = self._test_session()
             return response.status_code == 200
@@ -151,7 +142,6 @@ class SessionManager(ABC):
             with open(self.session_file, 'r') as f:
                 cookies_data = json.load(f)
 
-            # Agregar cookies a la sesión
             for cookie in cookies_data:
                 self.session.cookies.set(
                     cookie['name'],
@@ -170,7 +160,6 @@ class SessionManager(ABC):
     def _save_cookies(self, cookies_list: list):
         """Guarda cookies a archivo"""
         try:
-            # Crear directorio si no existe
             self.session_file.parent.mkdir(parents=True, exist_ok=True)
 
             with open(self.session_file, 'w') as f:
@@ -194,7 +183,6 @@ class SessionManager(ABC):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=self.headless)
 
-                # Contexto con User-Agent idéntico al de requests
                 context = browser.new_context(
                     user_agent=self.USER_AGENT,
                     viewport={'width': 1920, 'height': 1080},
@@ -203,17 +191,12 @@ class SessionManager(ABC):
                 )
                 page = context.new_page()
 
-                # Navegar a la página de login (implementado por subclases)
                 success = self._perform_login(page, context)
 
                 if success:
-                    # Capturar cookies
                     cookies_list = context.cookies()
-
-                    # Guardar para futuro
                     self._save_cookies(cookies_list)
 
-                    # Actualizar sesión de requests
                     for cookie in cookies_list:
                         self.session.cookies.set(
                             cookie['name'],

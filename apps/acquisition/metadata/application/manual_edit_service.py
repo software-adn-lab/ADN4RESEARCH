@@ -13,6 +13,7 @@ Responsabilidades:
 
 from typing import Dict, Any, Optional, List
 from apps.acquisition.shared.domain.entities.study import Study
+from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
 from apps.acquisition.metadata.domain.services.completeness_validator import CompletenessValidator
 from apps.acquisition.metadata.domain.services.metadata_normalizer import MetadataNormalizer
 from apps.acquisition.metadata.domain.value_objects.consolidation_status import ConsolidationStatus
@@ -34,118 +35,110 @@ class ManualEditService:
     - Corregir cualquier error de la consolidación automática
     """
 
-    # Campos que pueden editarse manualmente
     EDITABLE_FIELDS = {
         "doi", "authors", "abstract", "year",
         "journal", "keywords", "title"
     }
 
-    def __init__(self):
-        """Inicializa el servicio con validador y normalizador."""
+    def __init__(self, repository: Optional[IStudyRepository] = None):
+        """
+        Inicializa el servicio con validador y normalizador.
+
+        Args:
+            repository: Repositorio de estudios (opcional, para métodos con persistencia)
+        """
         self.validator = CompletenessValidator()
         self.normalizer = MetadataNormalizer()
+        self.repository = repository
 
     def edit(
         self,
-        study: Study,
+        study_id: str,
         field_name: str,
         value: Any,
         normalize: bool = True
     ) -> Study:
         """
-        Edita un campo específico del estudio.
+        Edita un campo específico de un estudio (CON PERSISTENCIA).
 
         Args:
-            study: Estudio a editar
+            study_id: ID del estudio a editar
             field_name: Nombre del campo a editar
             value: Nuevo valor para el campo
             normalize: Si se debe normalizar el valor (default True)
 
         Returns:
-            El mismo estudio con el campo editado
+            Study con el campo editado y persistido
 
         Raises:
+            ValueError: Si el estudio no existe
             ValueError: Si el campo no es editable o el valor es inválido
 
-        Note:
-            - Actualiza field_origins con "manual"
-            - Revalida consolidation_status automáticamente
-            - Si normalize=True, aplica normalización al valor
+        Ejemplo:
+            >>> service = Container.get_manual_edit_service()
+            >>> study = service.edit(
+            ...     study_id="uuid-123",
+            ...     field_name="doi",
+            ...     value="10.1234/example"
+            ... )
+            >>> study.doi.value
+            '10.1234/example'
+            >>> study.field_origins["doi"]
+            'manual'
         """
-        # Validar que el campo sea editable
-        if field_name not in self.EDITABLE_FIELDS:
-            raise ValueError(
-                f"El campo '{field_name}' no es editable. "
-                f"Campos permitidos: {', '.join(sorted(self.EDITABLE_FIELDS))}"
-            )
+        study = self._get_study_or_raise(study_id)
+        
+        self._edit_in_place(study, field_name, value, normalize)
 
-        # Validar y aplicar el valor
-        self._apply_field_value(study, field_name, value)
+        # 3. Persistir cambios
+        saved_study = self.repository.save(study)
 
-        # Normalizar si está habilitado
-        if normalize:
-            self._normalize_field(study, field_name)
-
-        # Registrar trazabilidad
-        study.field_origins[field_name] = "manual"
-
-        # Revalidar estado de consolidación
-        new_status = self.validator.validate(study)
-        study.consolidation_status = new_status.value
-
-        return study
+        return saved_study
 
     def edit_multiple(
         self,
-        study: Study,
+        study_id: str,
         edits: Dict[str, Any],
         normalize: bool = True
     ) -> Study:
         """
-        Edita múltiples campos del estudio en una sola operación.
+        Edita múltiples campos de un estudio (CON PERSISTENCIA).
 
         Args:
-            study: Estudio a editar
+            study_id: ID del estudio a editar
             edits: Diccionario {campo: valor} con las ediciones
             normalize: Si se deben normalizar los valores
 
         Returns:
-            El mismo estudio con los campos editados
+            Study con los campos editados y persistido
 
         Raises:
+            ValueError: Si el estudio no existe
             ValueError: Si algún campo no es editable o valor inválido
 
-        Note:
-            Es más eficiente que llamar edit() múltiples veces
-            ya que solo revalida una vez al final.
+        Ejemplo:
+            >>> service = Container.get_manual_edit_service()
+            >>> study = service.edit_multiple(
+            ...     study_id="uuid-123",
+            ...     edits={
+            ...         "doi": "10.1234/example",
+            ...         "year": 2023,
+            ...         "authors": ["Smith, J.", "Doe, A."]
+            ...     }
+            ... )
+            >>> study.field_origins["doi"]
+            'manual'
         """
-        if not edits:
-            return study
+        # 1. Recuperar estudio
+        study = self._get_study_or_raise(study_id)
 
-        # Validar todos los campos antes de aplicar
-        invalid_fields = set(edits.keys()) - self.EDITABLE_FIELDS
-        if invalid_fields:
-            raise ValueError(
-                f"Campos no editables: {', '.join(sorted(invalid_fields))}. "
-                f"Campos permitidos: {', '.join(sorted(self.EDITABLE_FIELDS))}"
-            )
+        # 2. Aplicar ediciones múltiples (lógica pura)
+        self._edit_multiple_in_place(study, edits, normalize)
 
-        # Aplicar todas las ediciones
-        for field_name, value in edits.items():
-            self._apply_field_value(study, field_name, value)
+        # 3. Persistir cambios
+        saved_study = self.repository.save(study)
 
-            # Normalizar si está habilitado
-            if normalize:
-                self._normalize_field(study, field_name)
-
-            # Registrar trazabilidad
-            study.field_origins[field_name] = "manual"
-
-        # Revalidar estado de consolidación (una sola vez)
-        new_status = self.validator.validate(study)
-        study.consolidation_status = new_status.value
-
-        return study
+        return saved_study
 
     def _apply_field_value(self, study: Study, field_name: str, value: Any) -> None:
         """
@@ -316,16 +309,97 @@ class ManualEditService:
         """
         return sorted(list(self.EDITABLE_FIELDS))
 
-    def get_edit_summary(self, study: Study) -> Dict[str, Any]:
+    def get_edit_summary(self, study_id: str) -> Dict[str, Any]:
         """
-        Genera un resumen del estado de edición del estudio.
+        Genera un resumen del estado de edición de un estudio.
 
         Args:
-            study: Estudio a analizar
+            study_id: ID del estudio a analizar
 
         Returns:
             Diccionario con información de campos editados manualmente
+
+        Raises:
+            ValueError: Si el estudio no existe
         """
+        study = self._get_study_or_raise(study_id)
+        return self._build_edit_summary(study)
+
+    # ==========================================================================
+    # HELPERS PRIVADOS (lógica pura en memoria)
+    # ==========================================================================
+
+    def _get_study_or_raise(self, study_id: str) -> Study:
+        """Recupera estudio o lanza excepción."""
+        study = self.repository.find_by_id(study_id)
+        if study is None:
+            raise ValueError(f"Estudio no encontrado: {study_id}")
+        return study
+
+    def _edit_in_place(
+        self,
+        study: Study,
+        field_name: str,
+        value: Any,
+        normalize: bool
+    ) -> None:
+        """Aplica edición de un campo en el objeto Study (en memoria)."""
+        # Validar que el campo sea editable
+        if field_name not in self.EDITABLE_FIELDS:
+            raise ValueError(
+                f"El campo '{field_name}' no es editable. "
+                f"Campos permitidos: {', '.join(sorted(self.EDITABLE_FIELDS))}"
+            )
+
+        # Validar y aplicar el valor
+        self._apply_field_value(study, field_name, value)
+
+        # Normalizar si está habilitado
+        if normalize:
+            self._normalize_field(study, field_name)
+
+        # Registrar trazabilidad
+        study.field_origins[field_name] = "manual"
+
+        # Revalidar estado de consolidación
+        new_status = self.validator.validate(study)
+        study.consolidation_status = new_status.value
+
+    def _edit_multiple_in_place(
+        self,
+        study: Study,
+        edits: Dict[str, Any],
+        normalize: bool
+    ) -> None:
+        """Aplica ediciones múltiples en el objeto Study (en memoria)."""
+        if not edits:
+            return
+
+        # Validar todos los campos antes de aplicar
+        invalid_fields = set(edits.keys()) - self.EDITABLE_FIELDS
+        if invalid_fields:
+            raise ValueError(
+                f"Campos no editables: {', '.join(sorted(invalid_fields))}. "
+                f"Campos permitidos: {', '.join(sorted(self.EDITABLE_FIELDS))}"
+            )
+
+        # Aplicar todas las ediciones
+        for field_name, value in edits.items():
+            self._apply_field_value(study, field_name, value)
+
+            # Normalizar si está habilitado
+            if normalize:
+                self._normalize_field(study, field_name)
+
+            # Registrar trazabilidad
+            study.field_origins[field_name] = "manual"
+
+        # Revalidar estado de consolidación (una sola vez)
+        new_status = self.validator.validate(study)
+        study.consolidation_status = new_status.value
+
+    def _build_edit_summary(self, study: Study) -> Dict[str, Any]:
+        """Construye resumen de edición de un estudio."""
         manual_fields = [
             field for field, origin in study.field_origins.items()
             if origin == "manual"

@@ -39,9 +39,14 @@ class Study:
         journal: Nombre de la revista/conferencia
         keywords: Palabras clave del estudio
 
+        # Open Access (descubrimiento)
+        is_open_access: Flag que indica si la fuente ya confirmó OA
+        pdf_url: URL directa al PDF si la fuente la provee (ej. IEEE OA)
+
         # Texto completo (se completa en fase DOWNLOADED)
         pdf_path: Ruta al archivo PDF descargado
         pdf_source: Fuente desde donde se obtuvo el PDF (puede diferir de source)
+        download_status: Estado de disponibilidad del PDF (disponible, no_disponible, pendiente)
 
         # Auditoria
         discovered_at: Timestamp de cuándo se descubrió el estudio
@@ -72,9 +77,14 @@ class Study:
     journal: Optional[str] = None
     keywords: Optional[List[str]] = None
 
+    # Open Access (discovery)
+    is_open_access: Optional[bool] = None
+    pdf_url: Optional[str] = None
+
     # Texto completo (DOWNLOADED)
     pdf_path: Optional[str] = None
     pdf_source: Optional[str] = None
+    download_status: Optional[str] = None  # "texto_completo_disponible", "no_disponible", "pendiente"
 
     # Auditoría
     discovered_at: datetime = field(default_factory=datetime.now)
@@ -273,8 +283,11 @@ class Study:
             "year": self.year,
             "journal": self.journal,
             "keywords": self.keywords,
+            "is_open_access": self.is_open_access,
+            "pdf_url": self.pdf_url,
             "pdf_path": self.pdf_path,
             "pdf_source": self.pdf_source,
+            "download_status": self.download_status,
             "discovered_at": self.discovered_at.isoformat() if self.discovered_at else None,
             "enriched_at": self.enriched_at.isoformat() if self.enriched_at else None,
             "downloaded_at": self.downloaded_at.isoformat() if self.downloaded_at else None,
@@ -382,8 +395,11 @@ class Study:
             year=data.get("year"),
             journal=data.get("journal"),
             keywords=data.get("keywords"),
+            is_open_access=data.get("is_open_access"),
+            pdf_url=data.get("pdf_url"),
             pdf_path=data.get("pdf_path"),
             pdf_source=data.get("pdf_source"),
+            download_status=data.get("download_status"),
             discovered_at=discovered_at,
             enriched_at=enriched_at,
             downloaded_at=downloaded_at,
