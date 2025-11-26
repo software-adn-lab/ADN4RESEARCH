@@ -229,19 +229,43 @@ class Container:
             DiscoveryService con conectores inyectados
         """
         if cls._discovery_service is None:
-            from apps.acquisition.discovery.adapters.outbound.connectors.scopus_session_manager import (
-                ScopusSessionManager,
+            # Importar CONECTORES reales (no SessionManagers)
+            from apps.acquisition.discovery.adapters.outbound.connectors.composite_scopus_connector import (
+                CompositeScopusConnector,
             )
-            from apps.acquisition.discovery.adapters.outbound.connectors.ieee_session_manager import (
-                IEEESessionManager,
+            from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import (
+                IeeeConnector,
             )
 
+            # Leer credenciales del .env
+            scopus_api_key = os.getenv("SCOPUS_API_KEY")
+            scopus_cookies = os.getenv("SCOPUS_COOKIES")
+            epn_user = os.getenv("EPN_USER")
+            epn_pass = os.getenv("EPN_PASS")
+            ieee_user = os.getenv("IEEE_USERNAME") or epn_user
+            ieee_pass = os.getenv("IEEE_PASSWORD") or epn_pass
+
+            # Conectores REALES para producción
+            # CompositeScopusConnector: API + Playwright fallback
+            # IeeeConnector: Playwright con autenticación EPN
             connectors = {
-                "Scopus": ScopusSessionManager(),
-                "IEEE Xplore": IEEESessionManager(),
+                "Scopus": CompositeScopusConnector(
+                    api_key=scopus_api_key,
+                    username=epn_user,
+                    password=epn_pass,
+                    preloaded_cookies=scopus_cookies
+                ),
+                "IEEE Xplore": IeeeConnector(
+                    username=ieee_user,
+                    password=ieee_pass
+                ),
             }
 
-            cls._discovery_service = DiscoveryService(connectors=connectors)
+            # Inyectar repositorio para persistencia automática
+            cls._discovery_service = DiscoveryService(
+                connectors=connectors,
+                repository=cls.get_repository()
+            )
 
         return cls._discovery_service
 

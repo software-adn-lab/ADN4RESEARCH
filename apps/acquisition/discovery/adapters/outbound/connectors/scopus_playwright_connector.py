@@ -51,7 +51,7 @@ class ScopusPlaywrightConnector:
         self,
         username: str,
         password: str,
-        headless: bool = False,
+        headless: bool = True,
         preloaded_cookies: str = None
     ):
         """

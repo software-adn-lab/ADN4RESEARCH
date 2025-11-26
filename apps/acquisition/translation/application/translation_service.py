@@ -69,8 +69,9 @@ class TranslationService:
         )
 
         return {
-            "query": translation_result.query,
-            "status": "Done",
+            "output_query": translation_result.query,  # ← Cambio para consistencia con orchestrator
+            "query": translation_result.query,  # ← Mantener por compatibilidad
+            "status": "ready",  # ← Cambio "Done" → "ready" (lo que espera DiscoveryService)
             "warnings": translation_result.warnings,
             "trace": trace,
             "target": target,

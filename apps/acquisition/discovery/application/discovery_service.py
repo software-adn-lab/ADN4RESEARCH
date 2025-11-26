@@ -23,14 +23,16 @@ class DiscoveryService:
     Application service for orchestrating the discovery process.
     """
 
-    def __init__(self, connectors: dict[str, IAcademicConnector]):
+    def __init__(self, connectors: dict[str, IAcademicConnector], repository=None):
         """
         Initialize the discovery service.
 
         Args:
             connectors: Dictionary mapping source names to their connector implementations
+            repository: Optional IStudyRepository for persistence (None = no persistence)
         """
         self.connectors = connectors
+        self.repository = repository
         self.deduplicator = Deduplicator()
 
     def execute(
@@ -57,12 +59,19 @@ class DiscoveryService:
         executable_sources, no_ejecutadas = self._determine_execution_plan(
             supported_sources, sane_statuses
         )
-        all_studies, total_por_fuente = self._fetch_studies(
+        all_studies, total_por_fuente, studies_by_source = self._fetch_studies(
             executable_sources, sane_statuses, no_ejecutadas, max_results_per_source
         )
         unique_studies = self.deduplicator.deduplicate(all_studies)
+
+        # Persistencia opcional: Si hay repositorio inyectado, guardar estudios
+        if self.repository and unique_studies:
+            logger.info(f"Persistiendo {len(unique_studies)} estudios en base de datos...")
+            unique_studies = self.repository.save_batch(unique_studies)
+            logger.info("Persistencia completada")
+
         return self._build_result(
-            strategy_id, unique_studies, total_por_fuente, no_ejecutadas
+            strategy_id, unique_studies, total_por_fuente, no_ejecutadas, studies_by_source
         )
 
     def _validate_inputs(self, strategy_id: str) -> None:
@@ -137,13 +146,14 @@ class DiscoveryService:
         translation_statuses: dict,
         no_ejecutadas: dict[str, str],
         max_results: int = 25
-    ) -> tuple[list[Study], dict[str, int]]:
+    ) -> tuple[list[Study], dict[str, int], dict[str, list[Study]]]:
         """Consultar cada fuente ejecutable en paralelo con manejo robusto de excepciones."""
         all_studies: list[Study] = []
         total_por_fuente: dict[str, int] = {}
+        studies_by_source: dict[str, list[Study]] = {}
 
         if not executable_sources:
-            return all_studies, total_por_fuente
+            return all_studies, total_por_fuente, studies_by_source
 
         with ThreadPoolExecutor(max_workers=len(executable_sources)) as executor:
             future_to_source = {
@@ -163,6 +173,7 @@ class DiscoveryService:
                     converted = future.result()
                     all_studies.extend(converted)
                     total_por_fuente[source] = len(converted)
+                    studies_by_source[source] = converted  # ← Guardar estudios por fuente
                     logger.info(f"✓ {source}: {len(converted)} estudios obtenidos")
 
                 except Exception as e:
@@ -174,7 +185,7 @@ class DiscoveryService:
                         exc_info=True
                     )
 
-        return all_studies, total_por_fuente
+        return all_studies, total_por_fuente, studies_by_source
 
     def _fetch_single_source(
         self,
@@ -235,7 +246,8 @@ class DiscoveryService:
         strategy_id: str,
         unique_studies: list[Study],
         total_por_fuente: dict[str, int],
-        no_ejecutadas: dict[str, str]
+        no_ejecutadas: dict[str, str],
+        studies_by_source: dict[str, list[Study]]
     ) -> DiscoveryResult:
         """Construir el resultado final con summary completo."""
         total_bruto = sum(total_por_fuente.values())
@@ -248,6 +260,7 @@ class DiscoveryService:
             "total_unicos": len(unique_studies),
             "total_por_fuente": total_por_fuente,
             "no_ejecutadas": no_ejecutadas,
+            "studies_by_source": studies_by_source,  # ← Agregar para orchestrator
         }
 
         return DiscoveryResult(studies=unique_studies, summary=summary)

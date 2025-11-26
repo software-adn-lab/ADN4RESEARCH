@@ -87,8 +87,11 @@ if not connectors:
     print("❌ No hay conectores disponibles. Abortando test.")
     exit(1)
 
-# Inicializar servicio
-service = DiscoveryService(connectors=connectors)
+# CAMBIO: Usar Container para obtener DiscoveryService con persistencia
+from apps.acquisition.container import Container
+
+# El Container inyecta el repositorio automáticamente
+service = Container.get_discovery_service()
 
 tests_passed = 0
 tests_total = 2

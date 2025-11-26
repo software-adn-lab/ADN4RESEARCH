@@ -37,6 +37,12 @@ if str(ROOT_DIR) not in sys.path:
 
 load_dotenv()
 
+# Configurar Django ANTES de importar modelos
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+
+from apps.acquisition.container import Container
 from apps.acquisition.translation.domain.models import NormalizedStrategy
 from apps.acquisition.translation.application.translation_service import TranslationService
 from apps.acquisition.discovery.application.discovery_service import DiscoveryService
@@ -166,7 +172,10 @@ if ieee_available:
         password=IEEE_PASSWORD
     )
 
-discovery_service = DiscoveryService(connectors=connectors)
+discovery_service = DiscoveryService(
+    connectors=connectors,
+    repository=Container.get_repository()  # ← Persistir estudios en DB
+)
 
 discovery_result = discovery_service.execute(
     strategy_id=strategy.strategy_id,
@@ -196,9 +205,14 @@ print("=" * 80)
 print()
 
 crossref = CrossrefConnector(username=UNPAYWALL_EMAIL or "test@example.com")
-consolidation_service = ConsolidationService(connectors={"Crossref": crossref})
+consolidation_service = ConsolidationService(
+    connectors={"Crossref": crossref},
+    repository=Container.get_repository()
+)
 
-consolidation_result = consolidation_service.consolidate(studies_discovered)
+# enrich_studies() recibe lista de IDs, no estudios
+study_ids = [study.id for study in studies_discovered]
+consolidation_result = consolidation_service.enrich_studies(study_ids)
 studies_enriched = consolidation_result.studies
 
 print(f"✓ Estudios enriquecidos: {len(studies_enriched)}")
@@ -276,15 +290,16 @@ fulltext_service = FullTextService(
     oa_checker=oa_checker,
     downloader=http_downloader,
     alternative_finder=alternative_finder,
-    file_validator=file_validator
+    file_validator=file_validator,
+    repository=Container.get_repository()  # ← Persistir PDFs en DB
 )
 
-downloaded_results = []
+downloaded_studies = []
 for study in studies_accepted:
     print(f"Descargando: {study.title[:40]}...")
-    result = fulltext_service.obtain_fulltext(study)
-    downloaded_results.append(result)
-    print(f"  → Status: {result.download_status}, Source: {result.pdf_source}")
+    updated_study = fulltext_service.download_fulltext(study.id)
+    downloaded_studies.append(updated_study)
+    print(f"  → Status: {updated_study.download_status}, Source: {updated_study.pdf_source}")
 
 print()
 
@@ -301,7 +316,7 @@ print(f"  1. Traducción: {len(translation_statuses)} fuentes traducidas")
 print(f"  2. Descubrimiento: {discovery_result.summary['total_unicos']} estudios únicos")
 print(f"  3. Enriquecimiento: {len(studies_enriched)} estudios enriquecidos")
 print(f"  4. Selección: {len(studies_accepted)} estudios aceptados")
-print(f"  5. Descarga: {len([r for r in downloaded_results if r.pdf_path])} PDFs descargados")
+print(f"  5. Descarga: {len([s for s in downloaded_studies if s.pdf_path])} PDFs descargados")
 print()
 
 # Validaciones del pipeline completo
@@ -324,8 +339,8 @@ try:
 
     # 5. Descargas deben tener estados válidos
     valid_statuses = ["texto_completo_disponible", "no_disponible"]
-    assert all(r.download_status in valid_statuses for r in downloaded_results), \
-        "Todos los resultados deben tener estados válidos"
+    assert all(s.download_status in valid_statuses for s in downloaded_studies), \
+        "Todos los estudios deben tener estados de descarga válidos"
 
     print("✅ PIPELINE COMPLETO: TODAS LAS VALIDACIONES PASARON")
     print()

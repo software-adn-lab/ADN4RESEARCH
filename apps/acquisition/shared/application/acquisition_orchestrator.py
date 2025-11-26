@@ -205,11 +205,9 @@ class AcquisitionOrchestrator:
             f"(from {discovery_result.total_raw_studies} raw)"
         )
 
-        # 5. Persistir estudios
-        persisted_studies = []
-        if discovery_result.studies:
-            persisted_studies = self.study_repository.save_batch(discovery_result.studies)
-            logger.info(f"Persisted {len(persisted_studies)} studies")
+        # 5. Los estudios ya fueron persistidos por DiscoveryService
+        # (DiscoveryService tiene repositorio inyectado y persiste automáticamente)
+        persisted_studies = discovery_result.studies
 
         # 6. Registrar ejecución con trazabilidad
         execution_model = self._create_execution_model(
