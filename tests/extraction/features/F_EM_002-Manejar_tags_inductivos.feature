@@ -1,5 +1,4 @@
-# Created by jona at 28/10/25
-#language: es
+# language: es
 Característica: Gestión de Tags Inductivos (Propuesta y Moderación)
   Para capturar conceptos emergentes durante la lectura sin modificar el protocolo compartido,
   Como Investigador, quiero crear tags personales instantáneos.
@@ -12,8 +11,8 @@ Característica: Gestión de Tags Inductivos (Propuesta y Moderación)
     Dado que el Investigador "Juan" está extrayendo datos de un estudio
     Cuando "Juan" crea un nuevo tag inductivo llamado "Resistencia al cambio"
     Entonces se debe registrar el tag con:
-      | Nombre               | Propietario | Estado                  | Visibilidad |
-      | Resistencia al cambio| Juan        | Pendiente de Aprobación | Privada     |
+      | Nombre                | Propietario | Estado                  | Visibilidad |
+      | Resistencia al cambio | Juan        | Pendiente de Aprobación | Privada     |
     Y el tag "Resistencia al cambio" debe estar disponible para ser usado por "Juan" en otros papers
     Pero el tag "Resistencia al cambio" NO debe aparecer en la lista de tags del Investigador "Ana"
 
@@ -24,16 +23,15 @@ Característica: Gestión de Tags Inductivos (Propuesta y Moderación)
     Y la visibilidad para el resto del equipo (ej. "Ana") pasa a ser "<Visibilidad_Equipo>"
 
     Ejemplos:
-      | Nombre_Tag       | Accion_Owner | Estado_Final | Visibilidad_Equipo | Notas                                                                 |
-      | Gestión de Crisis| Aprobar      | Aprobado     | Pública            | El tag se vuelve estándar para todos los investigadores.              |
-      | Datos confusos   | Rechazar     | Rechazado    | Privada            | El tag sigue siendo útil solo para Juan, o se marca como no relevante.|
+      | Nombre_Tag        | Accion_Owner | Estado_Final | Visibilidad_Equipo |
+      | Gestión de Crisis | Aprobar      | Aprobado     | Pública            |
+      | Datos confusos    | Rechazar     | Rechazado    | Privada            |
 
   Escenario: Fusión de tags inductivos duplicados al aprobar
-    # Este es un caso borde crítico: Dos investigadores proponen lo mismo antes de que el Owner revise.
     Dada la existencia de los siguientes tags propuestos pendientes:
-      | Nombre_Tag | Propietario |
-      | Costo oculto| Juan        |
-      | Costos oc.  | Ana         |
+      | Nombre_Tag   | Propietario |
+      | Costo oculto | Juan        |
+      | Costos oc.   | Ana         |
     Cuando el Owner aprueba "Costo oculto" y lo marca como equivalente a "Costos oc."
     Entonces ambos tags se fusionan en un único tag global "Costo oculto"
     Y las extracciones que "Ana" hizo con "Costos oc." ahora deben estar asociadas al tag aprobado "Costo oculto"
