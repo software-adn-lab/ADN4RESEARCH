@@ -1,73 +1,63 @@
 """
 Dependency Injection Container - Composition Root.
 
-Este módulo es el "Composition Root" de la aplicación: el único lugar
-donde se ensamblan todas las dependencias.
+Este módulo es el "composition root" de Acquisition:
+el único lugar donde se ensamblan todas las dependencias concretas.
 
 Responsabilidades:
 - Inicializar conectores externos (Scopus, IEEE, Crossref, etc.)
 - Inicializar repositorios (DjangoStudyRepository)
 - Ensamblar servicios de aplicación con sus dependencias
-- Proporcionar interfaces simples para obtener servicios configurados
+- Exponer métodos de clase para obtener servicios ya configurados
 
-PRINCIPIO DE INVERSIÓN DE DEPENDENCIAS:
-- Los servicios de dominio dependen de INTERFACES (puertos), no de implementaciones
-- Este container inyecta las implementaciones CONCRETAS (adaptadores)
+Principio de inversión de dependencias:
+- Los servicios de dominio dependen de interfaces/puertos
+- Este container inyecta implementaciones concretas (adaptadores)
 
-Patrón Singleton Simple:
-- Los conectores y repositorios se crean una sola vez (lazy initialization)
-- Los servicios se pueden crear por solicitud (son livianos)
+Patrón Singleton simple:
+- Conectores y repositorios se crean una sola vez (lazy initialization)
+- Los servicios se crean una vez y se reutilizan (son livianos)
 """
 
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 
-# ============================================================================
-# ADAPTERS - Outbound (Infraestructura)
-# ============================================================================
-
-# Repositorio
 from apps.acquisition.shared.adapters.outbound.repositories.django_study_repository import (
-    DjangoStudyRepository
+    DjangoStudyRepository,
 )
 
-# Conectores académicos (cuando se implementen)
-# from apps.acquisition.discovery.adapters.outbound.connectors.scopus_connector import ScopusConnector
-# from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import IeeeConnector
-# from apps.acquisition.metadata.adapters.outbound.connectors.crossref_connector import CrossrefConnector
-
-# ============================================================================
-# APPLICATION SERVICES
-# ============================================================================
-
-# Translation
+# Application services
 from apps.acquisition.translation.application.translation_service import TranslationService
-
-# Discovery
 from apps.acquisition.discovery.application.discovery_service import DiscoveryService
-
-# Metadata
-# from apps.acquisition.metadata.application.consolidation_service import ConsolidationService
-
-# Orchestrator (Coordina todo el flujo)
 from apps.acquisition.shared.application.acquisition_orchestrator import AcquisitionOrchestrator
 
-# Downloads
 from apps.acquisition.downloads.application.fulltext_service import FullTextService
 from apps.acquisition.downloads.application.open_access_checker import CompositeOpenAccessChecker
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
-from apps.acquisition.downloads.application.manual_upload_app_service import ManualUploadAppService
+from apps.acquisition.downloads.application.manual_upload_app_service import (
+    ManualUploadAppService,
+)
 from apps.acquisition.downloads.domain.services.file_validator import FileValidator
 
-# Downloads - Conectores reales
-from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import UnpaywallChecker
-from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_access_checker import CrossrefOpenAccessChecker
-from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import ScopusInstitutionalChecker
-from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import HttpDownloader
-from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import AlternativeSourceFinder
-from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import LocalFileStorage
+from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import (
+    UnpaywallChecker,
+)
+from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_access_checker import (
+    CrossrefOpenAccessChecker,
+)
+from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import (
+    ScopusInstitutionalChecker,
+)
+from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import (
+    HttpDownloader,
+)
+from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import (
+    AlternativeSourceFinder,
+)
+from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import (
+    LocalFileStorage,
+)
 
-# Application Services (ahora con persistencia integrada)
 from apps.acquisition.discovery.application.manual_study_service import ManualStudyService
 from apps.acquisition.metadata.application.manual_edit_service import ManualEditService
 from apps.acquisition.metadata.application.consolidation_service import ConsolidationService
@@ -77,142 +67,130 @@ class Container:
     """
     Dependency Injection Container (Composition Root).
 
-    Patrón: Singleton simple con lazy initialization.
-    Todas las dependencias se crean una sola vez y se reutilizan.
+    Uso típico:
 
-    USO:
         # En una vista Django
-        service = Container.get_fulltext_service()
+        service = Container.get_fulltext_service_production()
         result = service.obtain_fulltext(study)
 
         # En una tarea Celery
         repo = Container.get_repository()
         studies = repo.find_all_by_status(StudyStatus.DISCOVERED)
 
-    CONFIGURACIÓN:
-        Las credenciales se leen de variables de entorno:
-        - SCOPUS_API_KEY
-        - IEEE_USERNAME, IEEE_PASSWORD
-        - CROSSREF_EMAIL (para rate limit más alto)
+    Las credenciales se leen de variables de entorno, por ejemplo:
+    - SCOPUS_API_KEY
+    - IEEE_USERNAME / IEEE_PASSWORD (o EPN_USER / EPN_PASS)
+    - UNPAYWALL_EMAIL
     """
 
-    # Singleton instances (lazy initialization)
+    # --------------------------------------------------------------------- #
+    # Singletons (lazy initialization)
+    # --------------------------------------------------------------------- #
+
+    # Repositorio
     _repository: Optional[DjangoStudyRepository] = None
+
+    # Conectores (reservados para uso futuro si se centralizan aquí)
     _scopus_connector = None
     _ieee_connector = None
     _crossref_connector = None
-    _file_validator = None
 
-    # Application Services
-    _translation_service = None
-    _discovery_service = None
-    _orchestrator = None
+    # Servicios de dominio / aplicación
+    _file_validator: Optional[FileValidator] = None
+    _translation_service: Optional[TranslationService] = None
+    _discovery_service: Optional[DiscoveryService] = None
+    _preview_discovery_service: Optional[DiscoveryService] = None
+    _orchestrator: Optional[AcquisitionOrchestrator] = None
 
-    # Application Services (con persistencia integrada)
-    _manual_study_service = None
-    _manual_edit_service = None
-    _consolidation_service = None
+    # Application services (con persistencia)
+    _manual_study_service: Optional[ManualStudyService] = None
+    _manual_edit_service: Optional[ManualEditService] = None
+    _consolidation_service: Optional[ConsolidationService] = None
 
-    # Downloads - Production connectors
-    _unpaywall_checker = None
-    _crossref_checker = None
-    _scopus_oa_checker = None
-    _http_downloader = None
-    _alternative_finder = None
-    _fulltext_service_production = None
-    _storage = None
-    _manual_upload_app_service = None
+    # Descargas (Feature 4)
+    _unpaywall_checker: Optional[UnpaywallChecker] = None
+    _crossref_checker: Optional[CrossrefOpenAccessChecker] = None
+    _scopus_oa_checker: Optional[ScopusInstitutionalChecker] = None
+    _http_downloader: Optional[HttpDownloader] = None
+    _alternative_finder: Optional[AlternativeSourceFinder] = None
+    _fulltext_service_production: Optional[FullTextService] = None
+    _storage: Optional[LocalFileStorage] = None
+    _manual_upload_app_service: Optional[ManualUploadAppService] = None
 
-    # ========================================================================
-    # REPOSITORIO
-    # ========================================================================
+    # --------------------------------------------------------------------- #
+    # Helpers privados
+    # --------------------------------------------------------------------- #
+
+    @classmethod
+    def _build_discovery_connectors(cls) -> Dict[str, Any]:
+        """
+        Construye los conectores reales usados por Discovery (Scopus, IEEE).
+
+        Se usa tanto para el servicio productivo como para el de preview.
+        """
+        from apps.acquisition.discovery.adapters.outbound.connectors.composite_scopus_connector import (
+            CompositeScopusConnector,
+        )
+        from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import (
+            IeeeConnector,
+        )
+
+        scopus_api_key = os.getenv("SCOPUS_API_KEY")
+        scopus_cookies = os.getenv("SCOPUS_COOKIES")
+
+        epn_user = os.getenv("EPN_USER")
+        epn_pass = os.getenv("EPN_PASS")
+
+        ieee_user = os.getenv("IEEE_USERNAME") or epn_user
+        ieee_pass = os.getenv("IEEE_PASSWORD") or epn_pass
+
+        return {
+            "Scopus": CompositeScopusConnector(
+                api_key=scopus_api_key,
+                username=epn_user,
+                password=epn_pass,
+                preloaded_cookies=scopus_cookies,
+            ),
+            "IEEE Xplore": IeeeConnector(
+                username=ieee_user,
+                password=ieee_pass,
+            ),
+        }
+
+    # --------------------------------------------------------------------- #
+    # Repositorio
+    # --------------------------------------------------------------------- #
 
     @classmethod
     def get_repository(cls) -> DjangoStudyRepository:
         """
-        Obtener la instancia del repositorio de estudios.
-
-        Returns:
-            DjangoStudyRepository configurado y listo para usar
+        Repositorio de estudios basado en Django ORM.
         """
         if cls._repository is None:
             cls._repository = DjangoStudyRepository()
         return cls._repository
 
-    # ========================================================================
-    # SERVICIOS DE DOMINIO
-    # ========================================================================
+    # --------------------------------------------------------------------- #
+    # Servicios de dominio básicos
+    # --------------------------------------------------------------------- #
 
     @classmethod
     def get_file_validator(cls) -> FileValidator:
         """
-        Obtener el validador de archivos PDF.
-
-        Returns:
-            FileValidator configurado
+        Validador de archivos PDF (estructura básica, tamaño, etc.).
         """
         if cls._file_validator is None:
             cls._file_validator = FileValidator()
         return cls._file_validator
 
-    # ========================================================================
-    # CONECTORES ACADÉMICOS (para Discovery y Metadata)
-    # ========================================================================
-
-    # TODO: Descomentar cuando se implementen los conectores reales
-
-    # @classmethod
-    # def get_scopus_connector(cls):
-    #     """
-    #     Obtener conector a Scopus.
-    #
-    #     Requiere: SCOPUS_API_KEY en variables de entorno
-    #     """
-    #     if cls._scopus_connector is None:
-    #         api_key = os.getenv("SCOPUS_API_KEY")
-    #         if not api_key:
-    #             raise ValueError("SCOPUS_API_KEY no configurada en variables de entorno")
-    #         cls._scopus_connector = ScopusConnector(api_key=api_key)
-    #     return cls._scopus_connector
-
-    # @classmethod
-    # def get_ieee_connector(cls):
-    #     """
-    #     Obtener conector a IEEE Xplore.
-    #
-    #     Requiere: IEEE_USERNAME, IEEE_PASSWORD en variables de entorno
-    #     """
-    #     if cls._ieee_connector is None:
-    #         username = os.getenv("IEEE_USERNAME")
-    #         password = os.getenv("IEEE_PASSWORD")
-    #         if not username or not password:
-    #             raise ValueError("IEEE_USERNAME y IEEE_PASSWORD deben estar configurados")
-    #         cls._ieee_connector = IeeeConnector(username=username, password=password)
-    #     return cls._ieee_connector
-
-    # @classmethod
-    # def get_crossref_connector(cls):
-    #     """
-    #     Obtener conector a Crossref.
-    #
-    #     Requiere (opcional): CROSSREF_EMAIL para rate limit más alto
-    #     """
-    #     if cls._crossref_connector is None:
-    #         email = os.getenv("CROSSREF_EMAIL", None)
-    #         cls._crossref_connector = CrossrefConnector(email=email)
-    #     return cls._crossref_connector
-
-    # ========================================================================
-    # APPLICATION SERVICES (ensamblados con dependencias)
-    # ========================================================================
+    # --------------------------------------------------------------------- #
+    # Translation / Discovery / Orchestrator
+    # --------------------------------------------------------------------- #
 
     @classmethod
     def get_translation_service(cls) -> TranslationService:
         """
-        Obtener servicio de traducción de estrategias (Feature 1).
-
-        Returns:
-            TranslationService configurado
+        Servicio de traducción de estrategias de búsqueda (Feature 1).
         """
         if cls._translation_service is None:
             cls._translation_service = TranslationService()
@@ -221,75 +199,46 @@ class Container:
     @classmethod
     def get_discovery_service(cls) -> DiscoveryService:
         """
-        Obtener servicio de descubrimiento de estudios (Feature 2).
+        Servicio de descubrimiento de estudios (Feature 2 - modo producción).
 
-        Configura conectores para Scopus e IEEE Xplore.
-
-        Returns:
-            DiscoveryService con conectores inyectados
+        - Usa conectores reales (Scopus, IEEE Xplore)
+        - Persiste resultados usando el repositorio de estudios
         """
         if cls._discovery_service is None:
-            # Importar CONECTORES reales (no SessionManagers)
-            from apps.acquisition.discovery.adapters.outbound.connectors.composite_scopus_connector import (
-                CompositeScopusConnector,
-            )
-            from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import (
-                IeeeConnector,
-            )
-
-            # Leer credenciales del .env
-            scopus_api_key = os.getenv("SCOPUS_API_KEY")
-            scopus_cookies = os.getenv("SCOPUS_COOKIES")
-            epn_user = os.getenv("EPN_USER")
-            epn_pass = os.getenv("EPN_PASS")
-            ieee_user = os.getenv("IEEE_USERNAME") or epn_user
-            ieee_pass = os.getenv("IEEE_PASSWORD") or epn_pass
-
-            # Conectores REALES para producción
-            # CompositeScopusConnector: API + Playwright fallback
-            # IeeeConnector: Playwright con autenticación EPN
-            connectors = {
-                "Scopus": CompositeScopusConnector(
-                    api_key=scopus_api_key,
-                    username=epn_user,
-                    password=epn_pass,
-                    preloaded_cookies=scopus_cookies
-                ),
-                "IEEE Xplore": IeeeConnector(
-                    username=ieee_user,
-                    password=ieee_pass
-                ),
-            }
-
-            # Inyectar repositorio para persistencia automática
+            connectors = cls._build_discovery_connectors()
             cls._discovery_service = DiscoveryService(
                 connectors=connectors,
-                repository=cls.get_repository()
+                repository=cls.get_repository(),
             )
-
         return cls._discovery_service
+
+    @classmethod
+    def get_preview_discovery_service(cls) -> DiscoveryService:
+        """
+        Servicio de descubrimiento en modo PREVIEW (sin persistencia).
+
+        - Usa los mismos conectores reales (Scopus, IEEE)
+        - Devuelve resultados en memoria
+        - NO persiste en base de datos
+        - Pensado para Diseño (probar estrategias).
+        """
+        if cls._preview_discovery_service is None:
+            connectors = cls._build_discovery_connectors()
+            cls._preview_discovery_service = DiscoveryService(
+                connectors=connectors,
+                repository=None,  # Sin repositorio = no hay persistencia
+            )
+        return cls._preview_discovery_service
 
     @classmethod
     def get_orchestrator(cls) -> AcquisitionOrchestrator:
         """
-        Obtener orquestador principal de Acquisition.
+        Orquestador principal de Acquisition.
 
-        El orquestador coordina:
+        Coordina:
         - Traducción de estrategias
         - Discovery en múltiples proveedores
-        - Persistencia con trazabilidad completa
-        - Integración con Design (ResearchQuestion)
-
-        Returns:
-            AcquisitionOrchestrator configurado con todos los servicios
-
-        Ejemplo:
-            >>> orchestrator = Container.get_orchestrator()
-            >>> result = orchestrator.execute_search_from_strategy(
-            ...     strategy_dict={"strategy_id": "...", ...},
-            ...     research_question_id=123
-            ... )
-            >>> print(f"Found {result.total_found} studies")
+        - Persistencia y trazabilidad de estudios
         """
         if cls._orchestrator is None:
             cls._orchestrator = AcquisitionOrchestrator(
@@ -297,75 +246,36 @@ class Container:
                 discovery_service=cls.get_discovery_service(),
                 study_repository=cls.get_repository(),
             )
-
         return cls._orchestrator
 
-    # @classmethod
-    # def get_discovery_service(cls) -> DiscoveryService:
-    #     """
-    #     Obtener servicio de descubrimiento de estudios (Feature 2).
-    #
-    #     Returns:
-    #         DiscoveryService con conectores y repositorio inyectados
-    #     """
-    #     connectors = {
-    #         "Scopus": cls.get_scopus_connector(),
-    #         "IEEE Xplore": cls.get_ieee_connector(),
-    #     }
-    #
-    #     return DiscoveryService(
-    #         connectors=connectors,
-    #         repository=cls.get_repository(),
-    #     )
-
-    # @classmethod
-    # def get_consolidation_service(cls) -> ConsolidationService:
-    #     """
-    #     Obtener servicio de consolidación de metadatos (Feature 3).
-    #
-    #     Returns:
-    #         ConsolidationService con conectores inyectados
-    #     """
-    #     connectors = {
-    #         "Scopus": cls.get_scopus_connector(),
-    #         "IEEE Xplore": cls.get_ieee_connector(),
-    #         "Crossref": cls.get_crossref_connector(),
-    #     }
-    #
-    #     return ConsolidationService(connectors=connectors)
+    # --------------------------------------------------------------------- #
+    # Descargas (Full text, manual upload, storage)
+    # --------------------------------------------------------------------- #
 
     @classmethod
     def get_fulltext_service_with_mocks(cls) -> FullTextService:
         """
-        Obtener servicio de descarga de textos completos CON MOCKS (Feature 4).
+        Servicio de descarga de full text con mocks (para BDD/testing).
 
-        NOTA: Esta versión usa mocks para BDD/testing.
-        Para producción, usar get_fulltext_service() con conectores reales.
-
-        Returns:
-            FullTextService con mocks inyectados
+        Para producción usar get_fulltext_service_production().
         """
         from apps.acquisition.shared.testing.mocks.downloads import (
-            build_fulltext_service_with_mocks
+            build_fulltext_service_with_mocks,
         )
+
         return build_fulltext_service_with_mocks()
 
     @classmethod
     def get_manual_upload_service(cls) -> ManualUploadService:
         """
-        Obtener servicio de carga manual de PDFs (Feature 4).
-
-        Returns:
-            ManualUploadService con FileValidator inyectado
+        Servicio de dominio para carga manual de PDFs.
         """
-        return ManualUploadService(
-            file_validator=cls.get_file_validator()
-        )
+        return ManualUploadService(file_validator=cls.get_file_validator())
 
     @classmethod
     def get_storage(cls) -> LocalFileStorage:
         """
-        Obtener adaptador de storage local para PDFs.
+        Adaptador de storage local para PDFs.
 
         Usa PAPERS_STORAGE_DIR como base (default: media/papers).
         """
@@ -377,7 +287,8 @@ class Container:
     @classmethod
     def get_manual_upload_app_service(cls) -> ManualUploadAppService:
         """
-        Servicio de aplicación para carga manual listo para usar desde vistas/APIs.
+        Servicio de aplicación para carga manual de PDFs,
+        listo para usarse desde vistas/APIs.
         """
         if cls._manual_upload_app_service is None:
             cls._manual_upload_app_service = ManualUploadAppService(
@@ -390,30 +301,22 @@ class Container:
     @classmethod
     def get_fulltext_service_production(cls) -> FullTextService:
         """
-        Obtener servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
+        Servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
 
-        Usa conectores REALES:
-        - UnpaywallChecker para verificar Open Access
-        - HttpDownloader para descargar PDFs
-        - AlternativeSourceFinder (stub por ahora)
-        - FileValidator para validar PDFs
+        Conectores reales:
+        - UnpaywallChecker (Open Access)
+        - CrossrefOpenAccessChecker
+        - ScopusInstitutionalChecker (opcional, si hay API key)
+        - HttpDownloader (descarga de PDFs)
+        - AlternativeSourceFinder (incluye Sci-Hub opcional)
 
-        CONFIGURACIÓN REQUERIDA (.env):
-        - UNPAYWALL_EMAIL: Email para API de Unpaywall (reutilizado para Crossref User-Agent)
-          (si no está, se intenta usar EPN_USER / IEEE_USERNAME como fallback)
-        - PAPERS_STORAGE_DIR: Directorio donde guardar PDFs (opcional, default: media/papers)
-        - ENABLE_SCIHUB: Habilitar LibGen y Sci-Hub (opcional, default: false)
-          ⚠️ LibGen y Sci-Hub operan en zona gris legal. Solo para investigación académica.
-
-        Returns:
-            FullTextService con conectores reales inyectados
-
-        Uso:
-            service = Container.get_fulltext_service_production()
-            result = service.obtain_fulltext(study)
+        Variables de entorno relevantes:
+        - UNPAYWALL_EMAIL (recomendado) o EPN_USER / IEEE_USERNAME
+        - PAPERS_STORAGE_DIR (destino de PDFs, default: media/papers)
+        - SCOPUS_API_KEY (opcional, para ScopusInstitutionalChecker)
+        - ENABLE_SCIHUB=true/false (zona gris legal: solo para investigación)
         """
         if cls._fulltext_service_production is None:
-            # Leer configuración de entorno
             email = (
                 os.getenv("UNPAYWALL_EMAIL")
                 or os.getenv("EPN_USER")
@@ -428,7 +331,7 @@ class Container:
             storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
             scopus_api_key = os.getenv("SCOPUS_API_KEY")
 
-            # Crear conectores
+            # Conectores OA
             if cls._unpaywall_checker is None:
                 cls._unpaywall_checker = UnpaywallChecker(email=email)
 
@@ -438,38 +341,37 @@ class Container:
             if cls._scopus_oa_checker is None and scopus_api_key:
                 cls._scopus_oa_checker = ScopusInstitutionalChecker(api_key=scopus_api_key)
 
+            # Descarga y fuentes alternativas
             if cls._http_downloader is None:
                 cls._http_downloader = HttpDownloader(base_dir=storage_dir)
 
             if cls._alternative_finder is None:
-                # Leer configuración de fuentes alternativas (Sci-Hub con bypass anti-DDoS)
                 enable_scihub = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
 
-                # Usar SciHubDownloader con mejores prácticas anti-DDoS
-                from apps.acquisition.downloads.adapters.outbound.connectors.scihub_downloader import SciHubDownloader
+                from apps.acquisition.downloads.adapters.outbound.connectors.scihub_downloader import (
+                    SciHubDownloader,
+                )
 
                 scihub = SciHubDownloader(
                     enabled=enable_scihub,
                     base_dir=storage_dir,
                     timeout=30,
-                    delay_range=(2.0, 5.0),  # Delays para evitar rate limiting
-                    use_cache=True  # Caché para evitar re-descargas
+                    delay_range=(2.0, 5.0),
+                    use_cache=True,
                 )
 
                 cls._alternative_finder = AlternativeSourceFinder(
                     scihub_downloader=scihub,
                     enable_scihub=enable_scihub,
-                    base_dir=storage_dir
+                    base_dir=storage_dir,
                 )
 
-            # Ensamblar servicio con checker compuesto (Unpaywall primario, Crossref secundario)
-            # OPTIMIZACIÓN: No consultar Scopus API si el estudio ya viene de Scopus
-            # (para no gastar cuota API dos veces, ya que Discovery ya lo consultó)
             oa_checker = CompositeOpenAccessChecker(
                 primary_checker=cls._unpaywall_checker,
                 secondary_checker=cls._crossref_checker,
                 tertiary_checker=cls._scopus_oa_checker,
-                skip_tertiary_for_sources=['Scopus']  # Saltar Scopus si ya vino de Discovery
+                # No gastar cuota de Scopus OA para estudios que ya vienen de Scopus
+                skip_tertiary_for_sources=["Scopus"],
             )
 
             cls._fulltext_service_production = FullTextService(
@@ -477,30 +379,19 @@ class Container:
                 downloader=cls._http_downloader,
                 alternative_finder=cls._alternative_finder,
                 file_validator=cls.get_file_validator(),
-                repository=cls.get_repository(),  # <-- Inyectar repository
+                repository=cls.get_repository(),
             )
 
         return cls._fulltext_service_production
 
-    # ========================================================================
-    # APPLICATION SERVICES (con persistencia integrada)
-    # ========================================================================
+    # --------------------------------------------------------------------- #
+    # Application services con persistencia
+    # --------------------------------------------------------------------- #
 
     @classmethod
     def get_manual_study_service(cls) -> ManualStudyService:
         """
-        Obtener servicio para registro manual de estudios.
-
-        Returns:
-            ManualStudyService configurado con repository
-
-        Ejemplo:
-            >>> service = Container.get_manual_study_service()
-            >>> study = service.create_manual_study(
-            ...     title="Manual Testing in Agile",
-            ...     link="https://example.com/paper",
-            ...     doi="10.1234/example"
-            ... )
+        Servicio para registro manual de estudios.
         """
         if cls._manual_study_service is None:
             cls._manual_study_service = ManualStudyService(
@@ -511,18 +402,7 @@ class Container:
     @classmethod
     def get_manual_edit_service(cls) -> ManualEditService:
         """
-        Obtener servicio para edición manual de metadatos.
-
-        Returns:
-            ManualEditService configurado con repository
-
-        Ejemplo:
-            >>> service = Container.get_manual_edit_service()
-            >>> study = service.edit(
-            ...     study_id="uuid-123",
-            ...     field_name="doi",
-            ...     value="10.1234/example"
-            ... )
+        Servicio para edición manual de metadatos de estudios.
         """
         if cls._manual_edit_service is None:
             cls._manual_edit_service = ManualEditService(
@@ -533,54 +413,42 @@ class Container:
     @classmethod
     def get_consolidation_service(cls) -> ConsolidationService:
         """
-        Obtener servicio para consolidación automática de metadatos.
+        Servicio para consolidación automática de metadatos (Feature 3).
 
-        NOTA: Requiere conectores externos configurados.
-        Por ahora retorna un servicio sin conectores (para testing).
-        En producción, inyectar conectores reales.
-
-        Returns:
-            ConsolidationService configurado con repository
-
-        Ejemplo:
-            >>> service = Container.get_consolidation_service()
-            >>> result = service.enrich_studies(["uuid-1", "uuid-2"])
-            >>> result.summary["enriched_fields"]
-            15
+        De momento se inicializa sin conectores externos (modo safe/testing).
+        En producción se pueden inyectar conectores reales desde aquí.
         """
         if cls._consolidation_service is None:
-            # TODO: Descomentar cuando los conectores estén disponibles
-            # connectors = {
-            #     "Scopus": cls.get_scopus_connector(),
-            #     "IEEE Xplore": cls.get_ieee_connector(),
-            #     "Crossref": cls.get_crossref_connector(),
-            # }
-            connectors = {}  # Por ahora vacío
+            connectors: Dict[str, Any] = {}  # TODO: inyectar Scopus/IEEE/Crossref cuando toque
             cls._consolidation_service = ConsolidationService(
                 connectors=connectors,
-                repository=cls.get_repository()  # <-- Inyectar repository
+                repository=cls.get_repository(),
             )
         return cls._consolidation_service
 
-    # ========================================================================
-    # UTILIDADES
-    # ========================================================================
+    # --------------------------------------------------------------------- #
+    # Utilidades
+    # --------------------------------------------------------------------- #
 
     @classmethod
-    def reset(cls):
+    def reset(cls) -> None:
         """
-        Resetear todas las instancias singleton.
+        Resetea todas las instancias singleton del container.
 
-        Útil para testing cuando necesitas "limpiar" el container.
+        Útil para testing cuando necesitas "limpiar" el estado.
         """
         cls._repository = None
+
         cls._scopus_connector = None
         cls._ieee_connector = None
         cls._crossref_connector = None
+
         cls._file_validator = None
         cls._translation_service = None
         cls._discovery_service = None
+        cls._preview_discovery_service = None
         cls._orchestrator = None
+
         cls._unpaywall_checker = None
         cls._crossref_checker = None
         cls._scopus_oa_checker = None
@@ -589,6 +457,7 @@ class Container:
         cls._fulltext_service_production = None
         cls._storage = None
         cls._manual_upload_app_service = None
+
         cls._manual_study_service = None
         cls._manual_edit_service = None
         cls._consolidation_service = None

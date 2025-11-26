@@ -48,7 +48,7 @@ class CompositeScopusConnector(IAcademicConnector):
         api_key: Optional[str] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        headless: bool = False,
+        headless: bool | None = None,
         rate_limit: float = 1.0,
         preloaded_cookies: Optional[str] = None
     ):
@@ -57,14 +57,18 @@ class CompositeScopusConnector(IAcademicConnector):
             api_key: API key de Elsevier (para API oficial)
             username: Usuario EPN (para fallback Playwright)
             password: Contraseña EPN (para fallback Playwright)
-            headless: Navegador sin interfaz. Default False (evita detección de bot)
+            headless: Navegador sin interfaz. Si es None, usa HEADLESS_MODE del .env.
             rate_limit: Segundos entre peticiones
             preloaded_cookies: Cookies JSON exportadas (opcional, para bypass reCAPTCHA)
         """
+        # Usar configuración centralizada si no se especifica explícitamente
+        from apps.acquisition.shared.config.playwright_config import get_playwright_config
+        cfg = get_playwright_config()
+
         self.api_key = api_key
         self.username = username
         self.password = password
-        self.headless = headless
+        self.headless = cfg.headless if headless is None else headless
         self.rate_limit = rate_limit
         self.preloaded_cookies = preloaded_cookies
 

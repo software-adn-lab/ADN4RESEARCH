@@ -245,7 +245,7 @@ def step_then_estado_traduccion(context, estado_esperado):
     OBJETIVO: Chequear estado observable del caso de uso.
 
     INCLUYE:
-    - status del resultado es exactamente el esperado ("Done")
+    - status del resultado es exactamente el esperado ("ready")
 
     NO INCLUYE:
     - Deducciones por inspección de la query

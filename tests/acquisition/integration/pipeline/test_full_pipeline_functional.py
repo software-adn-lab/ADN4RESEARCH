@@ -111,7 +111,12 @@ STRATEGY_DATA = {
         }
     ],
     "exclusions": [],
-    "filters": {}
+    "filters": {
+        "year_filter": {
+            "from": 2019,
+            "to": 2021
+        }
+    }
 }
 
 strategy = NormalizedStrategy.from_dict(STRATEGY_DATA)
