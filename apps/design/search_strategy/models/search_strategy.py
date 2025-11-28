@@ -9,12 +9,6 @@ class SearchStrategyQuerySet(models.QuerySet):
         return self.filter(status=self.model.Status.APPROVED)
     
 class SearchStrategy(models.Model):
-    """
-    MODELO UNIFICADO: Gestiona el ciclo de vida completo.
-    - Design: Define qué buscar.
-    - Acquisition: Ejecuta y reporta resultados.
-    """
-    
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft' 
         APPROVED = 'APPROVED', 'Approved'
@@ -50,15 +44,12 @@ class SearchStrategy(models.Model):
     )
 
     def __str__(self):
-        return f"Strategy '{self.name}' ({self.get_status_display()})"
+        return f"Strategy '{self.name}' for RQ-{self.research_question.id}"
 
-
-# ==============================================================================
-# 3. VERSIONAMIENTO (Se mantiene igual, no rompe nada)
-# ==============================================================================
 class SearchStrategyVersion(models.Model):
+    """ Este es el memento"""
     strategy = models.ForeignKey(
-        SearchStrategy,
+        'design.SearchStrategy',
         on_delete=models.CASCADE,
         related_name='versions'
     )
@@ -68,7 +59,6 @@ class SearchStrategyVersion(models.Model):
     total_found = models.PositiveIntegerField(default=0, help_text="Number of studies found with this strategy")
     
     metadata_snapshot = models.JSONField(default=dict) 
-    
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True) 
 

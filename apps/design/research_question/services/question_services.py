@@ -20,6 +20,7 @@ class ResearchQuestionService:
         project = design_phase.project
         if not self._is_valid_framework_fields(project.research_framework, framework_fields or {}):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")
+
         question = ResearchQuestion.objects.create(
             design_phase=design_phase,
             researcher_id=researcher_id,
@@ -27,6 +28,7 @@ class ResearchQuestionService:
             motivation=motivation,
             framework_fields=framework_fields
         )
+
         return question
 
     @transaction.atomic
@@ -244,8 +246,10 @@ class ResearchQuestionService:
             project = Project.objects.select_related('owner', 'design_phase').get(pk=project_id)
         except Project.DoesNotExist:
             raise ProjectNotFoundError(f"Project with id {project_id} not found.")
+
         if project.owner != user:
             raise ProjectPermissionError("Only the owner can consolidate this project.")
+
         try:
             phase = project.design_phase
         except DesignPhase.DoesNotExist:
