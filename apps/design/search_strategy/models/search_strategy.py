@@ -9,12 +9,6 @@ class SearchStrategyQuerySet(models.QuerySet):
         return self.filter(status=self.model.Status.APPROVED)
     
 class SearchStrategy(models.Model):
-    """
-    MODELO UNIFICADO: Gestiona el ciclo de vida completo.
-    - Design: Define qué buscar.
-    - Acquisition: Ejecuta y reporta resultados.
-    """
-    
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft' 
         APPROVED = 'APPROVED', 'Approved'
