@@ -10,6 +10,7 @@ Característica: Construir cadena de búsqueda
     # tomo como ejemplo a PICO.
     Antecedentes:
         Dado que estoy asignado a un proyecto de investigación
+        Y que la fase de diseño esta activa
         Y el proyecto tiene como framework investigativo a PICO
 
     Esquema del escenario: Proveer términos clave a partir de campos del framework

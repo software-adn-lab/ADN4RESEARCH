@@ -1,5 +1,13 @@
 from django.db import models
 
+
+class SearchStrategyQuerySet(models.QuerySet):
+    def by_project(self, project_id):
+        return self.filter(research_question__design_phase_id=project_id)
+
+    def active(self):
+        return self.filter(status=self.model.Status.ACTIVE)
+    
 class SearchStrategy(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
@@ -20,6 +28,7 @@ class SearchStrategy(models.Model):
     # Aquí se guarda la CADENA FINAL GENERADA!!!!!! pilas
     final_search_string = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = SearchStrategyQuerySet.as_manager()
     # approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL) # Opcional: Quién aprobó la estrategia
 
     def __str__(self):

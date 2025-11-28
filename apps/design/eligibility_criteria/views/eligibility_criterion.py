@@ -11,7 +11,11 @@ project_service = ProjectService()
 
 def open_eligibility_criteria_panel(request, project_id):
     """Render the eligibility criteria panel for a project."""
-    project = project_service.get_project_by_id(project_id)
+    project = project_service.get_project_by_id(
+        project_id, 
+        user=request.user,
+        related_fields=['design_phase', 'owner']
+    )
     inclusion_criteria = eligibility_service.get_inclusion_criteria(project_id)
     exclusion_criteria = eligibility_service.get_exclusion_criteria(project_id)
     timeline_stages = project_service.get_design_timeline_context(project_id)
@@ -31,7 +35,11 @@ def create_eligibility_criterion(request, project_id):
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
     try:
-        project = project_service.get_project_by_id(project_id)
+        project = project_service.get_project_by_id(
+            project_id, 
+            user=request.user, 
+            related_fields=['design_phase', 'owner'] 
+        )
         description = request.POST.get('description', '').strip()
         motivation = request.POST.get('motivation', '').strip()
         criteria_type = request.POST.get('type', '')

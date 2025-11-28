@@ -11,6 +11,7 @@ from apps.design.search_strategy.services.keyword_processor_service import Keywo
 from apps.project.models import Project
 from apps.project.services.project_services import ProjectService
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 
 research_question_service = ResearchQuestionService()
 project_service = ProjectService()
@@ -24,22 +25,29 @@ def hello(request):
     return render(request, 'base_tabs.html', {
         'project': project
     })
-    
+
+@login_required
 def open_questions_workspace_view(request, project_id):
     # Obtengo las preguntas del proyecto que un usuario ha creado
+    status_filter = request.GET.get('status')
+    project = project_service.get_project_by_id(
+        project_id, 
+        user=request.user, 
+        related_fields=['owner', 'research_framework', 'design_phase'] 
+    )
     questions = research_question_service.get_all_questions_by_user_and_project(project_id=project_id, user=request.user)
-    # Obtengo las keywords del proyecto
+    if status_filter:
+        questions = research_question_service.filter_questions_by_status(questions, status_filter)
     project_keywords = project_service.get_project_keyterms(project_id)
-    # Obtengo el proyecto para pasarle solo cosas necesarias al template, no el objeto entero al template
-    project = project_service.get_project_by_id(project_id)
     stage_end_date = project_service.get_current_stage_deadline(project_id)
     timeline_stages = project_service.get_design_timeline_context(project_id)
     context = {
         'project': project,
-        'questions': questions, # aqui si le mando todo porque son algunos atributos de las preguntas
+        'questions': questions,
         'keywords': project_keywords,
         'stage_end_date': stage_end_date,
         'timeline_stages': timeline_stages,
+        'status': status_filter,
         'active_tab': 'questions_history', 
     }
     return render(request, 'rq_workspace.html', context)

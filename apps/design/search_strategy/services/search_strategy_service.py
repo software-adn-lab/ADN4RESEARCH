@@ -44,7 +44,7 @@ class SearchStrategyService:
 
     # TRABAJO PARA SUGERIDOS SIN SINONIMOS Y CON SINONIMOS
     def _link_project_keywords_to_strategy(self, strategy: SearchStrategy, keyword_data: list[dict], clear_previous: bool = True):
-        project_id = strategy.research_question.project_id
+        design_phase_id = strategy.research_question.design_phase_id
         with transaction.atomic():
             if clear_previous:
                 strategy.keywords.all().delete()
@@ -55,13 +55,13 @@ class SearchStrategyService:
                 if not term_text:
                     continue
                 project_keyword, _ = ProjectKeyword.objects.get_or_create(
-                    project_id=project_id,
+                    design_phase_id=design_phase_id, 
                     term=term_text,
                     defaults={'synonyms': item.get('synonyms', '')}
-                )
+                )    
                 if not clear_previous:
                     if Keyword.objects.filter(strategy=strategy, project_keyword=project_keyword).exists():
-                        continue
+                        continue      
                 keywords_to_link.append(
                     Keyword(strategy=strategy, project_keyword=project_keyword)
                 )
@@ -73,7 +73,6 @@ class SearchStrategyService:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
         self._link_project_keywords_to_strategy(strategy, keyword_data)
 
-    # Método para sincronizar UNICAMENTE términos sugeridos con una estrategia
     def sync_suggested_terms_with_strategy(self, research_question_id: int, suggested_terms: list[str]) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
         keyword_data = [{'term': term, 'synonyms': ''} for term in suggested_terms]

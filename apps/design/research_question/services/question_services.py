@@ -8,6 +8,8 @@ from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError
 from apps.project.models import Project
 from django.contrib.auth.models import User
+
+from apps.design.shared.models.design_phase import DesignPhase
 # user de django
 
 
@@ -15,24 +17,25 @@ class ResearchQuestionService:
     # METODOS CRUD - de DAO en una segunda version
     @transaction.atomic
     def add_research_question(self, project_id: int, question: str, motivation: str, researcher_id: int, framework_fields: dict) -> ResearchQuestion:
-        print("Adding research question with framework fields:", framework_fields)
-        print("Type of framework_fields:", type(framework_fields))
         if not framework_fields:
             raise InvalidFrameworkFieldsError("Framework fields cannot be empty")
         try:
-            project = Project.objects.get(id=project_id)
+            project = Project.objects.select_related('research_framework').get(id=project_id)
         except Project.DoesNotExist:
             raise ProjectNotFoundError(f"Project with id {project_id} does not exist")
+        if not DesignPhase.objects.filter(pk=project_id).exists():
+             raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
         if not self._is_valid_framework_fields(project.research_framework, framework_fields):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")
+
         question = ResearchQuestion.objects.create(
-            project_id=project_id,
-            research_framework_id=project.research_framework_id,
+            design_phase_id=project_id,   
             researcher_id=researcher_id,
             question=question,
             motivation=motivation,
             framework_fields=framework_fields
         )
+
         return question
 
     @transaction.atomic
@@ -65,24 +68,21 @@ class ResearchQuestionService:
             researcher=user,
             project__id=project_id
         ).order_by('-modified_at')
+    
+    def filter_questions_by_status(self, questions_queryset, status):
+        return questions_queryset.filter(status=status)
 
     def get_research_questions_by_project_and_status(self, project_id, status):
         return ResearchQuestion.objects.filter(
-            project_id=project_id,
+            design_phase_id=project_id, 
             status=status
         ).order_by('-modified_at')
         
     def get_discussion_research_questions_by_project(self, project_id: int):
-        return ResearchQuestion.objects.filter(
-            project_id=project_id,
-            status__in=ResearchQuestion.DISCUSSION_PHASE_STATUSES
-        ).order_by('-modified_at')
+        return ResearchQuestion.objects.by_project(project_id).in_discussion_phase().order_by('-modified_at')
         
     def get_research_questions_by_status(self, project_id, status):
-        return ResearchQuestion.objects.filter(
-            project_id=project_id,
-            status=status
-        ).order_by('-modified_at')
+        return ResearchQuestion.objects.by_project(project_id).by_status(status).order_by('-modified_at')
 
     # Logica de negocio
     # TODO: La limpieza de los datos es en el formulario, no en el servicio
@@ -227,20 +227,27 @@ class ResearchQuestionService:
 
     def _validate_consolidation_prerequisites(self, project_id, user):
         try:
-            project = Project.objects.select_related('owner').get(pk=project_id)
+            project = Project.objects.select_related('owner', 'design_phase').get(pk=project_id)
         except Project.DoesNotExist:
             raise ProjectNotFoundError(f"Project with id {project_id} not found.")
+
         if project.owner != user:
             raise ProjectPermissionError("Only the owner can consolidate this project.")
+
         try:
-            phase = project.phases.get(phase_type=ProjectPhase.PhaseType.DESIGN, is_active=True)
-        except ProjectPhase.DoesNotExist:
-            raise InvalidProjectStateError("Active Design phase not found.")
+            phase = project.design_phase
+        except DesignPhase.DoesNotExist: # O la excepción genérica ObjectDoesNotExist
+             raise InvalidProjectStateError("Active Design phase not found.")
 
-        if phase.current_stage != ProjectPhase.Stage.RQ_DISCUSSION:
-            raise InvalidProjectStateError(f"Phase must be in 'Discussion' stage, but is in {phase.current_stage}.")
+        if not phase.is_active:
+            raise InvalidProjectStateError("Design phase is not active.")
 
-        if not project.research_questions.filter(status=ResearchQuestion.Status.APPROVED).exists():
+        if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
+            raise InvalidProjectStateError(
+                f"Phase must be in 'Discussion' stage, but is in '{phase.get_current_stage_display()}'."
+            )
+
+        if not phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).exists():
             raise ConsolidationError("Cannot consolidate without at least one APPROVED question.")
 
         return project, phase

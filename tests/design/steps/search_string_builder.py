@@ -4,6 +4,7 @@ from apps.project.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
+from apps.design.shared.models.design_phase import DesignPhase
 import logging
 import json
 project_service = ProjectService()
@@ -16,8 +17,8 @@ def step_dado_creo_pregunta_investigacion(context, pregunta_investigacion, frame
     fields = json.loads(framework_fields)
     context.research_question = research_question_service.add_research_question(
         project_id=context.project.id,
-        researcher_id=context.researcher.id,
         question=pregunta_investigacion,
+        researcher_id=context.researcher.id,
         motivation="Motivación de prueba",
         framework_fields=fields
     )

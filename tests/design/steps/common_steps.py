@@ -4,7 +4,7 @@ from apps.project.services.project_services import ProjectService
 import logging
 import json
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.project.models import ProjectPhase
+from apps.design.shared.models.design_phase import DesignPhase
 from apps.project.services.project_services import ProjectPhaseService
 
 research_question_service = ResearchQuestionService()
@@ -37,16 +37,32 @@ def step_dado_he_redactado_pregunta(context):
     )
     assert context.research_question is not None
 
-@given('que la etapa de "{design_stage}" esta activa en la fase de diseño')
-def step_dado_proyecto_en_fase_y_etapa(context, design_stage):
+@given('que la etapa de "{design_stage_name}" esta activa en la fase de diseño')
+def step_dado_proyecto_en_fase_y_etapa(context, design_stage_name):
     # 1. Mapeo de Lenguaje Natural (Gherkin) -> Enums del Modelo
-    phase = ProjectPhase.PhaseType.DESIGN
     stage_map = {
-        "creación": ProjectPhase.Stage.RQ_CREATION,
-        "discusión": ProjectPhase.Stage.RQ_DISCUSSION, #
-        "criterios": ProjectPhase.Stage.CRITERIA_DEFINITION, # Ajusta según tu enum real si cambia
-        "finalizado": ProjectPhase.Stage.FINISHED,   #
+        "creación": DesignPhase.DesignStage.RQ_CREATION,
+        "discusión": DesignPhase.DesignStage.RQ_DISCUSSION,
+        "criterios": DesignPhase.DesignStage.CRITERIA_DEFINITION,
+        "estrategia": DesignPhase.DesignStage.SEARCH_STRATEGY,
+        "finalizado": DesignPhase.DesignStage.FINISHED,
     }
-    target_stage = stage_map[design_stage]
-    phase_created = project_phase_service.open_stage_phase(context.project.id, phase, target_stage)
-    assert phase_created.current_stage == target_stage
+    target_stage = stage_map[design_stage_name]
+    phase, created = DesignPhase.objects.update_or_create(
+        project=context.project, 
+        defaults={
+            'current_stage': target_stage,
+            'is_active': True,
+        }
+    )
+    assert phase.current_stage == target_stage
+
+@step('que la fase de diseño esta activa')
+def step_dado_fase_diseno_activa(context):
+    phase, created = DesignPhase.objects.update_or_create(
+        project=context.project, # Al ser OneToOne con PK=True, esto busca por ID automáticamente
+        defaults={
+            'is_active': True,
+        }
+    )
+    assert phase.is_active is True

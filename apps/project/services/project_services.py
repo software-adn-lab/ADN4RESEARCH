@@ -2,8 +2,11 @@ from apps.design.research_question.services.question_services import ResearchQue
 from apps.design.search_strategy.models.keyword import ProjectKeyword
 from apps.project.models import Project, ProjectPhase, ResearchFramework
 from typing import List
-from django.core.exceptions import ValidationError
 from django.db import transaction
+
+from apps.design.shared.models.design_phase import DesignPhase
+
+from apps.project.exceptions import ProjectNotFoundError
 
 
 class ProjectService:
@@ -20,22 +23,33 @@ class ProjectService:
             owner=owner,
             research_framework=framework
         )
+        DesignPhase.objects.create(
+            project=project,
+            is_active=True,
+            current_stage=DesignPhase.DesignStage.RQ_CREATION
+        )
+
         self.add_member(project, owner, role="OWNER")
         return project
-
+    
     def add_member(self, project: Project, user, role):
-        # Implementation to add a member to the project with a specific role
         project.add_member(user, role)
-
+        
     def get_members(self, project: Project):
         return project.get_members()
 
     def get_questions_for_project(self, project_id: int):
-        project = Project.objects.get(id=project_id)
-        return project.research_questions.all().order_by('-created_at')
+        """
+        Obtiene las preguntas buscando explícitamente la fase asociada al proyecto.
+        """
+        try:
+            # SEMÁNTICA CLARA: "Dame la fase cuyo project_id sea X"
+            design_phase = DesignPhase.objects.get(project_id=project_id)
+            return design_phase.research_questions.all().order_by('-created_at')
+        except DesignPhase.DoesNotExist:
+            return []
     
     def get_project_framework(self, request):
-        # Implementation to get the research framework associated with the project
         user = request.user
         project = Project.objects.filter(memberships__user=user).first()
         if project:
@@ -46,15 +60,27 @@ class ProjectService:
         return project.get_members()
 
     def get_project_keyterms(self, project_id: int) -> List[ProjectKeyword]:
-        return list(ProjectKeyword.objects.filter(project_id=project_id))
+        """
+        Obtiene los keywords filtrando por la relación con el proyecto.
+        Aqui si lo relaciono a disenio porque es la fase que posee los keywords
+        """
+        return list(ProjectKeyword.objects.filter(design_phase__project_id=project_id))
 
-    def get_project_by_id(self, project_id) -> Project:
+    def get_project_by_id(self, project_id: int, user=None, related_fields: list = None) -> Project:
         try:
-            # Trae el proyecto Y su framework en UN solo viaje a la DB
-            return Project.objects.select_related('research_framework', 'owner').get(id=project_id)
+            queryset = Project.objects.all()
+            if related_fields:
+                queryset = queryset.select_related(*related_fields)
+            else:
+                queryset = queryset.select_related('owner', 'research_framework')
+            if user:
+                queryset = queryset.filter(
+                    Q(owner=user) | Q(memberships__user=user)
+                ).distinct() # distinct() evita duplicados si el join se complica
+            return queryset.get(id=project_id)
+
         except Project.DoesNotExist:
-            # 
-            pass
+            raise ProjectNotFoundError(f"Project {project_id} not found or access denied.")
     
     def get_current_stage_deadline(self, project_id: int):
         try:

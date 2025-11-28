@@ -59,7 +59,7 @@ class Project(models.Model):
     def get_members(self):
         return Membership.objects.filter(project=self)
         
-class Membership(models.Model):
+class Membership(models.Model): 
     ROLE_CHOICES = [
         ('OWNER', 'Owner'),
         ('RESEARCHER', 'Researcher'),
@@ -72,7 +72,15 @@ class Membership(models.Model):
 
     class Meta:
         unique_together = ('project', 'user')
-        
+
+class BasePhase(models.Model): # Clase abstracta para las phases
+    is_active = models.BooleanField(default=False)
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        abstract = True 
+      
 class ProjectPhase(models.Model):
     class PhaseType(models.TextChoices):
         DESIGN = 'DESIGN', 'Design Phase'
