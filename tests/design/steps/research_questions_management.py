@@ -56,9 +56,10 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
         framework_fields=fields
     )
     research_question_service.submit_research_question_for_review(research_question_id=context.research_question_two.id)
-    research_questions_project = research_question_service.get_research_questions_by_status(
+    research_questions_project = research_question_service.get_questions_for_workspace(
         project_id=context.project.id,
-        status=status_suggested
+        user=context.researcher,
+        status_filter=status_suggested
     )
     suggested_questions_project = research_question_service.get_discussion_research_questions_by_project(
         project_id=context.project.id

@@ -5,12 +5,10 @@ import logging
 import json
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.shared.models.design_phase import DesignPhase
-from apps.project.services.project_services import ProjectPhaseService
 
 research_question_service = ResearchQuestionService()
 
 project_service = ProjectService()
-project_phase_service = ProjectPhaseService()
 
 @given('que estoy asignado a un proyecto de investigación')
 def step_dado_proyecto_asignado(context):

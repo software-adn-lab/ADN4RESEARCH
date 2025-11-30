@@ -9,6 +9,9 @@ class ResearchQuestionQuerySet(models.QuerySet):
 
     def by_status(self, status):
         return self.filter(status=status)
+    
+    def by_researcher(self, user):
+        return self.filter(researcher=user)
 
     def in_discussion_phase(self):
         return self.filter(status__in=self.model.DISCUSSION_PHASE_STATUSES)

@@ -1,8 +1,6 @@
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.project.exceptions import ConsolidationError, InvalidProjectStateError, ProjectPermissionError
-from apps.project.models import ProjectPhase
 from config.events import bus
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError
@@ -14,38 +12,37 @@ from apps.design.shared.models.design_phase import DesignPhase
 
 
 class ResearchQuestionService:
-    # METODOS CRUD - de DAO en una segunda version
+    # METODOS CRUD - en una segunda version
     @transaction.atomic
     def add_research_question(self, project_id: int, question: str, motivation: str, researcher_id: int, framework_fields: dict) -> ResearchQuestion:
-        if not framework_fields:
-            raise InvalidFrameworkFieldsError("Framework fields cannot be empty")
         try:
-            project = Project.objects.select_related('research_framework').get(id=project_id)
-        except Project.DoesNotExist:
-            raise ProjectNotFoundError(f"Project with id {project_id} does not exist")
-        if not DesignPhase.objects.filter(pk=project_id).exists():
+            design_phase = DesignPhase.objects.select_related('project__research_framework').get(pk=project_id) 
+        except DesignPhase.DoesNotExist:
              raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
-        if not self._is_valid_framework_fields(project.research_framework, framework_fields):
+        project = design_phase.project
+        if not self._is_valid_framework_fields(project.research_framework, framework_fields or {}):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")
-
         question = ResearchQuestion.objects.create(
-            design_phase_id=project_id,   
+            design_phase=design_phase,
             researcher_id=researcher_id,
             question=question,
             motivation=motivation,
             framework_fields=framework_fields
         )
-
         return question
 
     @transaction.atomic
     def update_research_question(self, question_id, user, **data):
         try:
-            question = ResearchQuestion.objects.select_related('project__owner').get(id=question_id)
+            # Aqui accedo a la pregunta junto con el proyecto y su dueño
+            question = ResearchQuestion.objects.select_related(
+                'design_phase__project__owner',
+                'design_phase__project__research_framework' 
+            ).get(id=question_id)
         except ResearchQuestion.DoesNotExist:
-            raise ValidationError("Question not found.")
+            raise QuestionNotFoundError("Question not found.")
         self._validate_edit_permissions(question, user)
-        updated_question = self._apply_updates(question, data)
+        updated_question = self._apply_updates(question, data)     
         return updated_question
 
     @transaction.atomic
@@ -56,46 +53,63 @@ class ResearchQuestionService:
             raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
         question.delete()
 
-    @transaction.atomic
     def get_research_question_by_id(self, research_question_id: int, user: User):
         try:
-            return ResearchQuestion.objects.get(id=research_question_id, researcher=user)
+            # Una pregunta de cierto proyecto
+            qs = ResearchQuestion.objects.select_related(
+                'design_phase__project__research_framework',
+                'design_phase__project__owner'
+            )
+            question = qs.get(id=research_question_id)
+            is_author = question.researcher == user
+            is_owner = question.design_phase.project.owner == user
+            if not (is_author or is_owner):
+                raise QuestionNotFoundError(f"Question not found or access denied.")
+
+            return question
+
         except ResearchQuestion.DoesNotExist:
             raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
+    
+    def get_questions_for_workspace(self, project_id: int, user, status_filter: str = None):
+        """
+        Obtiene las preguntas para el Workspace aplicando reglas de visibilidad:
+        - Owner: Ve TODAS las preguntas.
+        - Researcher: Ve SOLO sus propias preguntas.
+        - Filtro opcional: Aplica filtro por estado si se envía.
+        """
+        try:
+            owner_id = Project.objects.values_list('owner_id', flat=True).get(pk=project_id)
+        except Project.DoesNotExist:
+            raise ProjectNotFoundError(f"Project with id {project_id} not found.")
+        qs = ResearchQuestion.objects.by_project(project_id)
+        is_owner = (user.id == owner_id)
+        if not is_owner:
+            qs = qs.by_researcher(user)
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs.order_by('-modified_at')
 
     def get_all_questions_by_user_and_project(self, project_id: int, user):
-        return ResearchQuestion.objects.filter(
-            researcher=user,
-            project__id=project_id
-        ).order_by('-modified_at')
-    
-    def filter_questions_by_status(self, questions_queryset, status):
-        return questions_queryset.filter(status=status)
+        return ResearchQuestion.objects.by_project(project_id).by_researcher(user).order_by('-modified_at')
 
-    def get_research_questions_by_project_and_status(self, project_id, status):
-        return ResearchQuestion.objects.filter(
-            design_phase_id=project_id, 
-            status=status
-        ).order_by('-modified_at')
+    #def get_research_questions_by_project_and_status(self, project_id, status):
+    #    return ResearchQuestion.objects.by_project(project_id).filter(status=status).order_by('-modified_at')
         
     def get_discussion_research_questions_by_project(self, project_id: int):
         return ResearchQuestion.objects.by_project(project_id).in_discussion_phase().order_by('-modified_at')
         
-    def get_research_questions_by_status(self, project_id, status):
-        return ResearchQuestion.objects.by_project(project_id).by_status(status).order_by('-modified_at')
+    #def get_research_questions_by_status(self, project_id, status):
+    #    return ResearchQuestion.objects.by_project(project_id).by_status(status).order_by('-modified_at')
 
     # Logica de negocio
     # TODO: La limpieza de los datos es en el formulario, no en el servicio
     @transaction.atomic
     def autosave_question(self, cleaned_data, user, project_id, question_id) -> ResearchQuestion:
-        # Extraemos los datos ya limpios y tipados
-        framework_data = cleaned_data.get('framework_fields', {})
-        question_text = cleaned_data.get('question', '')
-        motivation = cleaned_data.get('motivation', '')
         payload = {
-            'question': question_text,
-            'motivation': motivation,
-            'framework_fields': framework_data
+            'question': cleaned_data.get('question', ''),
+            'motivation': cleaned_data.get('motivation', ''),
+            'framework_fields': cleaned_data.get('framework_fields', {})
         }
         if question_id:
             return self.update_research_question(question_id=question_id, user=user, **payload)
@@ -132,12 +146,11 @@ class ResearchQuestionService:
 
     def _validate_edit_permissions(self, question, user):
         """Valida fase del proyecto y propiedad de la pregunta."""
-        project = question.project
-        is_owner = (project.owner == user)
-        design_phase = project.phases.filter(phase_type=ProjectPhase.PhaseType.DESIGN).first()
-        if design_phase:
-            open_stages = [ProjectPhase.Stage.RQ_CREATION, ProjectPhase.Stage.RQ_DISCUSSION]
-            if design_phase.current_stage not in open_stages and not is_owner:
+        design_phase = question.design_phase
+        project_owner = design_phase.project.owner
+        is_owner = (project_owner == user)
+        if design_phase.current_stage not in DesignPhase.RQ_EDITION_STAGES:
+            if not is_owner:
                 raise ValidationError(
                     f"Locked Stage: Only the owner can edit questions during '{design_phase.get_current_stage_display()}'."
                 )
@@ -173,8 +186,6 @@ class ResearchQuestionService:
         question.status = verdict
         question.justification = justification
         question.save(update_fields=['status', 'justification', 'modified_at'])
-        # Para la comunicacion, un ejemplo
-        # self.notification_service.notify_researcher(question)
         return question
 
     def select_question_to_suggest_action(self, question_id: int, suggester_id: int):
@@ -210,19 +221,18 @@ class ResearchQuestionService:
     @transaction.atomic
     def consolidate_questions(self, project_id: int, user):
         project, design_phase = self._validate_consolidation_prerequisites(project_id, user)
-        affected_rows = ResearchQuestion.objects.filter(
-            project_id=project.id,
+        affected_rows = design_phase.research_questions.filter(
             status=ResearchQuestion.Status.SUGGESTED
         ).update(
             status=ResearchQuestion.Status.REJECTED,
             justification="Rejected automatically via consolidation."
         )
-        design_phase.current_stage = ProjectPhase.Stage.CRITERIA_DEFINITION
+        design_phase.current_stage = DesignPhase.DesignStage.CRITERIA_DEFINITION
         design_phase.save()
 
         return {
             "rejected_automatically": affected_rows,
-            "total_approved": project.research_questions.filter(status=ResearchQuestion.Status.APPROVED).count()
+            "total_approved": design_phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).count()
         }
 
     def _validate_consolidation_prerequisites(self, project_id, user):
@@ -230,23 +240,18 @@ class ResearchQuestionService:
             project = Project.objects.select_related('owner', 'design_phase').get(pk=project_id)
         except Project.DoesNotExist:
             raise ProjectNotFoundError(f"Project with id {project_id} not found.")
-
         if project.owner != user:
             raise ProjectPermissionError("Only the owner can consolidate this project.")
-
         try:
             phase = project.design_phase
-        except DesignPhase.DoesNotExist: # O la excepción genérica ObjectDoesNotExist
+        except DesignPhase.DoesNotExist:
              raise InvalidProjectStateError("Active Design phase not found.")
-
         if not phase.is_active:
             raise InvalidProjectStateError("Design phase is not active.")
-
         if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
             raise InvalidProjectStateError(
                 f"Phase must be in 'Discussion' stage, but is in '{phase.get_current_stage_display()}'."
             )
-
         if not phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).exists():
             raise ConsolidationError("Cannot consolidate without at least one APPROVED question.")
 

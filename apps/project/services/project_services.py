@@ -1,6 +1,5 @@
-from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.models.keyword import ProjectKeyword
-from apps.project.models import Project, ProjectPhase, ResearchFramework
+from apps.project.models import Project, ResearchFramework
 from typing import List
 from django.db import transaction
 
@@ -60,11 +59,7 @@ class ProjectService:
         return project.get_members()
 
     def get_project_keyterms(self, project_id: int) -> List[ProjectKeyword]:
-        """
-        Obtiene los keywords filtrando por la relación con el proyecto.
-        Aqui si lo relaciono a disenio porque es la fase que posee los keywords
-        """
-        return list(ProjectKeyword.objects.filter(design_phase__project_id=project_id))
+        return list(ProjectKeyword.objects.by_project(project_id))
 
     def get_project_by_id(self, project_id: int, user=None, related_fields: list = None) -> Project:
         try:
@@ -84,12 +79,11 @@ class ProjectService:
     
     def get_current_stage_deadline(self, project_id: int):
         try:
-            phase = ProjectPhase.objects.get(
-                project_id=project_id, 
-                phase_type=ProjectPhase.PhaseType.DESIGN
+            phase = DesignPhase.objects.get(
+                design_phase_id=project_id
             )
             return phase.end_date
-        except ProjectPhase.DoesNotExist:
+        except DesignPhase.DoesNotExist:
             return None
     
     def get_design_timeline_context(self, project_id):
@@ -97,11 +91,11 @@ class ProjectService:
         Genera la estructura de datos para el Timeline (Completed, Current, Upcoming).
         """
         project = self.get_project_by_id(project_id)
-        phase = project.phases.filter(phase_type=ProjectPhase.PhaseType.DESIGN).first()
+        phase = project.design_phase
         if not phase: return []
 
         current_stage = phase.current_stage
-        design_flow = ProjectPhase.STAGES_FLOW[ProjectPhase.PhaseType.DESIGN]
+        design_flow = DesignPhase.DESIGN_FLOW
         
         timeline_stages = []
         is_past = True 
@@ -117,7 +111,7 @@ class ProjectService:
                 status = 'completed'
 
             # Usamos el label del Enum para mostrar texto bonito
-            label = ProjectPhase.Stage(stage_key).label 
+            label = DesignPhase.DesignStage(stage_key).label
 
             timeline_stages.append({
                 'key': stage_key,
@@ -126,24 +120,3 @@ class ProjectService:
             })
         
         return timeline_stages
-        
-class ProjectPhaseService:
-    
-    @transaction.atomic
-    def open_stage_phase(self, project_id, phase_type, target_stage):
-        phase, created = ProjectPhase.objects.update_or_create(
-            project_id=project_id,
-            phase_type=phase_type,
-            defaults={
-                'current_stage': target_stage,
-                'is_active': True
-            }
-        )
-        return phase
-
-    def get_phase_end_date(self, project_id: int, phase_type: str) -> str:
-        try:
-            phase = ProjectPhase.objects.get(project_id=project_id, phase_type=phase_type)
-            return phase.end_date
-        except ProjectPhase.DoesNotExist:
-            return None

@@ -9,6 +9,7 @@ research_question_service = ResearchQuestionService()
 
 @given('que existen preguntas en el proyecto como:')
 def step_dado_existen_preguntas_sugeridas(context):
+    context.phase = context.project.design_phase
     fields = {
             "Population": "Population details",
             "Intervention": "Intervention details",
@@ -16,20 +17,17 @@ def step_dado_existen_preguntas_sugeridas(context):
             "Outcome": "Outcome details",
         }
     for row in context.table:
-        desired_status = row['estado']
-        question_text = row['pregunta']
-        rq = research_question_service.add_research_question(
-            project_id=context.project.id,
-            question=question_text,
-            motivation="Setup automático",
-            researcher_id=context.researcher.id,
-            framework_fields=fields
+        desired_status = getattr(ResearchQuestion.Status, row['estado'])
+        ResearchQuestion.objects.create(
+            design_phase=context.phase,           
+            question=row['pregunta'],
+            motivation="Setup automático de prueba BDD",
+            researcher=context.researcher,
+            framework_fields=fields,
+            status=desired_status          
         )
-        # bypasseo de validaciones para setear el estado directamente
-        status_enum = getattr(ResearchQuestion.Status, desired_status)
-        rq.status = status_enum
-        rq.save()
-    assert context.project.research_questions.count() > 0
+
+    assert context.phase.research_questions.count() > 0
     
 @when('consolide el estado de las preguntas de investigación de mi proyecto')
 def step_cuando_consolido_estado_preguntas(context):
@@ -48,12 +46,12 @@ def step_preguntas_approved_son_protocolo(context):
 
 @step('las preguntas "SUGGESTED" deben cambiar automáticamente a "REJECTED"')
 def step_preguntas_sugeridas_son_rechazadas(context):
-    suggested_questions = context.project.research_questions.filter(status=ResearchQuestion.Status.SUGGESTED)
+    suggested_questions = context.phase.research_questions.filter(status=ResearchQuestion.Status.SUGGESTED)
     assert suggested_questions.count() == 0
 
 @step('solo el owner del proyecto podrá cambiar las preguntas o su estado, bloqueando a los investigadores')
 def step_solo_owner_puede_cambiar_preguntas(context):
-    target_question = context.project.research_questions.first()
+    target_question = context.phase.research_questions.first()
     try:
         # Intentamos cambiar una pregunta usando al investigador
         research_question_service.update_research_question(

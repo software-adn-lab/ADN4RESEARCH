@@ -17,6 +17,11 @@ class DesignPhase(BasePhase):
         SEARCH_STRATEGY = 'SEARCH_STRATEGY', 'Search Strategy Building'
         FINISHED = 'FINISHED', 'Finalized'
 
+    RQ_EDITION_STAGES = [
+        DesignStage.RQ_CREATION,
+        DesignStage.RQ_DISCUSSION,
+    ]
+    
     DESIGN_FLOW = [
             DesignStage.RQ_CREATION, 
             DesignStage.RQ_DISCUSSION, 

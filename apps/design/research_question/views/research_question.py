@@ -28,27 +28,29 @@ def hello(request):
 
 @login_required
 def open_questions_workspace_view(request, project_id):
-    # Obtengo las preguntas del proyecto que un usuario ha creado
     status_filter = request.GET.get('status')
     project = project_service.get_project_by_id(
         project_id, 
         user=request.user, 
         related_fields=['owner', 'research_framework', 'design_phase'] 
     )
-    questions = research_question_service.get_all_questions_by_user_and_project(project_id=project_id, user=request.user)
-    if status_filter:
-        questions = research_question_service.filter_questions_by_status(questions, status_filter)
+    questions = research_question_service.get_questions_for_workspace(
+        project_id=project_id, 
+        user=request.user,
+        status_filter=status_filter
+    )
     project_keywords = project_service.get_project_keyterms(project_id)
     stage_end_date = project_service.get_current_stage_deadline(project_id)
     timeline_stages = project_service.get_design_timeline_context(project_id)
+    
     context = {
         'project': project,
         'questions': questions,
         'keywords': project_keywords,
         'stage_end_date': stage_end_date,
         'timeline_stages': timeline_stages,
-        'status': status_filter,
-        'active_tab': 'questions_history', 
+        'active_tab': 'questions_history',
+        'current_status_filter': status_filter, 
     }
     return render(request, 'rq_workspace.html', context)
 
@@ -128,18 +130,3 @@ def autosave_research_question(request):
             return JsonResponse({'error': f'Internal Error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'errors': form.errors}, status=400)
-
-def get_research_questions_by_status(request, project_id, status):
-    questions = research_question_service.get_research_questions_by_project_and_status(project_id=project_id, status=status)
-    questions_data = [
-        {
-            'id': q.id,
-            'question': q.question,
-            'motivation': q.motivation,
-            'status': q.status,
-            'created_at': q.created_at,
-            'modified_at': q.modified_at,
-        }
-        for q in questions
-    ]
-    return JsonResponse({'questions': questions_data}, status=200)

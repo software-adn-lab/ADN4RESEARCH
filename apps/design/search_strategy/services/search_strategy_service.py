@@ -29,7 +29,7 @@ class SearchStrategyService:
 
         strategy.final_search_string = final_string
         strategy.save()
-        self.create_version_snapshot(strategy_id= strategy.id, user_id=user_id)  # user_id puede ser None por la sugerencia automática
+        self.create_version_snapshot(strategy_id= strategy.id, user_id=user_id)  # user_id puede ser None por la sugerencia automática :D
         return strategy
     
     def _get_or_create_strategy(self, research_question_id: int) -> SearchStrategy:
@@ -54,11 +54,13 @@ class SearchStrategyService:
                 term_text = item.get('term')
                 if not term_text:
                     continue
-                project_keyword, _ = ProjectKeyword.objects.get_or_create(
+                project_keyword, created = ProjectKeyword.objects.update_or_create(
                     design_phase_id=design_phase_id, 
                     term=term_text,
-                    defaults={'synonyms': item.get('synonyms', '')}
-                )    
+                    defaults={
+                        'synonyms': item.get('synonyms', '')
+                    }
+                )  
                 if not clear_previous:
                     if Keyword.objects.filter(strategy=strategy, project_keyword=project_keyword).exists():
                         continue      

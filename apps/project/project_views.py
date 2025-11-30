@@ -1,6 +1,6 @@
 from django.shortcuts import redirect
-from apps.project.models import ProjectPhase
 from django.contrib.auth.decorators import login_required
+from apps.design.shared.models.design_phase import DesignPhase
 
 @login_required
 def design_stages_view(request, project_id):
@@ -11,8 +11,8 @@ def design_stages_view(request, project_id):
     
     # Mapa de navegación: Etapa -> URL Name
     stage_map = {
-        ProjectPhase.Stage.RQ_CREATION: 'design:questions_history',
-        ProjectPhase.Stage.RQ_DISCUSSION: 'design:question_discussion_panel',
+        DesignPhase.DESIGN_FLOW.DesignStage.RQ_CREATION: 'design:questions_history',
+        DesignPhase.DESIGN_FLOW.DesignStage.RQ_DISCUSSION: 'design:question_discussion_panel',
         # ProjectPhase.Stage.CRITERIA_DEFINITION: 'design:criteria_workspace', (Futuro)
         # ProjectPhase.Stage.SEARCH_STRATEGY: 'design:search_strategy_workspace', (Futuro)
     }
