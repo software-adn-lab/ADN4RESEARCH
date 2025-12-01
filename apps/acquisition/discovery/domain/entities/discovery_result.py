@@ -13,6 +13,7 @@ class DiscoveryResult:
     studies: List[Study] = field(default_factory=list)
     summary: Dict[str, Any] = field(default_factory=dict)
 
+    # Properties para compatibilidad con el Orchestrator
     @property
     def total_unique_studies(self) -> int:
         """Total de estudios únicos (deduplicados)."""
@@ -24,7 +25,7 @@ class DiscoveryResult:
         return self.summary.get("total_bruto", len(self.studies))
 
     @property
-    def results_by_source(self) -> Dict[str, List[Study]]:
+    def studies_by_source(self) -> Dict[str, List[Study]]:
         """Estudios agrupados por fuente (para trazabilidad)."""
         return self.summary.get("studies_by_source", {})
 
@@ -38,8 +39,13 @@ class DiscoveryResult:
         """Errores por fuente (alias de not_executed_sources)."""
         return self.not_executed_sources
 
+    @property
+    def results_by_source(self) -> Dict[str, List[Study]]:
+        """Alias para studies_by_source (compatibilidad con Orchestrator)."""
+        return self.studies_by_source
+
     def to_dict(self) -> Dict[str, Any]:
-        """Convert the discovery result to a dictionary."""
+        """Convert discovery result to a dictionary."""
         return {
             "studies": [study.to_dict() for study in self.studies],
             "summary": self.summary

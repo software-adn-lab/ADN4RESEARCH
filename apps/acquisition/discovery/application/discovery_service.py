@@ -40,7 +40,8 @@ class DiscoveryService:
         strategy_id: str,
         translation_statuses: dict,
         supported_sources: list[str],
-        max_results_per_source: int = 25
+        max_results_per_source: int = 25,
+        persist: bool = True
     ) -> DiscoveryResult:
         """
         Execute the discovery process.
@@ -50,6 +51,7 @@ class DiscoveryService:
             translation_statuses: Dictionary with translation status for each source
             supported_sources: List of sources to query
             max_results_per_source: Maximum results to fetch from each source
+            persist: Whether to persist studies to database (default: True)
 
         Returns:
             DiscoveryResult with unique studies and summary
@@ -64,11 +66,13 @@ class DiscoveryService:
         )
         unique_studies = self.deduplicator.deduplicate(all_studies)
 
-        # Persistencia opcional: Si hay repositorio inyectado, guardar estudios
-        if self.repository and unique_studies:
+        # Persistencia opcional: Solo si persist=True y hay repositorio inyectado
+        if persist and self.repository and unique_studies:
             logger.info(f"Persistiendo {len(unique_studies)} estudios en base de datos...")
             unique_studies = self.repository.save_batch(unique_studies)
             logger.info("Persistencia completada")
+        elif not persist:
+            logger.info(f"Modo preview: {len(unique_studies)} estudios NO persistidos")
 
         return self._build_result(
             strategy_id, unique_studies, total_por_fuente, no_ejecutadas, studies_by_source
@@ -131,7 +135,8 @@ class DiscoveryService:
                 no_ejecutadas[source] = "not_supported"
                 continue
 
-            query = translation_statuses[source].get("query", "")
+            # Usar "query" (o "output_query" si existe)
+            query = translation_statuses[source].get("query") or translation_statuses[source].get("output_query", "")
             if not query or not query.strip():
                 no_ejecutadas[source] = "missing_query"
                 continue

@@ -168,87 +168,6 @@ class StudyModel(models.Model):
 # ==============================================================================
 
 
-class SearchStrategyModel(models.Model):
-    """
-    Modelo Django para persistir estrategias de búsqueda.
-
-    Guarda la definición de búsqueda (NormalizedStrategy) que se usará
-    para ejecutar búsquedas en proveedores académicos.
-
-    Integración con Design:
-    - Vinculado a ResearchQuestion del módulo Design
-    - Permite reproducibilidad y trazabilidad de búsquedas
-    """
-
-    # Identificación
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        help_text="Identificador único de la estrategia"
-    )
-
-    # INTEGRACIÓN CON DESIGN: Vinculación a pregunta de investigación
-    research_question = models.ForeignKey(
-        'design.ResearchQuestion',
-        on_delete=models.CASCADE,
-        related_name='search_strategies',
-        null=True,
-        blank=True,
-        help_text="Pregunta de investigación asociada (módulo Design)"
-    )
-
-    # Definición de búsqueda (JSON de NormalizedStrategy)
-    # Ejemplo: {"strategy_id": "...", "main_terms": [...], "exclusions": [...], "filters": {...}}
-    definition = models.JSONField(
-        help_text="Definición de la estrategia de búsqueda (NormalizedStrategy serializada)"
-    )
-
-    # Metadata descriptiva
-    name = models.CharField(
-        max_length=200,
-        null=True,
-        blank=True,
-        help_text="Nombre descriptivo de la estrategia"
-    )
-    description = models.TextField(
-        null=True,
-        blank=True,
-        help_text="Descripción detallada de la estrategia"
-    )
-
-    # Auditoría
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_search_strategies',
-        help_text="Usuario que creó la estrategia"
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="Fecha de creación"
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text="Última actualización"
-    )
-
-    class Meta:
-        db_table = "acquisition_search_strategy"
-        verbose_name = "Search Strategy"
-        verbose_name_plural = "Search Strategies"
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["research_question", "-created_at"]),
-        ]
-
-    def __str__(self):
-        name_part = self.name or "Unnamed"
-        return f"Strategy({self.id}): {name_part}"
-
-
 class SearchExecutionModel(models.Model):
     """
     Modelo Django para registrar ejecuciones de búsqueda.
@@ -265,12 +184,12 @@ class SearchExecutionModel(models.Model):
         help_text="Identificador único de la ejecución"
     )
 
-    # Vinculación a estrategia
+    # Vinculación a estrategia (ahora apunta a design.SearchStrategy)
     strategy = models.ForeignKey(
-        SearchStrategyModel,
+        'design.SearchStrategy',
         on_delete=models.CASCADE,
         related_name='executions',
-        help_text="Estrategia que se ejecutó"
+        help_text="Estrategia que se ejecutó (desde design.SearchStrategy)"
     )
 
     # Auditoría de ejecución

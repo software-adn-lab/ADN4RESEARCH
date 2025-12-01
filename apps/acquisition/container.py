@@ -239,12 +239,16 @@ class Container:
         - Traducción de estrategias
         - Discovery en múltiples proveedores
         - Persistencia y trazabilidad de estudios
+        - Gestión manual de estudios y PDFs
+
+        Inyecta TODAS las dependencias (Inversión de Dependencias).
         """
         if cls._orchestrator is None:
             cls._orchestrator = AcquisitionOrchestrator(
                 translation_service=cls.get_translation_service(),
                 discovery_service=cls.get_discovery_service(),
                 study_repository=cls.get_repository(),
+                manual_upload_service=cls.get_manual_upload_app_service(),  # INYECCIÓN
             )
         return cls._orchestrator
 
@@ -425,6 +429,16 @@ class Container:
                 repository=cls.get_repository(),
             )
         return cls._consolidation_service
+
+    @classmethod
+    def get_enrichment_service(cls) -> ConsolidationService:
+        """
+        Alias para get_consolidation_service (compatibilidad con Facade).
+
+        La Facade usa el término "enrichment" que es más amigable,
+        pero internamente es el mismo ConsolidationService.
+        """
+        return cls.get_consolidation_service()
 
     # --------------------------------------------------------------------- #
     # Utilidades
