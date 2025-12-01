@@ -60,6 +60,7 @@ flake8-docstrings = "*"
 flake8-bugbear = "*"
 django-stubs = "^5.2.7"
 django-stubs-ext = "^5.2.7"
+hypothesis = "^6.148.3"
 [tool.behave]
 junit = true
 junit_directory = "tests"

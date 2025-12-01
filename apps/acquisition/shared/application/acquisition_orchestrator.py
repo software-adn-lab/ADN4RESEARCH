@@ -193,6 +193,8 @@ class AcquisitionOrchestrator:
                     "abstract": study.abstract,
                     "journal": study.journal,
                     "keywords": study.keywords or [],
+                    "is_open_access": study.is_open_access,  # ✅ AGREGADO
+                    "pdf_url": study.pdf_url,  # ✅ AGREGADO
                     "providers": [study.source],
                     "rank_position": idx + 1,
                 }
@@ -260,6 +262,8 @@ class AcquisitionOrchestrator:
                         "year": raw.get("year"),
                         "journal": raw.get("journal"),
                         "keywords": raw.get("keywords", []),
+                        "is_open_access": raw.get("is_open_access"),  # ✅ AGREGADO
+                        "pdf_url": raw.get("pdf_url"),  # ✅ AGREGADO
                         "pdf_path": raw.get("pdf_path"),
                         "pdf_source": raw.get("pdf_source"),
                         "download_status": raw.get("download_status"),
@@ -504,27 +508,23 @@ class AcquisitionOrchestrator:
 
     def get_download_status(self, study_ids: List[str]) -> List[Dict[str, Any]]:
         """
-        Obtener estado de descargas de PDFs.
+        Obtener estado de descargas de PDFs y metadatos completos.
 
         Args:
             study_ids: Lista de IDs de estudios
 
         Returns:
-            Lista de dicts con info de descarga por estudio
+            Lista de dicts con info completa por estudio
         """
         results = []
         for study_id in study_ids:
             study = self.study_repository.find_by_id(study_id)
             if study:
-                results.append(
-                    {
-                        "study_id": study.id,
-                        "title": study.title,
-                        "download_status": study.download_status,
-                        "pdf_path": study.pdf_path,
-                        "pdf_source": study.pdf_source,
-                    }
-                )
+                # Usar to_dict() para obtener todos los campos
+                study_dict = study.to_dict()
+                # Mantener compatibilidad con código existente que espera 'study_id'
+                study_dict['study_id'] = study.id
+                results.append(study_dict)
         return results
 
     # ==========================================================================
@@ -591,13 +591,14 @@ class AcquisitionOrchestrator:
                 "translation_statuses": {...}
             }
         """
-        # Traducir a todos los proveedores soportados
-        from apps.acquisition.shared.domain.constants import SUPPORTED_SOURCES
+        # Traducir SOLO a proveedores de DISCOVERY (Scopus, IEEE)
+        # NO traducir a Crossref ni Manual (esos son para enriquecimiento/manual)
+        from apps.acquisition.shared.domain.constants import DISCOVERY_SOURCES
 
         queries_by_source = {}
         translation_statuses = {}
 
-        for source in SUPPORTED_SOURCES:
+        for source in DISCOVERY_SOURCES:
             try:
                 translation_result = self.translation_service.translate(
                     strategy=normalized_strategy, target=source
@@ -741,21 +742,31 @@ class AcquisitionOrchestrator:
             if not study_data.get("title") or not study_data.get("link"):
                 raise ValueError("Title and link are required for manual study")
 
-            # 1. Crear estudio usando el factory del dominio
+            # 1. Crear estudio usando el factory del dominio (solo campos básicos)
             study = Study.create_discovered(
                 title=study_data["title"],
                 link=study_data["link"],
                 source="Manual",  # Origen explícito
                 doi=study_data.get("doi"),
-                year=study_data.get("year"),
-                authors=study_data.get("authors", []),
-                abstract=study_data.get("abstract"),
-                keywords=study_data.get("keywords", []),
-                is_open_access=study_data.get("is_open_access", False),
-                pdf_url=study_data.get("pdf_url"),
             )
 
-            # 2. Marcar trazabilidad de origen manual
+            # 2. Agregar metadatos adicionales si están presentes
+            if study_data.get("year"):
+                study.year = study_data["year"]
+            if study_data.get("authors"):
+                study.authors = study_data["authors"]
+            if study_data.get("abstract"):
+                study.abstract = study_data["abstract"]
+            if study_data.get("journal"):
+                study.journal = study_data["journal"]
+            if study_data.get("keywords"):
+                study.keywords = study_data["keywords"]
+            if study_data.get("is_open_access") is not None:
+                study.is_open_access = study_data["is_open_access"]
+            if study_data.get("pdf_url"):
+                study.pdf_url = study_data["pdf_url"]
+
+            # 3. Marcar trazabilidad de origen manual
             study.field_origins = {k: "manual" for k in study_data.keys()}
             study.field_origins["source"] = "manual"  # Explícito para debugging
 

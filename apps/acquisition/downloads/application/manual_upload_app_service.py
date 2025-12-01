@@ -69,7 +69,10 @@ class ManualUploadAppService:
         try:
             updated = self.manual_upload_service.attach_file(study=study, file_path=saved_path)
 
-            updated.attach_pdf(pdf_path=saved_path, pdf_source=PdfSource.MANUAL.value)
+            # Para operaciones manuales, permitir adjuntar PDF sin validar estado
+            # (el usuario puede subir PDFs antes de enriquecer metadatos)
+            updated.pdf_path = saved_path
+            updated.pdf_source = PdfSource.MANUAL.value
             updated.download_status = DownloadStatus.DISPONIBLE.value
 
             self.repository.save(updated)
