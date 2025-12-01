@@ -7,9 +7,19 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-base-content">Discussion Panel</h1>
+            <p class="text-sm text-base-content/70">Review and justify decisions on research questions.</p>
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
+            <form method="GET" action="">
+                <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="SUGGESTED" {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
+                    <option value="APPROVED" {% if current_status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if current_status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </form>
+
             <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
