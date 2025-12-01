@@ -191,8 +191,14 @@ class AcquisitionFacade:
         5. Actualiza estadísticas en la estrategia de Design
 
         Args:
+<<<<<<< HEAD
             design_strategy_id: ID de la estrategia en design.SearchStrategy
             preview_result: Resultado del preview con estudios y estrategia
+=======
+            strategy_dict: Estrategia normalizada final
+            design_strategy_id: ID de la estrategia en design.SearchStrategy
+            selected_studies: Lista de estudios seleccionados (del preview) para persistir
+>>>>>>> bfe06b0 (Feature/acquisition clean architecture (#23))
             user: Usuario que confirma la persistencia
 
         Returns:
