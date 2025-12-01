@@ -28,6 +28,7 @@ from django.contrib.auth import get_user_model
 from apps.acquisition.translation.domain.models import NormalizedStrategy
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
+from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
 # Application Services
 from apps.acquisition.translation.application.translation_service import TranslationService
@@ -35,7 +36,6 @@ from apps.acquisition.discovery.application.discovery_service import DiscoverySe
 
 # Infrastructure (ORM Models)
 from apps.acquisition.models import (
-    SearchStrategyModel,
     SearchExecutionModel,
     ExecutionStudy,
     StudyModel,
@@ -93,7 +93,7 @@ class AcquisitionOrchestrator:
     Orquestador principal del módulo de Adquisición.
 
     Coordina el flujo completo desde la estrategia de búsqueda hasta
-    los estudios persistidos con metadatos y PDFs.
+    los estudios persistidos con metadatos y PDFs.ha
 
     Responsabilidades:
     1. Ejecutar búsqueda desde estrategia normalizada:
@@ -116,6 +116,7 @@ class AcquisitionOrchestrator:
         translation_service: TranslationService,
         discovery_service: DiscoveryService,
         study_repository: IStudyRepository,
+        manual_upload_service=None,  # Inyección de dependencia
     ):
         """
         Inicializar el orquestador con servicios inyectados.
@@ -124,15 +125,212 @@ class AcquisitionOrchestrator:
             translation_service: Servicio de traducción de estrategias
             discovery_service: Servicio de descubrimiento de estudios
             study_repository: Repositorio de persistencia de estudios
+            manual_upload_service: Servicio de carga manual de PDFs (opcional)
         """
         self.translation_service = translation_service
         self.discovery_service = discovery_service
         self.study_repository = study_repository
+        self.manual_upload_service = manual_upload_service
 
         logger.info("AcquisitionOrchestrator initialized")
 
     # ==========================================================================
-    # USE CASE 1: Ejecutar búsqueda completa desde estrategia
+    # USE CASE 1: Preview de búsqueda (SIN persistir)
+    # ==========================================================================
+
+    def preview_search_from_strategy(
+        self,
+        strategy_dict: Dict[str, Any],
+        user: Optional[User] = None,
+        max_results_per_source: int = 25,
+    ) -> Dict[str, Any]:
+        """
+        Piloto: traduce y ejecuta la estrategia pero NO persiste nada.
+        Devuelve solo un arreglo de estudios (dicts) para Design.
+
+        Args:
+            strategy_dict: Diccionario con la estrategia normalizada
+            user: Usuario que ejecuta la búsqueda (opcional para preview)
+            max_results_per_source: Máximo de resultados por fuente
+
+        Returns:
+            Dict con:
+            - queries_by_source: Dict[str, str] - Queries traducidas
+            - total_found: int - Total de estudios únicos encontrados
+            - studies: List[Dict] - Estudios como dicts (sin persistir)
+        """
+        logger.info(f"[PREVIEW] strategy: {strategy_dict.get('strategy_id')}")
+
+        # Convertir a dominio
+        normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
+
+        # Traducir estrategia a queries por proveedor
+        translation_results = self._translate_strategy(normalized_strategy)
+        queries_by_source = translation_results["queries_by_source"]
+        translation_statuses = translation_results["translation_statuses"]
+
+        # Ejecutar discovery SIN persistir
+        discovery_result = self.discovery_service.execute(
+            strategy_id=normalized_strategy.strategy_id,
+            translation_statuses=translation_statuses,
+            supported_sources=list(queries_by_source.keys()),
+            max_results_per_source=max_results_per_source,
+            persist=False,  # MUY IMPORTANTE: no persistir
+        )
+
+        # Convertir estudios a dicts para Design (sin tocar BD)
+        studies_payload = []
+        for idx, study in enumerate(discovery_result.studies):
+            studies_payload.append(
+                {
+                    "id": str(study.id),
+                    "title": study.title,
+                    "link": study.link,
+                    "source": study.source,
+                    "doi": study.doi,
+                    "year": study.year,
+                    "authors": study.authors or [],
+                    "abstract": study.abstract,
+                    "journal": study.journal,
+                    "keywords": study.keywords or [],
+                    "is_open_access": study.is_open_access,  # ✅ AGREGADO
+                    "pdf_url": study.pdf_url,  # ✅ AGREGADO
+                    "providers": [study.source],
+                    "rank_position": idx + 1,
+                }
+            )
+
+        return {
+            "queries_by_source": queries_by_source,
+            "total_found": discovery_result.total_unique_studies,
+            "studies": studies_payload,
+        }
+
+    # ==========================================================================
+    # USE CASE 2: Ejecutar y persistir búsqueda FINAL
+    # ==========================================================================
+
+    @transaction.atomic
+    def execute_and_persist_final(
+        self,
+        strategy_dict: Dict[str, Any],
+        design_strategy_id: int,
+        selected_studies: List[Dict[str, Any]],
+        user: Optional[User] = None,
+    ) -> SearchExecutionResult:
+        """
+        Flujo FINAL: persiste estrategia + estudios + ejecución + trazabilidad.
+
+        Args:
+            strategy_dict: Diccionario con la estrategia normalizada
+            design_strategy_id: ID de la estrategia en design.SearchStrategy
+            selected_studies: Estudios seleccionados por Design para persistir
+            user: Usuario que ejecuta la búsqueda
+
+        Returns:
+            SearchExecutionResult con toda la información de la ejecución
+        """
+        from apps.design.search_strategy.models.search_strategy import SearchStrategy
+
+        # Obtener estrategia unificada de Design
+        strategy = SearchStrategy.objects.get(id=design_strategy_id)
+
+        # Actualizar definición en la estrategia unificada
+        strategy.definition = strategy_dict
+        strategy.start_execution(user)
+
+        logger.info(f"[FINAL] Executing strategy {design_strategy_id} with {len(selected_studies)} studies")
+
+        # Traducir estrategia para obtener queries (trazabilidad completa)
+        normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
+        translation_results = self._translate_strategy(normalized_strategy)
+        queries_by_source = translation_results["queries_by_source"]
+
+        # Convertir estudios seleccionados a entidades de dominio
+        study_entities = []
+        for raw in selected_studies:
+            study_entities.append(
+                Study.from_dict(
+                    {
+                        "id": raw.get("id"),
+                        "title": raw["title"],
+                        "link": raw["link"],
+                        "source": raw["source"],
+                        "doi": raw.get("doi"),
+                        "authors": raw.get("authors", []),
+                        "abstract": raw.get("abstract"),
+                        "year": raw.get("year"),
+                        "journal": raw.get("journal"),
+                        "keywords": raw.get("keywords", []),
+                        "is_open_access": raw.get("is_open_access"),  # ✅ AGREGADO
+                        "pdf_url": raw.get("pdf_url"),  # ✅ AGREGADO
+                        "pdf_path": raw.get("pdf_path"),
+                        "pdf_source": raw.get("pdf_source"),
+                        "download_status": raw.get("download_status"),
+                        "field_origins": raw.get("field_origins", {}),
+                    }
+                )
+            )
+
+        # Persistir estudios seleccionados
+        persisted_studies = self.study_repository.save_batch(study_entities)
+
+        # Crear modelo de ejecución con trazabilidad completa
+        execution_model = SearchExecutionModel.objects.create(
+            strategy=strategy,
+            executed_by=user,
+            translated_queries={"queries_by_source": queries_by_source},  # ← TRAZABILIDAD COMPLETA
+            results_count=len(persisted_studies),
+            new_studies_count=0,  # Se ajusta abajo
+            status="SUCCESS",
+            error_details={},
+        )
+
+        # Crear vínculos ExecutionStudy
+        execution_links = []
+        new_count = 0
+        for idx, (entity, raw) in enumerate(zip(persisted_studies, selected_studies)):
+            is_new = getattr(entity, "_was_new", True)
+            if is_new:
+                new_count += 1
+
+            execution_links.append(
+                ExecutionStudy(
+                    execution=execution_model,
+                    study_id=entity.id,
+                    is_new=is_new,
+                    providers=raw.get("providers", [entity.source]),
+                    rank_position=raw.get("rank_position", idx + 1),
+                )
+            )
+
+        ExecutionStudy.objects.bulk_create(execution_links, ignore_conflicts=True)
+
+        # Actualizar contador de nuevos estudios
+        execution_model.new_studies_count = new_count
+        execution_model.save(update_fields=["new_studies_count"])
+
+        # Actualizar estadísticas en la estrategia
+        strategy.complete_execution(len(persisted_studies), new_count)
+
+        logger.info(f"[FINAL] Persisted {len(persisted_studies)} studies ({new_count} new) for execution {execution_model.id}")
+
+        # Construir resultado
+        return SearchExecutionResult(
+            execution_id=str(execution_model.id),
+            strategy_id=str(strategy.id),
+            studies=persisted_studies,
+            total_found=len(persisted_studies),
+            new_studies_count=new_count,
+            duplicates_count=len(persisted_studies) - new_count,
+            queries_by_source=execution_model.translated_queries.get("queries_by_source", {}),
+            executed_at=execution_model.executed_at,
+            status=execution_model.status,
+            errors=execution_model.error_details,
+        )
+
+    # ==========================================================================
+    # USE CASE 3: Ejecutar búsqueda completa (LEGACY - mantiene compatibilidad)
     # ==========================================================================
 
     @transaction.atomic
@@ -145,59 +343,40 @@ class AcquisitionOrchestrator:
         strategy_description: Optional[str] = None,
     ) -> SearchExecutionResult:
         """
-        Ejecutar búsqueda completa desde una estrategia normalizada.
+        LEGADO: Ejecutar búsqueda completa desde estrategia (método original).
 
-        Flujo completo:
-        1. Persistir estrategia en BD (SearchStrategyModel)
-        2. Convertir dict → NormalizedStrategy (dominio)
-        3. Traducir estrategia a queries por proveedor (TranslationService)
-        4. Ejecutar discovery en paralelo (DiscoveryService)
-        5. Persistir estudios encontrados (StudyRepository)
-        6. Registrar ejecución con trazabilidad (SearchExecutionModel + ExecutionStudy)
-
-        Args:
-            strategy_dict: Diccionario con la estrategia normalizada
-                          {"strategy_id": str, "main_terms": [...], "exclusions": [...], "filters": {...}}
-            research_question_id: ID de la pregunta de investigación (integración con Design)
-            user: Usuario que ejecuta la búsqueda
-            strategy_name: Nombre descriptivo de la estrategia
-            strategy_description: Descripción de la estrategia
-
-        Returns:
-            SearchExecutionResult con toda la información de la ejecución
-
-        Raises:
-            ValueError: Si la estrategia es inválida
-            Exception: Si falla algún servicio crítico
+        Este método mantiene compatibilidad con código existente pero
+        idealmente debería reemplazarse por execute_and_persist_final.
         """
-        logger.info(f"Starting search execution for strategy: {strategy_dict.get('strategy_id')}")
+        logger.info(f"[LEGACY] Full execution for strategy: {strategy_dict.get('strategy_id')}")
 
-        # 1. Persistir estrategia
-        strategy_model = self._create_strategy_model(
+        # Crear o obtener estrategia unificada de Design
+        strategy_model = self._get_or_create_unified_strategy(
             strategy_dict=strategy_dict,
             research_question_id=research_question_id,
             user=user,
             name=strategy_name,
             description=strategy_description,
         )
-        logger.info(f"Strategy persisted: {strategy_model.id}")
+        logger.info(f"Unified strategy: {strategy_model.id}")
 
-        # 2. Convertir a dominio
+        # Convertir a dominio
         normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
 
-        # 3. Traducir estrategia a queries por proveedor
+        # Traducir estrategia a queries por proveedor
         translation_results = self._translate_strategy(normalized_strategy)
         queries_by_source = translation_results["queries_by_source"]
         translation_statuses = translation_results["translation_statuses"]
 
         logger.info(f"Strategy translated to {len(queries_by_source)} providers")
 
-        # 4. Ejecutar discovery
+        # Ejecutar discovery CON persistir
         discovery_result = self.discovery_service.execute(
             strategy_id=normalized_strategy.strategy_id,
             translation_statuses=translation_statuses,
             supported_sources=list(queries_by_source.keys()),
-            max_results_per_source=25,  # TODO: Hacer configurable
+            max_results_per_source=25,
+            persist=True,
         )
 
         logger.info(
@@ -205,11 +384,10 @@ class AcquisitionOrchestrator:
             f"(from {discovery_result.total_raw_studies} raw)"
         )
 
-        # 5. Los estudios ya fueron persistidos por DiscoveryService
-        # (DiscoveryService tiene repositorio inyectado y persiste automáticamente)
+        # Los estudios ya fueron persistidos por DiscoveryService
         persisted_studies = discovery_result.studies
 
-        # 6. Registrar ejecución con trazabilidad
+        # Registrar ejecución con trazabilidad
         execution_model = self._create_execution_model(
             strategy_model=strategy_model,
             queries_by_source=queries_by_source,
@@ -217,7 +395,7 @@ class AcquisitionOrchestrator:
             user=user,
         )
 
-        # 7. Vincular estudios con ejecución (tabla M2M ExecutionStudy)
+        # Vincular estudios con ejecución (tabla M2M ExecutionStudy)
         if persisted_studies:
             self._link_studies_to_execution(
                 execution_model=execution_model,
@@ -227,7 +405,7 @@ class AcquisitionOrchestrator:
 
         logger.info(f"Execution registered: {execution_model.id}")
 
-        # 8. Construir resultado
+        # Construir resultado
         return SearchExecutionResult(
             execution_id=str(execution_model.id),
             strategy_id=str(strategy_model.id),
@@ -330,60 +508,78 @@ class AcquisitionOrchestrator:
 
     def get_download_status(self, study_ids: List[str]) -> List[Dict[str, Any]]:
         """
-        Obtener estado de descargas de PDFs.
+        Obtener estado de descargas de PDFs y metadatos completos.
 
         Args:
             study_ids: Lista de IDs de estudios
 
         Returns:
-            Lista de dicts con info de descarga por estudio
+            Lista de dicts con info completa por estudio
         """
         results = []
         for study_id in study_ids:
             study = self.study_repository.find_by_id(study_id)
             if study:
-                results.append(
-                    {
-                        "study_id": study.id,
-                        "title": study.title,
-                        "download_status": study.download_status,
-                        "pdf_path": study.pdf_path,
-                        "pdf_source": study.pdf_source,
-                    }
-                )
+                # Usar to_dict() para obtener todos los campos
+                study_dict = study.to_dict()
+                # Mantener compatibilidad con código existente que espera 'study_id'
+                study_dict['study_id'] = study.id
+                results.append(study_dict)
         return results
 
     # ==========================================================================
     # HELPER METHODS (Privados)
     # ==========================================================================
 
-    def _create_strategy_model(
+    def _get_or_create_unified_strategy(
         self,
         strategy_dict: Dict[str, Any],
         research_question_id: Optional[int],
         user: Optional[User],
         name: Optional[str],
         description: Optional[str],
-    ) -> SearchStrategyModel:
-        """Crear y persistir SearchStrategyModel."""
-        research_question = None
-        if research_question_id:
-            from apps.design.research_question.models.research_question import ResearchQuestion
+    ):
+        """
+        LEGADO: Este método mantiene compatibilidad pero ya no crea SearchStrategyModel.
 
-            try:
-                research_question = ResearchQuestion.objects.get(id=research_question_id)
-            except ResearchQuestion.DoesNotExist:
-                logger.warning(f"ResearchQuestion {research_question_id} not found")
+        En el nuevo diseño:
+        - Design crea SearchStrategy directamente
+        - Acquisition solo vincula ejecuciones a SearchStrategy existentes
+        """
+        from apps.design.search_strategy.models.search_strategy import SearchStrategy as UnifiedSearchStrategy
 
-        strategy_model = SearchStrategyModel.objects.create(
-            research_question=research_question,
-            definition=strategy_dict,
-            name=name or f"Strategy {strategy_dict.get('strategy_id', 'unnamed')}",
-            description=description,
-            created_by=user,
+        logger.warning(
+            "[LEGACY] _get_or_create_unified_strategy called. "
+            "Design should create SearchStrategy directly now."
         )
 
-        return strategy_model
+        # Buscar estrategia existente en Design
+        if research_question_id:
+            existing_strategy = UnifiedSearchStrategy.objects.filter(
+                research_question_id=research_question_id,
+                status=UnifiedSearchStrategy.Status.FINAL  # ← Buscar versiones finales
+            ).first()
+
+            if existing_strategy:
+                logger.info(f"Found existing final strategy: {existing_strategy.id}")
+                # Actualizar definición si es diferente
+                if existing_strategy.definition != strategy_dict:
+                    existing_strategy.definition = strategy_dict
+                    existing_strategy.save(update_fields=['definition'])
+                return existing_strategy
+
+        # Crear nueva estrategia en Design (fallback para legacy)
+        strategy_name = name or f"Search Strategy {strategy_dict.get('strategy_id', 'unnamed')[:8]}"
+        strategy = UnifiedSearchStrategy.objects.create(
+            research_question_id=research_question_id,
+            name=strategy_name,
+            definition=strategy_dict,
+            created_by=user,
+            status=UnifiedSearchStrategy.Status.READY,  # Lista para ejecución
+        )
+
+        logger.info(f"Created new SearchStrategy in Design: {strategy.id}")
+        return strategy
 
     def _translate_strategy(self, normalized_strategy: NormalizedStrategy) -> Dict[str, Any]:
         """
@@ -395,13 +591,14 @@ class AcquisitionOrchestrator:
                 "translation_statuses": {...}
             }
         """
-        # Traducir a todos los proveedores soportados
-        from apps.acquisition.shared.domain.constants import SUPPORTED_SOURCES
+        # Traducir SOLO a proveedores de DISCOVERY (Scopus, IEEE)
+        # NO traducir a Crossref ni Manual (esos son para enriquecimiento/manual)
+        from apps.acquisition.shared.domain.constants import DISCOVERY_SOURCES
 
         queries_by_source = {}
         translation_statuses = {}
 
-        for source in SUPPORTED_SOURCES:
+        for source in DISCOVERY_SOURCES:
             try:
                 translation_result = self.translation_service.translate(
                     strategy=normalized_strategy, target=source
@@ -422,7 +619,7 @@ class AcquisitionOrchestrator:
 
     def _create_execution_model(
         self,
-        strategy_model: SearchStrategyModel,
+        strategy_model,  # Ahora es design.SearchStrategy
         queries_by_source: Dict[str, str],
         discovery_result: Any,  # DiscoveryResult
         user: Optional[User],
@@ -512,3 +709,263 @@ class AcquisitionOrchestrator:
             f"Linked {len(execution_studies)} studies to execution {execution_model.id} "
             f"({new_count} new, {len(studies) - new_count} duplicates)"
         )
+
+    # ==========================================================================
+    # USE CASE 4: Gestión Manual (Cuando los robots fallan o se necesita intervención humana)
+    # ==========================================================================
+
+    def add_manual_study(self, study_data: Dict[str, Any], user: Optional[User] = None) -> Study:
+        """
+        Registra un estudio manualmente (ej. el usuario lo tiene en físico).
+
+        Este método permite:
+        1. Agregar estudios que no fueron encontrados por los robots
+        2. Completar información faltante manualmente
+        3. Marcar trazabilidad de origen manual
+        4. Persistir usando el repositorio estándar
+
+        Args:
+            study_data: Diccionario con datos del estudio
+            user: Usuario que agrega el estudio (opcional)
+
+        Returns:
+            Study: Entidad de dominio creada/persistida
+
+        Raises:
+            ValueError: Si faltan campos requeridos
+            Exception: Si falla la persistencia
+        """
+        logger.info(f"[MANUAL] Adding manual study: {study_data.get('title', 'Unknown title')}")
+
+        try:
+            # Validar campos mínimos requeridos
+            if not study_data.get("title") or not study_data.get("link"):
+                raise ValueError("Title and link are required for manual study")
+
+            # 1. Crear estudio usando el factory del dominio (solo campos básicos)
+            study = Study.create_discovered(
+                title=study_data["title"],
+                link=study_data["link"],
+                source="Manual",  # Origen explícito
+                doi=study_data.get("doi"),
+            )
+
+            # 2. Agregar metadatos adicionales si están presentes
+            if study_data.get("year"):
+                study.year = study_data["year"]
+            if study_data.get("authors"):
+                study.authors = study_data["authors"]
+            if study_data.get("abstract"):
+                study.abstract = study_data["abstract"]
+            if study_data.get("journal"):
+                study.journal = study_data["journal"]
+            if study_data.get("keywords"):
+                study.keywords = study_data["keywords"]
+            if study_data.get("is_open_access") is not None:
+                study.is_open_access = study_data["is_open_access"]
+            if study_data.get("pdf_url"):
+                study.pdf_url = study_data["pdf_url"]
+
+            # 3. Marcar trazabilidad de origen manual
+            study.field_origins = {k: "manual" for k in study_data.keys()}
+            study.field_origins["source"] = "manual"  # Explícito para debugging
+
+            # 3. Persistir usando el repositorio estándar
+            persisted_study = self.study_repository.save(study)
+
+            logger.info(f"[MANUAL] Successfully added manual study: {persisted_study.id}")
+            return persisted_study
+
+        except ValueError as ve:
+            logger.error(f"[MANUAL] Validation error: {ve}")
+            raise
+        except Exception as e:
+            logger.error(f"[MANUAL] Error adding manual study: {e}", exc_info=True)
+            raise
+
+    def update_study_metadata_manually(
+        self,
+        study_id: str,
+        updates: Dict[str, Any],
+        user: Optional[User] = None
+    ) -> Study:
+        """
+        Corrige o completa metadatos manualmente.
+
+        Este método permite:
+        1. Corregir errores en metadatos automáticamente recolectados
+        2. Agregar campos faltantes (ej. año, DOI)
+        3. Sobreescribir información incorrecta
+        4. Marcar trazabilidad de qué fue modificado manualmente
+
+        Args:
+            study_id: UUID del estudio a modificar
+            updates: Diccionario con campos a actualizar
+            user: Usuario que hace la corrección (opcional)
+
+        Returns:
+            Study: Entidad actualizada
+
+        Raises:
+            ValueError: Si no se encuentra el estudio
+            Exception: Si falla la actualización
+        """
+        logger.info(f"[MANUAL] Updating metadata for study: {study_id}")
+
+        try:
+            # 1. Buscar estudio existente
+            study = self.study_repository.find_by_id(study_id)
+            if not study:
+                raise ValueError(f"Study {study_id} not found")
+
+            # 2. Aplicar actualizaciones
+            for field, value in updates.items():
+                if hasattr(study, field):
+                    setattr(study, field, value)
+                    # Marcar trazabilidad de qué campo fue modificado manualmente
+                    if not hasattr(study, 'field_origins'):
+                        study.field_origins = {}
+                    study.field_origins[field] = "manual"
+
+            # 3. Validar campos críticos si se actualizan
+            if "doi" in updates and updates["doi"]:
+                if not self._validate_doi(updates["doi"]):
+                    logger.warning(f"[MANUAL] Invalid DOI format: {updates['doi']}")
+
+            # 4. Re-validar estado de consolidación (opcional, podría llamar a servicio)
+            # study.consolidation_status = self._validate_consolidation_status(study)
+            # Por ahora, marcamos como "manual_review"
+            study.consolidation_status = "manual_review"
+
+            # 5. Persistir cambios
+            updated_study = self.study_repository.save(study)
+
+            logger.info(f"[MANUAL] Successfully updated study: {study_id}")
+            return updated_study
+
+        except ValueError as ve:
+            logger.error(f"[MANUAL] Study not found: {ve}")
+            raise
+        except Exception as e:
+            logger.error(f"[MANUAL] Error updating study metadata: {e}", exc_info=True)
+            raise
+
+    def upload_study_pdf(self, study_id: str, file_obj, filename: str, user: Optional[User] = None) -> Study:
+        """
+        Subir PDF manualmente para un estudio.
+
+        Args:
+            study_id: ID del estudio
+            file_obj: Objeto archivo subido
+            filename: Nombre del archivo
+            user: Usuario que sube el archivo
+
+        Returns:
+            Study con PDF actualizado
+
+        Raises:
+            RuntimeError: Si el servicio de upload no está configurado
+        """
+        logger.info(f"[MANUAL] Uploading PDF for study {study_id}")
+
+        if self.manual_upload_service is None:
+            raise RuntimeError(
+                "Manual upload service not configured. "
+                "Container must inject manual_upload_service in __init__."
+            )
+
+        return self.manual_upload_service.upload_pdf_for_study(
+            study_id=study_id,
+            uploaded_file=file_obj
+        )
+        """
+        Sube un PDF manual para un estudio.
+
+        Este método DELEGA la responsabilidad completa al servicio especializado
+        ManualUploadAppService, que sabe manejar:
+        - Validación de archivos PDF
+        - Almacenamiento en disco
+        - Actualización de metadatos del estudio
+        - Trazabilidad completa del origen manual
+
+        Args:
+            study_id: UUID del estudio a actualizar
+            file_obj: Archivo PDF subido (InMemoryUploadedFile, File, etc.)
+            filename: Nombre original del archivo
+            user: Usuario que realiza la subida (opcional)
+
+        Returns:
+            Study: Entidad actualizada con la ruta del PDF y metadatos
+
+        Raises:
+            ValueError: Si no se encuentra el estudio o parámetros inválidos
+            Exception: Si falla la subida (se delega al servicio especializado)
+        """
+        logger.info(f"[MANUAL] Delegating PDF upload for study: {study_id}, file: {filename}")
+
+        try:
+            # 1. Obtener el servicio especializado del container
+            from apps.acquisition.container import Container
+            manual_upload_app_service = Container.get_manual_upload_app_service()
+
+            # 2. Validar que el servicio esté disponible
+            if manual_upload_app_service is None:
+                raise RuntimeError("Manual upload service not available in container")
+
+            # 3. DELEGAR COMPLETAMENTE la responsabilidad
+            # El servicio sabe: validación de PDF, storage, actualización BD, etc.
+            updated_study = manual_upload_app_service.upload_pdf_for_study(
+                study_id=study_id,
+                uploaded_file=file_obj,
+                filename=filename,
+                user=user
+            )
+
+            logger.info(f"[MANUAL] PDF upload delegated successfully: {study_id}")
+            return updated_study
+
+        except ValueError as ve:
+            logger.error(f"[MANUAL] Validation error: {ve}")
+            raise
+        except Exception as e:
+            logger.error(f"[MANUAL] Error delegating PDF upload: {e}", exc_info=True)
+            raise
+
+    # ==========================================================================
+    # HELPER METHODS (Mantenimiento y Validación)
+    # ==========================================================================
+
+    def _validate_doi(self, doi: str) -> bool:
+        """Validar formato básico de DOI."""
+        if not doi:
+            return False
+
+        # Validación básica de formato DOI
+        import re
+        doi_pattern = r'^(10\.\d{4,}/.*)|(doi:10\.\d{4,}/.*)$'
+        return bool(re.match(doi_pattern, doi.strip()))
+
+    def _validate_consolidation_status(self, study: Study) -> str:
+        """
+        Validar estado de consolidación de metadatos.
+
+        En un sistema completo, esto llamaría a un ConsolidationService,
+        pero por ahora hacemos una validación básica.
+        """
+        required_fields = ["title", "authors", "year"]
+        missing_fields = []
+
+        for field in required_fields:
+            value = getattr(study, field, None)
+            if not value:
+                missing_fields.append(field)
+
+        if missing_fields:
+            logger.warning(f"[VALIDATION] Missing required fields: {missing_fields}")
+            return "incomplete"
+
+        # Si tiene DOI, validar formato
+        if study.doi and not self._validate_doi(study.doi):
+            return "invalid_doi"
+
+        return "complete"

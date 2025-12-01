@@ -267,8 +267,37 @@ class SciHubDownloader:
                 pdf_url = embed['src']
                 logger.debug(f"Found PDF in embed: {pdf_url[:60]}...")
 
+        # Método 4: Buscar cualquier enlace que termine en .pdf
+        if not pdf_url:
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if href.endswith('.pdf') or '.pdf?' in href:
+                    pdf_url = href
+                    logger.debug(f"Found PDF in link: {pdf_url[:60]}...")
+                    break
+
+        # Método 5: Buscar en atributos onclick de cualquier elemento
+        if not pdf_url:
+            for elem in soup.find_all(onclick=True):
+                onclick = elem.get('onclick', '')
+                if '.pdf' in onclick:
+                    # Extraer URL del onclick
+                    import re
+                    match = re.search(r'["\']([^"\']*\.pdf[^"\']*)["\']', onclick)
+                    if match:
+                        pdf_url = match.group(1)
+                        logger.debug(f"Found PDF in onclick: {pdf_url[:60]}...")
+                        break
+
         if not pdf_url:
             logger.debug("No PDF URL found in HTML")
+            # Guardar HTML para debug
+            try:
+                with open('debug_scihub_response.html', 'w', encoding='utf-8', errors='replace') as f:
+                    f.write(str(soup.prettify()))
+                logger.debug("HTML guardado en debug_scihub_response.html")
+            except Exception:
+                pass
             return None
 
         # Asegurar URL absoluta
