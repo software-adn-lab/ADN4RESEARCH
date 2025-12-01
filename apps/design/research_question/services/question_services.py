@@ -3,13 +3,11 @@ from apps.project.exceptions import ConsolidationError, InvalidProjectStateError
 from config.events import bus
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError
+from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError, ResearchQuestionError
 from apps.project.models import Project
 from django.contrib.auth.models import User
-
 from apps.design.shared.models.design_phase import DesignPhase
-# user de django
-
+from django.utils import timezone
 
 class ResearchQuestionService:
     # METODOS CRUD - en una segunda version
@@ -46,38 +44,27 @@ class ResearchQuestionService:
         return updated_question
 
     @transaction.atomic
-    def delete_research_question(self, research_question_id: int, user: User):
-        try:
-            question = self.get_research_question_by_id(research_question_id, user)
-        except ResearchQuestion.DoesNotExist:
-            raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
+    def delete_research_question(self, question_id: int, user) -> int:
+        question = self.get_research_question_by_id(question_id, user)
+        if question.status == ResearchQuestion.Status.APPROVED:
+            raise ResearchQuestionError("Cannot delete an APPROVED question directly. Change its status first.")
+        project_id = question.design_phase_id
         question.delete()
+        return project_id
 
     def get_research_question_by_id(self, research_question_id: int, user: User):
         try:
-            # Una pregunta de cierto proyecto
-            qs = ResearchQuestion.objects.select_related(
-                'design_phase__project__research_framework',
-                'design_phase__project__owner'
-            )
+            qs = ResearchQuestion.objects.select_related('design_phase__project__research_framework', 'design_phase__project__owner')
             question = qs.get(id=research_question_id)
             is_author = question.researcher == user
             is_owner = question.design_phase.project.owner == user
             if not (is_author or is_owner):
                 raise QuestionNotFoundError(f"Question not found or access denied.")
-
             return question
-
         except ResearchQuestion.DoesNotExist:
             raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
     
     def get_questions_for_workspace(self, project_id: int, user, status_filter: str = None):
-        """
-        Obtiene las preguntas para el Workspace aplicando reglas de visibilidad:
-        - Owner: Ve TODAS las preguntas.
-        - Researcher: Ve SOLO sus propias preguntas.
-        - Filtro opcional: Aplica filtro por estado si se envía.
-        """
         try:
             owner_id = Project.objects.values_list('owner_id', flat=True).get(pk=project_id)
         except Project.DoesNotExist:
@@ -92,18 +79,14 @@ class ResearchQuestionService:
 
     def get_all_questions_by_user_and_project(self, project_id: int, user):
         return ResearchQuestion.objects.by_project(project_id).by_researcher(user).order_by('-modified_at')
-
-    #def get_research_questions_by_project_and_status(self, project_id, status):
-    #    return ResearchQuestion.objects.by_project(project_id).filter(status=status).order_by('-modified_at')
         
-    def get_discussion_research_questions_by_project(self, project_id: int):
-        return ResearchQuestion.objects.by_project(project_id).in_discussion_phase().order_by('-modified_at')
-        
-    #def get_research_questions_by_status(self, project_id, status):
-    #    return ResearchQuestion.objects.by_project(project_id).by_status(status).order_by('-modified_at')
+    def get_discussion_research_questions_by_project(self, project_id: int, status_filter: str = None):
+        qs = ResearchQuestion.objects.by_project(project_id).in_discussion_phase()
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs.order_by('-modified_at')
 
     # Logica de negocio
-    # TODO: La limpieza de los datos es en el formulario, no en el servicio
     @transaction.atomic
     def autosave_question(self, cleaned_data, user, project_id, question_id) -> ResearchQuestion:
         payload = {
@@ -171,11 +154,13 @@ class ResearchQuestionService:
                 fields_to_update.append(field)
         if fields_to_update:
             fields_to_update.append('modified_at')
+            fields_to_update.append('last_modified_by')
+            fields_to_update.append('status')
             question.save(update_fields=fields_to_update)
         return question
 
     @transaction.atomic
-    def review_research_question(self, question_id: int, verdict: str, justification: str) -> ResearchQuestion:
+    def review_research_question(self, question_id: int, verdict: str, justification: str, user_id: int) -> ResearchQuestion:
         allowed_verdicts = {
             ResearchQuestion.Status.APPROVED,
             ResearchQuestion.Status.REJECTED,
@@ -184,8 +169,23 @@ class ResearchQuestionService:
             raise ValidationError(f"Estado no válido para una revisión: {verdict}")
         question = ResearchQuestion.objects.get(id=question_id)
         question.status = verdict
+        question.reviewed_by_id = user_id
         question.justification = justification
-        question.save(update_fields=['status', 'justification', 'modified_at'])
+        question.reviewed_at = timezone.now()
+        question.save(update_fields=['status', 'justification', 'reviewed_by', 'reviewed_at'])
+        return question
+    
+    def validate_reviewer_eligibility(self, question_id: int, user_id: int) -> ResearchQuestion:
+        try:
+            question = ResearchQuestion.objects.select_related(
+                'design_phase__project__owner'
+            ).get(id=question_id)
+        except ResearchQuestion.DoesNotExist:
+            raise QuestionNotFoundError("Question not found.")
+        is_author = (question.researcher_id == user_id)
+        is_owner = (question.design_phase.project.owner.id == user_id)
+        if is_author and not is_owner:
+            raise QuestionReviewError("Researchers cannot review their own questions. Wait for the Owner or a peer.")
         return question
 
     def select_question_to_suggest_action(self, question_id: int, suggester_id: int):

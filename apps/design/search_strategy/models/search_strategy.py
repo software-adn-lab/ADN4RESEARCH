@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.conf import settings
 
 class SearchStrategyQuerySet(models.QuerySet):
     def by_project(self, project_id):
@@ -29,7 +29,20 @@ class SearchStrategy(models.Model):
     final_search_string = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     objects = SearchStrategyQuerySet.as_manager()
-    # approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL) # Opcional: Quién aprobó la estrategia
+    last_modified_by = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='modified_strategies',
+        help_text="User who last modified the strategy"
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='reviewed_strategies',
+        help_text="Owner who reviewed the search strategy"
+    )
 
     def __str__(self):
         return f"Strategy '{self.name}' for RQ-{self.research_question.id}"

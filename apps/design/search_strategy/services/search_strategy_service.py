@@ -9,7 +9,8 @@ class SearchStrategyService:
     def generate_and_save_search_string(self, strategy_id, user_id=None) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
         keywords = strategy.keywords.select_related('project_keyword').all()
-        
+        if user_id:
+            strategy.last_modified_by_id = user_id
         if not keywords:
             strategy.final_search_string = ""
             strategy.save()
@@ -84,11 +85,14 @@ class SearchStrategyService:
     def get_strategy_for_question(self, question_id: int) -> SearchStrategy | None:
         return SearchStrategy.objects.filter(research_question_id=question_id).first()
     
-    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict]) -> SearchStrategy:
+    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user=None) -> SearchStrategy:
         # 1. Obtener o crear la estrategia para asegurar que siempre exista.
         strategy = self._get_or_create_strategy(research_question_id)
         # 2. Llamar al método central para limpiar los keywords antiguos y enlazar los nuevos.
         self._link_project_keywords_to_strategy(strategy, keyword_data)
+        if user:
+            strategy.last_modified_by = user
+            strategy.save(update_fields=['last_modified_by'])
         return strategy
 
     # Metodo del patron para crear el memento.

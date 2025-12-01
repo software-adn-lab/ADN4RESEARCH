@@ -7,10 +7,21 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-base-content">Discussion Panel</h1>
+            <p class="text-sm text-base-content/70">Review and justify decisions on research questions.</p>
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
+            <form method="GET" action="">
+                <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="SUGGESTED" {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
+                    <option value="APPROVED" {% if current_status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if current_status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </form>
+
             <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            
             {% if is_owner %}
             <form method="POST" action="{% url 'design:consolidate_discussion_stage' project.id %}" onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
                 {% csrf_token %}
@@ -35,7 +46,7 @@
     </div>
     {% endif %}
 
-    <div class="border border-base-300 rounded-lg">
+    <div class="overflow-x-auto border border-base-300 rounded-lg">
         <table class="table w-full table-fixed">
             <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                 <tr>
@@ -49,16 +60,16 @@
                 {% for question in questions %}
                 <tr class="hover">
                     <td class="p-2">
-                        <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded" 
+                        <div class="whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium" 
                              title="{{ question.question }}">
                              {{ question.question }}
                         </div>
                     </td>
                     
                     <td class="p-2">
-                        <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
+                        <div class="whitespace-nowrap overflow-hidden text-ellipsis w-full text-sm text-base-content/80"
                              title="{{ question.motivation }}">
-                            {{ question.motivation }}
+                            {{ question.motivation|default:"-" }}
                         </div>
                     </td>
 
@@ -77,24 +88,25 @@
                     <td class="text-center p-2">
                         {% if question.status == 'SUGGESTED' %}
                         <div class="flex justify-center gap-2">
-                            <a href="{% url 'design:select_question_to_suggest_action' question.id 'APPROVED' %}"
-                                class="btn btn-circle btn-success btn-xs text-white review-btn"
+                            <button type="button" 
+                                    class="btn btn-circle btn-success btn-xs text-white review-btn"
                                     data-id="{{ question.id }}"
                                     data-action="APPROVED"
                                     title="Approve">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                 </svg>
-                            </a>
-                            <a href="{% url 'design:select_question_to_suggest_action' question.id 'REJECTED' %}" 
-                                class="btn btn-circle btn-error btn-xs text-white review-btn"
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-circle btn-error btn-xs text-white review-btn"
                                     data-id="{{ question.id }}"
                                     data-action="REJECTED"
                                     title="Reject">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
-                            </a>
+                            </button>
                         </div>
                         {% else %}
                             <div class="tooltip" data-tip="{{ question.justification|default:'No justification' }}">

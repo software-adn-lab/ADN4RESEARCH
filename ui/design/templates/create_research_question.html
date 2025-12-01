@@ -1,20 +1,26 @@
 {% extends 'base_tabs.html'%}
 {% load static tailwind_tags %}
-{% block questions_history_content %}
+{% block rq_workspace_content %}
 
 <form id="question-form" method="POST"
     action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
-    class="form p-6 space-y-6">
+    class="form space-y-6">
     {% csrf_token %}
     <input type="hidden" id="research-question-id" name="question_id" value="{{ question.id|default:'' }}">
     <input type="hidden" id="project-id" name="project_id" value="{{ project.id }}">
-    
+    <a href="{% url 'design:rq_workspace' project.id %}" 
+           class="btn btn-circle btn-ghost btn-sm"
+           title="Back to Workspace">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+    </a>
     {% if project.research_framework %}
         {# Siempre usa el framework del proyecto #}
         <input type="hidden" name="research_framework" value="{{ project.research_framework.id }}">
 
-        <h2 class="text-xl font-semibold">Framework: {{ project.research_framework.name }}</h2>
-        <hr class="my-4">
+        <h2 class="text-xl font-semibold">Project Framework: {{ project.research_framework.name }}</h2>
+
 
         <div id="fields-container" class="space-y-4">
             {% for field_name in project.research_framework.fields_data.keys %}
@@ -66,4 +72,4 @@
 </script>
 <script src="{% static 'scripts/create_research_question.js' %}"></script>
 
-{% endblock questions_history_content %}
+{% endblock rq_workspace_content %}

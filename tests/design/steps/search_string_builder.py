@@ -49,7 +49,8 @@ def step_se_identifican_terminos_clave_con_sinonimos(context):
         })
     context.strategy = search_strategy_service.create_or_update_strategy_with_keywords(
             research_question_id=context.research_question.id,
-            keyword_data=keyword_data_list
+            keyword_data=keyword_data_list,
+            user=context.researcher
         )
     assert context.strategy.keywords.count() == len(keyword_data_list)
     

@@ -4,35 +4,36 @@
 
 <div class="p-4" data-project-id="{{ project.id }}">
     {% csrf_token %}
-    <div class="text-xs justify-end flex">
-        <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: FECHAA</span>
-    </div>
-    <!-- Title -->
-    <div class="flex justify-center items-center">
-        <h1 class="text-2xl font-bold text-base-content">Eligibility Criteria Panel</h1>
-    </div>
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-base-content">Eligibility Criteria Panel</h1>
+            <p class="text-sm text-base-content/70">Define inclusion and exclusion criteria.</p>
+        </div>
 
-    <!-- Header / Filter -->
-    <div class="flex justify-end items-center p-4 space-x-4">
-        <div class="form-control">
-            <select id="status-filter" class="select select-bordered select-sm w-48">
-                <option value="">Filter by status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-            </select>
+        <div class="text-xs justify-end flex text-center items-center gap-4">
+            <form method="GET" action="">
+                <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT" {% if current_status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
+                    <option value="APPROVED" {% if current_status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if current_status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </form>
+
+            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
         </div>
     </div>
 
     <div class="space-y-8">
-        <!-- Inclusion Criteria -->
+        
         <div class="space-y-3">
             <h2 class="text-lg font-semibold text-base-content flex items-center gap-2">
                 Inclusion Criteria
             </h2>
 
             <div class="overflow-x-auto border border-base-300 rounded-lg">
-                <table class="table w-full">
+                <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
                             <th class="w-1/4">Description</th>
@@ -52,9 +53,9 @@
                             </td>
                             <td class="p-2 text-center">
                                 {% if criterion.status == 'APPROVED' %}
-                                <span class="badge badge-success text-xs">Approved</span>
+                                <span class="badge badge-success text-xs text-white">Approved</span>
                                 {% elif criterion.status == 'REJECTED' %}
-                                <span class="badge badge-error text-xs">Rejected</span>
+                                <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
                                 <span class="badge badge-ghost text-xs">Draft</span>
                                 {% endif %}
@@ -78,7 +79,6 @@
                     </tbody>
                 </table>
 
-                <!-- Add inclusion -->
                 <a id="add-inclusion-btn" href="#"
                     class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,14 +89,13 @@
             </div>
         </div>
 
-        <!-- Exclusion Criteria -->
         <div class="space-y-3">
             <h2 class="text-lg font-semibold text-base-content flex items-center gap-2 mt-8">
                 Exclusion Criteria
             </h2>
 
             <div class="overflow-x-auto border border-base-300 rounded-lg">
-                <table class="table w-full">
+                <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
                             <th class="w-1/4">Description</th>
@@ -116,9 +115,9 @@
                             </td>
                             <td class="p-2 text-center">
                                 {% if criterion.status == 'APPROVED' %}
-                                <span class="badge badge-success text-xs">Approved</span>
+                                <span class="badge badge-success text-xs text-white">Approved</span>
                                 {% elif criterion.status == 'REJECTED' %}
-                                <span class="badge badge-error text-xs">Rejected</span>
+                                <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
                                 <span class="badge badge-ghost text-xs">Draft</span>
                                 {% endif %}
@@ -142,7 +141,6 @@
                     </tbody>
                 </table>
 
-                <!-- Add exclusion -->
                 <a id="add-exclusion-btn" href="#"
                     class="p-3 border-t border-base-300 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,12 +151,9 @@
             </div>
         </div>
     </div>
-
 </div>
 
-<!-- JS -->
 <script>
-    // Pass Django URLs to the external JavaScript file
     const URLS = {
         create: "{% url 'design:create_criterion' project.id %}",
         update: "{% url 'design:update_criterion' 9999 %}",
@@ -175,20 +170,9 @@
         border: 1px solid transparent;
         transition: all 0.2s ease;
     }
-
-    .editable-cell:hover {
-        background-color: hsl(var(--b2) / 0.3);
-    }
-
-    .editable-cell:focus {
-        background-color: hsl(var(--b1));
-    }
-
-    .editable-cell:empty:before {
-        content: attr(data-placeholder);
-        color: #afafaf;
-        /* Placeholder más opaco */
-    }
+    .editable-cell:hover { background-color: hsl(var(--b2) / 0.3); }
+    .editable-cell:focus { background-color: hsl(var(--b1)); }
+    .editable-cell:empty:before { content: attr(data-placeholder); color: #afafaf; }
 </style>
 
 {% endblock eligibility_criteria_content %}

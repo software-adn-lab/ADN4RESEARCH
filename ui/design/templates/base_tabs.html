@@ -1,89 +1,55 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
 
-<div class="container mx-auto p-4">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="container mx-auto p-4 space-y-8">
+    <div class="w-full flex justify-center bg-base-100/50 m-0">
+        <ul class="timeline timeline-vertical  justify-center lg:timeline-horizontal w-full lg:max-w-6xl mx-auto">
+            {% for stage in timeline_stages %}
+            <li class="h-18">
+                {% if not forloop.first %}
+                    <hr class="{% if stage.status == 'completed' or stage.status == 'current' %}bg-primary{% else %}bg-base-300{% endif %}" />
+                {% endif %}
 
-        <div class="lg:w-3/4">
-            <div role="tablist" class="tabs tabs-lifted">
-                
-                <a href="{% url 'design:questions_history' project.id %}"
-                  class="tab {% if active_tab == 'questions_history' %}tab-active{% endif %}">
-                  Research Question Workspace
+                <div class="timeline-middle">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                        class="h-5 w-5 {% if stage.status == 'completed' or stage.status == 'current' %}text-primary{% else %}text-base-300{% endif %}">
+                        {% if stage.status == 'completed' %}
+                            <circle cx="10" cy="10" r="10" />
+                            <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                        {% elif stage.status == 'current' %}
+                            <circle cx="10" cy="10" r="10" />
+                        {% else %}
+                            <circle cx="10" cy="10" r="8" />
+                        {% endif %}
+                    </svg>
+                </div>
+
+                <a href="{% url 'design:design_stages' project.id %}?target_stage={{ stage.key }}" 
+                   class="timeline-start md:timeline-end timeline-box border-none shadow-sm cursor-pointer hover:bg-base-200 transition-colors no-underline text-xs sm:text-sm
+                          {% if stage.status == 'current' %}bg-primary text-primary-content font-bold shadow-md{% endif %}">
+                    {{ stage.label }}
                 </a>
-                <div class="tab-content bg-base-100 border-base-300 p-6">
-                  {% block questions_history_content %}
-                  {% endblock questions_history_content %}
-                </div>
 
-                <a href="{% url 'design:question_discussion_panel' project.id %}"
-                  class="tab {% if active_tab == 'question_discussion_panel' %}tab-active{% endif %}">
-                  Research Question Discussion Panel
-                </a>
-                <div class="tab-content bg-base-100 border-base-300 p-6">
-                  {% block discusion_panel_content %}
-                  {% endblock discusion_panel_content %}
-                </div>
+                {% if not forloop.last %}
+                    <hr class="{% if stage.status == 'completed' %}bg-primary{% else %}bg-base-300{% endif %}" />
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
 
-                <a href="{% url 'design:eligibility_criteria_panel' project.id %}"
-                  class="tab {% if active_tab == 'eligibility_criteria_panel' %}tab-active{% endif %}">
-                  Eligibility Criteria Panel
-                </a>
-                <div class="tab-content bg-base-100 border-base-300 p-6">
-                  {% block eligibility_criteria_content %}
-                  {% endblock eligibility_criteria_content %}
-                </div>
-
-                <a href="#" class="tab {% if active_tab == 'search_string' %}tab-active{% endif %}">
-                  Search String Builder
-                </a>
-                <div class="tab-content bg-base-100 border-base-300 p-6">
-                  {% block search_string_content %}
-                  {% endblock search_string_content %}
-                </div>
-            </div>
-        </div>
-
-        <div class="lg:w-1/4">
-            <div class="card bg-base-100 shadow-md sticky top-4"> 
-              <div class="card-body p-0">
-                    <h3 class="card-title text-sm opacity-70 mb-4">Design Phase Progress</h3>
-                    <ul class="timeline timeline-vertical">
-                        {% for stage in timeline_stages %}
-                        <li>
-                            {% if not forloop.first %}
-                                <hr class="{% if stage.status == 'completed' or stage.status == 'current' %}bg-primary{% else %}bg-base-300{% endif %}" />
-                            {% endif %}
-                            
-                            <div class="timeline-middle">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
-                                    class="h-5 w-5 {% if stage.status == 'completed' or stage.status == 'current' %}text-primary{% else %}text-base-300{% endif %}">
-                                    {% if stage.status == 'completed' %}
-                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                                    {% elif stage.status == 'current' %}
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd" />
-                                    {% else %}
-                                        <circle cx="10" cy="10" r="8" />
-                                    {% endif %}
-                                </svg>
-                            </div>
-                            
-                            <a href="{% url 'design:design_stages' project.id %}?target_stage={{ stage.key }}" 
-                               class="timeline-end timeline-box shadow-none border-none cursor-pointer hover:bg-base-200 transition-colors no-underline text-xs p-2
-                                      {% if stage.status == 'current' %}bg-primary text-primary-content font-bold shadow-md transition-colors {% endif %}">
-                                {{ stage.label }}
-                            </a>
-
-                            {% if not forloop.last %}
-                                <hr class="{% if stage.status == 'completed' %}bg-primary{% else %}bg-base-300{% endif %}" />
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <div class="w-full bg-base-100 border border-base-200 rounded-xl shadow-sm p-6 min-h-[500px]">
+        {% block rq_workspace_content %}{% endblock %}
+        
+        {% block discusion_panel_content %}{% endblock %}
+        
+        {% block eligibility_criteria_content %}{% endblock %}
+        
+        {% block search_string_content %}{% endblock %}
 
     </div>
+
 </div>
 {% endblock %}

@@ -1,7 +1,5 @@
 
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
-from django.shortcuts import get_object_or_404
-from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from django.http import JsonResponse
 

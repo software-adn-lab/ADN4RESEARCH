@@ -1,5 +1,5 @@
 {% extends 'base_tabs.html'%}
-{% block questions_history_content %}
+{% block rq_workspace_content %}
 <div class="p-4" data-project-id="{{ project.id }}">
     {% csrf_token %}
     <div class="flex justify-between items-center p-1 space-x-4">
@@ -9,10 +9,22 @@
             <form method="GET" action="">
                 <div class="form-control">
                     <select name="status" id="status-filter" class="select select-bordered select-sm w-48" onchange="this.form.submit()">
-                        <option value="">Filter by status</option>
-                        <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
-                        <option value="READY_TO_SEND" {% if request.GET.status == 'READY_TO_SEND' %}selected{% endif %}>Ready to send</option>
-                        <option value="SUGGESTED" {% if request.GET.status == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
+                        <option value="">All Statuses</option>
+                        
+                        <option value="DRAFT" 
+                                {% if current_status_filter == 'DRAFT' %}selected{% endif %}>
+                                Draft
+                        </option>
+                        
+                        <option value="READY_TO_SEND" 
+                                {% if current_status_filter == 'READY_TO_SEND' %}selected{% endif %}>
+                                Ready to send
+                        </option>
+                        
+                        <option value="SUGGESTED" 
+                                {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>
+                                Suggested
+                        </option>
                     </select>
                 </div>
             </form>
@@ -225,4 +237,4 @@
     .editable-cell:empty:before { content: attr(data-placeholder); color: #afafaf; }
 </style>
 
-{% endblock questions_history_content %}
+{% endblock rq_workspace_content %}

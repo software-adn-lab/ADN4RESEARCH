@@ -51,6 +51,21 @@ class ResearchQuestion(models.Model):
         default=Status.DRAFT     
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    last_modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='modified_questions',
+        help_text="User who last modified the research question"
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='reviewed_questions',
+        help_text="Owner who reviewed the research question"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     modified_at = models.DateTimeField(auto_now=True)
     framework_fields = models.JSONField(default=dict)
 

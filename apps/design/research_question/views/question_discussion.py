@@ -1,50 +1,36 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.contrib import messages
-from apps.project.models import Project
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.project.services.project_services import ProjectService
-
+from apps.design.shared.services.design_phase_service import DesignPhaseService
 from apps.design.exceptions.research_question_exceptions import QuestionReviewError
 
 # Instancia del servicio (o inyección de dependencias si usas eso)
 research_question_service = ResearchQuestionService()
 project_service = ProjectService()
+design_phase_service = DesignPhaseService()
 
 @login_required
 def question_discussion_panel_view(request, project_id):
-    project = project_service.get_project_by_id(project_id) 
+    status_filter = request.GET.get('status')
+    project = project_service.get_project_by_id(project_id, user=request.user, related_fields=['owner', 'design_phase'])
     
-    questions = research_question_service.get_discussion_research_questions_by_project(project_id) 
-    stage_end_date = project_service.get_current_stage_deadline(project_id)
-    timeline_stages = project_service.get_design_timeline_context(project_id)
+    questions = research_question_service.get_discussion_research_questions_by_project(project_id, status_filter=status_filter) 
+    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
+    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
     context = {
         'project': project,
         'questions': questions,
         'is_owner': project.owner == request.user,
         'stage_end_date': stage_end_date,
         'timeline_stages': timeline_stages,
+        'current_status_filter': status_filter,
         'active_tab': 'question_discussion_panel', # Para resaltar el tab si usas base_tabs active_tab == 'question_discussion_panel'
     }
     return render(request, 'question_discussion_panel.html', context)
-
-@login_required
-def select_question_to_suggest_action(request, question_id, action_type):
-    try:
-        # Llamamos al servicio con la acción específica
-        research_question_service.process_suggestion_action(
-            question_id=question_id, 
-            user_id=request.user.id,
-            action=action_type # Pasamos 'APPROVED' o 'REJECTED'
-        )
-        messages.success(request, f"Question marked as {action_type}.")
-    except QuestionReviewError as e:
-        messages.error(request, str(e))
-    
-    # Redirigir de vuelta a la lista o panel donde estaba el usuario
-    return redirect('design:question_discussion_panel')
 
 @login_required
 @require_POST
@@ -54,13 +40,10 @@ def review_research_question_action(request):
     justification = request.POST.get('justification')
 
     if not all([question_id, verdict, justification]):
-        return JsonResponse({'status': 'error', 'message': 'Missing fields.'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Missing fields (Justification is required).'}, status=400)
+
     try:
-        research_question_service.review_research_question(
-            question_id=int(question_id),
-            verdict=verdict,
-            justification=justification
-        )
+        research_question_service.review_research_question(question_id=int(question_id), verdict=verdict, justification=justification,user_id=request.user.id)
         return JsonResponse({'status': 'success', 'message': 'Question reviewed successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

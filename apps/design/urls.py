@@ -4,14 +4,14 @@ from apps.design.eligibility_criteria.views import eligibility_criterion
 from apps.design.research_question.views import research_question
 from apps.design.search_strategy.views import project_keyword, search_strategy
 from apps.design.research_question.views import question_discussion
-from apps.project import project_views
+from apps.design.shared.views import navigation
 
 app_name = 'design'
 
 urlpatterns = [
     path('', research_question.hello),
     # Lo que se relaciona con Research Questions
-    path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='questions_history'),
+    path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='rq_workspace'),
     path('create-research-question/<int:project_id>', research_question.create_research_question, name='create_research_question'),
     path('autosave-question/', research_question.autosave_research_question, name='autosave_research_question'),
     path('edit-research-question/<int:question_id>/', research_question.edit_research_question, name='edit_research_question'),
@@ -19,12 +19,11 @@ urlpatterns = [
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
     path('get-strategy/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
     #'design:design_stages' project.id
-    path('design-stages/<int:project_id>/', project_views.design_stages_view, name='design_stages'),
+    path('design-stages/<int:project_id>/', navigation.design_stages_router, name='design_stages'),
     
     path('discussion/<int:project_id>/', question_discussion.question_discussion_panel_view, name='question_discussion_panel'),
     path('discussion/review/', question_discussion.review_research_question_action, name='review_research_question_action'),
     path('discussion/consolidate/<int:project_id>/', question_discussion.consolidate_discussion_stage_action, name='consolidate_discussion_stage'),
-    path('discussion/select-question/<int:question_id>/<str:action_type>/', question_discussion.select_question_to_suggest_action, name='select_question_to_suggest_action'),
     
     path('eligibility-criteria-panel/<int:project_id>/', eligibility_criterion.open_eligibility_criteria_panel, name='eligibility_criteria_panel'),
     path('create-criterion/<int:project_id>/', eligibility_criterion.create_eligibility_criterion, name='create_criterion'),
