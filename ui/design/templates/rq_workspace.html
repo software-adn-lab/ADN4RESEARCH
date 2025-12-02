@@ -2,13 +2,13 @@
 {% block rq_workspace_content %}
 <div class="p-4" data-project-id="{{ project.id }}">
     {% csrf_token %}
-    <div class="flex justify-between items-center p-1 space-x-4">
-        <h1 class="text-xl font-bold text-base-content p-1">Research Question Workspace</h1>
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-base-content">Research Question Workspace</h1>
         <div class="text-xs justify-end flex text-center items-center gap-4">
             <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
             <form method="GET" action="">
                 <div class="form-control">
-                    <select name="status" id="status-filter" class="select select-bordered select-sm w-48" onchange="this.form.submit()">
+                    <select name="status" id="status-filter" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                         <option value="">All Statuses</option>
                         
                         <option value="DRAFT" 
@@ -138,8 +138,8 @@
             </div>
         </div>
         <div class="space-y-1">
-            <div>
-                <h1 class="text-xl font-bold text-base-content p-1">Project Key Terms</h1>
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-base-content">Project Key Terms</h1>
             </div>
             <div class="space-y-3">
                 <div class="overflow-x-auto border border-base-300 rounded-lg">

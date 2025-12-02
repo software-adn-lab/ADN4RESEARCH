@@ -2,68 +2,111 @@
 {% load static tailwind_tags %}
 {% block rq_workspace_content %}
 
-<form id="question-form" method="POST"
-    action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
-    class="form space-y-6">
-    {% csrf_token %}
-    <input type="hidden" id="research-question-id" name="question_id" value="{{ question.id|default:'' }}">
-    <input type="hidden" id="project-id" name="project_id" value="{{ project.id }}">
-    <a href="{% url 'design:rq_workspace' project.id %}" 
-           class="btn btn-circle btn-ghost btn-sm"
-           title="Back to Workspace">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
-    </a>
-    {% if project.research_framework %}
-        {# Siempre usa el framework del proyecto #}
-        <input type="hidden" name="research_framework" value="{{ project.research_framework.id }}">
+<div class="max-w-5xl mx-auto">
+    
+    <form id="question-form" method="POST"
+        action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
+        class="card shadow-lg border border-base-200">
+        
+        <div class="card-body p-8 space-y-6">
+            {% csrf_token %}
+            
+            <input type="hidden" id="research-question-id" name="question_id" value="{{ question.id|default:'' }}">
+            <input type="hidden" id="project-id" name="project_id" value="{{ project.id }}">
 
-        <h2 class="text-xl font-semibold">Project Framework: {{ project.research_framework.name }}</h2>
+            {% if project.research_framework %}
+                <input type="hidden" name="research_framework" value="{{ project.research_framework.id }}">
 
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center border-b border-base-200 pb-6">
+                    
+                    <div class="justify-self-start">
+                        <a href="{% url 'design:rq_workspace' project.id %}" 
+                            class="btn btn-circle btn-ghost btn-sm tooltip tooltip-right"
+                            data-tip="Back to Workspace">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                            </svg>
+                        </a>
+                    </div>
 
-        <div id="fields-container" class="space-y-4">
-            {% for field_name in project.research_framework.fields_data.keys %}
-            <fieldset class="form-control w-full max-w-xs">
-                <label class="label">
-                    <span class="label-text">{{ field_name }}</span>
-                </label>
-                <input type="text" 
-                       name="framework_fields[{{ field_name }}]" 
-                       value="{% for key, val in question.framework_fields.items %}{% if key == field_name %}{{ val }}{% endif %}{% endfor %}"
-                       placeholder="Type here" 
-                       class="input input-bordered w-full max-w-xs" />
-            </fieldset>
-            {% endfor %}
-            <div>
-                <label for="question" class="block mb-2 text-sm font-medium text-gray-900">Question</label>
-                <textarea id="question" name="question" rows="4" 
-                          class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
-                          placeholder="Write your question here...">{{ question.question|default:'' }}</textarea>
-            </div>
-            <div>
-                <label for="motivation" class="block mb-2 text-sm font-medium text-gray-900">Motivation</label>
-                <textarea id="motivation" name="motivation" rows="4" 
-                          class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
-                          placeholder="Write the motivation...">{{ question.motivation|default:'' }}</textarea>
-            </div>
-            <div id="submit-container">
-                {% if question.status == 'READY_TO_SEND' or question.status == 'SUGGESTED' %}
-                    <button type="submit" class="btn btn-primary mt-4">Submit Question</button>
-                {% else %}
-                    <p class="text-gray-500 mt-4">Complete all fields to enable submission</p>
-                {% endif %}
-            </div>
+                    <div class="justify-self-center text-center">
+                        <h2 class="text-2xl font-bold text-base-content flex flex-col items-center sm:flex-row gap-2">
+                            Framework Strategy: 
+                            <span class="badge badge-primary badge-outline font-semibold text-lg py-3 px-4">{{ project.research_framework.name }}</span>
+                        </h2>
+                    </div>
+
+                    <div class="justify-self-end flex items-center">
+                        <div id="autosave-status" class="flex items-center justify-end min-w-[120px]">
+                            {% if question.id %}
+                            
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fields-container" class="space-y-6 pt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for field_name, field_description in project.research_framework.fields_data.items %}
+                        <div class="form-control w-full">
+                            <label class="label">
+                                <span class="label-text font-semibold text-base">{{ field_name }}</span>
+                            </label>
+                            <input type="text" 
+                                   name="framework_fields[{{ field_name }}]" 
+                                   value="{% for key, val in question.framework_fields.items %}{% if key == field_name %}{{ val }}{% endif %}{% endfor %}"
+                                   placeholder="{{ field_description }}" 
+                                   class="input input-bordered w-full focus:input-primary transition-all" />
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="form-control">
+                        <label for="question" class="label flex">
+                            <span class="label-text font-semibold text-lg text-primary">Research Question</span>
+                        </label>
+                        <textarea id="question" name="question" rows="3" 
+                                  class="textarea w-full textarea-bordered text-base h-24 focus:textarea-primary leading-relaxed"
+                                  placeholder="E.g., What is the impact of...">{{ question.question|default:'' }}</textarea>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="motivation" class="label flex">
+                            <span class="label-text font-semibold text-lg">Motivation</span>
+                        </label>
+                        <textarea id="motivation" name="motivation" rows="3" 
+                                  class="textarea w-full textarea-bordered text-base h-24 focus:textarea-primary leading-relaxed"
+                                  placeholder="Explain why this question is relevant to the study...">{{ question.motivation|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end items-center border-t border-base-200 mt-6 pt-4">
+                    <div id="submit-container">
+                        {% if question.status == 'READY_TO_SEND' or question.status == 'SUGGESTED' %}
+                            <button type="submit" class="btn btn-primary text-white gap-2 px-8">
+                                Submit Question
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                                </svg>
+                            </button>
+                        {% else %}
+                            <div class="tooltip tooltip-left" data-tip="Fill all fields to enable submission">
+                                <button class="btn btn-disabled btn-outline">Complete fields to submit</button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                <div class="alert alert-error shadow-sm">
+                    <span>Error: No research framework assigned.</span>
+                </div>
+            {% endif %}
         </div>
-    {% else %}
-        <p class="text-red-500">No research framework has been assigned to this project.</p>
-    {% endif %}
-
-    <div class="flex items-center mt-4 h-6">
-        <div id="autosave-status"></div>
-    </div>
-
-</form>
+    </form>
+</div>
 
 <script>
     const QUESTION_DATA = {{ question_json|safe|default:"null" }};

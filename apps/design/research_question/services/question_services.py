@@ -107,6 +107,7 @@ class ResearchQuestionService:
             raise QuestionSubmissionError(
                 f"Question {research_question.id} cannot be submitted. "
                 f"Current status: {research_question.get_status_display()}"
+                f" in stage {research_question.design_phase.get_current_stage_display()}."
             )
         research_question.status = ResearchQuestion.Status.SUGGESTED
         research_question.save(update_fields=['status', 'modified_at'])
@@ -117,10 +118,13 @@ class ResearchQuestionService:
         })
 
     def can_submit_question(self, research_question_id: int) -> bool:
-        research_question = ResearchQuestion.objects.get(id=research_question_id)
-        if research_question.status == ResearchQuestion.Status.READY_TO_SEND:
-            return True
-        return False
+        try:
+            research_question = ResearchQuestion.objects.select_related('design_phase').get(id=research_question_id)
+        except ResearchQuestion.DoesNotExist:
+            return False
+        is_ready = research_question.status == ResearchQuestion.Status.READY_TO_SEND
+        is_in_edition_stage = research_question.design_phase.current_stage in DesignPhase.RQ_EDITION_STAGES
+        return is_ready and is_in_edition_stage
 
     def _is_valid_framework_fields(self, framework, fields):
         allowed_keys = set(framework.get_allowed_keys())

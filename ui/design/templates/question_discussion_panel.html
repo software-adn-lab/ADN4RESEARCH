@@ -2,15 +2,15 @@
 {% load static %}
 
 {% block discusion_panel_content %}
-<div class="p-6 bg-base-100" data-project-id="{{ project.id }}">
+<div class="p-6" data-project-id="{{ project.id }}">
     
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-base-content">Discussion Panel</h1>
-            <p class="text-sm text-base-content/70">Review and justify decisions on research questions.</p>
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
+            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
@@ -19,20 +19,6 @@
                     <option value="REJECTED" {% if current_status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
                 </select>
             </form>
-
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
-            
-            {% if is_owner %}
-            <form method="POST" action="{% url 'design:consolidate_discussion_stage' project.id %}" onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-warning gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                    Consolidate Stage
-                </button>
-            </form>
-            {% endif %}
         </div>
     </div>
 
@@ -127,6 +113,19 @@
             </tbody>
         </table>
     </div>
+</div>
+<div class="flex text-center justify-center p-6">
+    {% if is_owner %}
+        <form method="POST" action="{% url 'design:consolidate_discussion_stage' project.id %}" onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                Consolidate Stage
+            </button>
+        </form>
+    {% endif %}
 </div>
 
 <dialog id="review_modal" class="modal">
