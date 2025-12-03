@@ -159,7 +159,7 @@ class AcquisitionOrchestrator:
             - total_found: int - Total de estudios únicos encontrados
             - studies: List[Dict] - Estudios como dicts (sin persistir)
         """
-        logger.info(f"[PREVIEW] strategy: {strategy_dict.get('strategy_id')}")
+        logger.info(f"[PREVIEW] Executing preview search")
 
         # Convertir a dominio
         normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
@@ -171,7 +171,6 @@ class AcquisitionOrchestrator:
 
         # Ejecutar discovery SIN persistir
         discovery_result = self.discovery_service.execute(
-            strategy_id=normalized_strategy.strategy_id,
             translation_statuses=translation_statuses,
             supported_sources=list(queries_by_source.keys()),
             max_results_per_source=max_results_per_source,
@@ -372,7 +371,6 @@ class AcquisitionOrchestrator:
 
         # Ejecutar discovery CON persistir
         discovery_result = self.discovery_service.execute(
-            strategy_id=normalized_strategy.strategy_id,
             translation_statuses=translation_statuses,
             supported_sources=list(queries_by_source.keys()),
             max_results_per_source=25,

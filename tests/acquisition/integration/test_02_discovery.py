@@ -35,7 +35,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         Este es el test más importante - valida que el módulo completo funciona.
         """
         strategy_dict = {
-            "strategy_id": "test_facade_2024",
             "main_terms": [{"term": "machine learning", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -105,7 +104,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         translation_service = Container.get_translation_service()
         
         strategy_dict = {
-            "strategy_id": "test_scopus_2024",
             "main_terms": [{"term": "software testing", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -129,7 +127,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         
         # Ejecutar discovery solo con Scopus
         result = discovery_service.execute(
-            strategy_id=strategy_dict['strategy_id'],
             translation_statuses=translation_statuses,
             supported_sources=["Scopus"],
             max_results_per_source=5,
@@ -161,7 +158,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         translation_service = Container.get_translation_service()
         
         strategy_dict = {
-            "strategy_id": "test_ieee_2024",
             "main_terms": [{"term": "machine learning", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -185,7 +181,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         
         # Ejecutar discovery solo con IEEE
         result = discovery_service.execute(
-            strategy_id=strategy_dict['strategy_id'],
             translation_statuses=translation_statuses,
             supported_sources=["IEEE Xplore"],
             max_results_per_source=5,
@@ -221,7 +216,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         translation_service = Container.get_translation_service()
         
         strategy_dict = {
-            "strategy_id": "test_both_2024",
             "main_terms": [{"term": "artificial intelligence", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -255,7 +249,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         
         # Ejecutar discovery con ambas fuentes
         result = discovery_service.execute(
-            strategy_id=strategy_dict['strategy_id'],
             translation_statuses=translation_statuses,
             supported_sources=DISCOVERY_SOURCES,  # ["Scopus", "IEEE Xplore"]
             max_results_per_source=5,
@@ -287,7 +280,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         Validar que los estudios devueltos tienen los metadatos requeridos.
         """
         strategy_dict = {
-            "strategy_id": "test_metadata_2024",
             "main_terms": [{"term": "deep learning", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -337,7 +329,6 @@ class DiscoveryLiveTest(BaseLiveTest):
         Validar que la deduplicación funciona (no hay estudios duplicados).
         """
         strategy_dict = {
-            "strategy_id": "test_dedup_2024",
             "main_terms": [{"term": "neural networks", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -411,7 +402,6 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
             year_from, year_to = year_to, year_from
         
         strategy_dict = {
-            "strategy_id": f"test_persist_{hash(term) % 10000}",
             "main_terms": [{"term": term, "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": year_from, "to": year_to}}
@@ -427,15 +417,14 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
             # No results to test persistence - skip
             return
         
-        # Select first study for persistence test
-        selected_studies = preview_result.studies[:1]
+        # Select first study for persistence test (filtrar el DTO)
+        preview_result.studies = preview_result.studies[:1]
         
         # Persist through facade
         try:
             final_result = self.facade.finalize_search(
-                strategy_dict=strategy_dict,
                 design_strategy_id=1,  # Mock ID
-                selected_studies=selected_studies,
+                preview_result=preview_result,
                 user=self.test_user
             )
             
@@ -465,7 +454,6 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
         title, link, and source fields populated.
         """
         strategy_dict = {
-            "strategy_id": f"test_metadata_{hash(term) % 10000}",
             "main_terms": [{"term": term, "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -502,7 +490,6 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
         correctly tracked and retrievable.
         """
         strategy_dict = {
-            "strategy_id": f"test_status_{hash(term) % 10000}",
             "main_terms": [{"term": term, "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -517,14 +504,13 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
         if preview_result.total_found == 0:
             return
         
-        # Persist one study
-        selected_studies = preview_result.studies[:1]
+        # Persist one study (filtrar el preview_result)
+        preview_result.studies = preview_result.studies[:1]
         
         try:
             final_result = self.facade.finalize_search(
-                strategy_dict=strategy_dict,
                 design_strategy_id=1,
-                selected_studies=selected_studies,
+                preview_result=preview_result,
                 user=self.test_user
             )
             
@@ -563,7 +549,6 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
         should be properly combined and deduplicated.
         """
         strategy_dict = {
-            "strategy_id": f"test_multi_{hash(term) % 10000}",
             "main_terms": [{"term": term, "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -607,7 +592,6 @@ class DiscoveryPropertyTests(BaseLiveTest, HypothesisTestCase):
         print(f"{'='*60}")
         
         strategy_dict = {
-            "strategy_id": "test_open_access_2024",
             "main_terms": [{"term": "open access machine learning", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
