@@ -32,16 +32,6 @@
         </div>
     </div>
 
-    {% if messages %}
-    <div class="mb-4">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} shadow-lg text-sm py-2">
-            <div><span>{{ message }}</span></div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     <div class="overflow-x-auto border border-base-300 rounded-lg">
         <table class="table w-full table-fixed">
             <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">

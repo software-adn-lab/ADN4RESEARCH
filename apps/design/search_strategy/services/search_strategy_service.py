@@ -3,6 +3,7 @@ from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db.models import Max
 from django.db import transaction
+from apps.acquisition.facade import get_acquisition_facade
 
 
 class SearchStrategyService:

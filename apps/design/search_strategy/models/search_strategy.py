@@ -44,7 +44,7 @@ class SearchStrategy(models.Model):
     )
 
     def __str__(self):
-        return f"Strategy '{self.name}' for RQ-{self.research_question.id}"
+        return f"Strategy for RQ-{self.research_question.id}"
 
 class SearchStrategyVersion(models.Model):
     """ Este es el memento"""
