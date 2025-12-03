@@ -1,0 +1,103 @@
+{% extends 'base_tabs.html' %}
+{% load static %}
+
+{% block search_string_content %}
+<div class="p-4" data-project-id="{{ project.id }}">
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-base-content">Search Strategy Builder</h1>
+            <p class="text-sm text-base-content/70">Design search strings for approved protocol questions.</p>
+        </div>
+        <div class="text-xs font-medium text-base-content/80">
+            Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}
+        </div>
+    </div>
+
+    <div class="overflow-x-auto border border-base-300 rounded-lg">
+        <table class="table w-full table-fixed">
+            <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                <tr>
+                    <th class="w-3/4">Protocol Research Question</th>
+                    <th class="w-1/4 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                {% for question in protocol_questions %}
+                <tr class="hover:bg-base-200 transition-colors">
+                    <td class="p-3">
+                        <div class="font-medium truncate" title="{{ question.question }}">
+                            {{ question.question }}
+                        </div>
+                    </td>
+                    <td class="p-2 text-center">
+                        <div class="flex justify-center gap-3">
+                            
+                            <a href="{% url 'design:search_strategy_builder_view' project.id %}?question_id={{ question.id }}" 
+                               class="btn btn-square btn-sm btn-ghost text-primary hover:bg-primary/10 tooltip" 
+                               data-tip="Build Strategy">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+                                </svg>
+                            </a>
+
+                            <button class="btn btn-square btn-sm btn-ghost text-secondary hover:bg-secondary/10 tooltip view-versions-btn" 
+                                    data-tip="View History"
+                                    data-id="{{ question.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                            </button>
+
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="text-center py-8 text-base-content/50">
+                        No approved questions in the protocol yet. Go to Discussion Panel.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<dialog id="strategy_versions_modal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        
+        <h3 class="font-bold text-lg mb-4">Strategy Version History</h3>
+        
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-base-200">
+                        <th class="w-16">Ver.</th>
+                        <th>Search String</th>
+                        <th class="w-24 text-center">Results</th>
+                        <th class="w-32">Date</th>
+                        <th class="w-24 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="versions-table-body">
+                    <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+    // URL base para el JS
+    const versionsApiUrl = "{% url 'design:get_strategy_versions' 0 %}"; 
+    const builderUrlBase = "{% url 'design:search_strategy_builder_view' project.id %}";
+</script>
+<script src="{% static 'scripts/search_strategy_panel.js' %}"></script>
+
+{% endblock search_string_content %}

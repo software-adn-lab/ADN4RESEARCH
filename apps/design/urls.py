@@ -36,4 +36,12 @@ urlpatterns = [
     path('project-keyword/update/<int:keyword_id>/', project_keyword.update_project_keyword, name='update_project_keyword'),
     path('project-keyword/delete/<int:keyword_id>/', project_keyword.delete_project_keyword, name='delete_project_keyword'),
     
+    path('search-strategy/builder/<int:project_id>/', 
+         search_strategy.search_strategy_builder_view, 
+         name='search_strategy_builder_view'),
+    path('search-strategy/save-visual/<int:strategy_id>/', search_strategy.save_visual_strategy, name='save_visual_strategy'),
+    path('search-strategy/versions/<int:strategy_id>/', search_strategy.get_strategy_versions, name='get_strategy_versions'),
+    path('search-strategy/panel/<int:project_id>/', search_strategy.open_search_strategy_panel, name='open_search_strategy_panel'),
+    #search_strategy_builder_view
+    
 ]

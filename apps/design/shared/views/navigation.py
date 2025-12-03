@@ -9,6 +9,7 @@ def design_stages_router(request, project_id):
         DesignPhase.DesignStage.RQ_CREATION.value: 'design:rq_workspace',
         DesignPhase.DesignStage.RQ_DISCUSSION.value: 'design:question_discussion_panel',
         DesignPhase.DesignStage.CRITERIA_DEFINITION.value: 'design:eligibility_criteria_panel',
+        DesignPhase.DesignStage.SEARCH_STRATEGY.value: 'design:open_search_strategy_panel',
     }
 
     url_name = stage_map.get(target_stage, 'design:rq_workspace')
