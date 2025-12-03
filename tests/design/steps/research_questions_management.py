@@ -56,16 +56,23 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
         framework_fields=fields
     )
     research_question_service.submit_research_question_for_review(research_question_id=context.research_question_two.id)
-    research_questions_project = research_question_service.get_research_questions_by_status(
+    research_questions_project = research_question_service.get_questions_for_workspace(
         project_id=context.project.id,
-        status=status_suggested
+        user=context.researcher,
+        status_filter=status_suggested
+    )
+    suggested_questions_project = research_question_service.get_discussion_research_questions_by_project(
+        project_id=context.project.id
     )
     assert len(research_questions_project) > 0
 
 @step('selecciono una pregunta que no haya sido sugerida por mí')
 def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
     # El researcher escoge una pregunta sugerida por otro researcher (researcher 2 xd)
-    context.selected_question = research_question_service.select_question_to_suggest_action(question_id = context.research_question_two.id, suggester_id = context.researcher.id)
+    context.selected_question = research_question_service.validate_reviewer_eligibility(
+        question_id=context.research_question_two.id, 
+        user_id=context.researcher.id
+    )
     assert context.selected_question.researcher != context.researcher 
 
 @when('la revise y sugiera {action} la pregunta de investigación seleccionada con la justificación de mi decisión')
@@ -80,6 +87,7 @@ def step_cuando_sugiero_aprobar_pregunta(context, action):
     context.processed_question = research_question_service.review_research_question(
         question_id=context.selected_question.id,
         verdict=target_status,
-        justification=justification
+        justification=justification,
+        user_id=context.researcher.id
     )
     context.research_question = context.processed_question # esto es por el paso siguiente que me pide behave que se actualice la movida

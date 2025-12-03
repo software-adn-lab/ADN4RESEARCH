@@ -1,26 +1,3 @@
-"""
-IEEE Xplore Connector con sesión persistente y detección automática de red.
-
-DETECCIÓN AUTOMÁTICA DE RED:
-- EN LA RED universitaria (EPN): Acceso directo por IP → sin login → sin cookies → RÁPIDO
-- FUERA de la red: Autenticación automática con Playwright → guarda cookies → usa cookies
-
-FLUJO:
-1. Primera búsqueda:
-   a. Intenta acceso directo por IP (red universitaria)
-   b. Si falla: Autentica con Playwright → guarda cookies → busca con requests
-2. Siguientes búsquedas:
-   a. Si estás en la red: Acceso directo (sin cookies)
-   b. Si estás fuera: Usa cookies guardadas
-3. Si cookies expiran: Re-autentica automáticamente
-
-CARACTERÍSTICAS:
-- NO abre navegador en búsquedas subsecuentes (rápido y eficiente)
-- Usa endpoint /rest/search para obtener JSON directo (no scraping HTML)
-- Rate limiting con variación aleatoria (anti-detección)
-- Retry automático con backoff exponencial
-- Paginación automática
-"""
 from typing import Iterable, Dict, Any, Optional
 import logging
 import time
@@ -30,22 +7,22 @@ import requests
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from .ieee_session_manager import IeeeSessionManager
+from apps.acquisition.shared.infrastructure.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
 
 class IeeeConnector(IAcademicConnector):
     """
-    Conector para IEEE Xplore vía EZproxy con sesión persistente.
+    Conector para IEEE Xplore con sesión persistente.
 
     Características:
-    - Autenticación automática vía Playwright (solo primera vez)
-    - Reutiliza cookies guardadas (sin browser para búsquedas)
-    - Re-autentica automáticamente si sesión expira
-    - Usa endpoint /rest/search para obtener JSON directo
+    - Autenticación automática vía Playwright (solo primera vez si es necesario)
+    - Reutiliza cookies guardadas (sin navegador para búsquedas normales)
+    - Re-autentica si la sesión expira
+    - Usa el endpoint /rest/search para obtener JSON
     """
 
-    # URLs - Búsqueda vía EZproxy (las cookies solo funcionan con el dominio del proxy)
     IEEE_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2097/rest/search"
     IEEE_DIRECT_SEARCH = "https://ieeexplore.ieee.org/rest/search"
     IEEE_HOME = "https://ieeexplore.ieee.org/Xplore/home.jsp"
@@ -56,7 +33,7 @@ class IeeeConnector(IAcademicConnector):
         password: str,
         headless: bool = True,
         rate_limit: float = 2.0,
-        prefer_playwright: bool = True  # Por defecto usa Playwright (más confiable)
+        prefer_playwright: bool = True
     ):
         """
         Args:
@@ -64,8 +41,8 @@ class IeeeConnector(IAcademicConnector):
             password: Contraseña institucional
             headless: Ejecutar navegador sin ventana (solo para autenticación)
             rate_limit: Segundos de espera entre búsquedas
-            prefer_playwright: Si True, usa Playwright directamente (más lento pero confiable)
-                             Si False, intenta API REST primero
+            prefer_playwright: Si True, usa Playwright directamente (más confiable);
+                               si False, intenta API REST primero
         """
         self.username = username
         self.password = password
@@ -73,36 +50,75 @@ class IeeeConnector(IAcademicConnector):
         self.rate_limit = rate_limit
         self.prefer_playwright = prefer_playwright
 
-        # Session manager (maneja autenticación y cookies)
         self.session_manager = IeeeSessionManager(
             username=username,
             password=password,
             headless=headless
         )
 
+        self.circuit_breaker = CircuitBreaker(
+            fail_max=5,
+            timeout_duration=300,
+            name="IEEE Xplore"
+        )
+
     def search(self, query: str, max_results: int = 10) -> Iterable[Dict[str, Any]]:
         """
-        Busca en IEEE Xplore usando sesión persistente.
+        Busca en IEEE Xplore usando sesión persistente y Circuit Breaker.
 
         Args:
             query: Término de búsqueda
             max_results: Máximo de resultados a retornar
 
-        Yields:
-            Diccionarios con estructura:
+        Returns:
+            Iterable de diccionarios con:
             {
                 'title': str,
                 'link': str,
                 'doi': str | None,
-                'source': 'IEEE Xplore'
+                'source': 'IEEE Xplore',
+                'is_open_access': bool | None,
+                'pdf_url': str | None
             }
         """
         try:
-            logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
+            results = self.circuit_breaker.call(self._search_protected, query, max_results)
+            return results
 
-            # Si prefer_playwright, ir directo sin intentar API
-            if self.prefer_playwright:
-                logger.info("Usando Playwright directamente (prefer_playwright=True)")
+        except CircuitBreakerOpenError as e:
+            logger.error(str(e))
+            return []
+
+        except Exception as e:
+            logger.error(f"Error en búsqueda IEEE: {e}")
+            raise
+
+    def _search_protected(self, query: str, max_results: int) -> list:
+        """
+        Lógica de búsqueda protegida por Circuit Breaker.
+        """
+        logger.info(f"Buscando en IEEE: '{query}' (max: {max_results})")
+
+        if self.prefer_playwright:
+            logger.info("Usando Playwright directamente (prefer_playwright=True)")
+            from .ieee_playwright_connector import IeeePlaywrightConnector
+
+            with IeeePlaywrightConnector(
+                username=self.username,
+                password=self.password,
+                headless=self.headless,
+                rate_limit=self.rate_limit
+            ) as connector:
+                results = list(connector.search(query, max_results=max_results))
+        else:
+            if not self.session_manager.ensure_authenticated():
+                raise Exception("No se pudo autenticar en IEEE Xplore")
+
+            try:
+                api_results_iter = self._search_via_api(query, max_results)
+                results = list(api_results_iter)
+            except ValueError as api_error:
+                logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
                 from .ieee_playwright_connector import IeeePlaywrightConnector
 
                 with IeeePlaywrightConnector(
@@ -110,38 +126,14 @@ class IeeeConnector(IAcademicConnector):
                     password=self.password,
                     headless=self.headless,
                     rate_limit=self.rate_limit
-                ) as connector:
-                    results = list(connector.search(query, max_results=max_results))
-            else:
-                # Estrategia original: API primero, Playwright como fallback
-                if not self.session_manager.ensure_authenticated():
-                    raise Exception("No se pudo autenticar en IEEE Xplore")
+                ) as fallback_connector:
+                    results = list(fallback_connector.search(query, max_results=max_results))
 
-                try:
-                    api_results_iter = self._search_via_api(query, max_results)
-                    results = list(api_results_iter)
-                except ValueError as api_error:
-                    logger.warning(f"Fallo en API JSON de IEEE, usando fallback Playwright: {api_error}")
-                    from .ieee_playwright_connector import IeeePlaywrightConnector
+        delay = self.rate_limit + random.uniform(0.5, 1.5)
+        logger.debug(f"Rate limit: esperando {delay:.2f}s")
+        time.sleep(delay)
 
-                    with IeeePlaywrightConnector(
-                        username=self.username,
-                        password=self.password,
-                        headless=self.headless,
-                        rate_limit=self.rate_limit
-                    ) as fallback_connector:
-                        results = list(fallback_connector.search(query, max_results=max_results))
-
-            # Rate limiting con variación random (parecer más humano)
-            delay = self.rate_limit + random.uniform(0.5, 1.5)
-            logger.debug(f"Rate limit: esperando {delay:.2f}s")
-            time.sleep(delay)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Error en búsqueda IEEE: {e}")
-            raise
+        return results
 
     @retry(
         stop=stop_after_attempt(3),
@@ -151,23 +143,21 @@ class IeeeConnector(IAcademicConnector):
     )
     def _search_via_api(self, query: str, max_results: int) -> Iterable[Dict[str, Any]]:
         """
-        Ejecuta búsqueda usando /rest/search endpoint.
+        Ejecuta búsqueda usando el endpoint /rest/search.
 
-        Usa las cookies guardadas en session_manager.session (NO abre browser).
+        Usa las cookies guardadas en session_manager.session.
 
         Retries automáticos:
         - Máximo 3 intentos
-        - Backoff exponencial: 2s, 4s, 8s (con jitter)
+        - Backoff exponencial: 2s, 4s, 8s
         - Solo reintenta errores de red/conexión
         """
         try:
-            # Calcular paginación
-            page_size = min(max_results, 100)  # IEEE acepta hasta 100 por página
+            page_size = min(max_results, 100)
             total_fetched = 0
             page_number = 1
 
             while total_fetched < max_results:
-                # Request al endpoint de búsqueda
                 payload = {
                     "queryText": query,
                     "highlight": True,
@@ -178,7 +168,6 @@ class IeeeConnector(IAcademicConnector):
                     "rowsPerPage": page_size
                 }
 
-                # Intentar primero con EZproxy, luego directo
                 search_url = self.IEEE_PROXY_SEARCH
                 logger.debug(f"POST {search_url} (página {page_number})")
 
@@ -186,15 +175,13 @@ class IeeeConnector(IAcademicConnector):
                     search_url,
                     json=payload,
                     timeout=30,
-                    allow_redirects=False  # Evitar que cambie POST a GET en redirects
+                    allow_redirects=False
                 )
 
-                # Verificar si sesión expiró (redirect o 401)
                 if response.status_code in (301, 302, 303, 307, 308, 401):
-                    logger.warning(f"Sesión no válida ({response.status_code}), re-autenticando...")
+                    logger.warning(f"Sesión no válida ({response.status_code}), reautenticando...")
                     self.session_manager._authenticate()
 
-                    # Reintentar request
                     response = self.session_manager.session.post(
                         search_url,
                         json=payload,
@@ -205,8 +192,8 @@ class IeeeConnector(IAcademicConnector):
                 content_type = response.headers.get("Content-Type", "")
                 is_json_response = response.status_code == 200 and "application/json" in content_type.lower()
                 if not is_json_response:
-                    logger.error(f"IEEE: Respuesta inesperada. Status: {response.status_code}")
-                    logger.error(f"Contenido (HTML?): {response.text[:1000]}...")
+                    logger.error(f"IEEE: respuesta inesperada. Status: {response.status_code}")
+                    logger.error(f"Contenido (posible HTML): {response.text[:1000]}...")
                     try:
                         with open("debug_ieee_error.html", "w", encoding="utf-8") as f:
                             f.write(response.text)
@@ -215,21 +202,19 @@ class IeeeConnector(IAcademicConnector):
                         logger.error(f"No se pudo guardar el archivo de debug: {file_error}")
                     if response.status_code != 200:
                         response.raise_for_status()
-                    raise ValueError("IEEE: La respuesta no es JSON, revisar debug_ieee_error.html")
+                    raise ValueError("IEEE: la respuesta no es JSON, revisar debug_ieee_error.html")
 
                 response.raise_for_status()
                 data = response.json()
 
-                # Extraer resultados
                 records = data.get('records', [])
                 total_records = data.get('totalRecords', 0)
 
-                logger.info(f"✓ Página {page_number}: {len(records)} resultados (total disponible: {total_records})")
+                logger.info(f"Página {page_number}: {len(records)} resultados (total disponible: {total_records})")
 
                 if not records:
                     break
 
-                # Yield resultados normalizados
                 for record in records:
                     if total_fetched >= max_results:
                         break
@@ -237,13 +222,12 @@ class IeeeConnector(IAcademicConnector):
                     yield self._normalize_record(record)
                     total_fetched += 1
 
-                # Si no hay más páginas, salir
                 if total_fetched >= total_records or len(records) < page_size:
                     break
 
                 page_number += 1
 
-            logger.info(f"✓ Total retornado: {total_fetched} resultados")
+            logger.info(f"Total retornado: {total_fetched} resultados")
 
         except Exception as e:
             logger.error(f"Error en API search: {e}")
@@ -251,40 +235,34 @@ class IeeeConnector(IAcademicConnector):
 
     def _normalize_record(self, record: Dict) -> Dict[str, Any]:
         """
-        Normaliza un registro de /rest/search al contrato esperado.
-
-        Campos disponibles en record:
-        - articleNumber
-        - articleTitle
-        - doi
-        - publicationYear
-        - authors
-        - abstract
-        - etc.
+        Normaliza un registro del endpoint /rest/search al contrato esperado.
         """
         article_number = record.get('articleNumber', '')
+
+        is_open_access, pdf_url = self._extract_access_info(record, article_number)
 
         return {
             'title': record.get('articleTitle', 'N/A'),
             'link': f"https://ieeexplore.ieee.org/document/{article_number}" if article_number else '',
             'doi': record.get('doi'),
             'source': 'IEEE Xplore',
-            # Campos adicionales opcionales
             'year': record.get('publicationYear'),
             'authors': self._extract_authors(record.get('authors', [])),
-            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None
+            'abstract': record.get('abstract', '').strip() if record.get('abstract') else None,
+            'is_open_access': is_open_access,
+            'pdf_url': pdf_url,
         }
 
     def _extract_authors(self, authors_data: list) -> list:
-        """Extrae nombres de autores del formato IEEE"""
+        """
+        Extrae nombres de autores desde la estructura de autores de IEEE.
+        """
         if not authors_data:
             return []
 
         author_names = []
         for author in authors_data:
             if isinstance(author, dict):
-                # IEEE usa 'preferredName' como campo principal
-                # También puede tener 'fullName', 'name', o 'normalizedName'
                 name = (
                     author.get('preferredName') or
                     author.get('fullName') or
@@ -298,26 +276,63 @@ class IeeeConnector(IAcademicConnector):
 
         return author_names
 
+    def _extract_access_info(
+        self,
+        record: Dict[str, Any],
+        article_number: str
+    ) -> tuple[Optional[bool], Optional[str]]:
+        """
+        Infere el estado de acceso abierto y posible URL del PDF desde el registro JSON.
+        """
+        is_open_access: Optional[bool] = None
+        flag_fields = ["openAccessFlag", "isOa", "openAccess", "isOpenAccess"]
+        for field in flag_fields:
+            if field in record:
+                value = record.get(field)
+                if isinstance(value, str):
+                    normalized = value.lower()
+                    if "open" in normalized:
+                        is_open_access = True
+                    elif any(k in normalized for k in ("denied", "closed", "subscription")):
+                        is_open_access = False
+                else:
+                    is_open_access = bool(value) if value is not None else None
+                if is_open_access is not None:
+                    break
+
+        access_type = record.get("accessType") or record.get("accessType_s") or record.get("accessTypeIcon")
+        if is_open_access is None and isinstance(access_type, str):
+            normalized = access_type.lower()
+            if "open" in normalized:
+                is_open_access = True
+            elif any(k in normalized for k in ("denied", "closed", "subscription")):
+                is_open_access = False
+
+        pdf_url = record.get("pdfLink") or record.get("htmlLink") or record.get("fullTextLink")
+        if isinstance(pdf_url, list):
+            pdf_url = pdf_url[0] if pdf_url else None
+
+        if pdf_url and pdf_url.startswith('/'):
+            pdf_url = f"https://ieeexplore.ieee.org{pdf_url}"
+
+        if not pdf_url and article_number and is_open_access:
+            pdf_url = f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={article_number}"
+
+        return is_open_access, pdf_url
+
     def find_metadata(self, title: str) -> Optional[Dict[str, Any]]:
         """
         Busca metadatos de un estudio específico por título.
 
-        TODO: Implementar búsqueda específica en IEEE API.
-        Por ahora retorna None - usar CrossrefConnector para enrichment de IEEE.
-
-        Args:
-            title: Título del estudio
-
-        Returns:
-            None (pendiente de implementación)
+        Actualmente no implementado para IEEE Xplore.
         """
         logger.debug(f"find_metadata no implementado en IeeeConnector: {title}")
         return None
 
     def close(self):
         """
-        Cierra recursos (si hubiera).
+        Cierra recursos asociados al conector.
 
-        Nota: Las cookies se mantienen guardadas en disco para futuras ejecuciones.
+        Las cookies se mantienen guardadas en disco para ejecuciones futuras.
         """
         logger.info("IeeeConnector cerrado (sesión guardada en disco)")

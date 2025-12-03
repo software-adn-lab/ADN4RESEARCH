@@ -1,13 +1,12 @@
 # language: es
 @modulo:busqueda @componente:texto-completo @mvp
 Característica: Acceso al texto completo de estudios para análisis profundo
-  Como investigador 
+  Como investigador
   Quiero obtener el documento completo de los estudios relevantes
   Para poder leerlos, extraer datos y evaluar su calidad metodológica
 
   Antecedentes:
     Dado que existen estudios con metadatos consolidados de mi revisión sistemática
-    Y necesito acceder al texto completo para realizar análisis detallado
 
   @texto-completo @acceso-publico
   Escenario: Obtener texto completo cuando está disponible públicamente
@@ -22,8 +21,7 @@ Característica: Acceso al texto completo de estudios para análisis profundo
   Escenario: Buscar en fuentes alternativas cuando no está público en la fuente original
     Dado que un estudio no tiene acceso público en su fuente original
     Cuando el sistema intenta obtener el texto completo
-    Entonces busca automáticamente en fuentes alternativas utilizando el DOI
-    Y si encuentra el documento en una fuente alternativa, lo descarga
+    Entonces si encuentra el documento en una fuente alternativa, lo descarga
     Y el estudio queda marcado como "texto_completo_disponible"
     Y se registra desde qué fuente alternativa se obtuvo el texto
 

@@ -14,11 +14,8 @@ logger = logging.getLogger(__name__)
 class ScopusSessionManager(SessionManager):
     """Maneja sesión persistente de Scopus vía EZproxy EPN"""
 
-    # URLs - SIEMPRE a través de EZproxy (puerto 2057)
     SCOPUS_VIA_EZPROXY = "https://bvirtual.epn.edu.ec/login?url=http://www.scopus.com"
     SCOPUS_PROXY_HOME = "https://bvirtual.epn.edu.ec:2057/pages/home?display=basic#basic"
-    # TODO: Descubrir endpoint de búsqueda de Scopus
-    # SCOPUS_PROXY_SEARCH = "https://bvirtual.epn.edu.ec:2057/[ENDPOINT_A_DESCUBRIR]"
 
     def __init__(self, username: str, password: str, headless: bool = True):
         super().__init__(
@@ -39,12 +36,10 @@ class ScopusSessionManager(SessionManager):
 
             current_url = page.url
 
-            # Si ya estamos en Scopus, sesión activa
             if "scopus.com" in current_url:
                 logger.info("✓ Sesión activa detectada")
                 return True
 
-            # Buscar formulario de login
             logger.info("Buscando formulario de login...")
 
             username_field = None
@@ -70,12 +65,10 @@ class ScopusSessionManager(SessionManager):
             if not username_field or not password_field:
                 raise Exception("No se encontró formulario de login")
 
-            # Llenar credenciales
             logger.info("Rellenando credenciales...")
             username_field.fill(self.username)
             password_field.fill(self.password)
 
-            # Buscar botón submit
             submit_button = None
             submit_selectors = [
                 'button[type="submit"]',
@@ -100,11 +93,9 @@ class ScopusSessionManager(SessionManager):
                 logger.info("Presionando Enter...")
                 password_field.press('Enter')
 
-            # Esperar autenticación
             logger.info("Esperando autenticación...")
             time.sleep(5)
 
-            # Verificar éxito
             current_url = page.url
             if "scopus.com" in current_url or "Scopus" in page.title():
                 logger.info("✓ Login exitoso")

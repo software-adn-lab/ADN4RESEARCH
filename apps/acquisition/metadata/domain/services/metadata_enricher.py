@@ -28,7 +28,6 @@ class MetadataEnricher:
                    {"Scopus": ScopusConnector, "IEEE Xplore": IeeeConnector}
     """
 
-    # Campos que se pueden enriquecer automáticamente
     ENRICHABLE_FIELDS = {"doi", "abstract", "authors", "year", "journal", "keywords"}
 
     def __init__(self, connectors: Dict[str, Any] = None):
@@ -40,9 +39,6 @@ class MetadataEnricher:
         """
         self.connectors = connectors or {}
 
-    # Orden de prioridad para enriquecimiento (costo-efectivo)
-    # Crossref: gratis, ilimitado
-    # Scopus: premium, limitado (gastar solo si es necesario)
     ENRICHMENT_CASCADE = ["Crossref", "Scopus", "IEEE Xplore"]
 
     def enrich(self, study: Study) -> Study:
@@ -70,12 +66,10 @@ class MetadataEnricher:
         if not missing_fields:
             return study
 
-        # Estrategia en cascada: probar fuentes en orden de costo
         for source_name in self.ENRICHMENT_CASCADE:
             if source_name not in self.connectors:
                 continue
 
-            # Si ya no faltan campos, terminar
             if not missing_fields:
                 break
 

@@ -1,7 +1,5 @@
 """
 Translation services - Traductores de estrategias de búsqueda.
-
-Contiene los traductores específicos para cada base de datos académica.
 """
 
 from .translation_result import TranslationResult

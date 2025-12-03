@@ -105,7 +105,8 @@ def step_solicito_consolidar(context):
 
     # Ejecutar caso de uso
     service = ConsolidationService(connectors=connectors)
-    context.consolidation_result = service.consolidate(studies=context.studies)
+    # Usar el helper privado para testing con objetos en memoria
+    context.consolidation_result = service._consolidate_list(studies=context.studies)
 
 
 # ============================================================================
@@ -231,10 +232,13 @@ def step_ingreso_manual(context):
         "abstract": "Manually entered abstract content."
     }
 
-    context.estudio_actualizado = service.edit_multiple(
+    # Usar el helper privado para testing con objetos en memoria
+    service._edit_multiple_in_place(
         study=context.estudio_manual,
-        edits=user_input
+        edits=user_input,
+        normalize=True
     )
+    context.estudio_actualizado = context.estudio_manual
 
 
 # ============================================================================

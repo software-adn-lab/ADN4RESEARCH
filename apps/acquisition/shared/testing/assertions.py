@@ -29,25 +29,20 @@ class SyntaxValidator:
         - Operadores en MAYÚSCULAS
         - Paréntesis balanceados
         """
-        # 1. Field code
         assert expected_field_code in query, \
             f"Query debe contener '{expected_field_code}'"
 
-        # 2. Filtro de año
         year_from = expected_year_filter["from"]
         year_to = expected_year_filter["to"]
 
-        # Scopus usa PUBYEAR > (from-1) AND PUBYEAR < (to+1)
         assert f"PUBYEAR > {year_from - 1}" in query, \
             f"Query debe contener 'PUBYEAR > {year_from - 1}'"
         assert f"PUBYEAR < {year_to + 1}" in query, \
             f"Query debe contener 'PUBYEAR < {year_to + 1}'"
 
-        # 3. Operadores en MAYÚSCULAS
         if require_uppercase_operators:
             self._assert_uppercase_operators(query)
 
-        # 4. Paréntesis balanceados
         if require_balanced_parentheses:
             self._assert_balanced_parentheses(query)
 
@@ -77,38 +72,30 @@ class SyntaxValidator:
             require_uppercase_operators: Si True, valida operadores en mayúsculas
             require_balanced_parentheses: Si True, valida paréntesis balanceados
         """
-        # 1. Verificar que NO use field codes de Scopus
         if forbid_scopus_field_codes:
             assert "TITLE-ABS-KEY" not in query, \
                 "IEEE Xplore no debe usar TITLE-ABS-KEY (es específico de Scopus)"
 
-        # 2. Verificar que NO haya filtro de año en la query
         if forbid_year_in_query:
             assert "PUBYEAR" not in query, \
                 "IEEE Xplore no debe incluir PUBYEAR en la query (se aplica en UI)"
 
-        # 3. Verificar formato de exclusiones
-        # IEEE usa "NOT (...)" NO "AND NOT"
         if exclusion_format == "NOT (...)":
             assert " AND NOT " not in query, \
                 "IEEE no debe usar 'AND NOT' para exclusiones (usar 'NOT (...)')"
 
-            # Si hay NOT, debe tener el formato correcto
             if " NOT " in query:
                 assert " NOT (" in query, \
                     "IEEE debe usar 'NOT (...)' para exclusiones (sin 'AND' antes)"
 
-        # 4. Operadores en MAYÚSCULAS
         if require_uppercase_operators:
             self._assert_uppercase_operators(query)
 
-        # 5. Paréntesis balanceados
         if require_balanced_parentheses:
             self._assert_balanced_parentheses(query)
 
     def _assert_uppercase_operators(self, query: str) -> None:
         """Valida que AND/OR/NOT estén en MAYÚSCULAS."""
-        # Buscar operadores en minúsculas (palabra completa)
         lowercase_and = re.search(r'\band\b', query)
         lowercase_or = re.search(r'\bor\b', query)
         lowercase_not = re.search(r'\bnot\b', query)
@@ -141,7 +128,6 @@ class LogicPreservationChecker:
     ) -> None:
         """Verifica que cada main_term aparece (al menos una variante)."""
         for main_term in strategy.main_terms:
-            # Verificar término principal O al menos un sinónimo
             all_variants = [main_term.term] + main_term.synonyms
 
             found = any(variant.lower() in query.lower() for variant in all_variants)
@@ -155,7 +141,6 @@ class LogicPreservationChecker:
         query: str
     ) -> None:
         """Verifica OR entre sinónimos dentro de cada grupo."""
-        # Verificar que existe " OR " en la query (simplificado)
         if any(len(mt.synonyms) > 0 for mt in strategy.main_terms):
             assert " OR " in query, \
                 "Query debe contener ' OR ' para unir sinónimos"
@@ -181,16 +166,13 @@ class LogicPreservationChecker:
             return
 
         if target == "Scopus":
-            # Scopus usa AND NOT
             assert " AND NOT " in query, \
                 "Scopus debe usar ' AND NOT ' para exclusiones"
 
-            # Verificar que al menos una exclusión aparece
             found = any(exc.lower() in query.lower() for exc in strategy.exclusions)
             assert found, "Al menos una exclusión debe aparecer en query"
 
         elif target == "IEEE Xplore":
-            # IEEE usa NOT (...)
             assert " NOT " in query, \
                 "IEEE debe usar ' NOT ' para exclusiones"
 

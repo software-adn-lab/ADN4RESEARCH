@@ -4,6 +4,7 @@ from apps.project.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
+from apps.design.shared.models.design_phase import DesignPhase
 import logging
 import json
 project_service = ProjectService()
@@ -16,8 +17,8 @@ def step_dado_creo_pregunta_investigacion(context, pregunta_investigacion, frame
     fields = json.loads(framework_fields)
     context.research_question = research_question_service.add_research_question(
         project_id=context.project.id,
-        researcher_id=context.researcher.id,
         question=pregunta_investigacion,
+        researcher_id=context.researcher.id,
         motivation="Motivación de prueba",
         framework_fields=fields
     )
@@ -32,6 +33,8 @@ def step_entonces_lista_terminos_clave(context, expected_terms):
     expected_terms_list = list(set(expected_terms.split(',')))
     project_keywords = project_service.get_project_keyterms(context.project.id)
     project_keyword_list = {kw.term for kw in project_keywords}
+    logging.info(f"Expected terms: {expected_terms_list}")
+    logging.info(f"Project keywords: {project_keyword_list}")
     assert set(expected_terms_list) == set(project_keyword_list)
 
 @step('he identificado los sinónimos de los términos clave:')
@@ -46,7 +49,8 @@ def step_se_identifican_terminos_clave_con_sinonimos(context):
         })
     context.strategy = search_strategy_service.create_or_update_strategy_with_keywords(
             research_question_id=context.research_question.id,
-            keyword_data=keyword_data_list
+            keyword_data=keyword_data_list,
+            user=context.researcher
         )
     assert context.strategy.keywords.count() == len(keyword_data_list)
     
@@ -61,4 +65,6 @@ def step_entonces_estrategia_sugerida_sera(context):
     actual_string = context.strategy.final_search_string
     normalized_expected = " ".join(expected_string.split())
     normalized_actual = " ".join(actual_string.split())
+    logging.info(f"Expected search string: {normalized_expected}")
+    logging.info(f"Actual search string: {normalized_actual}")
     assert normalized_expected == normalized_actual

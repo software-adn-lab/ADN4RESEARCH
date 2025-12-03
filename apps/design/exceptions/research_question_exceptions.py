@@ -17,3 +17,8 @@ class ProjectNotFoundError(ResearchQuestionError):
 class InvalidFrameworkFieldsError(ResearchQuestionError):
     """Se lanza cuando la estructura o datos del framework son inválidos."""
     pass
+
+class QuestionReviewError(ResearchQuestionError):
+    """Se lanza cuando ocurre un error durante la revisión de una pregunta."""
+    # Para cuando el mismo investigador intente revisar su propia pregunta
+    pass

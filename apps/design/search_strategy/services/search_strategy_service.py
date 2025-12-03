@@ -3,41 +3,77 @@ from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db.models import Max
 from django.db import transaction
+from apps.acquisition.facade import get_acquisition_facade
 
 
 class SearchStrategyService:
-    def generate_and_save_search_string(self, strategy_id, user_id=None) -> SearchStrategy:
+    @transaction.atomic
+    def generate_and_save_search_string(self, strategy_id: int, user_id: int = None) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
-        keywords = strategy.keywords.select_related('project_keyword').all()
-        
+        keywords = list(strategy.keywords.select_related('project_keyword').all())
+        exclusions = list(strategy.exclusion_terms.all())
+        json_definition = self._build_json_definition(keywords, exclusions)
+        final_search_string = self._build_boolean_string(keywords, exclusions)
+
+        if user_id:
+            strategy.last_modified_by_id = user_id
+            
+        strategy.json_definition = json_definition
+        strategy.final_search_string = final_search_string
+        strategy.save()
+        self.create_version_snapshot(strategy_id=strategy.id, user_id=user_id)
+
+        return strategy
+    def get_version_by_id(self, version_id: int) -> SearchStrategyVersion:
+        return SearchStrategyVersion.objects.get(id=version_id)
+    
+    def _build_json_definition(self, keywords: list, exclusions: list) -> dict:
+        json_main_terms = []
+        for kw in keywords:
+            pk = kw.project_keyword
+            synonyms_list = self._parse_synonyms(pk.synonyms)
+            
+            json_main_terms.append({
+                "term": pk.term,
+                "synonyms": synonyms_list
+            })
+
+        json_exclusions = [exc.term for exc in exclusions]
+
+        return {
+            "main_terms": json_main_terms,
+            "exclusions": json_exclusions
+        }
+
+    def _build_boolean_string(self, keywords: list, exclusions: list) -> str:
         if not keywords:
-            strategy.final_search_string = ""
-            strategy.save()
-            return strategy
+            return ""
         or_groups = []
         for kw in keywords:
-            # Acceder a los datos a través del objeto project_keyword relacionado
             pk = kw.project_keyword
-            terms = [f'"{pk.term}"']
-            if pk.synonyms and pk.synonyms.strip():
-                synonyms_list = [s.strip() for s in pk.synonyms.split(',')]
-                for s in synonyms_list:
-                    if s:
-                        terms.append(f'"{s}"')
-            group_string = ' OR '.join(terms)
+            terms_in_group = [f'"{pk.term}"']
+            
+            synonyms_list = self._parse_synonyms(pk.synonyms)
+            for syn in synonyms_list:
+                terms_in_group.append(f'"{syn}"')
+            group_string = " OR ".join(terms_in_group)
             or_groups.append(f"({group_string})")
         final_string = " AND ".join(or_groups)
+        if exclusions:
+            exclusion_terms = [f'"{exc.term}"' for exc in exclusions]
+            exclusion_string = " OR ".join(exclusion_terms)
+            final_string += f" AND NOT ({exclusion_string})"
+        return final_string
 
-        strategy.final_search_string = final_string
-        strategy.save()
-        self.create_version_snapshot(strategy_id= strategy.id, user_id=user_id)  # user_id puede ser None por la sugerencia automática
-        return strategy
+    def _parse_synonyms(self, synonyms_str: str) -> list[str]:
+        if not synonyms_str or not synonyms_str.strip():
+            return []
+        return [s.strip() for s in synonyms_str.split(',') if s.strip()]
     
     def _get_or_create_strategy(self, research_question_id: int) -> SearchStrategy:
         strategy, _ = SearchStrategy.objects.update_or_create(
             research_question_id=research_question_id,
             defaults={
-                'name': f"Suggested Strategy for Question {research_question_id}",
                 'status': SearchStrategy.Status.DRAFT
             }
         )
@@ -45,7 +81,7 @@ class SearchStrategyService:
 
     # TRABAJO PARA SUGERIDOS SIN SINONIMOS Y CON SINONIMOS
     def _link_project_keywords_to_strategy(self, strategy: SearchStrategy, keyword_data: list[dict], clear_previous: bool = True):
-        project_id = strategy.research_question.project_id
+        design_phase_id = strategy.research_question.design_phase_id
         with transaction.atomic():
             if clear_previous:
                 strategy.keywords.all().delete()
@@ -55,14 +91,16 @@ class SearchStrategyService:
                 term_text = item.get('term')
                 if not term_text:
                     continue
-                project_keyword, _ = ProjectKeyword.objects.get_or_create(
-                    project_id=project_id,
+                project_keyword, created = ProjectKeyword.objects.update_or_create(
+                    design_phase_id=design_phase_id, 
                     term=term_text,
-                    defaults={'synonyms': item.get('synonyms', '')}
-                )
+                    defaults={
+                        'synonyms': item.get('synonyms', '')
+                    }
+                )  
                 if not clear_previous:
                     if Keyword.objects.filter(strategy=strategy, project_keyword=project_keyword).exists():
-                        continue
+                        continue      
                 keywords_to_link.append(
                     Keyword(strategy=strategy, project_keyword=project_keyword)
                 )
@@ -74,7 +112,6 @@ class SearchStrategyService:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
         self._link_project_keywords_to_strategy(strategy, keyword_data)
 
-    # Método para sincronizar UNICAMENTE términos sugeridos con una estrategia
     def sync_suggested_terms_with_strategy(self, research_question_id: int, suggested_terms: list[str]) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
         keyword_data = [{'term': term, 'synonyms': ''} for term in suggested_terms]
@@ -84,20 +121,25 @@ class SearchStrategyService:
     def get_strategy_for_question(self, question_id: int) -> SearchStrategy | None:
         return SearchStrategy.objects.filter(research_question_id=question_id).first()
     
-    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict]) -> SearchStrategy:
+    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user=None) -> SearchStrategy:
         # 1. Obtener o crear la estrategia para asegurar que siempre exista.
         strategy = self._get_or_create_strategy(research_question_id)
         # 2. Llamar al método central para limpiar los keywords antiguos y enlazar los nuevos.
         self._link_project_keywords_to_strategy(strategy, keyword_data)
+        if user:
+            strategy.last_modified_by = user
+            strategy.save(update_fields=['last_modified_by'])
         return strategy
 
+    def get_or_create_strategy(self, research_question_id: int) -> SearchStrategy:
+        return self._get_or_create_strategy(research_question_id)
+    
     # Metodo del patron para crear el memento.
-    def create_version_snapshot(self, strategy_id: int, user_id: int | None) -> int: # El None es por la sugerencia automática del sistema jeje
+    def create_version_snapshot(self, strategy_id: int, user_id: int | None, total_found: int = 0) -> int:
         strategy = SearchStrategy.objects.get(id=strategy_id)
         last_version = strategy.versions.aggregate(Max('version_number'))['version_number__max']
         new_version_number = 1 if last_version is None else last_version + 1
 
-        # Estas son las cosas que se guardan en el momento del checkpoint
         current_keywords = [k.project_keyword.term for k in strategy.keywords.select_related('project_keyword')]
         current_exclusions = [e.term for e in strategy.exclusion_terms.all()]
         
@@ -105,11 +147,71 @@ class SearchStrategyService:
             'keywords': current_keywords,
             'exclusions': current_exclusions,
         }
+        
         SearchStrategyVersion.objects.create(
             strategy=strategy,
             version_number=new_version_number,
             final_search_string=strategy.final_search_string,
+            json_definition=strategy.json_definition, 
             metadata_snapshot=snapshot_data,
-            created_by=user_id
+            total_found=total_found, 
+            created_by_id=user_id
         )
         return new_version_number
+    
+    @transaction.atomic
+    def save_strategy_from_visual_builder(self, strategy_id: int, visual_data: dict, user_id: int) -> SearchStrategy:
+        strategy = SearchStrategy.objects.get(id=strategy_id)
+        strategy.json_definition = visual_data
+        strategy.final_search_string = self._build_string_from_json(visual_data)
+        strategy.status = SearchStrategy.Status.DRAFT
+        strategy.last_modified_by_id = user_id
+        strategy.save()
+        acquisition_facade = get_acquisition_facade()
+        
+        try:
+            preview_result = acquisition_facade.preview_search(visual_data)
+            count = getattr(preview_result, 'total_found', 0) 
+            
+        except Exception as e:
+            print(f"Error fetching search preview: {e}")
+            count = 0
+        self.create_version_snapshot(strategy.id, user_id, total_found=count)
+        
+        return strategy
+
+    def _build_string_from_json(self, data: dict) -> str:
+        """
+        Convierte la estructura JSON del Visual Builder en un String Booleano.
+        """
+        main_terms = data.get('main_terms', [])
+        exclusions = data.get('exclusions', [])
+        
+        # 1. Grupos AND (Conceptos)
+        and_blocks = []
+        for group in main_terms:
+            # El término principal + sus sinónimos forman un grupo OR
+            term = group.get('term', '').strip()
+            synonyms = group.get('synonyms', [])
+            
+            if not term: continue
+            
+            # Lista de todos los términos del grupo (Main + Synonyms)
+            # Envolvemos en comillas para frases exactas
+            all_terms = [f'"{term}"'] + [f'"{s.strip()}"' for s in synonyms if s.strip()]
+            
+            # Unir con OR
+            block_str = " OR ".join(all_terms)
+            and_blocks.append(f"({block_str})")
+            
+        # 2. Unir Bloques con AND
+        search_string = " AND ".join(and_blocks)
+        
+        # 3. Agregar Exclusiones (AND NOT)
+        if exclusions:
+            not_terms = [f'"{exc.strip()}"' for exc in exclusions if exc.strip()]
+            if not_terms:
+                not_block = " OR ".join(not_terms)
+                search_string += f" AND NOT ({not_block})"
+                
+        return search_string

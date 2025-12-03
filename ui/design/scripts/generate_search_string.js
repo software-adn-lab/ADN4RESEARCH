@@ -1,58 +1,68 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Obtener referencias al Modal y sus elementos
     const modal = document.getElementById('my_modal_3');
-    if (!modal) return; // Salir si el modal no está en la página
+    if (!modal) return; 
 
     const modalStrategyName = document.getElementById('modal-strategy-name');
     const modalSearchString = document.getElementById('modal-search-string');
-    const projectContainer = document.querySelector('[data-project-id]');
     
-    if (!projectContainer || !modalStrategyName || !modalSearchString) {
-        console.error('Faltan elementos requeridos para el modal de estrategia de búsqueda.');
-        return;
-    }
+    // Ya no necesitamos 'projectContainer' ni 'projectId' porque la URL viene lista en el botón.
 
-    const projectId = projectContainer.dataset.projectId;
-
-    // Usar delegación de eventos en el body para asegurar que los botones funcionen
-    // incluso si se añaden dinámicamente.
+    // 2. Event Delegation para detectar clics en los botones dinámicos
     document.body.addEventListener('click', (event) => {
+        // Buscamos si el clic fue dentro de un botón con la clase .view-strategy-btn
         const button = event.target.closest('.view-strategy-btn');
+        
         if (button) {
-            // Prevenir cualquier otro evento de click (como la navegación de la fila)
             event.stopPropagation(); 
+            event.preventDefault(); // Buena práctica para evitar saltos raros
 
-            const questionId = button.dataset.questionId;
-            if (!questionId) {
-                console.error('El ID de la pregunta no se encuentra en el botón.');
+            // 3. Extraer la URL generada por Django desde el atributo data-url
+            const url = button.dataset.url;
+            
+            if (!url) {
+                console.error('Error: El botón no tiene el atributo data-url definido.');
                 return;
             }
 
-            const url = `/design/get-strategy/project/${projectId}/question/${questionId}/`;
+            console.log("Solicitando estrategia a:", url); // Debugging
 
-            // Restablecer el contenido del modal y mostrarlo
+            // 4. Resetear UI y mostrar Modal (Estado de Carga)
             modalStrategyName.textContent = 'Search Strategy';
-            modalSearchString.textContent = 'Loading...';
+            modalSearchString.textContent = 'Generating search string...';
+            modalSearchString.classList.add('animate-pulse'); // Opcional: efecto visual
             modal.showModal();
 
+            // 5. Petición al Servidor
             fetch(url)
                 .then(response => {
+                    // Validamos si la respuesta es exitosa (Status 200-299)
                     if (!response.ok) {
-                        // Intenta obtener un mensaje de error del JSON si es posible
-                        return response.json().then(err => { throw new Error(err.error || 'La respuesta de la red no fue correcta') });
+                        // Si falla (ej. 500 o 404), leemos el texto para saber qué pasó (probablemente HTML de error)
+                        return response.text().then(text => { 
+                            throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}...`);
+                        });
                     }
+                    // Si todo bien, parseamos el JSON
                     return response.json();
                 })
                 .then(data => {
+                    modalSearchString.classList.remove('animate-pulse');
+                    
                     if (data.status === 'success') {
-                        modalStrategyName.textContent = data.strategy_name;
-                        modalSearchString.textContent = data.final_search_string || 'Aún no se ha generado una cadena de búsqueda.';
+                        // Caso Exitoso
+                        modalStrategyName.textContent = data.strategy_name || 'Search Strategy';
+                        modalSearchString.textContent = data.final_search_string || 'No search string generated yet.';
                     } else {
-                        modalSearchString.textContent = `Error: ${data.error}`;
+                        // El servidor respondió 200 pero con un mensaje de error lógico
+                        modalSearchString.innerHTML = `<span class="text-error">Error: ${data.error}</span>`;
                     }
                 })
                 .catch(error => {
-                    console.error('Error al obtener la estrategia de búsqueda:', error);
-                    modalSearchString.textContent = `No se pudo cargar la estrategia de búsqueda: ${error.message}`;
+                    // Manejo de errores de red o excepciones
+                    console.error('Error AJAX:', error);
+                    modalSearchString.classList.remove('animate-pulse');
+                    modalSearchString.innerHTML = `<span class="text-error">Failed to load strategy.<br><br>Technical details: ${error.message}</span>`;
                 });
         }
     });
