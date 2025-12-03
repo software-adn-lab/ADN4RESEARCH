@@ -10,10 +10,9 @@ class SearchStrategyQuerySet(models.QuerySet):
     
 class SearchStrategy(models.Model):
     class Status(models.TextChoices):
-        DRAFT = 'DRAFT', 'Draft' # Para search strategies que no estan anexadas a una pregunta de investigación ya que se crean manualmente
-        SUGGESTED = 'SUGGESTED', 'Suggested' # Para los search string generados automáticamente
-        APPROVED = 'APPROVED', 'Approved' # Para search strategies que han sido aprobadas por el equipo
-        REJECTED = 'REJECTED', 'Rejected' # Para search strategies que han sido rechazadas por el equipo
+        DRAFT = 'DRAFT', 'Draft' 
+        APPROVED = 'APPROVED', 'Approved'
+        REJECTED = 'REJECTED', 'Rejected'
         
     research_question = models.ForeignKey(
         'design.ResearchQuestion',
@@ -23,7 +22,6 @@ class SearchStrategy(models.Model):
         null=True
     )
     status = models.CharField(max_length=20, choices=Status.choices,  default=Status.DRAFT)
-    # Aquí se guarda la CADENA FINAL GENERADA pero en logica booleana pilas
     final_search_string = models.TextField(blank=True)
     json_definition = models.JSONField(default=dict)
     total_studies_found = models.PositiveIntegerField(default=0)

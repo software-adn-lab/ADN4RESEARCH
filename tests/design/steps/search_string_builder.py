@@ -65,4 +65,6 @@ def step_entonces_estrategia_sugerida_sera(context):
     actual_string = context.strategy.final_search_string
     normalized_expected = " ".join(expected_string.split())
     normalized_actual = " ".join(actual_string.split())
+    logging.info(f"Expected search string: {normalized_expected}")
+    logging.info(f"Actual search string: {normalized_actual}")
     assert normalized_expected == normalized_actual

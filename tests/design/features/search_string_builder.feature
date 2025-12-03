@@ -52,10 +52,6 @@ Característica: Construir cadena de búsqueda
         | framework_fields                                                                                                                                           | expected_terms |
         | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |
 
-    """
-        Este test servira como una integracion interna entre diseno y adquisicion segun lo hablado con Alexis.
-        Se recibe un DTO resultante de probar x cadena que debe ser enviada en formato j-son
-    """
     Escenario: Probar cadena de búsqueda generada
         Dado que selecciono una pregunta de investigación del protocolo de diseño del proyecto
         Y que tengo la lista de términos clave y sinónimos de dicha pregunta
