@@ -368,10 +368,6 @@ class FullPipelineLiveTest(BaseLiveTest):
         print(f"\n   Ejecutando mini-pipeline...")
         
         strategy_dict = {
-<<<<<<< HEAD
-=======
-            "strategy_id": "persistence_test",
->>>>>>> bfe06b0 (Feature/acquisition clean architecture (#23))
             "main_terms": [{"term": "data persistence", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
