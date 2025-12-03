@@ -81,7 +81,6 @@ class FacadeValidationTest(BaseLiveTest):
         print(f"{'='*60}")
         
         strategy_dict = {
-            "strategy_id": "facade_test",
             "main_terms": [{"term": "test", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}

@@ -48,7 +48,6 @@ class FullPipelineLiveTest(BaseLiveTest):
         print(f"   Convertir estrategia a queries...")
         
         strategy_dict = {
-            "strategy_id": "full_pipeline_test_2024",
             "main_terms": [
                 {"term": "machine learning", "synonyms": ["ML", "artificial intelligence"]}
             ],
@@ -208,7 +207,6 @@ class FullPipelineLiveTest(BaseLiveTest):
         print(f"{'='*60}")
         
         strategy_dict = {
-            "strategy_id": "stage_completion_test",
             "main_terms": [{"term": "software engineering", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}
@@ -370,7 +368,6 @@ class FullPipelineLiveTest(BaseLiveTest):
         print(f"\n   Ejecutando mini-pipeline...")
         
         strategy_dict = {
-            "strategy_id": "persistence_test",
             "main_terms": [{"term": "data persistence", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}

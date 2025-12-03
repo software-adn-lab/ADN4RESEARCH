@@ -255,13 +255,12 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         
         print(f"Encontrados {preview_result.total_found} estudios")
         
-        # Persistir un estudio
-        selected_studies = preview_result.studies[:1]
+        # Persistir un estudio (filtrar el DTO)
+        preview_result.studies = preview_result.studies[:1]
         
         final_result = self.facade.finalize_search(
-            strategy_dict=strategy_dict,
             design_strategy_id=1,
-            selected_studies=selected_studies,
+            preview_result=preview_result,
             user=self.test_user
         )
         
@@ -328,12 +327,12 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         print(f"Encontrados {preview_result.total_found} estudios")
         
         # Persistir varios estudios
-        selected_studies = preview_result.studies[:3]  # Máximo 3 para no tardar mucho
+        # Máximo 3 para no tardar mucho (filtrar el DTO)
+        preview_result.studies = preview_result.studies[:3]
         
         final_result = self.facade.finalize_search(
-            strategy_dict=strategy_dict,
             design_strategy_id=1,
-            selected_studies=selected_studies,
+            preview_result=preview_result,
             user=self.test_user
         )
         

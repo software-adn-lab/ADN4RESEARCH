@@ -37,7 +37,6 @@ class DiscoveryService:
 
     def execute(
         self,
-        strategy_id: str,
         translation_statuses: dict,
         supported_sources: list[str],
         max_results_per_source: int = 25,
@@ -47,7 +46,6 @@ class DiscoveryService:
         Execute the discovery process.
 
         Args:
-            strategy_id: ID of the search strategy to use
             translation_statuses: Dictionary with translation status for each source
             supported_sources: List of sources to query
             max_results_per_source: Maximum results to fetch from each source
@@ -56,7 +54,6 @@ class DiscoveryService:
         Returns:
             DiscoveryResult with unique studies and summary
         """
-        self._validate_inputs(strategy_id)
         sane_statuses = self._sanitize_statuses(translation_statuses)
         executable_sources, no_ejecutadas = self._determine_execution_plan(
             supported_sources, sane_statuses
@@ -75,13 +72,10 @@ class DiscoveryService:
             logger.info(f"Modo preview: {len(unique_studies)} estudios NO persistidos")
 
         return self._build_result(
-            strategy_id, unique_studies, total_por_fuente, no_ejecutadas, studies_by_source
+            unique_studies, total_por_fuente, no_ejecutadas, studies_by_source
         )
 
-    def _validate_inputs(self, strategy_id: str) -> None:
-        """Validar entradas críticas."""
-        if not strategy_id or not strategy_id.strip():
-            raise ValueError("strategy_id no puede estar vacío")
+
 
     def _sanitize_statuses(self, translation_statuses: dict) -> dict:
         """Filtrar fuentes no soportadas de translation_statuses."""
@@ -248,7 +242,6 @@ class DiscoveryService:
 
     def _build_result(
         self,
-        strategy_id: str,
         unique_studies: list[Study],
         total_por_fuente: dict[str, int],
         no_ejecutadas: dict[str, str],
@@ -259,7 +252,6 @@ class DiscoveryService:
         resultado = DISCOVERY_RESULT_COMPLETE if not no_ejecutadas else DISCOVERY_RESULT_PARTIAL
 
         summary = {
-            "id_estrategia": strategy_id,
             "resultado": resultado,
             "total_bruto": total_bruto,
             "total_unicos": len(unique_studies),

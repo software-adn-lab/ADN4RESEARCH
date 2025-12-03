@@ -47,7 +47,6 @@ class DownloadsLiveTest(BaseLiveTest):
         print(f"\n1️⃣ PASO 1: Discovery busca estudios Open Access")
         
         strategy_dict = {
-            "strategy_id": "test_downloads_2024",
             "main_terms": [{"term": "open access machine learning", "synonyms": []}],
             "exclusions": [],
             "filters": {"year": {"from": 2023, "to": 2024}}

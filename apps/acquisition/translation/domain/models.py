@@ -115,29 +115,23 @@ class NormalizedStrategy:
     Representa la entrada de negocio validada para el proceso de traducción.
 
     Atributos:
-        strategy_id: Identificador único de la estrategia
         main_terms: Lista de términos principales con sus sinónimos (≥1)
         exclusions: Lista de términos a excluir (puede estar vacía)
         year_filter: Filtro de rango de años (opcional)
 
     Invariantes de dominio:
-        - strategy_id no puede estar vacío
         - main_terms debe tener al menos un elemento
         - Cada main_term.term no puede estar vacío
         - Si year_filter existe, from <= to
         - La instancia es inmutable (frozen=True)
     """
 
-    strategy_id: str
     main_terms: List[MainTerm]
     exclusions: List[str] = field(default_factory=list)
     year_filter: Optional[YearFilter] = None
 
     def __post_init__(self):
         """Validar invariantes de dominio."""
-        if not self.strategy_id or not self.strategy_id.strip():
-            raise DomainValidationError("strategy_id", "No puede estar vacío")
-
         if not self.main_terms:
             raise DomainValidationError("main_terms", "Debe tener al menos un término")
 
@@ -155,13 +149,8 @@ class NormalizedStrategy:
         Raises:
             DomainValidationError: Si alguna regla de negocio se viola
         """
-        if "strategy_id" not in data:
-            raise DomainValidationError("strategy_id", "El campo es obligatorio")
-
         if "main_terms" not in data:
             raise DomainValidationError("main_terms", "El campo es obligatorio")
-
-        strategy_id = data["strategy_id"].strip() if isinstance(data["strategy_id"], str) else ""
 
         main_terms_data = data.get("main_terms", [])
         if not isinstance(main_terms_data, list):
@@ -190,7 +179,6 @@ class NormalizedStrategy:
             year_filter = YearFilter.from_dict(filters_data["year"])
 
         return cls(
-            strategy_id=strategy_id,
             main_terms=main_terms,
             exclusions=exclusions,
             year_filter=year_filter
@@ -204,7 +192,6 @@ class NormalizedStrategy:
             Diccionario con la misma estructura que from_dict acepta
         """
         result = {
-            "strategy_id": self.strategy_id,
             "main_terms": [mt.to_dict() for mt in self.main_terms],
             "exclusions": self.exclusions,
         }
@@ -226,8 +213,7 @@ class NormalizedStrategy:
             return False
 
         return (
-            self.strategy_id == other.strategy_id
-            and self.main_terms == other.main_terms
+            self.main_terms == other.main_terms
             and self.exclusions == other.exclusions
             and self.year_filter == other.year_filter
         )

@@ -47,6 +47,8 @@ class PreviewSearchResult:
     queries_by_source: Dict[str, str]
     total_found: int
     studies: List[Dict[str, Any]]  # Estudios como dicts simples
+    strategy_dict: Dict[str, Any]  # Estrategia original para finalize
+    strategy_dict: Dict[str, Any]  # Estrategia original para finalize
 
 
 @dataclass
@@ -145,7 +147,7 @@ class AcquisitionFacade:
             ValueError: Si la estrategia es inválida
             Exception: Si falla algún servicio crítico
         """
-        logger.info(f"[FACADE] Preview search for strategy: {strategy_dict.get('strategy_id')}")
+        logger.info(f"[FACADE] Preview search starting")
 
         try:
             # Delegar al orchestrator (que ya implementa la lógica)
@@ -160,6 +162,7 @@ class AcquisitionFacade:
                 queries_by_source=preview_result["queries_by_source"],
                 total_found=preview_result["total_found"],
                 studies=preview_result["studies"],
+                strategy_dict=strategy_dict,  # Guardar para finalize
             )
 
         except Exception as e:
@@ -168,9 +171,8 @@ class AcquisitionFacade:
 
     def finalize_search(
         self,
-        strategy_dict: Dict[str, Any],
         design_strategy_id: int,
-        selected_studies: List[Dict[str, Any]],
+        preview_result: PreviewSearchResult,
         user: Optional[User] = None,
     ) -> FinalSearchResult:
         """
@@ -189,9 +191,8 @@ class AcquisitionFacade:
         5. Actualiza estadísticas en la estrategia de Design
 
         Args:
-            strategy_dict: Estrategia normalizada final
             design_strategy_id: ID de la estrategia en design.SearchStrategy
-            selected_studies: Lista de estudios seleccionados (del preview) para persistir
+            preview_result: Resultado del preview con estudios y estrategia
             user: Usuario que confirma la persistencia
 
         Returns:
@@ -201,14 +202,14 @@ class AcquisitionFacade:
             ValueError: Si parámetros inválidos
             Exception: Si falla persistencia
         """
-        logger.info(f"[FACADE] Finalize search for strategy {design_strategy_id} with {len(selected_studies)} studies")
+        logger.info(f"[FACADE] Finalize search for strategy {design_strategy_id} with {len(preview_result.studies)} studies")
 
         try:
             # Delegar al orchestrator (que ya implementa la lógica completa)
             execution_result = self._orchestrator.execute_and_persist_final(
-                strategy_dict=strategy_dict,
+                strategy_dict=preview_result.strategy_dict,
                 design_strategy_id=design_strategy_id,
-                selected_studies=selected_studies,
+                selected_studies=preview_result.studies,
                 user=user,
             )
 
@@ -540,12 +541,14 @@ facade = get_acquisition_facade()
 preview = facade.preview_search(strategy_dict, user=current_user)
 print(f"Preview encontró {preview.total_found} estudios")
 
-# 2. Persistir resultados seleccionados
+# 2. Usuario selecciona estudios (filtrar el DTO)
+preview.studies = preview.studies[:10]  # Usuario selecciona 10
+
+# 3. Persistir resultados seleccionados
 if user_confirms:
     final_result = facade.finalize_search(
-        strategy_dict=strategy_dict,
         design_strategy_id=strategy.id,
-        selected_studies=preview.studies[:10],  # Usuario selecciona 10
+        preview_result=preview,  # DTO completo con estudios seleccionados
         user=current_user,
     )
     print(f"Persistidos {final_result.new_studies_count} estudios nuevos")
