@@ -10,7 +10,7 @@ from apps.design.shared.models.design_phase import DesignPhase
 
 class EligibilityCriterionService:
 
-    def create_eligibility_criterion(self, description: str, motivation: str, project_id: int, suggester, criteria_type: str) -> EligibilityCriterion:
+    def create_eligibility_criterion(self, description: str, motivation: str, project_id: int, researcher, criteria_type: str) -> EligibilityCriterion:
         try:
             try:
                 design_phase = DesignPhase.objects.get(pk=project_id)
@@ -20,7 +20,7 @@ class EligibilityCriterionService:
                 description=description,
                 motivation=motivation,
                 design_phase=design_phase,
-                suggester=suggester,
+                researcher=researcher,
                 type=criteria_type
             )
             criterion.full_clean()

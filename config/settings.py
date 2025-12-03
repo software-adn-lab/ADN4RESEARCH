@@ -96,6 +96,7 @@ TEMPLATES = [
         "DIRS": [
             BASE_DIR / "ui" / "design" / "templates",
             BASE_DIR / "ui" / "interpretation" / "templates",
+            BASE_DIR / "ui" / "shared" / "templates",
         ],
         "APP_DIRS": True,
         "OPTIONS": {

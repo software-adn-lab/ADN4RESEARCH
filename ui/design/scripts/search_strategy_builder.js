@@ -399,11 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Aquí podrías redirigir o mostrar un modal de éxito
-                console.log("String Generated:", data.final_search_string);
-                // Ejemplo: window.location.href = data.redirect_url;
-                alert("Strategy Saved!\n\nBoolean String:\n" + data.final_search_string);
-            } else {
+                window.location.href = data.redirect_url;
+            }else {
                 alert("Error: " + data.error);
             }
         })

@@ -56,7 +56,7 @@
                 {% empty %}
                 <tr>
                     <td colspan="2" class="text-center py-8 text-base-content/50">
-                        No approved questions in the protocol yet. Go to Discussion Panel.
+                        No approved questions in the protocol yet.
                     </td>
                 </tr>
                 {% endfor %}
@@ -77,7 +77,7 @@
             <table class="table table-zebra w-full">
                 <thead>
                     <tr class="bg-base-200">
-                        <th class="w-16">Ver.</th>
+                        <th class="w-16 text-center">Ver.</th>
                         <th>Search String</th>
                         <th class="w-24 text-center">Results</th>
                         <th class="w-32">Date</th>
@@ -94,10 +94,12 @@
 </dialog>
 
 <script>
-    // URL base para el JS
     const versionsApiUrl = "{% url 'design:get_strategy_versions' 0 %}"; 
     const builderUrlBase = "{% url 'design:search_strategy_builder_view' project.id %}";
+    const approveUrlBase = "{% url 'design:approve_strategy' 0 %}";
+    const rejectUrlBase = "{% url 'design:reject_strategy' 0 %}";
 </script>
+
 <script src="{% static 'scripts/search_strategy_panel.js' %}"></script>
 
 {% endblock search_string_content %}

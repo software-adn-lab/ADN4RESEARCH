@@ -38,7 +38,6 @@ def open_eligibility_criteria_panel(request, project_id):
 def create_eligibility_criterion(request, project_id):
     try:
         project = project_service.get_project_by_id(project_id, user=request.user)
-        
         description = request.POST.get('description', '').strip()
         motivation = request.POST.get('motivation', '').strip()
         criteria_type = request.POST.get('type', '')
@@ -52,7 +51,7 @@ def create_eligibility_criterion(request, project_id):
             description=description,
             motivation=motivation,
             project_id=project.id, 
-            suggester=request.user,
+            researcher=request.user,
             criteria_type=criteria_type
         )
         

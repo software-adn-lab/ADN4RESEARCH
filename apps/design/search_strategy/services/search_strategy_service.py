@@ -122,9 +122,7 @@ class SearchStrategyService:
         return SearchStrategy.objects.filter(research_question_id=question_id).first()
     
     def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user=None) -> SearchStrategy:
-        # 1. Obtener o crear la estrategia para asegurar que siempre exista.
         strategy = self._get_or_create_strategy(research_question_id)
-        # 2. Llamar al método central para limpiar los keywords antiguos y enlazar los nuevos.
         self._link_project_keywords_to_strategy(strategy, keyword_data)
         if user:
             strategy.last_modified_by = user
@@ -133,6 +131,19 @@ class SearchStrategyService:
 
     def get_or_create_strategy(self, research_question_id: int) -> SearchStrategy:
         return self._get_or_create_strategy(research_question_id)
+    
+    def get_strategy_by_id(self, strategy_id: int) -> SearchStrategy:
+        return SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
+    
+    def get_or_create_project_keyword(self, project_id: int, term: str, synonyms: str) -> ProjectKeyword:
+        keyword, created = ProjectKeyword.objects.update_or_create(
+            design_phase_id=project_id,
+            term=term,
+            defaults={
+                'synonyms': synonyms
+            }
+        )
+        return keyword
     
     # Metodo del patron para crear el memento.
     def create_version_snapshot(self, strategy_id: int, user_id: int | None, total_found: int = 0) -> int:
@@ -168,6 +179,7 @@ class SearchStrategyService:
         strategy.last_modified_by_id = user_id
         strategy.save()
         acquisition_facade = get_acquisition_facade()
+        logging.info(f"Fetching search preview for strategy ID {visual_data}")
         
         try:
             preview_result = acquisition_facade.preview_search(visual_data)
@@ -181,33 +193,17 @@ class SearchStrategyService:
         return strategy
 
     def _build_string_from_json(self, data: dict) -> str:
-        """
-        Convierte la estructura JSON del Visual Builder en un String Booleano.
-        """
         main_terms = data.get('main_terms', [])
         exclusions = data.get('exclusions', [])
-        
-        # 1. Grupos AND (Conceptos)
         and_blocks = []
         for group in main_terms:
-            # El término principal + sus sinónimos forman un grupo OR
             term = group.get('term', '').strip()
             synonyms = group.get('synonyms', [])
-            
             if not term: continue
-            
-            # Lista de todos los términos del grupo (Main + Synonyms)
-            # Envolvemos en comillas para frases exactas
             all_terms = [f'"{term}"'] + [f'"{s.strip()}"' for s in synonyms if s.strip()]
-            
-            # Unir con OR
             block_str = " OR ".join(all_terms)
             and_blocks.append(f"({block_str})")
-            
-        # 2. Unir Bloques con AND
         search_string = " AND ".join(and_blocks)
-        
-        # 3. Agregar Exclusiones (AND NOT)
         if exclusions:
             not_terms = [f'"{exc.strip()}"' for exc in exclusions if exc.strip()]
             if not_terms:
@@ -215,3 +211,23 @@ class SearchStrategyService:
                 search_string += f" AND NOT ({not_block})"
                 
         return search_string
+    
+    def get_search_results_dto(self, strategy_id: int):
+        strategy = self.get_or_create_strategy(strategy_id)
+        acquisition_facade = get_acquisition_facade()
+        try:
+            results_dto = acquisition_facade.preview_search(strategy.json_definition)
+            return results_dto
+        except Exception as e:
+            raise RuntimeError(f"Error fetching search results: {e}")
+    
+    def change_strategy_status(self, strategy_id: int, status: str, user) -> SearchStrategy:
+        strategy = SearchStrategy.objects.get(id=strategy_id)
+        strategy.status = status
+        strategy.last_modified_by = user
+        if status == SearchStrategy.Status.APPROVED:
+             strategy.reviewed_by = user
+        
+        strategy.save()
+        return strategy
+            

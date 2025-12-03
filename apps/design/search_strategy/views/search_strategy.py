@@ -1,4 +1,5 @@
 
+from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from django.http import JsonResponse
@@ -7,6 +8,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib import messages
 import json
+from django.http import Http404
+from django.urls import reverse
+from django.shortcuts import redirect
 
 from apps.project.services.project_services import ProjectService
 
@@ -86,19 +90,20 @@ def search_strategy_builder_view(request, project_id):
             pool_keywords = project_service.get_project_keyterms(project_id)
             if version_id_to_load:
                 try:
-                    # Cargamos datos históricos específicos
-                    version = search_strategy_service.get_version_by_id(version_id_to_load)
+                    v_id = int(version_id_to_load)
+                    version = search_strategy_service.get_version_by_id(v_id)
                     initial_visual_data = version.json_definition
-                    # Opcional: Avisar al usuario que está viendo una versión antigua
+                    
                     messages.info(request, f"Loaded version {version.version_number} from history.")
-                except version.DoesNotExist:
-                    pass  # Si falla, cargamos lo actual
+                    
+                except (ValueError, SearchStrategyVersion.DoesNotExist):
+                    initial_visual_data = strategy.json_definition
+                    messages.warning(request, "Could not load requested version. Loaded current draft instead.")
             else:
-                # Carga normal (Estado actual de la estrategia)
                 initial_visual_data = strategy.json_definition
-        except Exception:
-            pass
-
+                
+        except Exception as e:
+            raise Http404("Error loading strategy builder.")
     context = {
         'project': project,
         'timeline_stages': timeline_stages,
@@ -115,11 +120,9 @@ def search_strategy_builder_view(request, project_id):
 @login_required
 @require_POST
 def save_visual_strategy(request, strategy_id):
-    import json
     try:
         data = json.loads(request.body)
         visual_data = data.get('visual_data')
-        
         if not visual_data:
             return JsonResponse({'error': 'No data provided'}, status=400)
         updated_strategy = search_strategy_service.save_strategy_from_visual_builder(
@@ -130,7 +133,7 @@ def save_visual_strategy(request, strategy_id):
         
         return JsonResponse({
             'status': 'success',
-            'redirect_url': '', # Aquí la URL de resultados si la tuvieras
+            'redirect_url': reverse('design:search_results_view', args=[strategy_id]), 
             'final_string': updated_strategy.final_search_string
         })
         
@@ -145,6 +148,8 @@ def get_strategy_versions(request, question_id):
         if not strategy:
             return JsonResponse({'versions': []})
         versions = strategy.versions.all().order_by('-version_number').values(
+            'id',
+            'strategy_id',
             'version_number',
             'final_search_string',
             'total_found',
@@ -153,6 +158,8 @@ def get_strategy_versions(request, question_id):
         data = []
         for v in versions:
             data.append({
+                'id': v['id'],  
+                'strategy_id': v['strategy_id'], 
                 'version': v['version_number'],
                 'string': v['final_search_string'],
                 'total_found': v['total_found'],
@@ -163,3 +170,56 @@ def get_strategy_versions(request, question_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def search_results_view(request, strategy_id):
+    try:
+        strategy = search_strategy_service.get_strategy_by_id(strategy_id)
+        project = strategy.research_question.design_phase.project
+        results_dto = search_strategy_service.get_search_results_dto(strategy_id)
+        year_filter = request.GET.get('year')
+        studies = getattr(results_dto, 'studies', []) if results_dto else []
+        if year_filter and studies:
+            studies = [s for s in studies if str(s.get('year')) == year_filter]
+        context = {
+            'project': project,
+            'strategy': strategy,
+            'results': results_dto, 
+            'studies': studies, 
+            'years_range': range(2025, 2000, -1), 
+            'current_year_filter': year_filter,
+            'timeline_stages': design_phase_service.get_design_timeline_context(project.id)
+        }
+        return render(request, 'search_results.html', context)
+    except strategy.DoesNotExist:
+        raise Http404("Strategy not found")
+
+@login_required
+@require_POST
+def approve_strategy(request, strategy_id):
+    try:
+        strategy = search_strategy_service.change_strategy_status(
+            strategy_id, 
+            SearchStrategy.Status.APPROVED, 
+            request.user
+        )
+        messages.success(request, f"Strategy approved successfully!")
+        return redirect('design:open_search_strategy_panel', project_id=strategy.research_question.design_phase.project.id)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+@login_required
+@require_POST
+def reject_strategy(request, strategy_id):
+    try:
+        strategy = search_strategy_service.change_strategy_status(
+            strategy_id, 
+            SearchStrategy.Status.REJECTED, 
+            request.user
+        )
+        messages.warning(request, "Strategy rejected.")
+        return redirect('design:open_search_strategy_panel', project_id=strategy.research_question.design_phase.project.id)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect(request.META.get('HTTP_REFERER', '/'))
