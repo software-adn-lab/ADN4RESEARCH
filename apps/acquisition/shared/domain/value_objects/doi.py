@@ -90,6 +90,18 @@ class DOI:
         Raises:
             ValueError: Si el formato del DOI es inválido
         """
+        # FIX: Si value ya es un objeto DOI, devolverlo directamente
+        if isinstance(value, cls):
+            return value
+        
+        # Si tiene un atributo 'value', extraerlo (para objetos similares)
+        if hasattr(value, 'value') and not isinstance(value, str):
+            value = value.value
+        
+        # Convertir a string para asegurar compatibilidad
+        if value is not None:
+            value = str(value)
+        
         if not value or not value.strip():
             return None
         return cls(value)

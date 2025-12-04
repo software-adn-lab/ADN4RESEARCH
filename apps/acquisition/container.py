@@ -126,35 +126,119 @@ class Container:
         """
         Construye los conectores reales usados por Discovery (Scopus, IEEE).
 
+        Usa la nueva arquitectura con estrategias (API + Web).
         Se usa tanto para el servicio productivo como para el de preview.
         """
-        from apps.acquisition.discovery.adapters.outbound.connectors.composite_scopus_connector import (
-            CompositeScopusConnector,
-        )
-        from apps.acquisition.discovery.adapters.outbound.connectors.ieee_connector import (
+        # Imports de la nueva estructura
+        from apps.acquisition.discovery.adapters.outbound.connectors import (
+            ScopusConnector,
             IeeeConnector,
         )
+        from apps.acquisition.discovery.adapters.outbound.connectors.scopus.strategies.api_strategy import (
+            ScopusApiStrategy,
+        )
+        from apps.acquisition.discovery.adapters.outbound.connectors.scopus.strategies.web_strategy import (
+            ScopusWebStrategy,
+        )
+        from apps.acquisition.discovery.adapters.outbound.connectors.ieee.strategies.api_strategy import (
+            IeeeApiStrategy,
+        )
+        from apps.acquisition.discovery.adapters.outbound.connectors.ieee.strategies.web_strategy import (
+            IeeeWebStrategy,
+        )
+        from apps.acquisition.discovery.infrastructure.http.http_client import HttpClient
+        from apps.acquisition.discovery.infrastructure.http.rate_limiter import RateLimiter
+        from apps.acquisition.discovery.infrastructure.normalization.ieee_result_normalizer import (
+            IeeeResultNormalizer,
+        )
+        from apps.acquisition.discovery.infrastructure.normalization.scopus_result_normalizer import (
+            ScopusResultNormalizer,
+        )
+        from apps.acquisition.discovery.infrastructure.config.connector_config import (
+            IeeeConfig,
+            ScopusConfig,
+        )
+        from apps.acquisition.shared.infrastructure.circuit_breaker import CircuitBreaker
 
+        # Configuración y credenciales
         scopus_api_key = os.getenv("SCOPUS_API_KEY")
-        scopus_cookies = os.getenv("SCOPUS_COOKIES")
-
         epn_user = os.getenv("EPN_USER")
         epn_pass = os.getenv("EPN_PASS")
-
         ieee_user = os.getenv("IEEE_USERNAME") or epn_user
         ieee_pass = os.getenv("IEEE_PASSWORD") or epn_pass
 
-        return {
-            "Scopus": CompositeScopusConnector(
+        # Infraestructura compartida
+        http_client = HttpClient()
+
+        # --- ENSAMBLAJE DE SCOPUS ---
+        scopus_config = ScopusConfig()
+        scopus_normalizer = ScopusResultNormalizer()
+        scopus_rate_limiter = RateLimiter(rate=scopus_config.rate_limit)
+
+        # Estrategias Scopus
+        scopus_api_strategy = None
+        if scopus_api_key:
+            scopus_api_strategy = ScopusApiStrategy(
+                http_client=http_client,
+                normalizer=scopus_normalizer,
                 api_key=scopus_api_key,
-                username=epn_user,
-                password=epn_pass,
-                preloaded_cookies=scopus_cookies,
-            ),
-            "IEEE Xplore": IeeeConnector(
-                username=ieee_user,
-                password=ieee_pass,
-            ),
+            )
+
+        scopus_web_strategy = ScopusWebStrategy(
+            username=epn_user,
+            password=epn_pass,
+            normalizer=scopus_normalizer,
+            headless=True,
+        )
+
+        # Conector Scopus (modo nuevo con estrategias inyectadas)
+        scopus_connector = ScopusConnector(
+            username=epn_user,  # Requerido para fallback
+            password=epn_pass,  # Requerido para fallback
+            api_key=scopus_api_key,  # Requerido para API
+            api_strategy=scopus_api_strategy,
+            web_strategy=scopus_web_strategy,
+            rate_limiter=scopus_rate_limiter,
+            prefer_api=True,
+        )
+
+        # --- ENSAMBLAJE DE IEEE ---
+        ieee_config = IeeeConfig()
+        ieee_normalizer = IeeeResultNormalizer()
+        ieee_rate_limiter = RateLimiter(rate=ieee_config.rate_limit)
+        ieee_circuit_breaker = CircuitBreaker(
+            fail_max=ieee_config.circuit_breaker_threshold,
+            timeout_duration=ieee_config.circuit_breaker_timeout,
+            name="IEEE",
+        )
+
+        # Estrategias IEEE
+        ieee_api_strategy = IeeeApiStrategy(
+            http_client=http_client,
+            normalizer=ieee_normalizer,
+        )
+
+        ieee_web_strategy = IeeeWebStrategy(
+            username=ieee_user,
+            password=ieee_pass,
+            normalizer=ieee_normalizer,
+            headless=True,
+        )
+
+        # Conector IEEE (modo nuevo con estrategias inyectadas)
+        ieee_connector = IeeeConnector(
+            username=ieee_user,  # Requerido por constructor
+            password=ieee_pass,  # Requerido por constructor
+            api_strategy=ieee_api_strategy,
+            web_strategy=ieee_web_strategy,
+            rate_limiter=ieee_rate_limiter,
+            circuit_breaker=ieee_circuit_breaker,
+            prefer_api=True,
+        )
+
+        return {
+            "Scopus": scopus_connector,
+            "IEEE Xplore": ieee_connector,
         }
 
     # --------------------------------------------------------------------- #

@@ -34,6 +34,17 @@ class Source:
 
     def __post_init__(self):
         """Validar que la fuente sea válida."""
+        # FIX: Si self.name ya es un objeto Source, extraer su nombre
+        if isinstance(self.name, Source):
+            object.__setattr__(self, "name", self.name.name)
+        # Si tiene un atributo 'name', usarlo (para objetos similares)
+        elif hasattr(self.name, 'name') and not isinstance(self.name, str):
+            object.__setattr__(self, "name", self.name.name)
+        # Asegurar que es string
+        else:
+            object.__setattr__(self, "name", str(self.name))
+        
+        # Ahora sí es seguro hacer strip()
         if not self.name or not self.name.strip():
             raise ValueError("El nombre de la fuente no puede estar vacío")
 

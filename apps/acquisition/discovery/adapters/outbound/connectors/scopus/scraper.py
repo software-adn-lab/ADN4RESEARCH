@@ -1,3 +1,13 @@
+"""
+Scopus Playwright scraper - Internal implementation detail.
+
+This module contains the legacy Playwright-based scraping implementation
+for Scopus. It is used internally by ScopusWebStrategy and should not
+be imported directly by external code.
+
+This is an implementation detail that may be refactored or replaced in
+the future without affecting the public API.
+"""
 import logging
 import time
 import json
