@@ -75,12 +75,13 @@ class CompositeOpenAccessChecker:
         if not doi or not doi.value:
             return False
 
-        for i, checker in enumerate(self.checkers):
+        for checker in self.checkers:
             if not checker:
                 continue
 
-            is_tertiary = (i == 2 and checker is self.tertiary_checker)
-            if is_tertiary and study and study.source.name in self.skip_tertiary_for_sources:
+            # Identificar por identidad, no por índice (robusto ante cambios de configuración)
+            is_tertiary = (checker is self.tertiary_checker)
+            if is_tertiary and study and study.source and hasattr(study.source, 'name') and study.source.name in self.skip_tertiary_for_sources:
                 logger.info(
                     f"⚡ Saltando checker terciario para estudio de {study.source.name} "
                     f"(ya consultado en Discovery)"

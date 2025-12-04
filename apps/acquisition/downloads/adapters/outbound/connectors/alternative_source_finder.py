@@ -22,7 +22,6 @@ ESTADO ACTUAL:
 - Tasa de éxito: 95-97%
 """
 import logging
-import os
 from typing import Optional
 
 from apps.acquisition.shared.domain.entities.study import Study
@@ -50,16 +49,13 @@ class AlternativeSourceFinder:
     def __init__(
         self,
         scihub_downloader,
-        enable_scihub: bool = False,
-        base_dir: str = "media/papers"
+        enable_scihub: bool = False
     ):
         """
         Args:
             scihub_downloader: Instancia de SciHubDownloader
             enable_scihub: Si True, habilita Sci-Hub (zona gris legal)
-            base_dir: Directorio base para guardar PDFs
         """
-        self.base_dir = base_dir
         self.enable_scihub = enable_scihub
         self.scihub = scihub_downloader
 

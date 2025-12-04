@@ -451,7 +451,6 @@ class Container:
                 cls._alternative_finder = AlternativeSourceFinder(
                     scihub_downloader=scihub,
                     enable_scihub=enable_scihub,
-                    base_dir=storage_dir,
                 )
 
             oa_checker = CompositeOpenAccessChecker(

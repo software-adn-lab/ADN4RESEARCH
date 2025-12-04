@@ -1,6 +1,7 @@
 import logging
-from typing import Dict, List, Any, Generator, Optional
+from typing import Dict, List, Any, Iterable, Optional
 
+from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from apps.acquisition.discovery.infrastructure.http import HttpClient, RateLimiter
 from apps.acquisition.discovery.infrastructure.normalization import ScopusResultNormalizer
 from apps.acquisition.discovery.infrastructure.config import ScopusConfig
@@ -9,7 +10,7 @@ from .strategies import SearchStrategy, ScopusApiStrategy, ScopusWebStrategy
 logger = logging.getLogger(__name__)
 
 
-class ScopusConnector:
+class ScopusConnector(IAcademicConnector):
     """
     Refactored Scopus connector using Strategy pattern.
 
@@ -95,7 +96,7 @@ class ScopusConnector:
         self,
         query: str,
         max_results: int = 25
-    ) -> Generator[Dict[str, Any], None, None]:
+    ) -> Iterable[Dict[str, Any]]:
         """
         Busca en Scopus usando la mejor estrategia disponible.
 
@@ -173,11 +174,12 @@ class ScopusConnector:
         Busca metadatos de un artículo por título.
         
         Uses API strategy if available to search for specific title.
+        Implements IAcademicConnector interface with additional optional parameters.
         
         Args:
-            title: Article title to search for
-            authors: Optional list of authors for matching
-            year: Optional publication year for matching
+            title: Article title to search for (required by interface)
+            authors: Optional list of authors for matching (Scopus-specific)
+            year: Optional publication year for matching (Scopus-specific)
             
         Returns:
             Normalized metadata dictionary or None if not found

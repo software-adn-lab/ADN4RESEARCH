@@ -8,82 +8,20 @@ Orquesta la estrategia de tres niveles para obtener textos completos:
 """
 
 import logging
-from typing import Protocol, Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
+from apps.acquisition.downloads.domain.interfaces import (
+    IOpenAccessChecker,
+    IDownloader,
+    IAlternativeSourceFinder,
+    IFileValidator
+)
 from apps.acquisition.downloads.domain.value_objects.download_status import DownloadStatus
 from apps.acquisition.downloads.domain.value_objects.pdf_source import PdfSource
 
 logger = logging.getLogger(__name__)
-
-
-
-
-class IOpenAccessChecker(Protocol):
-    """Port para verificar si un estudio es Open Access."""
-
-    def is_open_access(self, doi) -> bool:
-        """
-        Verificar si un DOI corresponde a un artículo Open Access.
-
-        Args:
-            doi: DOI del estudio (Value Object)
-
-        Returns:
-            True si el estudio es Open Access, False en caso contrario
-        """
-        ...
-
-
-class IDownloader(Protocol):
-    """Port para descargar PDFs desde URLs."""
-
-    def download(self, study: Study) -> Optional[str]:
-        """
-        Descargar el PDF de un estudio.
-
-        Args:
-            study: Estudio a descargar
-
-        Returns:
-            Ruta al archivo descargado, o None si falló la descarga
-        """
-        ...
-
-
-class IAlternativeSourceFinder(Protocol):
-    """Port para buscar PDFs en fuentes alternativas."""
-
-    def find_and_download(self, study: Study) -> Optional[str]:
-        """
-        Buscar y descargar PDF desde fuentes alternativas.
-
-        Args:
-            study: Estudio a buscar
-
-        Returns:
-            Ruta al archivo descargado, o None si no se encontró
-        """
-        ...
-
-
-class IFileValidator(Protocol):
-    """Port para validar archivos PDF."""
-
-    def is_valid_pdf(self, file_path: str) -> bool:
-        """
-        Verificar si un archivo es un PDF válido.
-
-        Args:
-            file_path: Ruta al archivo
-
-        Returns:
-            True si es un PDF válido, False en caso contrario
-        """
-        ...
-
-
 
 
 class FullTextService:
