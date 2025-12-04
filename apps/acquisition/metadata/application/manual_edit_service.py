@@ -11,7 +11,7 @@ Responsabilidades:
 - Validar que las ediciones sean válidas
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
 from apps.acquisition.metadata.domain.services.completeness_validator import CompletenessValidator
@@ -40,12 +40,12 @@ class ManualEditService:
         "journal", "keywords", "title"
     }
 
-    def __init__(self, repository: Optional[IStudyRepository] = None):
+    def __init__(self, repository: IStudyRepository):
         """
         Inicializa el servicio con validador y normalizador.
 
         Args:
-            repository: Repositorio de estudios (opcional, para métodos con persistencia)
+            repository: Repositorio de estudios
         """
         self.validator = CompletenessValidator()
         self.normalizer = MetadataNormalizer()
