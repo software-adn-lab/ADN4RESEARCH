@@ -13,7 +13,7 @@ from typing import Protocol, BinaryIO
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
-from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import LocalFileStorage
+from apps.acquisition.downloads.domain.interfaces import IStorage
 
 
 class IUploadedFile(Protocol):
@@ -32,13 +32,17 @@ class IUploadedFile(Protocol):
 class ManualUploadAppService:
     """
     Servicio de aplicación de alto nivel para carga manual de PDFs.
+    
+    Usa IStorage (Port) en lugar de implementación concreta,
+    permitiendo cambiar entre LocalFileStorage, DjangoStorage (MinIO/S3),
+    o cualquier otro backend sin modificar este servicio.
     """
 
     def __init__(
         self,
         repository: IStudyRepository,
         manual_upload_service: ManualUploadService,
-        storage: LocalFileStorage,
+        storage: IStorage,
     ):
         self.repository = repository
         self.manual_upload_service = manual_upload_service

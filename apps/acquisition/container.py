@@ -57,6 +57,9 @@ from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_
 from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import (
     LocalFileStorage,
 )
+from apps.acquisition.downloads.adapters.outbound.storage.django_storage import (
+    DjangoStorage,
+)
 
 from apps.acquisition.discovery.application.manual_study_service import ManualStudyService
 from apps.acquisition.metadata.application.manual_edit_service import ManualEditService
@@ -114,7 +117,7 @@ class Container:
     _http_downloader: Optional[HttpDownloader] = None
     _alternative_finder: Optional[AlternativeSourceFinder] = None
     _fulltext_service_production: Optional[FullTextService] = None
-    _storage: Optional[LocalFileStorage] = None
+    _storage: Optional[DjangoStorage] = None
     _manual_upload_app_service: Optional[ManualUploadAppService] = None
 
     # --------------------------------------------------------------------- #
@@ -361,15 +364,15 @@ class Container:
         return ManualUploadService(file_validator=cls.get_file_validator())
 
     @classmethod
-    def get_storage(cls) -> LocalFileStorage:
+    def get_storage(cls) -> DjangoStorage:
         """
-        Adaptador de storage local para PDFs.
+        Adaptador de storage que usa Django's default_storage.
 
-        Usa PAPERS_STORAGE_DIR como base (default: media/papers).
+        Soporta tanto FileSystemStorage (local) como S3Boto3Storage (MinIO/AWS)
+        según la configuración USE_S3 en settings.py.
         """
         if cls._storage is None:
-            storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
-            cls._storage = LocalFileStorage(base_dir=storage_dir)
+            cls._storage = DjangoStorage()
         return cls._storage
 
     @classmethod

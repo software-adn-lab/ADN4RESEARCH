@@ -87,3 +87,59 @@ class IFileValidator(Protocol):
             True si es un PDF válido, False en caso contrario
         """
         ...
+
+
+class IStorage(Protocol):
+    """
+    Port para persistir archivos binarios (PDFs, imágenes, etc.).
+    
+    Permite cambiar entre diferentes backends de almacenamiento
+    (filesystem local, S3/MinIO, Azure Blob, Google Cloud Storage)
+    sin modificar la lógica de aplicación.
+    """
+
+    def save(self, file_obj, relative_path: str) -> str:
+        """
+        Guardar un archivo en el storage.
+
+        Args:
+            file_obj: Objeto archivo (BinaryIO, UploadedFile)
+            relative_path: Ruta relativa dentro del storage
+
+        Returns:
+            Ruta donde se guardó el archivo (puede ser URL o path local)
+        """
+        ...
+
+    def delete(self, path: str) -> None:
+        """
+        Eliminar un archivo del storage.
+
+        Args:
+            path: Ruta al archivo a eliminar
+        """
+        ...
+
+    def exists(self, path: str) -> bool:
+        """
+        Verificar si un archivo existe en el storage.
+
+        Args:
+            path: Ruta al archivo
+
+        Returns:
+            True si existe, False si no
+        """
+        ...
+
+    def url(self, path: str) -> str:
+        """
+        Obtener URL pública del archivo.
+
+        Args:
+            path: Ruta al archivo
+
+        Returns:
+            URL completa (para S3/MinIO) o ruta relativa (para local)
+        """
+        ...
