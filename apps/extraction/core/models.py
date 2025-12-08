@@ -14,7 +14,7 @@ class PaperExtraction(models.Model):
     Aggregate Root.
     Representa el proceso de extracción sobre un estudio (Paper).
     """
-    study_id = models.IntegerField(unique=True, db_index=True)
+    study_id = models.UUIDField(unique=True, db_index=True)
     project_id = models.IntegerField(db_index=True)
 
     status = models.CharField(
