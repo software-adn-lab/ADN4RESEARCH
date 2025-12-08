@@ -5,11 +5,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalVerdict = document.getElementById('modal-verdict');
     const modalJustification = document.getElementById('modal-justification');
     const reviewForm = document.getElementById('review-form');
-    
+
     // 1. Manejo de botones de Apertura del Modal
     document.body.addEventListener('click', (e) => {
         const btn = e.target.closest('.review-btn');
         if (!btn) return;
+
+        const mainContainer = document.querySelector('[data-project-id]');
+        if (mainContainer) {
+            const isPastStage = mainContainer.dataset.isPastStage === 'true';
+            if (isPastStage) {
+                if (!confirm("This stage is already consolidated. Are you sure you want to review this question?")) return;
+            }
+        }
 
         const questionId = btn.dataset.id;
         const action = btn.dataset.action; // 'APPROVED' o 'REJECTED'
@@ -50,23 +58,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                modal.close();
-                // Recargar la página para actualizar la tabla y estados
-                window.location.reload(); 
-            } else {
-                alert('Error: ' + data.message);
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    modal.close();
+                    // Recargar la página para actualizar la tabla y estados
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An unexpected error occurred.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An unexpected error occurred.');
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-        });
+            });
     });
 });

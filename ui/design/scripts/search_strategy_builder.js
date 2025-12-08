@@ -154,14 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (emptyMsg) emptyMsg.style.display = 'none';
 
         const groupDiv = document.createElement('div');
-        groupDiv.className = "card bg-white border border-base-200 shadow-sm mb-6 group-block transition-all hover:shadow-md relative overflow-visible";
+        groupDiv.className = "card border border-base-200 shadow-sm mb-2 group-block transition-all hover:shadow-md relative overflow-visible";
         
         // Template del Main Term Zone (Vacío o Lleno)
         // Usamos un div clickeable/droppable en lugar de input
         let mainTermHTML = '';
         if (term) {
             mainTermHTML = `
-                <div class="main-term-chip badge badge-primary badge-lg py-4 px-4 font-bold text-white w-full justify-between cursor-grab" draggable="true">
+                <div class="main-term-chip badge badge-primary badge-lg font-bold text-white w-full justify-between cursor-grab" draggable="true">
                     <span class="main-term-text truncate">${term}</span>
                     <button class="btn btn-ghost btn-xs btn-circle text-white/70 hover:text-white clear-main-term ml-2">✕</button>
                 </div>
@@ -175,11 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         groupDiv.innerHTML = `
-        <button class="btn btn-sm btn-circle btn-ghost absolute top-2 right-2 text-base-content/40 hover:text-error delete-group-btn z-10">✕</button>
-        <div class="card-body p-4">
+        <button class="btn btn-sm btn-circle btn-ghost absolute h-6 w-6 top-0.5 right-2 text-base-content/40 hover:text-error delete-group-btn z-10">✕</button>
+        <div class="card-body p-2 pl-4">
             <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_2fr] gap-4 items-stretch">
-                <div class="flex flex-col gap-2">
-                    <h6 class="text-xs font-bold uppercase text-primary tracking-wide">
+                <div class="flex flex-col">
+                    <h6 class="text-xs font-bold text-primary tracking-wide">
                         Main Concept (AND)
                     </h6>
                     <div class="main-term-zone flex-1 flex flex-col justify-center">
@@ -187,11 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="divider md:divider-horizontal text-xs text-base-content/30 font-bold mx-0">OR</div>
-                <div class="flex flex-col gap-2">
-                    <h6 class="text-xs font-bold uppercase text-secondary tracking-wide">
+                <div class="flex flex-col">
+                    <h6 class="text-xs font-bold text-secondary tracking-wide">
                         Synonyms / Related (OR)
                     </h6>
-                    <div class="synonyms-zone min-h-[80px] bg-base-100 rounded-lg border border-dashed border-base-300 p-3 flex flex-wrap gap-2 content-start transition-colors h-full">
+                    <div class="synonyms-zone rounded-lg border border-dashed border-gray-400 p-3 flex flex-wrap gap-2 content-start transition-colors">
                         <div class="text-xs text-base-content/30 w-full text-center pointer-events-none empty-syn-msg self-center mt-4">
                             Drag synonyms here
                         </div>
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setMainTerm(container, text, synonymsStr) {
         // Reemplazar el placeholder con el chip
         container.innerHTML = `
-            <div class="main-term-chip badge badge-primary badge-lg py-4 px-4 font-bold text-white w-full justify-between cursor-grab" draggable="true">
+            <div class="main-term-chip badge font-bold text-white w-full justify-between cursor-grab" draggable="true">
                 <span class="main-term-text truncate">${text}</span>
                 <button class="btn btn-ghost btn-xs btn-circle text-white/70 hover:text-white clear-main-term ml-2">✕</button>
             </div>
@@ -277,10 +277,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existing.includes(text)) return;
 
         const chip = document.createElement('div');
-        chip.className = "badge badge-outline gap-2 pr-0 pl-3 py-3 h-auto bg-white shadow-sm hover:border-primary transition-colors cursor-default";
+        chip.className = "badge badge-outline gap-2 shadow-sm hover:border-primary transition-colors cursor-default align-middle justify-center flex";
         chip.innerHTML = `
             <span class="synonym-val font-medium">${text}</span>
-            <button class="btn btn-ghost btn-xs btn-circle h-6 w-6 min-h-0 text-base-content/40 hover:text-error remove-chip">✕</button>
+            <button class="btn btn-ghost btn-xs btn-circle h-4 w-4 min-h-0 text-base-content/40 hover:text-error hover:bg-white hover:border-0 hover:border-white remove-chip">✕</button>
         `;
 
         chip.querySelector('.remove-chip').addEventListener('click', () => {
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existing.includes(text)) return;
 
         const chip = document.createElement('div');
-        chip.className = "badge badge-error text-white gap-2 pr-0 pl-3 py-3 h-auto shadow-sm";
+        chip.className = "badge badge-error text-white gap-2 h-auto shadow-sm";
         chip.innerHTML = `
             <span class="font-bold opacity-70">NOT</span>
             <span class="exclusion-val font-bold">${text}</span>

@@ -1,68 +1,87 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Obtener referencias al Modal y sus elementos
     const modal = document.getElementById('my_modal_3');
-    if (!modal) return; 
+    if (!modal) return;
 
     const modalStrategyName = document.getElementById('modal-strategy-name');
     const modalSearchString = document.getElementById('modal-search-string');
-    
-    // Ya no necesitamos 'projectContainer' ni 'projectId' porque la URL viene lista en el botón.
+    const testStrategyBtn = document.getElementById('test-strategy-btn');
 
-    // 2. Event Delegation para detectar clics en los botones dinámicos
+    // Helper para obtener el CSRF Token (Estándar en Django)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     document.body.addEventListener('click', (event) => {
-        // Buscamos si el clic fue dentro de un botón con la clase .view-strategy-btn
         const button = event.target.closest('.view-strategy-btn');
-        
-        if (button) {
-            event.stopPropagation(); 
-            event.preventDefault(); // Buena práctica para evitar saltos raros
 
-            // 3. Extraer la URL generada por Django desde el atributo data-url
+        if (button) {
+            event.stopPropagation();
+            event.preventDefault();
+
             const url = button.dataset.url;
-            
+            const questionId = button.dataset.id;
+
             if (!url) {
                 console.error('Error: El botón no tiene el atributo data-url definido.');
                 return;
             }
-
-            console.log("Solicitando estrategia a:", url); // Debugging
-
-            // 4. Resetear UI y mostrar Modal (Estado de Carga)
             modalStrategyName.textContent = 'Search Strategy';
             modalSearchString.textContent = 'Generating search string...';
-            modalSearchString.classList.add('animate-pulse'); // Opcional: efecto visual
+            modalSearchString.classList.add('animate-pulse');
+            if (testStrategyBtn) testStrategyBtn.classList.add('hidden');
             modal.showModal();
 
-            // 5. Petición al Servidor
-            fetch(url)
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
                 .then(response => {
-                    // Validamos si la respuesta es exitosa (Status 200-299)
                     if (!response.ok) {
-                        // Si falla (ej. 500 o 404), leemos el texto para saber qué pasó (probablemente HTML de error)
-                        return response.text().then(text => { 
-                            throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}...`);
+                        return response.text().then(text => {
+                            try {
+                                const jsonErr = JSON.parse(text);
+                                throw new Error(jsonErr.error || `Server Error (${response.status})`);
+                            } catch (e) {
+                                throw new Error(`Server Error (${response.status})`);
+                            }
                         });
                     }
-                    // Si todo bien, parseamos el JSON
                     return response.json();
                 })
                 .then(data => {
                     modalSearchString.classList.remove('animate-pulse');
-                    
+
                     if (data.status === 'success') {
-                        // Caso Exitoso
                         modalStrategyName.textContent = data.strategy_name || 'Search Strategy';
                         modalSearchString.textContent = data.final_search_string || 'No search string generated yet.';
+
+                        // Show Test Button if configured
+                        if (testStrategyBtn && typeof builderUrlBase !== 'undefined') {
+                            testStrategyBtn.href = `${builderUrlBase}?question_id=${questionId}`;
+                            testStrategyBtn.classList.remove('hidden');
+                        }
                     } else {
-                        // El servidor respondió 200 pero con un mensaje de error lógico
                         modalSearchString.innerHTML = `<span class="text-error">Error: ${data.error}</span>`;
                     }
                 })
                 .catch(error => {
-                    // Manejo de errores de red o excepciones
                     console.error('Error AJAX:', error);
                     modalSearchString.classList.remove('animate-pulse');
-                    modalSearchString.innerHTML = `<span class="text-error">Failed to load strategy.<br><br>Technical details: ${error.message}</span>`;
+                    modalSearchString.innerHTML = `<span class="text-error text-sm">Failed to generate strategy.<br>${error.message}</span>`;
                 });
         }
     });

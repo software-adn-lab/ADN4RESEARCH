@@ -2,9 +2,10 @@
 {% load static %}
 {% block eligibility_criteria_content %}
 
-<div class="p-4" data-project-id="{{ project.id }}">
+<div class="p-6" data-project-id="{{ project.id }}"
+    data-is-past-stage="{% if not is_editable and is_owner %}true{% else %}false{% endif %}">
     {% csrf_token %}
-    
+
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-base-content">Eligibility Criteria Panel</h1>
@@ -24,7 +25,7 @@
     </div>
 
     <div class="space-y-8">
-        
+
         <div class="space-y-3">
             <h2 class="text-lg font-semibold text-base-content flex items-center gap-2">
                 Inclusion Criteria
@@ -44,10 +45,12 @@
                         {% for criterion in inclusion_criteria %}
                         <tr data-id="{{ criterion.id }}" class="hover:bg-base-200 transition-colors">
                             <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter description">{{ criterion.description }}</div>
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
+                                    data-placeholder="Enter description">{{ criterion.description }}</div>
                             </td>
                             <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
+                                    data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
                             </td>
                             <td class="p-2 text-center">
                                 {% if criterion.status == 'APPROVED' %}
@@ -60,15 +63,48 @@
                             </td>
                             <td class="p-2 text-center">
                                 <div class="flex justify-center gap-2">
-                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn" title="Approve">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    </button>
-                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn" title="Reject">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                    <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn" title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" /></svg>
-                                    </button>
+                                    {% if criterion.justification %}
+                                    <div class="tooltip" data-tip="{{ criterion.justification }}">
+                                        <button class="btn btn-ghost btn-xs">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if is_editable or is_owner %}
+                                    <div class="flex gap-1">
+                                        <button
+                                            class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn"
+                                            title="Approve">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn"
+                                            title="Reject">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
+                                            title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="autosave-status text-xs h-4 mt-1"></div>
                             </td>
@@ -77,6 +113,7 @@
                     </tbody>
                 </table>
 
+                {% if is_editable or is_owner %}
                 <a id="add-inclusion-btn" href="#"
                     class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,6 +121,7 @@
                     </svg>
                     Add inclusion criterion
                 </a>
+                {% endif %}
             </div>
         </div>
 
@@ -106,10 +144,12 @@
                         {% for criterion in exclusion_criteria %}
                         <tr data-id="{{ criterion.id }}" class="hover:bg-base-200 transition-colors">
                             <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter description">{{ criterion.description }}</div>
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
+                                    data-placeholder="Enter description">{{ criterion.description }}</div>
                             </td>
                             <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
+                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
+                                    data-placeholder="Enter motivation">{{ criterion.motivation }}</div>
                             </td>
                             <td class="p-2 text-center">
                                 {% if criterion.status == 'APPROVED' %}
@@ -122,15 +162,48 @@
                             </td>
                             <td class="p-2 text-center">
                                 <div class="flex justify-center gap-2">
-                                    <button class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn" title="Approve">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    </button>
-                                    <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn" title="Reject">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                    <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn" title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" /></svg>
-                                    </button>
+                                    {% if criterion.justification %}
+                                    <div class="tooltip" data-tip="{{ criterion.justification }}">
+                                        <button class="btn btn-ghost btn-xs">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if is_editable or is_owner %}
+                                    <div class="flex gap-1">
+                                        <button
+                                            class="btn btn-ghost btn-xs text-success hover:bg-success/10 approve-btn"
+                                            title="Approve">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button class="btn btn-ghost btn-xs text-error hover:bg-error/10 reject-btn"
+                                            title="Reject">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
+                                            title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="autosave-status text-xs h-4 mt-1"></div>
                             </td>
@@ -139,6 +212,7 @@
                     </tbody>
                 </table>
 
+                {% if is_editable or is_owner %}
                 <a id="add-exclusion-btn" href="#"
                     class="p-3 border-t border-base-300 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,10 +220,58 @@
                     </svg>
                     Add exclusion criterion
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+<div class="flex text-center justify-center p-6">
+    {% if is_owner and is_editable %}
+    <form method="POST" action="{% url 'design:consolidate_eligibility_stage' project.id %}"
+        onsubmit="return confirm('Are you sure? This will REJECT all pending drafts and advance to the next stage.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            Consolidate Stage
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<dialog id="review_modal" class="modal">
+    <div class="modal-box">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+
+        <h3 class="font-bold text-lg" id="modal-title">Review Criterion</h3>
+        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+
+        <form id="review-form" class="mt-4 space-y-4">
+            <input type="hidden" name="criterion_id" id="modal-criterion-id">
+            <input type="hidden" name="action_type" id="modal-action-type"> <!-- 'approve' or 'reject' -->
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Justification</span>
+                </label>
+                <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
+                    placeholder="Type your justification..."></textarea>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 
 <script>
     const URLS = {

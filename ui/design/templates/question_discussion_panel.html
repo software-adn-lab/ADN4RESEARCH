@@ -2,24 +2,17 @@
 {% load static %}
 
 {% block discusion_panel_content %}
-<div class="p-6" data-project-id="{{ project.id }}">
-    
+<div class="p-6" data-project-id="{{ project.id }}"
+    data-is-past-stage="{% if not is_editable and is_owner %}true{% else %}false{% endif %}">
+
     <div class="flex justify-between items-center mb-6">
+
         <div>
             <h1 class="text-2xl font-bold text-base-content">Discussion Panel</h1>
             <p class="text-sm text-base-content/70">Review and justify decisions on research questions.</p>
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <form method="GET" action="">
-                <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
-                    <option value="">All Statuses</option>
-                    <option value="SUGGESTED" {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>Suggested</option>
-                    <option value="APPROVED" {% if current_status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
-                    <option value="REJECTED" {% if current_status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
-                </select>
-            </form>
-
             <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
@@ -32,7 +25,7 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto border border-base-300 rounded-lg">
+    <div class="border border-base-300 rounded-lg">
         <table class="table w-full table-fixed">
             <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                 <tr>
@@ -46,68 +39,68 @@
                 {% for question in questions %}
                 <tr class="hover">
                     <td class="p-2">
-                        <div class="whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium" 
-                             title="{{ question.question }}">
-                             {{ question.question }}
+                        <div class="whitespace-normal break-words w-full font-medium" title="{{ question.question }}">
+                            {{ question.question }}
                         </div>
                     </td>
-                    
+
                     <td class="p-2">
-                        <div class="whitespace-nowrap overflow-hidden text-ellipsis w-full text-sm text-base-content/80"
-                             title="{{ question.motivation }}">
+                        <div class="whitespace-normal break-words w-full text-sm text-base-content/80"
+                            title="{{ question.motivation }}">
                             {{ question.motivation|default:"-" }}
                         </div>
                     </td>
 
                     <td class="text-center p-2">
                         {% if question.status == 'APPROVED' %}
-                            <div class="badge badge-success gap-1 text-white">Approved</div>
+                        <div class="badge badge-success gap-1 text-white">Approved</div>
                         {% elif question.status == 'REJECTED' %}
-                            <div class="badge badge-error gap-1 text-white">Rejected</div>
+                        <div class="badge badge-error gap-1 text-white">Rejected</div>
                         {% elif question.status == 'SUGGESTED' %}
-                            <div class="badge badge-info gap-1 text-white">Suggested</div>
+                        <div class="badge badge-info gap-1 text-white">Suggested</div>
                         {% else %}
-                            <div class="badge badge-ghost">{{ question.get_status_display }}</div>
+                        <div class="badge badge-ghost">{{ question.get_status_display }}</div>
                         {% endif %}
                     </td>
 
                     <td class="text-center p-2">
                         {% if question.status == 'SUGGESTED' %}
+                        {% if is_editable or is_owner %}
                         <div class="flex justify-center gap-2">
-                            <button type="button" 
-                                    class="btn btn-circle btn-success btn-xs text-white review-btn"
-                                    data-id="{{ question.id }}"
-                                    data-action="APPROVED"
-                                    title="Approve">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                            <button type="button" class="btn btn-circle btn-success btn-xs text-white review-btn"
+                                data-id="{{ question.id }}" data-action="APPROVED" title="Approve">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                 </svg>
                             </button>
 
-                            <button type="button"
-                                    class="btn btn-circle btn-error btn-xs text-white review-btn"
-                                    data-id="{{ question.id }}"
-                                    data-action="REJECTED"
-                                    title="Reject">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                            <button type="button" class="btn btn-circle btn-error btn-xs text-white review-btn"
+                                data-id="{{ question.id }}" data-action="REJECTED" title="Reject">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
+                        {% endif %}
                         {% else %}
-                            <div class="tooltip" data-tip="{{ question.justification|default:'No justification' }}">
-                                <button class="btn btn-ghost btn-xs">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                                    </svg>
-                                </button>
-                            </div>
+                        <div class="tooltip" data-tip="{{ question.justification|default:'No justification' }}">
+                            <button class="btn btn-ghost btn-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                                </svg>
+                            </button>
+                        </div>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-base-content/50">No questions found in this project.</td>
+                    <td colspan="4" class="text-center py-4 text-base-content/50">No questions found in this project.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -115,16 +108,19 @@
     </div>
 </div>
 <div class="flex text-center justify-center p-6">
-    {% if is_owner %}
-        <form method="POST" action="{% url 'design:consolidate_discussion_stage' project.id %}" onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-                Consolidate Stage
-            </button>
-        </form>
+    {% if is_owner and is_editable %}
+    <form method="POST" action="{% url 'design:consolidate_discussion_stage' project.id %}"
+        onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            Consolidate Stage
+        </button>
+    </form>
     {% endif %}
 </div>
 
@@ -133,24 +129,23 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
         </form>
-        
+
         <h3 class="font-bold text-lg" id="modal-title">Review Question</h3>
         <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
-        
+
         <form id="review-form" class="mt-4 space-y-4">
             {% csrf_token %}
             <input type="hidden" name="question_id" id="modal-question-id">
             <input type="hidden" name="verdict" id="modal-verdict">
-            
+
             <div class="form-control">
                 <label class="label">
                     <span class="label-text">Justification <span class="text-error">*</span></span>
                 </label>
-                <textarea name="justification" id="modal-justification" 
-                          class="textarea textarea-bordered h-24" 
-                          placeholder="Type your justification about your decision..." required></textarea>
+                <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
+                    placeholder="Type your justification about your decision..." required></textarea>
             </div>
-            
+
             <div class="modal-action">
                 <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
             </div>

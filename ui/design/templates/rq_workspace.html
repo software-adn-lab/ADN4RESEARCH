@@ -1,6 +1,6 @@
 {% extends 'base_tabs.html'%}
 {% block rq_workspace_content %}
-<div class="p-4" data-project-id="{{ project.id }}">
+<div class="p-6" data-project-id="{{ project.id }}">
     {% csrf_token %}
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-base-content">Research Question Workspace</h1>
@@ -10,26 +10,26 @@
                 <div class="form-control">
                     <select name="status" id="status-filter" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                         <option value="">All Statuses</option>
-                        
+
                         <option value="DRAFT" 
                                 {% if current_status_filter == 'DRAFT' %}selected{% endif %}>
-                                Draft
+                            Draft
                         </option>
-                        
+
                         <option value="READY_TO_SEND" 
                                 {% if current_status_filter == 'READY_TO_SEND' %}selected{% endif %}>
-                                Ready to send
+                            Ready to send
                         </option>
-                        
+
                         <option value="SUGGESTED" 
                                 {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>
-                                Suggested
+                            Suggested
                         </option>
                     </select>
                 </div>
             </form>
         </div>
-        
+
     </div>
     <div class="space-y-5">
         <div class="space-y-8">
@@ -52,37 +52,38 @@
                                 data-href="{% url 'design:edit_research_question' question.id %}"
                                 class="hover:bg-base-200 transition-colors cursor-pointer">
                                 <td class="p-2">
-                                    <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
+                                    <div class="whitespace-normal break-words focus:outline-none w-full p-1 rounded"
                                         title="{{ question.question }}">
                                         {% if question.question %}
-                                            {{ question.question }}
+                                        {{ question.question }}
                                         {% else %}
                                         <span class="text-base-content/50 italic">No question provided</span>
                                         {% endif %}
                                     </div>
                                 </td>
                                 <td class="p-2">
-                                    <div class="whitespace-nowrap overflow-hidden text-ellipsis focus:outline-none w-full p-1 rounded"
+                                    <div class="whitespace-normal break-words focus:outline-none w-full p-1 rounded"
                                         title="{{ question.motivation }}">
                                         {% if question.motivation %}
-                                            {{ question.motivation }}
+                                        {{ question.motivation }}
                                         {% else %}
                                         <span class="text-base-content/50 italic">No motivation provided</span>
                                         {% endif %}
                                     </div>
                                 </td>
                                 <td class="p-2">
-                                    <div class="focus:outline-none w-full p-1 rounded text-center">{{ project.research_framework.name }}</div>
+                                    <div class="focus:outline-none w-full p-1 rounded text-center">
+                                        {{project.research_framework.name }}</div>
                                 </td>
                                 <td class="text-center">
                                     {% if question.status == 'APPROVED' %}
-                                        <div class="badge badge-success gap-1 text-white">Approved</div>
+                                    <div class="badge badge-success gap-1 text-white">Approved</div>
                                     {% elif question.status == 'REJECTED' %}
-                                        <div class="badge badge-error gap-1 text-white">Rejected</div>
+                                    <div class="badge badge-error gap-1 text-white">Rejected</div>
                                     {% elif question.status == 'SUGGESTED' %}
-                                        <div class="badge badge-info gap-1 text-white">Suggested</div>
+                                    <div class="badge badge-info gap-1 text-white">Suggested</div>
                                     {% else %}
-                                        <div class="badge badge-ghost">{{ question.get_status_display }}</div>
+                                    <div class="badge badge-ghost">{{ question.get_status_display }}</div>
                                     {% endif %}
                                 </td>
 
@@ -109,13 +110,15 @@
                                         </a>
                                         <!-- Search Strategy Button (NEW) -->
                                         {% if question.question %}
-                                        <button 
+                                        <button
                                             class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
                                             title="View Search Strategy"
                                             data-url="{% url 'design:get_search_strategy_for_question' question.id %}"
                                             data-question-id="{{ question.id }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
                                             </svg>
                                         </button>
                                         {% endif %}
@@ -155,14 +158,20 @@
                             {% for keyword in keywords %}
                             <tr data-id="{{ keyword.id }}" class="hover:bg-base-200 transition-colors">
                                 <td class="p-2">
-                                    <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter key term">{{ keyword.term }}</div>
+                                    <div contenteditable="true"
+                                        class="editable-cell focus:outline-none w-full p-1 rounded"
+                                        data-placeholder="Enter key term">{{ keyword.term }}</div>
                                 </td>
                                 <td class="p-2">
-                                    <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}</div>
+                                    <div contenteditable="true"
+                                        class="editable-cell focus:outline-none w-full p-1 rounded"
+                                        data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}
+                                    </div>
                                 </td>
                                 <td class="p-2 text-center">
                                     <div class="flex justify-center gap-2">
-                                        <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-keyword-btn"
+                                        <button
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-keyword-btn"
                                             title="Delete">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
@@ -179,7 +188,8 @@
                     </table>
 
                     <!-- Add keyword -->
-                    <a id="add-keyword-btn" href="#" class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                    <a id="add-keyword-btn" href="#"
+                        class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
@@ -191,18 +201,18 @@
     </div>
 </div>
 <dialog id="my_modal_3" class="modal">
-  <div class="modal-box w-11/12 max-w-2xl">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-    </form>
-    <h3 id="modal-strategy-name" class="text-lg font-bold">Search Strategy</h3>
-    <div class="py-4">
-        <p class="font-semibold text-base-content/80">Generated Search String:</p>
-        <div id="modal-search-string" class="p-3 mt-2 bg-base-200 rounded-md text-sm font-mono break-words">
-            Loading...
+    <div class="modal-box w-11/12 max-w-2xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <h3 id="modal-strategy-name" class="text-lg font-bold">Search Strategy</h3>
+        <div class="py-4">
+            <p class="font-semibold text-base-content/80">Generated Search String:</p>
+            <div id="modal-search-string" class="p-3 mt-2 bg-base-200 rounded-md text-sm font-mono break-words">
+                Loading...
+            </div>
         </div>
     </div>
-  </div>
 </dialog>
 <script>
     document.addEventListener('DOMContentLoaded', () => {

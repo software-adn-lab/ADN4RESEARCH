@@ -20,12 +20,14 @@ class EligibilityCriterion(models.Model):
         
     description = models.TextField()
     motivation = models.TextField(blank=True)
+    justification = models.TextField(blank=True)
     design_phase = models.ForeignKey('design.DesignPhase',on_delete=models.CASCADE, related_name='criteria')
     researcher = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
     last_modified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='modified_criteria',
         help_text="User who last modified the criterion"
     )
@@ -33,6 +35,7 @@ class EligibilityCriterion(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='reviewed_criteria',
         help_text="User who reviewed the criterion"
     )

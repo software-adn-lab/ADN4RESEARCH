@@ -15,6 +15,10 @@ class SearchStrategyService:
         json_definition = self._build_json_definition(keywords, exclusions)
         final_search_string = self._build_boolean_string(keywords, exclusions)
 
+        # Evitar crear versiones duplicadas si no hubo cambios
+        if strategy.final_search_string == final_search_string and strategy.json_definition == json_definition:
+             return strategy
+
         if user_id:
             strategy.last_modified_by_id = user_id
             
@@ -78,6 +82,10 @@ class SearchStrategyService:
             }
         )
         return strategy
+    
+    def delete_strategy_version(self, version_id: int):
+        version = SearchStrategyVersion.objects.get(id=version_id)
+        version.delete()
 
     # TRABAJO PARA SUGERIDOS SIN SINONIMOS Y CON SINONIMOS
     def _link_project_keywords_to_strategy(self, strategy: SearchStrategy, keyword_data: list[dict], clear_previous: bool = True):

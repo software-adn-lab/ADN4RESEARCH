@@ -3,7 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!mainContainer) return;
 
     const projectId = mainContainer.dataset.projectId;
+    const isPastStage = mainContainer.dataset.isPastStage === 'true';
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Modal elements
+    const reviewModal = document.getElementById('review_modal');
+    const reviewForm = document.getElementById('review-form');
+    const modalTitle = document.getElementById('modal-title');
+    const modalCriterionId = document.getElementById('modal-criterion-id');
+    const modalActionType = document.getElementById('modal-action-type');
+    const modalJustification = document.getElementById('modal-justification');
 
     const debounce = (func, delay) => {
         let timeout;
@@ -27,29 +36,97 @@ document.addEventListener("DOMContentLoaded", () => {
             body: method === 'POST' ? formData : null,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'An error occurred');
+        const data = await response.json();
+        if (!response.ok || data.success === false) {
+            throw new Error(data.error || 'An error occurred');
         }
-        return response.json();
+
+        return data;
     };
 
-    const updateStatusBadge = (statusEl, status) => {
+    const updateRowState = (tr, status, justification) => {
+        // 1. Update Status Badge
+        const statusCell = tr.querySelector('td:nth-child(3)');
         status = status.toUpperCase();
-        statusEl.textContent = status.charAt(0) + status.slice(1).toLowerCase();
         let badgeClass = 'badge badge-ghost text-xs';
+        let badgeText = 'Draft';
+
         if (status === 'APPROVED') {
-            badgeClass = 'badge badge-success text-xs';
+            badgeClass = 'badge badge-success text-xs text-white';
+            badgeText = 'Approved';
         } else if (status === 'REJECTED') {
-            badgeClass = 'badge badge-error text-xs';
+            badgeClass = 'badge badge-error text-xs text-white';
+            badgeText = 'Rejected';
         }
-        statusEl.className = badgeClass;
+        statusCell.innerHTML = `<span class="${badgeClass}">${badgeText}</span>`;
+
+        // 2. Update Actions Column (Info Button)
+        const actionsContainer = tr.querySelector('td:nth-child(4) .flex');
+        let infoBtn = actionsContainer.querySelector('.tooltip:has(button)');
+
+        if (!infoBtn) {
+            const firstChild = actionsContainer.firstElementChild;
+            if (firstChild && firstChild.classList.contains('tooltip')) {
+                infoBtn = firstChild;
+            }
+        }
+
+        if (justification) {
+            if (!infoBtn) {
+                infoBtn = document.createElement('div');
+                infoBtn.className = 'tooltip';
+                infoBtn.innerHTML = `
+                    <button class="btn btn-ghost btn-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                    </button>
+                `;
+                actionsContainer.prepend(infoBtn);
+            }
+            infoBtn.setAttribute('data-tip', justification);
+        } else {
+            if (infoBtn) infoBtn.remove();
+        }
     };
+
+    // Handle Review Form Submission
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const criterionId = modalCriterionId.value;
+            const actionType = modalActionType.value; // 'approve' or 'reject'
+            const justification = modalJustification.value;
+
+            // Find the row
+            const tr = document.querySelector(`tr[data-id="${criterionId}"]`);
+            if (!tr) return;
+
+            try {
+                let url;
+                if (actionType === 'approve') {
+                    url = URLS.approve.replace('9999', criterionId);
+                } else {
+                    url = URLS.reject.replace('9999', criterionId);
+                }
+
+                const data = await apiCall(url, 'POST', { justification });
+                updateRowState(tr, data.status, justification);
+                reviewModal.close();
+                reviewForm.reset();
+
+            } catch (error) {
+                console.error(`${actionType} failed:`, error);
+                alert(`Error: ${error.message}`);
+            }
+        });
+    }
 
     const bindRowEvents = (tr) => {
         const descriptionCell = tr.querySelector('td:nth-child(1) > div');
         const motivationCell = tr.querySelector('td:nth-child(2) > div');
-        const statusEl = tr.querySelector('.badge');
         const autosaveStatusEl = tr.querySelector('.autosave-status');
         const criterionType = tr.closest('tbody').id === 'inclusion-table-body' ? 'INCLUSION' : 'EXCLUSION';
         let lastSavedData = `${descriptionCell.textContent.trim()}|${motivationCell.textContent.trim()}`;
@@ -97,28 +174,34 @@ document.addEventListener("DOMContentLoaded", () => {
             cell.addEventListener('blur', saveChanges);
         });
 
-        tr.querySelector('.approve-btn')?.addEventListener('click', async () => {
+        tr.querySelector('.approve-btn')?.addEventListener('click', (e) => {
             const criterionId = tr.dataset.id;
             if (!criterionId) return;
-            try {
-                const url = URLS.approve.replace('9999', criterionId);
-                const data = await apiCall(url, 'POST');
-                updateStatusBadge(statusEl, data.status);
-            } catch (error) {
-                console.error('Approve failed:', error);
+
+            if (isPastStage) {
+                if (!confirm("This stage is already consolidated. Are you sure you want to modify this criterion?")) return;
             }
+
+            modalCriterionId.value = criterionId;
+            modalActionType.value = 'approve';
+            modalTitle.textContent = 'Approve Criterion';
+            reviewForm.reset(); // clear previous
+            reviewModal.showModal();
         });
 
-        tr.querySelector('.reject-btn')?.addEventListener('click', async () => {
+        tr.querySelector('.reject-btn')?.addEventListener('click', (e) => {
             const criterionId = tr.dataset.id;
             if (!criterionId) return;
-            try {
-                const url = URLS.reject.replace('9999', criterionId);
-                const data = await apiCall(url, 'POST');
-                updateStatusBadge(statusEl, data.status);
-            } catch (error) {
-                console.error('Reject failed:', error);
+
+            if (isPastStage) {
+                if (!confirm("This stage is already consolidated. Are you sure you want to modify this criterion?")) return;
             }
+
+            modalCriterionId.value = criterionId;
+            modalActionType.value = 'reject';
+            modalTitle.textContent = 'Reject Criterion';
+            reviewForm.reset();
+            reviewModal.showModal();
         });
 
         tr.querySelector('.delete-btn')?.addEventListener('click', async () => {
@@ -127,13 +210,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.remove();
                 return;
             }
-            if (confirm('Are you sure you want to delete this criterion?')) {
+
+            let message = 'Are you sure you want to delete this criterion?';
+            if (isPastStage) {
+                message = "This stage is already consolidated. Are you sure you want to DELETE this criterion?";
+            }
+
+            if (confirm(message)) {
                 try {
                     const url = URLS.delete.replace('9999', criterionId);
                     await apiCall(url, 'POST');
                     tr.remove();
                 } catch (error) {
                     console.error('Delete failed:', error);
+                    alert(`Error: ${error.message}`);
                 }
             }
         });
@@ -177,12 +267,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('#inclusion-table-body tr, #exclusion-table-body tr').forEach(bindRowEvents);
 
     // Event listeners for 'Add' buttons
-    document.getElementById("add-inclusion-btn").addEventListener("click", (e) => {
-        e.preventDefault();
-        addRow("inclusion-table-body");
-    });
-    document.getElementById("add-exclusion-btn").addEventListener("click", (e) => {
-        e.preventDefault();
-        addRow("exclusion-table-body");
-    });
+    const addInclusionBtn = document.getElementById("add-inclusion-btn");
+    if (addInclusionBtn) {
+        addInclusionBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            addRow("inclusion-table-body");
+        });
+    }
+
+    const addExclusionBtn = document.getElementById("add-exclusion-btn");
+    if (addExclusionBtn) {
+        addExclusionBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            addRow("exclusion-table-body");
+        });
+    }
 });

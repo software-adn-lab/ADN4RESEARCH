@@ -34,7 +34,6 @@ class ResearchQuestionService:
     @transaction.atomic
     def update_research_question(self, question_id, user, **data):
         try:
-            # Aqui accedo a la pregunta junto con el proyecto y su dueño
             question = ResearchQuestion.objects.select_related(
                 'design_phase__project__owner',
                 'design_phase__project__research_framework' 
@@ -50,9 +49,7 @@ class ResearchQuestionService:
         question = self.get_research_question_by_id(question_id, user)
         if question.status == ResearchQuestion.Status.APPROVED:
             raise ResearchQuestionError("Cannot delete an APPROVED question directly. Change its status first.")
-        project_id = question.design_phase_id
         question.delete()
-        return project_id
 
     def get_research_question_by_id(self, research_question_id: int, user: User):
         try:
@@ -173,7 +170,10 @@ class ResearchQuestionService:
         }
         if verdict not in allowed_verdicts:
             raise ValidationError(f"Estado no válido para una revisión: {verdict}")
+        
         question = ResearchQuestion.objects.get(id=question_id)
+        self._validate_stage_modification_permissions(question.design_phase, user_id)
+
         question.status = verdict
         question.reviewed_by_id = user_id
         question.justification = justification
@@ -181,6 +181,22 @@ class ResearchQuestionService:
         question.save(update_fields=['status', 'justification', 'reviewed_by', 'reviewed_at'])
         return question
     
+    def _validate_stage_modification_permissions(self, design_phase, user_id):
+        # Validate Stage Permissions
+        # Logic: If stage > RQ_DISCUSSION, only owner can review.
+        stages = [s for s, _ in DesignPhase.DesignStage.choices]
+        try:
+             current_idx = stages.index(design_phase.current_stage)
+             discussion_idx = stages.index(DesignPhase.DesignStage.RQ_DISCUSSION)
+             is_past_stage = current_idx > discussion_idx
+        except ValueError:
+             is_past_stage = False
+
+        is_owner = (design_phase.project.owner.id == user_id)
+        
+        if is_past_stage and not is_owner:
+             raise ValidationError("The Discussion stage is finished. You cannot review questions anymore.")
+
     def validate_reviewer_eligibility(self, question_id: int, user_id: int) -> ResearchQuestion:
         try:
             question = ResearchQuestion.objects.select_related(
@@ -258,7 +274,7 @@ class ResearchQuestionService:
             raise InvalidProjectStateError("Design phase is not active.")
         if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
             raise InvalidProjectStateError(
-                f"Phase must be in 'Discussion' stage, but is in '{phase.get_current_stage_display()}'."
+                f"Phase must be in 'Discussion' stage to consolidate, but is in '{phase.get_current_stage_display()}'."
             )
         if not phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).exists():
             raise ConsolidationError("Cannot consolidate without at least one APPROVED question.")

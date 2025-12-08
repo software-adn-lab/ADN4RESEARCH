@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth import get_user_model
-from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError
+from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError, ResearchQuestionError
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
@@ -108,11 +108,16 @@ def edit_research_question(request, question_id):
 @login_required
 def delete_research_question(request, question_id):
     try:
-        project_id = research_question_service.delete_research_question(question_id=question_id, user=request.user)
-        messages.success(request, "Research question deleted successfully.")
-        return redirect('design:rq_workspace', project_id=project_id)
+        question = research_question_service.get_research_question_by_id(question_id, request.user)
+        project_id = question.project.id
     except QuestionNotFoundError:
         raise Http404("Research question not found or access denied")
+    try:
+        research_question_service.delete_research_question(question_id=question_id, user=request.user)
+        messages.success(request, "Research question deleted successfully.")
+    except ResearchQuestionError as e:
+        messages.error(request, str(e))
+    return redirect('design:rq_workspace', project_id=project_id)
     
 @login_required
 @require_POST

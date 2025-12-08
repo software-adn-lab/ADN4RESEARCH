@@ -7,6 +7,7 @@ from apps.design.research_question.services.question_services import ResearchQue
 from apps.project.services.project_services import ProjectService
 from apps.design.shared.services.design_phase_service import DesignPhaseService
 from apps.design.exceptions.research_question_exceptions import QuestionReviewError
+from apps.design.shared.models.design_phase import DesignPhase
 
 # Instancia del servicio (o inyección de dependencias si usas eso)
 research_question_service = ResearchQuestionService()
@@ -28,7 +29,9 @@ def question_discussion_panel_view(request, project_id):
         'stage_end_date': stage_end_date,
         'timeline_stages': timeline_stages,
         'current_status_filter': status_filter,
-        'active_tab': 'question_discussion_panel', # Para resaltar el tab si usas base_tabs active_tab == 'question_discussion_panel'
+        'active_tab': 'question_discussion_panel', 
+        'current_stage_value': project.design_phase.current_stage,
+        'is_editable': project.design_phase.current_stage == DesignPhase.DesignStage.RQ_DISCUSSION,
     }
     return render(request, 'question_discussion_panel.html', context)
 

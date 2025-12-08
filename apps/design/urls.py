@@ -17,7 +17,7 @@ urlpatterns = [
     path('edit-research-question/<int:question_id>/', research_question.edit_research_question, name='edit_research_question'),
     path('delete-research-question/<int:question_id>/', research_question.delete_research_question, name='delete_research_question'),
     path('send-research-question/<int:question_id>/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
-    path('get-strategy/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
+    path('get-strategy/question/<int:question_id>/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'), #Para las automaticas se generan al momento de guardar
     #'design:design_stages' project.id
     path('design-stages/<int:project_id>/', navigation.design_stages_router, name='design_stages'),
     
@@ -31,6 +31,7 @@ urlpatterns = [
     path('approve-criterion/<int:criterion_id>/', eligibility_criterion.approve_eligibility_criterion, name='approve_criterion'),
     path('reject-criterion/<int:criterion_id>/', eligibility_criterion.reject_eligibility_criterion, name='reject_criterion'),
     path('delete-criterion/<int:criterion_id>/', eligibility_criterion.delete_eligibility_criterion, name='delete_criterion'),
+    path('consolidate-eligibility/<int:project_id>/', eligibility_criterion.consolidate_eligibility_stage, name='consolidate_eligibility_stage'),
 
     path('project-keyword/create/<int:project_id>/', project_keyword.create_project_keyword, name='create_project_keyword'),
     path('project-keyword/update/<int:keyword_id>/', project_keyword.update_project_keyword, name='update_project_keyword'),
@@ -46,4 +47,5 @@ urlpatterns = [
     path('search-strategy/results/<int:strategy_id>/', search_strategy.search_results_view, name='search_results_view'),
     path('search-strategy/approve/<int:strategy_id>/', search_strategy.approve_strategy, name='approve_strategy'),
     path('search-strategy/reject/<int:strategy_id>/', search_strategy.reject_strategy, name='reject_strategy'),
+    path('search-strategy/version/delete/<int:version_id>/', search_strategy.delete_strategy_version, name='delete_strategy_version'),
 ]

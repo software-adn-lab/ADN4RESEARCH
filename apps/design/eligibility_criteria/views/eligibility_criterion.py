@@ -5,8 +5,11 @@ from apps.project.services.project_services import ProjectService
 from django.http import JsonResponse
 from django.shortcuts import render
 from apps.design.shared.services.design_phase_service import DesignPhaseService
+from apps.design.shared.models.design_phase import DesignPhase
 from apps.design.shared.views.navigation import login_required
 from django.views.decorators.http import require_POST
+from django.shortcuts import redirect
+from django.contrib import messages
 
 eligibility_service = EligibilityCriterionService()
 project_service = ProjectService()
@@ -30,6 +33,9 @@ def open_eligibility_criteria_panel(request, project_id):
         'stage_end_date': stage_end_date,
         'current_status_filter': status_filter, 
         'active_tab': 'eligibility_criteria_panel',
+        'is_owner': project.owner == request.user,
+        'current_stage_value': project.design_phase.current_stage,
+        'is_editable': project.design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION,
     }
     return render(request, 'eligibity_criteria_panel.html', context)
 
@@ -102,7 +108,12 @@ def update_eligibility_criterion(request, criterion_id):
 @require_POST
 def approve_eligibility_criterion(request, criterion_id):
     try:
-        criterion = eligibility_service.approve_eligibility_criterion(criterion_id, request.user)
+        justification = request.POST.get('justification', '')
+        criterion = eligibility_service.approve_eligibility_criterion(
+            criterion_id, 
+            request.user, 
+            justification=justification
+        )
         return JsonResponse({
             'success': True,
             'criterion_id': criterion.id,
@@ -120,7 +131,12 @@ def reject_eligibility_criterion(request, criterion_id):
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
     try:
-        criterion = eligibility_service.reject_eligibility_criterion(criterion_id, request.user)
+        justification = request.POST.get('justification', '')
+        criterion = eligibility_service.reject_eligibility_criterion(
+            criterion_id, 
+            request.user, 
+            justification=justification
+        )
         return JsonResponse({
             'success': True,
             'criterion_id': criterion.id,
@@ -138,9 +154,26 @@ def delete_eligibility_criterion(request, criterion_id):
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
     try:
-        eligibility_service.delete_eligibility_criterion(criterion_id)
+        eligibility_service.delete_eligibility_criterion(criterion_id, user=request.user)
         return JsonResponse({'success': True, 'message': 'Criterion deleted successfully'})
     except EligibilityCriterion.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Criterion not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred during deletion'})
+
+@login_required
+@require_POST
+def consolidate_eligibility_stage(request, project_id):
+    try:
+        stats = eligibility_service.consolidate_criteria(
+            project_id=project_id,
+            user=request.user
+        )
+        msg = f"Stage consolidated! {stats.get('auto_rejected', 0)} drafts auto-rejected."
+        messages.success(request, msg)
+        return redirect('design:eligibility_criteria_panel', project_id=project_id)
+        
+    except Exception as e:
+        messages.error(request, f"Error consolidating stage: {str(e)}")
+        return redirect('design:eligibility_criteria_panel', project_id=project_id)
+

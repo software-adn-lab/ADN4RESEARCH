@@ -1,4 +1,5 @@
 
+import logging
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 from apps.design.research_question.services.question_services import ResearchQuestionService
@@ -48,6 +49,7 @@ def open_search_strategy_panel(request, project_id):
 def generate_and_save_search_string_for_question(request, question_id):
     try:
         strategy = search_strategy_service.get_strategy_for_question(question_id)
+        logging.debug(f"Generating search string for strategy ID: {strategy.id if strategy else 'None'}")
 
         if not strategy:
             return JsonResponse({'error': 'Strategy not found'}, status=404)
@@ -223,3 +225,12 @@ def reject_strategy(request, strategy_id):
     except Exception as e:
         messages.error(request, str(e))
         return redirect(request.META.get('HTTP_REFERER', '/'))
+        
+@login_required
+@require_POST
+def delete_strategy_version(request, version_id):
+    try:
+        search_strategy_service.delete_strategy_version(version_id)
+        return JsonResponse({'status': 'success', 'message': 'Version deleted successfully'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
