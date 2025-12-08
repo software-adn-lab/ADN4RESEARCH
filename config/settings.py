@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.notification.apps.NotificationConfig",
     # Third party apps
     "behave_django",
+    "storages",  # Django-storages para S3/MinIO
     # Frontend (Tailwind)
     "tailwind",
     "theme",
@@ -233,7 +234,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Storage configuration
 # S3-compatible storage (AWS S3, MinIO, etc.)
-USE_S3 = os.environ.get("USE_S3", "False") == "True"
+USE_S3 = os.environ.get("USE_S3", "false").lower() == "true"
 
 if USE_S3:
     # S3 Storage Settings

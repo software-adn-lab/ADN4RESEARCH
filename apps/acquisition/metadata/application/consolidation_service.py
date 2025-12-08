@@ -3,7 +3,7 @@ ConsolidationService - Servicio de aplicación para consolidación de metadatos.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
 from apps.acquisition.metadata.domain.entities.consolidation_result import ConsolidationResult
@@ -21,7 +21,7 @@ class ConsolidationService:
     def __init__(
         self,
         connectors: Dict[str, Any],
-        repository: Optional[IStudyRepository] = None
+        repository: IStudyRepository
     ):
         """Inicializa el servicio con conectores externos."""
         self.connectors = connectors
@@ -112,7 +112,6 @@ class ConsolidationService:
             "successful": 0,
             "failed": 0,
             "enriched_fields": 0,
-            "normalized_fields": 0,
         }
 
         for study in studies:
@@ -183,7 +182,6 @@ class ConsolidationService:
             "successful": 0,
             "failed": 0,
             "enriched_fields": 0,
-            "normalized_fields": 0,
         }
 
     def _consolidate_single(self, study: Study) -> Study:

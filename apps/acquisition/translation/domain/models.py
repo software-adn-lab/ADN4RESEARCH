@@ -218,13 +218,5 @@ class NormalizedStrategy:
             and self.year_filter == other.year_filter
         )
 
-    def __hash__(self) -> int:
-        """
-        Hash basado en valor (necesario para frozen=True).
-        """
-        return hash((
-            self.strategy_id,
-            tuple(self.main_terms),
-            tuple(self.exclusions),
-            self.year_filter
-        ))
+    # __hash__ es generado automáticamente por @dataclass(frozen=True)
+    # basado en todos los campos inmutables

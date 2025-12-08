@@ -142,9 +142,8 @@ def step_ejecutar_descubrimiento(context, strategy_id: str):
     # Crear servicio con inyección de dependencias
     service = DiscoveryService(connectors=connectors)
 
-    # Ejecutar caso de uso (firma esperada)
+    # Ejecutar caso de uso (firma actualizada - strategy_id ya no se usa)
     result = service.execute(
-        strategy_id=context.strategy_id,
         translation_statuses=context.translation_statuses,
         supported_sources=context.supported_sources,
     )
@@ -224,17 +223,15 @@ def step_resumen_minimo(context, strategy_id: str, expected_resultado: str):
     Valida resumen de ejecución (aceptación, no exhaustivo).
 
     Verificaciones clave:
-    - id_estrategia coincide
     - resultado coincide y es válido ('complete' | 'partial')
     - total_bruto = suma(total_por_fuente)
     - total_unicos ≤ total_bruto
+    
+    NOTA: id_estrategia ya no se incluye en el summary (se eliminó del servicio)
+    pero mantenemos el parámetro en el step para compatibilidad con el .feature
     """
     assert "summary" in context.discovery_result, "Falta 'summary' en resultado"
     summary = context.discovery_result["summary"]
-
-    # id_estrategia
-    assert summary.get("id_estrategia") == strategy_id, \
-        f"id_estrategia: esperado '{strategy_id}', recibido '{summary.get('id_estrategia')}'"
 
     # resultado
     assert summary.get("resultado") == expected_resultado, \

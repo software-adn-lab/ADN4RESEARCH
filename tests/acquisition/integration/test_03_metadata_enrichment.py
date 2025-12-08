@@ -16,6 +16,7 @@ from hypothesis.extra.django import TestCase as HypothesisTestCase
 
 from tests.acquisition.integration.base_live_test import BaseLiveTest
 from apps.acquisition.shared.domain.entities.study import Study
+from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
 
 class MetadataEnrichmentLiveTest(BaseLiveTest):
@@ -27,6 +28,20 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
     - Los datos enriquecidos son precisos
     - El procesamiento en batch funciona correctamente
     """
+    
+    def _create_dummy_strategy(self):
+        """
+        Ayudante: Simula que Design creó una estrategia en BD.
+        
+        En producción, Design crea la estrategia y pasa el ID a Acquisition.
+        En tests, debemos simular esto creando una estrategia dummy.
+        """
+        return SearchStrategy.objects.create(
+            status=SearchStrategy.Status.DRAFT,
+            final_search_string="test search string",
+            json_definition={"test": "data"},
+            created_by=self.test_user
+        )
     
     def test_selection_enriches_studies_via_facade(self):
         """
@@ -86,11 +101,16 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         
         for study_data in selected_studies:
             # Convertir el dict a entidad Study
+            # Extraer el valor del DOI si es un objeto
+            doi_val = study_data.get('doi')
+            if hasattr(doi_val, 'value'):
+                doi_val = doi_val.value  # Extraer el string si es un objeto DOI
+            
             study = Study.create_discovered(
                 title=study_data['title'],
                 link=study_data['link'],
                 source=str(study_data['source']),
-                doi=study_data.get('doi')
+                doi=doi_val  # <--- Pasamos el valor limpio
             )
             
             # Si tiene authors, agregarlos
@@ -258,8 +278,11 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         # Persistir un estudio (filtrar el DTO)
         preview_result.studies = preview_result.studies[:1]
         
+        # --- FIX: Crear la estrategia antes de finalizar ---
+        dummy_strategy = self._create_dummy_strategy()
+        
         final_result = self.facade.finalize_search(
-            design_strategy_id=1,
+            design_strategy_id=dummy_strategy.id,  # <--- USAMOS EL ID REAL CREADO
             preview_result=preview_result,
             user=self.test_user
         )
@@ -271,7 +294,6 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         self.track_created_study(study_id)
         
         print(f"\nEstudio persistido: {study_id}")
-        print(f"Título: {selected_studies[0]['title'][:80]}...")
         
         # Enriquecer el estudio
         print(f"\nEnriqueciendo estudio...")
@@ -330,8 +352,11 @@ class MetadataEnrichmentLiveTest(BaseLiveTest):
         # Máximo 3 para no tardar mucho (filtrar el DTO)
         preview_result.studies = preview_result.studies[:3]
         
+        # --- FIX: Crear la estrategia antes de finalizar ---
+        dummy_strategy = self._create_dummy_strategy()
+        
         final_result = self.facade.finalize_search(
-            design_strategy_id=1,
+            design_strategy_id=dummy_strategy.id,  # <--- USAMOS EL ID REAL CREADO
             preview_result=preview_result,
             user=self.test_user
         )

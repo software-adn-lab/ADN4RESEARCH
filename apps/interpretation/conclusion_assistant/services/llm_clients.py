@@ -208,11 +208,11 @@ class GeminiLLMClient(LLMClient):
             or "gemini-flash-latest"
         )
 
-    def _generate(self, prompt: str, max_output_tokens: int = 512) -> str:
+    def _generate(self, prompt: str, max_output_tokens: int = 2048) -> str:
         # Use the GenerativeModel API; wrap errors into RuntimeError to keep service layering simple
         try:
             model_instance = self.genai.GenerativeModel(self.model)
-            
+
             # Configure safety settings to be less restrictive
             safety_settings = {
                 self.genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
@@ -220,7 +220,7 @@ class GeminiLLMClient(LLMClient):
                 self.genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
                 self.genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: self.genai.types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
             }
-            
+
             response = model_instance.generate_content(
                 prompt,
                 generation_config=self.genai.types.GenerationConfig(
@@ -253,7 +253,11 @@ class GeminiLLMClient(LLMClient):
                 logger.error(
                     "Gemini response blocked. Finish reason: %s, Safety ratings: %s",
                     candidate.finish_reason,
-                    candidate.safety_ratings if hasattr(candidate, 'safety_ratings') else 'N/A',
+                    (
+                        candidate.safety_ratings
+                        if hasattr(candidate, "safety_ratings")
+                        else "N/A"
+                    ),
                 )
                 raise RuntimeError(
                     f"Gemini API response blocked (finish_reason={candidate.finish_reason}). "
@@ -333,7 +337,7 @@ class GeminiLLMClient(LLMClient):
         )
 
         try:
-            body = self._generate(prompt, max_output_tokens=256)
+            body = self._generate(prompt, max_output_tokens=2048)
         except Exception as e:
             logger.warning(
                 "Failed to generate opening message with Gemini, using fallback: %s", e
@@ -364,10 +368,11 @@ class GeminiLLMClient(LLMClient):
         )
 
         try:
-            return self._generate(prompt, max_output_tokens=256)
+            return self._generate(prompt, max_output_tokens=2048)
         except Exception as e:
             logger.warning(
-                "Failed to generate draft proposition with Gemini, using fallback: %s", e
+                "Failed to generate draft proposition with Gemini, using fallback: %s",
+                e,
             )
             # Fallback to default client
             return DefaultLLMClient().generate_draft_proposition(context, instruction)
@@ -383,10 +388,11 @@ class GeminiLLMClient(LLMClient):
         )
 
         try:
-            return self._generate(prompt, max_output_tokens=256)
+            return self._generate(prompt, max_output_tokens=2048)
         except Exception as e:
             logger.warning(
-                "Failed to generate refined proposition with Gemini, using fallback: %s", e
+                "Failed to generate refined proposition with Gemini, using fallback: %s",
+                e,
             )
             # Fallback to default client
             return DefaultLLMClient().generate_refined_proposition(
@@ -413,7 +419,7 @@ class GeminiLLMClient(LLMClient):
         )
 
         try:
-            response_text = self._generate(prompt, max_output_tokens=512)
+            response_text = self._generate(prompt, max_output_tokens=2048)
             # Parse JSON response
             proposals = json.loads(response_text)
             return proposals
@@ -455,7 +461,7 @@ class GeminiLLMClient(LLMClient):
         )
 
         try:
-            response_text = self._generate(prompt, max_output_tokens=1024)
+            response_text = self._generate(prompt, max_output_tokens=2048)
             # Parse JSON response
 
             proposals = json.loads(response_text)

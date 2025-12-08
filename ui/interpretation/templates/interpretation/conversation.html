@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load markdown_extras %}
 {% block content %}
 
 <div class="p-4" data-context-id="{{ context.id }}">
@@ -94,8 +95,8 @@
                                         </div>
                                         <span class="text-xs text-base-content/60">{{ t.created_at|date:"H:i" }}</span>
                                     </div>
-                                    <div class="bg-base-100 rounded p-3 mb-2">
-                                        <p class="text-sm text-base-content leading-relaxed">{{ t.body }}</p>
+                                    <div class="bg-base-100 rounded p-3 mb-2 prose prose-sm max-w-none">
+                                        <div class="text-sm text-base-content leading-relaxed markdown-content">{{ t.body|markdown }}</div>
                                     </div>
                                     {% if t.tags %}
                                     <div class="flex flex-wrap gap-1 mt-2">
@@ -155,8 +156,8 @@
                                         </span>
                                         <span class="text-xs text-base-content/60">{{ p.modified_at|date:"d/m/Y H:i" }}</span>
                                     </div>
-                                    <div class="bg-base-100 rounded border border-base-300 p-3 mb-4">
-                                        <p class="text-base-content leading-relaxed text-sm">{{ p.proposition_text }}</p>
+                                    <div class="bg-base-100 rounded border border-base-300 p-3 mb-4 prose prose-sm max-w-none">
+                                        <div class="text-base-content leading-relaxed text-sm markdown-content">{{ p.proposition_text|markdown }}</div>
                                     </div>
 
                                     {% if p.status != 'FINAL' %}
@@ -207,6 +208,137 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Markdown Content Styling */
+    .markdown-content {
+        line-height: 1.7;
+    }
+    
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3,
+    .markdown-content h4 {
+        font-weight: 600;
+        margin-top: 1em;
+        margin-bottom: 0.5em;
+        color: var(--fallback-bc, oklch(var(--bc)/1));
+    }
+    
+    .markdown-content h1 { font-size: 1.5em; }
+    .markdown-content h2 { font-size: 1.3em; }
+    .markdown-content h3 { font-size: 1.15em; }
+    .markdown-content h4 { font-size: 1em; }
+    
+    .markdown-content p {
+        margin-bottom: 0.75em;
+    }
+    
+    .markdown-content strong {
+        font-weight: 600;
+        color: var(--fallback-bc, oklch(var(--bc)/1));
+    }
+    
+    .markdown-content em {
+        font-style: italic;
+    }
+    
+    .markdown-content code {
+        background-color: var(--fallback-b2, oklch(var(--b2)/1));
+        padding: 0.15em 0.4em;
+        border-radius: 3px;
+        font-size: 0.9em;
+        font-family: 'Courier New', monospace;
+        color: var(--fallback-bc, oklch(var(--bc)/0.9));
+    }
+    
+    .markdown-content pre {
+        background-color: var(--fallback-b2, oklch(var(--b2)/1));
+        padding: 1em;
+        border-radius: 6px;
+        overflow-x: auto;
+        margin: 0.75em 0;
+        border: 1px solid var(--fallback-bc, oklch(var(--bc)/0.1));
+    }
+    
+    .markdown-content pre code {
+        background-color: transparent;
+        padding: 0;
+        font-size: 0.85em;
+    }
+    
+    .markdown-content ul,
+    .markdown-content ol {
+        margin-left: 1.5em;
+        margin-bottom: 0.75em;
+    }
+    
+    .markdown-content ul {
+        list-style-type: disc;
+    }
+    
+    .markdown-content ol {
+        list-style-type: decimal;
+    }
+    
+    .markdown-content li {
+        margin-bottom: 0.25em;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid var(--fallback-p, oklch(var(--p)/1));
+        padding-left: 1em;
+        margin: 0.75em 0;
+        color: var(--fallback-bc, oklch(var(--bc)/0.7));
+        font-style: italic;
+    }
+    
+    .markdown-content a {
+        color: var(--fallback-p, oklch(var(--p)/1));
+        text-decoration: underline;
+    }
+    
+    .markdown-content a:hover {
+        color: var(--fallback-pf, oklch(var(--pf)/1));
+    }
+    
+    .markdown-content hr {
+        border: none;
+        border-top: 1px solid var(--fallback-bc, oklch(var(--bc)/0.2));
+        margin: 1.5em 0;
+    }
+    
+    .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0.75em 0;
+    }
+    
+    .markdown-content table th,
+    .markdown-content table td {
+        border: 1px solid var(--fallback-bc, oklch(var(--bc)/0.2));
+        padding: 0.5em;
+        text-align: left;
+    }
+    
+    .markdown-content table th {
+        background-color: var(--fallback-b2, oklch(var(--b2)/1));
+        font-weight: 600;
+    }
+    
+    /* First paragraph no margin-top */
+    .markdown-content > p:first-child,
+    .markdown-content > h1:first-child,
+    .markdown-content > h2:first-child,
+    .markdown-content > h3:first-child {
+        margin-top: 0;
+    }
+    
+    /* Last element no margin-bottom */
+    .markdown-content > *:last-child {
+        margin-bottom: 0;
+    }
+</style>
 
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>

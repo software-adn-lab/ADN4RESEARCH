@@ -235,8 +235,8 @@ class AcquisitionOrchestrator:
         strategy = SearchStrategy.objects.get(id=design_strategy_id)
 
         # Actualizar definición en la estrategia unificada
-        strategy.definition = strategy_dict
-        strategy.start_execution(user)
+        strategy.json_definition = strategy_dict
+        strategy.save(update_fields=['json_definition'])
 
         logger.info(f"[FINAL] Executing strategy {design_strategy_id} with {len(selected_studies)} studies")
 
@@ -309,8 +309,9 @@ class AcquisitionOrchestrator:
         execution_model.new_studies_count = new_count
         execution_model.save(update_fields=["new_studies_count"])
 
-        # Actualizar estadísticas en la estrategia
-        strategy.complete_execution(len(persisted_studies), new_count)
+        # Actualizar estadísticas en la estrategia (manual update para no tocar Design)
+        strategy.total_studies_found = len(persisted_studies)
+        strategy.save(update_fields=['total_studies_found'])
 
         logger.info(f"[FINAL] Persisted {len(persisted_studies)} studies ({new_count} new) for execution {execution_model.id}")
 
@@ -555,25 +556,23 @@ class AcquisitionOrchestrator:
         if research_question_id:
             existing_strategy = UnifiedSearchStrategy.objects.filter(
                 research_question_id=research_question_id,
-                status=UnifiedSearchStrategy.Status.FINAL  # ← Buscar versiones finales
+                status=UnifiedSearchStrategy.Status.APPROVED  # ← Buscar versiones aprobadas
             ).first()
 
             if existing_strategy:
                 logger.info(f"Found existing final strategy: {existing_strategy.id}")
                 # Actualizar definición si es diferente
-                if existing_strategy.definition != strategy_dict:
-                    existing_strategy.definition = strategy_dict
-                    existing_strategy.save(update_fields=['definition'])
+                if existing_strategy.json_definition != strategy_dict:
+                    existing_strategy.json_definition = strategy_dict
+                    existing_strategy.save(update_fields=['json_definition'])
                 return existing_strategy
 
         # Crear nueva estrategia en Design (fallback para legacy)
-        strategy_name = name or f"Search Strategy {strategy_dict.get('strategy_id', 'unnamed')[:8]}"
         strategy = UnifiedSearchStrategy.objects.create(
             research_question_id=research_question_id,
-            name=strategy_name,
-            definition=strategy_dict,
+            json_definition=strategy_dict,
             created_by=user,
-            status=UnifiedSearchStrategy.Status.READY,  # Lista para ejecución
+            status=UnifiedSearchStrategy.Status.APPROVED,  # Lista para ejecución
         )
 
         logger.info(f"Created new SearchStrategy in Design: {strategy.id}")

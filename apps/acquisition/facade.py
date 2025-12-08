@@ -48,7 +48,6 @@ class PreviewSearchResult:
     total_found: int
     studies: List[Dict[str, Any]]  # Estudios como dicts simples
     strategy_dict: Dict[str, Any]  # Estrategia original para finalize
-    strategy_dict: Dict[str, Any]  # Estrategia original para finalize
 
 
 @dataclass

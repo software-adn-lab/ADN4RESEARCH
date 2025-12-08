@@ -1,3 +1,13 @@
+"""
+IEEE Playwright scraper - Internal implementation detail.
+
+This module contains the legacy Playwright-based scraping implementation
+for IEEE Xplore. It is used internally by IeeeWebStrategy and should not
+be imported directly by external code.
+
+This is an implementation detail that may be refactored or replaced in
+the future without affecting the public API.
+"""
 from typing import Iterable, Dict, Any, Optional
 from playwright.sync_api import sync_playwright, Page, BrowserContext
 import time

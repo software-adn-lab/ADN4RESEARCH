@@ -90,7 +90,9 @@ class ScopusTranslator(IStrategyTranslator):
         groups = []
         for main_term in main_terms:
             all_variants = [main_term.term] + main_term.synonyms
-            quoted_variants = [f'"{variant}"' for variant in all_variants]
+            # Escapar comillas para evitar queries rotas
+            safe_variants = [v.replace('"', '\\"') for v in all_variants]
+            quoted_variants = [f'"{v}"' for v in safe_variants]
             group = f"({' OR '.join(quoted_variants)})"
             groups.append(group)
         return groups
@@ -119,7 +121,9 @@ class ScopusTranslator(IStrategyTranslator):
         Returns:
             Query con exclusiones aplicadas
         """
-        quoted_exclusions = [f'"{exc}"' for exc in exclusions]
+        # Escapar comillas para evitar queries rotas
+        safe_exclusions = [exc.replace('"', '\\"') for exc in exclusions]
+        quoted_exclusions = [f'"{exc}"' for exc in safe_exclusions]
         exclusions_group = f"({' OR '.join(quoted_exclusions)})"
         return f"{main_query} AND NOT {exclusions_group}"
 

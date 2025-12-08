@@ -42,6 +42,7 @@ faker = "^37.12.0"
 dj-database-url = "^3.0.1"
 spacy = "^3.8.9"
 google-generativeai = "^0.8.5"
+markdown = ">=3.5"
 
 # Web Scraping
 requests = ">=2.31.0"
@@ -85,3 +86,11 @@ ignore-paths = ["^tests/.*$"]
 [tool.pylint.messages_control]
 # Disable specific warnings for behave decorators
 extension-pkg-whitelist = ["behave"]
+
+[[tool.mypy.overrides]]
+module = ["google.genai.*"]
+follow_untyped_imports = true
+
+[[tool.pyright.overrides]]
+module = ["google.genai.*"]
+follow_untyped_imports = true
