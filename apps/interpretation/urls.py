@@ -31,4 +31,7 @@ urlpatterns = [
     # Themes Created & Interpretation
     path('themes-created/', theme_discovery_views.themes_created_view, name='themes_created'),
     path('theme/<int:theme_id>/interpret/', views.start_theme_interpretation, name='start_theme_interpretation'),
+    
+    # Results Dashboard
+    path('dashboard/<int:project_id>/', views.results_dashboard, name='results_dashboard'),
 ]

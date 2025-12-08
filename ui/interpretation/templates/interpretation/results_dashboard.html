@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load interpretation_extras %}
+
+{% block content %}
+<div class="p-6 space-y-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-base-content">Dashboard de Resultados</h1>
+            <p class="text-base-content/70">Visualización analítica de los estudios y hallazgos del proyecto.</p>
+        </div>
+        <div class="flex gap-2">
+            <!-- Filter Button (Mockup) -->
+            <button class="btn btn-outline btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                Filtrar
+            </button>
+            <a href="{% url 'interpretation:index' %}" class="btn btn-ghost btn-sm">Volver</a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stats shadow bg-base-100 border border-base-300">
+            <div class="stat">
+                <div class="stat-title">Total Estudios</div>
+                <div class="stat-value text-primary">{{ dashboard_data.stats.total_studies }}</div>
+                <div class="stat-desc">Incluidos en la interpretación</div>
+            </div>
+        </div>
+        <!-- Add more stats here if available -->
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Studies per Year -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h2 class="card-title text-sm">Estudios por Año</h2>
+                <div class="h-64 w-full">
+                    <canvas id="yearChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Studies per Source -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h2 class="card-title text-sm">Distribución por Fuente</h2>
+                <div class="h-64 w-full">
+                    <canvas id="sourceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Synthesis Matrix -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-sm mb-4">Matriz de Cobertura Temática</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-xs w-full">
+                    <thead>
+                        <tr>
+                            <th>Estudio</th>
+                            {% for theme in dashboard_data.synthesis.coverage.themes %}
+                            <th class="text-center">{{ theme }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in dashboard_data.synthesis.coverage.matrix %}
+                        <tr class="hover">
+                            <td class="font-medium truncate max-w-xs" title="{{ row.study }}">
+                                {{ row.study }}
+                            </td>
+                            {% for theme in dashboard_data.synthesis.coverage.themes %}
+                            <td class="text-center">
+                                {% with count=row|get_item:theme %}
+                                    {% if count > 0 %}
+                                    <div class="badge badge-primary badge-sm">{{ count }}</div>
+                                    {% else %}
+                                    <span class="text-base-content/20">-</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="100%" class="text-center py-4 text-base-content/50">
+                                No hay datos de síntesis disponibles.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Year Chart
+        const yearCtx = document.getElementById('yearChart').getContext('2d');
+        new Chart(yearCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ dashboard_data.bibliometrics.years.labels|safe }},
+                datasets: [{
+                    label: 'Estudios',
+                    data: {{ dashboard_data.bibliometrics.years.data|safe }},
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+
+        // Source Chart
+        const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+        new Chart(sourceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ dashboard_data.bibliometrics.sources.labels|safe }},
+                datasets: [{
+                    data: {{ dashboard_data.bibliometrics.sources.data|safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

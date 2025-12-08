@@ -13,6 +13,8 @@ from apps.interpretation.conclusion_assistant.models import (
 )
 from apps.interpretation.conclusion_assistant.models.subtheme_models import SubTheme
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
+from apps.interpretation.structured_data.manager import StructuredDataManager
+from apps.interpretation.visualization.engine import ResultsVisualizationEngine
 
 
 service = InterpretationService()
@@ -40,24 +42,26 @@ def start_interpretation(request, subtheme_id):
 def start_theme_interpretation(request, theme_id):
     """Start interpretation directly from a Level 1 Theme (without subtheme)."""
     theme = get_object_or_404(Theme, id=theme_id)
-    
+
     try:
         subthemes = theme.subthemes.all()
-        
+
         if subthemes.exists():
             first_subtheme = subthemes.first()
             context, _ = service.initiate_interpretation_context(first_subtheme)
-            messages.success(request, f"Interpretation started for: {first_subtheme.name}")
+            messages.success(
+                request, f"Interpretation started for: {first_subtheme.name}"
+            )
         else:
             subtheme = SubTheme.objects.create(
                 theme=theme,
                 name=theme.name,
                 central_codes=[],
-                status=SubTheme.Status.IN_PROGRESS
+                status=SubTheme.Status.IN_PROGRESS,
             )
             context, _ = service.initiate_interpretation_context(subtheme)
             messages.success(request, f"Interpretation started for theme: {theme.name}")
-        
+
         return redirect(reverse("interpretation:conversation", args=[context.id]))
     except Exception as e:
         messages.error(request, f"Failed to start interpretation: {e}")
@@ -142,3 +146,36 @@ def finalize_proposition(request, context_id, prop_id):
     except Exception as e:
         messages.error(request, f"Error al finalizar proposición: {e}")
         return redirect(reverse("interpretation:conversation", args=[context_id]))
+
+
+@require_http_methods(["GET"])
+def results_dashboard(request, project_id):
+    """
+    Displays the interpretation dashboard with visualizations.
+    """
+    data_manager = StructuredDataManager()
+    viz_engine = ResultsVisualizationEngine()
+
+    # Get studies (optionally filtered from query params)
+    filters = {}
+    if request.GET.get("year_start"):
+        try:
+            filters["year_start"] = int(request.GET.get("year_start"))
+        except ValueError:
+            pass
+    if request.GET.get("year_end"):
+        try:
+            filters["year_end"] = int(request.GET.get("year_end"))
+        except ValueError:
+            pass
+    if request.GET.get("source"):
+        filters["source"] = request.GET.get("source")
+
+    studies = data_manager.get_studies_for_interpretation(str(project_id), filters)
+    dashboard_data = viz_engine.generate_dashboard_data(studies)
+
+    return render(
+        request,
+        "interpretation/results_dashboard.html",
+        {"dashboard_data": dashboard_data, "project_id": project_id},
+    )
