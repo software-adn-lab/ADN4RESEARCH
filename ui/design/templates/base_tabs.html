@@ -9,36 +9,37 @@
             {% for stage in timeline_stages %}
             <li class="h-20">
                 {% if not forloop.first %}
-                    <hr class="{% if stage.status == 'completed' or stage.status == 'current' %}bg-primary{% else %}bg-base-300{% endif %}" />
+                <hr
+                    class="{% if stage.status == 'completed' or stage.status == 'current' %}bg-primary{% else %}bg-base-300{% endif %}" />
                 {% endif %}
 
                 <div class="timeline-middle">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
-                        class="h-5 w-5 
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 
                         {% if stage.status == 'completed' %}text-primary
                         {% elif stage.status == 'current' %}text-white border-3 border-primary rounded-3xl
                         {% else %}text-base-300{% endif %}">
-                        
+
                         {% if stage.status == 'completed' %}
-                            <circle cx="10" cy="10" r="10" />
-                            <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                        
+                        <circle cx="10" cy="10" r="10" />
+                        <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+
                         {% elif stage.status == 'current' %}
-                            <circle cx="10" cy="10" r="10" />
+                        <circle cx="10" cy="10" r="10" />
                         {% else %}
-                            <circle cx="10" cy="10" r="8" />
+                        <circle cx="10" cy="10" r="8" />
                         {% endif %}
                     </svg>
                 </div>
 
-                <a href="{% url 'design:design_stages' project.id %}?target_stage={{ stage.key }}" 
-                   class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm
+                <a href="{% url 'design:design_stages' project.id %}?target_stage={{ stage.key }}"
+                    class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm
                           {% if stage.status == 'current' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% elif stage.status == 'completed' %}bg-primary hover:bg-gray-400 text-white{% endif %}">
                     {{ stage.label }}
                 </a>
 
                 {% if not forloop.last %}
-                    <hr class="{% if stage.status == 'completed' %}bg-primary{% else %}bg-base-300{% endif %}" />
+                <hr class="{% if stage.status == 'completed' %}bg-primary{% else %}bg-base-300{% endif %}" />
                 {% endif %}
             </li>
             {% endfor %}
@@ -49,8 +50,16 @@
         {% if messages %}
         <div class="mb-6 w-full">
             {% for message in messages %}
-            <div role="alert" class="alert alert-{{ message.tags }} shadow-sm mb-2 text-sm py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div role="alert" class="alert shadow-sm mb-2 text-sm font-bold py-1 bg-transparent border-2 
+                {% if 'success' in message.tags %}border-success text-success
+                {% elif 'error' in message.tags %}border-error text-error
+                {% elif 'warning' in message.tags %}border-warning text-warning
+                {% else %}border-info text-info{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    class="stroke-current shrink-0 w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
                 <span>{{ message }}</span>
                 <button class="btn btn-sm btn-circle btn-ghost" onclick="this.parentElement.remove()">✕</button>
             </div>
@@ -58,11 +67,11 @@
         </div>
         {% endif %}
         {% block rq_workspace_content %}{% endblock %}
-        
+
         {% block discusion_panel_content %}{% endblock %}
-        
+
         {% block eligibility_criteria_content %}{% endblock %}
-        
+
         {% block search_string_content %}{% endblock %}
 
     </div>

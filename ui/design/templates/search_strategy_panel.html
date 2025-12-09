@@ -95,13 +95,14 @@
                         <th class="w-16 text-center">Ver.</th>
                         <th>Search String</th>
                         <th class="w-24 text-center">Results</th>
+                        <th class="w-24 text-center">Status</th>
                         <th class="w-32">Date</th>
-                        <th class="w-24 text-center">Actions</th>
+                        <th class="w-32 text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="versions-table-body">
                     <tr>
-                        <td colspan="5" class="text-center">Loading...</td>
+                        <td colspan="6" class="text-center">Loading...</td>
                     </tr>
                 </tbody>
             </table>
@@ -109,6 +110,7 @@
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
+
 <dialog id="my_modal_3" class="modal">
     <div class="modal-box w-11/12 max-w-2xl">
         <form method="dialog">
@@ -133,6 +135,7 @@
         </div>
     </div>
 </dialog>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const tableBody = document.getElementById('question-table-body');

@@ -56,6 +56,7 @@ class SearchStrategyVersion(models.Model):
     final_search_string = models.TextField()
     json_definition = models.JSONField(default=dict)
     total_found = models.PositiveIntegerField(default=0, help_text="Number of studies found with this strategy")
+    status = models.CharField(max_length=20, choices=SearchStrategy.Status.choices, default=SearchStrategy.Status.DRAFT)
     
     metadata_snapshot = models.JSONField(default=dict) 
     

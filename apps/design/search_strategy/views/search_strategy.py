@@ -30,7 +30,7 @@ def open_search_strategy_panel(request, project_id):
         user=request.user,
         related_fields=['owner', 'design_phase']
     )
-    protocol_questions = project.protocol_questions  # Usando la property que arreglamos en Project
+    protocol_questions = project.protocol_questions
     stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
 
@@ -149,14 +149,17 @@ def get_strategy_versions(request, question_id):
         
         if not strategy:
             return JsonResponse({'versions': []})
+            
         versions = strategy.versions.all().order_by('-version_number').values(
             'id',
             'strategy_id',
             'version_number',
             'final_search_string',
             'total_found',
+            'status',
             'created_at'
         )
+        
         data = []
         for v in versions:
             data.append({
@@ -165,6 +168,7 @@ def get_strategy_versions(request, question_id):
                 'version': v['version_number'],
                 'string': v['final_search_string'],
                 'total_found': v['total_found'],
+                'status': v.get('status', 'DRAFT'),
                 'date': v['created_at'].strftime("%Y-%m-%d %H:%M")
             })
             
@@ -193,7 +197,7 @@ def search_results_view(request, strategy_id):
             'timeline_stages': design_phase_service.get_design_timeline_context(project.id)
         }
         return render(request, 'search_results.html', context)
-    except strategy.DoesNotExist:
+    except SearchStrategy.DoesNotExist:
         raise Http404("Strategy not found")
 
 @login_required

@@ -237,5 +237,13 @@ class SearchStrategyService:
              strategy.reviewed_by = user
         
         strategy.save()
+        strategy.save()
+        
+        # Update the latest version status to match the strategy status
+        latest_version = strategy.versions.first() # Ordered by -version_number
+        if latest_version:
+            latest_version.status = status
+            latest_version.save(update_fields=['status'])
+            
         return strategy
             

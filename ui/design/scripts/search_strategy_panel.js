@@ -2,12 +2,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('strategy_versions_modal');
     const tableBody = document.getElementById('versions-table-body');
     const viewButtons = document.querySelectorAll('.view-versions-btn');
+
     viewButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const questionId = btn.dataset.id;
             openHistoryModal(questionId);
         });
     });
+
     function openHistoryModal(questionId) {
         tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-base-content/50"><span class="loading loading-spinner"></span> Loading history...</td></tr>';
         modal.showModal();
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-error py-4">Error loading versions.</td></tr>';
             });
     }
+
     function renderTable(versions, questionId) {
         if (!versions || versions.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-base-content/50">No versions found. Build a strategy first.</td></tr>';
@@ -40,6 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="font-mono text-xs whitespace-normal break-words">${ver.string}</div>
                 </td>
                 <td class="text-center font-semibold">${ver.total_found}</td>
+                <td class="text-center">
+                    <span class="badge badge-sm ${getStatusBadgeClass(ver.status)}">${ver.status}</span>
+                </td>
                 <td class="text-xs text-base-content/70">${ver.date}</td>
                 <td class="text-center">
                     <div class="flex justify-center gap-2">
@@ -139,5 +145,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return cookieValue;
+    }
+
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'APPROVED': return 'badge-success text-white';
+            case 'REJECTED': return 'badge-error text-white';
+            default: return 'badge-ghost';
+        }
     }
 });
