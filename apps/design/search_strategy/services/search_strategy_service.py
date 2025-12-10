@@ -13,12 +13,11 @@ class SearchStrategyService:
         self.string_builder = SearchStringBuilder()
 
     @transaction.atomic
-    def generate_and_save_search_string(self, strategy_id: int, user_id: int = None) -> SearchStrategy:
+    def generate_and_save_search_string(self, strategy_id: int, user_id: int) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
         keywords = list(strategy.keywords.select_related('project_keyword').all())
         exclusions = list(strategy.exclusion_terms.all())
-        raw_json_definition = self._build_json_definition(keywords, exclusions)
-        json_definition = self.translation_service.translate_json_definition(raw_json_definition)
+        json_definition = self._build_json_definition(keywords, exclusions)
         final_search_string = self.string_builder.build_from_json(json_definition)
         if strategy.final_search_string == final_search_string and strategy.json_definition == json_definition:
              return strategy
@@ -114,7 +113,7 @@ class SearchStrategyService:
     def get_strategy_for_question(self, question_id: int) -> SearchStrategy | None:
         return SearchStrategy.objects.filter(research_question_id=question_id).first()
     
-    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user=None) -> SearchStrategy:
+    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
         self._link_project_keywords_to_strategy(strategy, keyword_data)
         if user:
