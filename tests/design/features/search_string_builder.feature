@@ -56,5 +56,6 @@ Característica: Construir cadena de búsqueda
         Dado que selecciono una pregunta de investigación del protocolo de diseño del proyecto
         Y que tengo la lista de términos clave y sinónimos de dicha pregunta
         Cuando pruebo la cadena de búsqueda que he construido
+        Y el sistema traduce la cadena de búsqueda a inglés
         Entonces se recibirán resultados de dicha búsqueda desde el módulo de adquisición
         Y se creará una versión borrador de la estratégia de busqueda

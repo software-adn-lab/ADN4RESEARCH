@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('search-studies-btn');
     const emptyMsg = document.getElementById('empty-canvas-msg');
     const livePreview = document.getElementById('live-string-preview');
-    
+
     // Manual Exclusion Inputs
     const manualExclInput = document.getElementById('manual-exclusion-input');
     const manualExclBtn = document.getElementById('add-manual-exclusion-btn');
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         setupDragEvents();
-        
+
         if (typeof INITIAL_DATA !== 'undefined' && INITIAL_DATA.main_terms) {
             loadFromJSON(INITIAL_DATA);
         } else {
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addGroupBtn.addEventListener('click', () => createNewGroup());
         searchBtn.addEventListener('click', saveAndSearch);
-        
+
         // Manual Exclusion Events
         manualExclBtn.addEventListener('click', addManualExclusion);
         manualExclInput.addEventListener('keypress', (e) => {
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     function updateStringPreview() {
         const data = collectData();
-        
+
         if (data.main_terms.length === 0) {
             livePreview.textContent = '(Add at least one Main Term to generate string)';
             livePreview.classList.add('text-base-content/50');
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('drop', (e) => {
             e.preventDefault();
             element.classList.remove('border-primary', 'bg-primary/5', 'drop-active');
-            
+
             // CORRECCIÓN: Parseo seguro del JSON
             let data;
             try {
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Invalid drag data", err);
                 return;
             }
-            
+
             // Lógica según zona
             if (type === 'exclusion') {
                 addExclusionChip(data.term);
@@ -135,14 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 addSynonymChip(element, data.term);
                 if (data.synonyms) {
                     data.synonyms.split(',').forEach(s => {
-                        if(s.trim()) addSynonymChip(element, s.trim());
+                        if (s.trim()) addSynonymChip(element, s.trim());
                     });
                 }
             } else if (type === 'main') {
                 // Al soltar en Main Term Zone, reemplazamos el placeholder
                 setMainTerm(element, data.term, data.synonyms);
             }
-            
+
             updateStringPreview();
         });
     }
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const groupDiv = document.createElement('div');
         groupDiv.className = "card border border-base-200 shadow-sm mb-2 group-block transition-all hover:shadow-md relative overflow-visible";
-        
+
         // Template del Main Term Zone (Vacío o Lleno)
         // Usamos un div clickeable/droppable en lugar de input
         let mainTermHTML = '';
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         groupDiv.querySelector('.delete-group-btn').addEventListener('click', () => {
             groupDiv.remove();
             if (strategyCanvas.querySelectorAll('.group-block').length === 0) {
-                if(emptyMsg) emptyMsg.style.display = 'block';
+                if (emptyMsg) emptyMsg.style.display = 'block';
             }
             updateStringPreview();
         });
@@ -231,19 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function setMainTerm(container, text, synonymsStr) {
         // Reemplazar el placeholder con el chip
         container.innerHTML = `
-            <div class="main-term-chip badge font-bold text-white w-full justify-between cursor-grab" draggable="true">
+            <div class="main-term-chip badge badge-primary badge-lg font-bold text-white w-full justify-between cursor-grab" draggable="true">
                 <span class="main-term-text truncate">${text}</span>
                 <button class="btn btn-ghost btn-xs btn-circle text-white/70 hover:text-white clear-main-term ml-2">✕</button>
             </div>
         `;
-        
+
         // Agregar automáticamente los sinónimos asociados al grupo de abajo
         const groupCard = container.closest('.card');
         const synZone = groupCard.querySelector('.synonyms-zone');
-        
+
         if (synonymsStr) {
             synonymsStr.split(',').forEach(s => {
-                if(s.trim()) addSynonymChip(synZone, s.trim());
+                if (s.trim()) addSynonymChip(synZone, s.trim());
             });
         }
 
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chip.querySelector('.remove-chip').addEventListener('click', () => {
             chip.remove();
-            if (container.children.length <= 1) if(msg) msg.style.display = 'block';
+            if (container.children.length <= 1) if (msg) msg.style.display = 'block';
             updateStringPreview();
         });
 
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chip.querySelector('.remove-chip').addEventListener('click', () => {
             chip.remove();
-            if (exclusionsZone.children.length <= 1) if(msg) msg.style.display = 'block';
+            if (exclusionsZone.children.length <= 1) if (msg) msg.style.display = 'block';
             updateStringPreview();
         });
 
@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     function collectData() {
         const mainTerms = [];
-        
+
         document.querySelectorAll('.group-block').forEach(group => {
             // Buscamos el texto dentro del chip, NO un input value
             const termEl = group.querySelector('.main-term-text');
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 group.querySelectorAll('.synonym-val').forEach(span => {
                     synonyms.push(span.textContent.trim());
                 });
-                
+
                 mainTerms.push({
                     term: termValue,
                     synonyms: synonyms
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadFromJSON(data) {
         // Limpiar canvas primero
-        strategyCanvas.innerHTML = ''; 
+        strategyCanvas.innerHTML = '';
         // Restaurar Grupos
         if (data.main_terms && data.main_terms.length > 0) {
             data.main_terms.forEach(group => {
@@ -396,22 +396,22 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: JSON.stringify({ visual_data: visualData })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.href = data.redirect_url;
-            }else {
-                alert("Error: " + data.error);
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Network error.");
-        })
-        .finally(() => {
-            searchBtn.disabled = false;
-            searchBtn.innerHTML = originalText;
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Network error.");
+            })
+            .finally(() => {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = originalText;
+            });
     }
 
     function getCookie(name) {
