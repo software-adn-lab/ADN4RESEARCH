@@ -4,18 +4,22 @@ from apps.design.search_strategy.models.search_strategy import SearchStrategy, S
 from django.db.models import Max
 from django.db import transaction
 from apps.acquisition.facade import get_acquisition_facade
-
+from apps.design.search_strategy.services.translation_service import TranslationService
+from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
 
 class SearchStrategyService:
+    def __init__(self):
+        self.translation_service = TranslationService()
+        self.string_builder = SearchStringBuilder()
+
     @transaction.atomic
     def generate_and_save_search_string(self, strategy_id: int, user_id: int = None) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
         keywords = list(strategy.keywords.select_related('project_keyword').all())
         exclusions = list(strategy.exclusion_terms.all())
-        json_definition = self._build_json_definition(keywords, exclusions)
-        final_search_string = self._build_boolean_string(keywords, exclusions)
-
-        # Evitar crear versiones duplicadas si no hubo cambios
+        raw_json_definition = self._build_json_definition(keywords, exclusions)
+        json_definition = self.translation_service.translate_json_definition(raw_json_definition)
+        final_search_string = self.string_builder.build_from_json(json_definition)
         if strategy.final_search_string == final_search_string and strategy.json_definition == json_definition:
              return strategy
 
@@ -28,6 +32,7 @@ class SearchStrategyService:
         self.create_version_snapshot(strategy_id=strategy.id, user_id=user_id)
 
         return strategy
+
     def get_version_by_id(self, version_id: int) -> SearchStrategyVersion:
         return SearchStrategyVersion.objects.get(id=version_id)
     
@@ -48,26 +53,6 @@ class SearchStrategyService:
             "main_terms": json_main_terms,
             "exclusions": json_exclusions
         }
-
-    def _build_boolean_string(self, keywords: list, exclusions: list) -> str:
-        if not keywords:
-            return ""
-        or_groups = []
-        for kw in keywords:
-            pk = kw.project_keyword
-            terms_in_group = [f'"{pk.term}"']
-            
-            synonyms_list = self._parse_synonyms(pk.synonyms)
-            for syn in synonyms_list:
-                terms_in_group.append(f'"{syn}"')
-            group_string = " OR ".join(terms_in_group)
-            or_groups.append(f"({group_string})")
-        final_string = " AND ".join(or_groups)
-        if exclusions:
-            exclusion_terms = [f'"{exc.term}"' for exc in exclusions]
-            exclusion_string = " OR ".join(exclusion_terms)
-            final_string += f" AND NOT ({exclusion_string})"
-        return final_string
 
     def _parse_synonyms(self, synonyms_str: str) -> list[str]:
         if not synonyms_str or not synonyms_str.strip():
@@ -182,7 +167,7 @@ class SearchStrategyService:
     def save_strategy_from_visual_builder(self, strategy_id: int, visual_data: dict, user_id: int) -> SearchStrategy:
         strategy = SearchStrategy.objects.get(id=strategy_id)
         strategy.json_definition = visual_data
-        strategy.final_search_string = self._build_string_from_json(visual_data)
+        strategy.final_search_string = self.string_builder.build_from_json(visual_data)
         strategy.status = SearchStrategy.Status.DRAFT
         strategy.last_modified_by_id = user_id
         strategy.save()
@@ -190,7 +175,8 @@ class SearchStrategyService:
         logging.info(f"Fetching search preview for strategy ID {visual_data}")
         
         try:
-            preview_result = acquisition_facade.preview_search(visual_data)
+            translated_json = self.translation_service.translate_json_definition(visual_data)
+            preview_result = acquisition_facade.preview_search(translated_json)
             count = getattr(preview_result, 'total_found', 0) 
             
         except Exception as e:
@@ -200,31 +186,15 @@ class SearchStrategyService:
         
         return strategy
 
-    def _build_string_from_json(self, data: dict) -> str:
-        main_terms = data.get('main_terms', [])
-        exclusions = data.get('exclusions', [])
-        and_blocks = []
-        for group in main_terms:
-            term = group.get('term', '').strip()
-            synonyms = group.get('synonyms', [])
-            if not term: continue
-            all_terms = [f'"{term}"'] + [f'"{s.strip()}"' for s in synonyms if s.strip()]
-            block_str = " OR ".join(all_terms)
-            and_blocks.append(f"({block_str})")
-        search_string = " AND ".join(and_blocks)
-        if exclusions:
-            not_terms = [f'"{exc.strip()}"' for exc in exclusions if exc.strip()]
-            if not_terms:
-                not_block = " OR ".join(not_terms)
-                search_string += f" AND NOT ({not_block})"
-                
-        return search_string
-    
     def get_search_results_dto(self, strategy_id: int):
         strategy = self.get_or_create_strategy(strategy_id)
         acquisition_facade = get_acquisition_facade()
+        
+        # Translate before preview
+        json_definition_translated = self.translation_service.translate_json_definition(strategy.json_definition)
+        
         try:
-            results_dto = acquisition_facade.preview_search(strategy.json_definition)
+            results_dto = acquisition_facade.preview_search(json_definition_translated)
             return results_dto
         except Exception as e:
             raise RuntimeError(f"Error fetching search results: {e}")
@@ -238,12 +208,9 @@ class SearchStrategyService:
         
         strategy.save()
         strategy.save()
-        
-        # Update the latest version status to match the strategy status
-        latest_version = strategy.versions.first() # Ordered by -version_number
+        latest_version = strategy.versions.first() 
         if latest_version:
             latest_version.status = status
             latest_version.save(update_fields=['status'])
             
         return strategy
-            
