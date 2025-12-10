@@ -1,6 +1,6 @@
 from django.utils import timezone
 from typing import List
-from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, NotFoundError, UpdateError
+from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, NotFoundError, UpdateError, ConsolidationError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DatabaseError, transaction
@@ -144,15 +144,34 @@ class EligibilityCriterionService:
         except DatabaseError as e:
             raise UpdateError(f"Error approving: {str(e)}")
         return criterion
-    
-    @transaction.atomic
-    def consolidate_criteria(self, project_id: int, user) -> dict:
-        phase = DesignPhase.objects.select_related('project').get(pk=project_id)
+
+    def _validate_consolidation_requirements(self, phase, user):
         if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
              raise UpdateError("This stage has already been consolidated.")
         
         if phase.project.owner != user:
             raise UpdateError("Only the project owner can consolidate the stage.")
+
+        has_inclusion = EligibilityCriterion.objects.filter(
+            design_phase=phase, 
+            type=EligibilityCriterion.CriterionType.INCLUSION, 
+            status=EligibilityCriterion.CriterionStatus.APPROVED
+        ).exists()
+
+        has_exclusion = EligibilityCriterion.objects.filter(
+            design_phase=phase, 
+            type=EligibilityCriterion.CriterionType.EXCLUSION, 
+            status=EligibilityCriterion.CriterionStatus.APPROVED
+        ).exists()
+
+        if not has_inclusion or not has_exclusion:
+            raise ConsolidationError("Cannot consolidate: You need at least one approved inclusion and one approved exclusion criterion.")
+
+    @transaction.atomic
+    def consolidate_criteria(self, project_id: int, user) -> dict:
+        phase = DesignPhase.objects.select_related('project').get(pk=project_id)
+        
+        self._validate_consolidation_requirements(phase, user)
             
         criteria = EligibilityCriterion.objects.filter(design_phase_id=project_id, status=EligibilityCriterion.CriterionStatus.DRAFT)
         
@@ -162,7 +181,6 @@ class EligibilityCriterionService:
             'auto_rejected': 0
         }
         for criterion in criteria:
-             # Auto-reject pending drafts
             criterion.status = EligibilityCriterion.CriterionStatus.REJECTED
             criterion.justification = "Automatically rejected during stage consolidation."
             criterion.reviewed_by = user

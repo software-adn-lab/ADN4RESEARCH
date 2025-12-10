@@ -18,3 +18,7 @@ class DeletionError(Exception):
 class InvalidCriterionTypeError(Exception):
     """Exception raised when an invalid criteria type is provided."""
     pass
+
+class ConsolidationError(Exception):
+    """Exception raised when there is an error consolidating the eligibility criteria stage."""
+    pass
