@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from tests.design.helpers.factories import create_project
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
+from datetime import datetime
 
 def before_scenario(context, scenario):
     """
@@ -11,8 +12,11 @@ def before_scenario(context, scenario):
     context.researcher = User.objects.create_user(username="researcher_user")
     context.researcher_two = User.objects.create_user(username="researcher_user_two")
     context.project = project_service.create_project_with_framework(
-        name = "Test Project", 
-        description = "Description",
+        project_title = "Test Project", 
+        summary = "Summary",
+        motivation = "Motivation Description",
+        general_objective = "General Objective Description",
+        project_end_date = datetime.now(),
         owner=context.owner, 
         framework_name="PICO", 
         framework_fields={

@@ -1,5 +1,5 @@
 from faker import Faker
-from apps.project.models import Project
+from apps.project.structure.models.project_models import Project
 from apps.design.research_question.models.research_question import ResearchQuestion
 
 fake = Faker()

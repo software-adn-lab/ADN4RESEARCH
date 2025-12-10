@@ -32,6 +32,7 @@ urlpatterns = [
     path('extraction/', include('apps.extraction.urls')),
     path('selection/', include('apps.selection.urls')),
     path('acquisition/', include('apps.acquisition.urls')),
+    path('project/', include('apps.project.urls')),
 ]
 
 # Serve media files in development

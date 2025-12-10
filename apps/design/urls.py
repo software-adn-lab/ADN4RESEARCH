@@ -9,7 +9,7 @@ from apps.design.shared.views import navigation
 app_name = 'design'
 
 urlpatterns = [
-    path('', research_question.hello),
+    path('', research_question.hello, name='hello'),
     # Lo que se relaciona con Research Questions
     path('rq-workspace/<int:project_id>', research_question.open_questions_workspace_view, name='rq_workspace'),
     path('create-research-question/<int:project_id>', research_question.create_research_question, name='create_research_question'),

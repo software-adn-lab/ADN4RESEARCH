@@ -1,10 +1,10 @@
 from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.project.exceptions import ConsolidationError, InvalidProjectStateError, ProjectPermissionError
+from apps.project.exceptions.project_exceptions import ConsolidationError, InvalidProjectStateError, ProjectPermissionError
 from config.events import bus
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError, ResearchQuestionError
-from apps.project.models import Project
+from apps.project.structure.models.project_models import Project
 from django.contrib.auth.models import User
 from apps.design.shared.models.design_phase import DesignPhase
 from django.utils import timezone

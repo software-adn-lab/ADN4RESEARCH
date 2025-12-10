@@ -1,5 +1,21 @@
 class ProjectError(Exception):
-    """Base para errores del módulo de proyectos."""
+    """Base exception for Project app"""
+    pass
+
+class ProjectCreationError(ProjectError):
+    """Raised when project creation fails"""
+    pass
+
+class FrameworkError(ProjectError):
+    """Raised when there is an issue with the Research Framework"""
+    pass
+
+class FrameworkValidationError(FrameworkError):
+    """Raised when framework data is invalid"""
+    pass
+
+class MembershipError(ProjectError):
+    """Raised when there is an issue adding or managing members"""
     pass
 
 class ProjectNotFoundError(ProjectError):

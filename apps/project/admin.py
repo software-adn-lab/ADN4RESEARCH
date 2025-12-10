@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.project.models import Membership, Project, ResearchFramework
+from apps.project.structure.models.project_models import Membership, Project, ResearchFramework
 
 # Register your models here.
 admin.site.register(Project)

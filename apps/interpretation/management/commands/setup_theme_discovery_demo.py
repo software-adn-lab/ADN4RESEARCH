@@ -6,7 +6,7 @@ Usage:
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from apps.project.models import Project
+from apps.project.structure.models.project_models import Project
 from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
     ThemeDiscoveryService,
 )

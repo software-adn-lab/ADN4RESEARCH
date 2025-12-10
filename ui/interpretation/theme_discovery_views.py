@@ -19,7 +19,7 @@ from apps.interpretation.conclusion_assistant.models.theme_discovery_models impo
     ThemeDiscoveryProposal,
 )
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
-from apps.project.models import Project
+from apps.project.structure.models.project_models import Project
 
 
 theme_discovery_service = ThemeDiscoveryService()

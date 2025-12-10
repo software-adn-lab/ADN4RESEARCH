@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from apps.project.models import BasePhase
+from apps.project.structure.models.project_models import BasePhase
 
 class DesignPhaseQuerySet(models.QuerySet):
     def active(self):

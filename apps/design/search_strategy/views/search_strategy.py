@@ -13,7 +13,7 @@ from django.http import Http404
 from django.urls import reverse
 from django.shortcuts import redirect
 
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
 
 from apps.design.shared.services.design_phase_service import DesignPhaseService
 

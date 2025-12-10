@@ -4,7 +4,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.contrib import messages
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
 from apps.design.shared.services.design_phase_service import DesignPhaseService
 from apps.design.exceptions.research_question_exceptions import QuestionReviewError
 from apps.design.shared.models.design_phase import DesignPhase

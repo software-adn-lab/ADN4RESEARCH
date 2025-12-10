@@ -1,6 +1,6 @@
 from behave import given, then, when, step
 from django.contrib.auth.models import User
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService

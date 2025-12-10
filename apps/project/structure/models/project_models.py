@@ -32,9 +32,14 @@ class ResearchFramework(models.Model):
         return f"Framework: {self.name}"
     
 class Project(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField()
+    title = models.CharField(max_length=100)
+    summary = models.TextField()
+    motivation = models.TextField()
+    general_objective = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_projects')
+    end_date = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     research_framework = models.ForeignKey(
         ResearchFramework, 
         on_delete=models.PROTECT, 
@@ -48,7 +53,7 @@ class Project(models.Model):
         return self.design_phase.research_questions.filter(status='APPROVED')
 
     def __str__(self):
-        return self.name
+        return self.title
     
     def add_member(self, user, role):
         try:
@@ -59,6 +64,20 @@ class Project(models.Model):
     
     def get_members(self):
         return Membership.objects.filter(project=self)
+
+class SpecificObjective(models.Model):
+    project = models.ForeignKey(Project, related_name='specific_objectives', on_delete=models.CASCADE)
+    description = models.TextField()
+
+    def __str__(self):
+        return self.description[:60]
+
+class ExpectedResult(models.Model):
+    project = models.ForeignKey(Project, related_name='expected_results', on_delete=models.CASCADE)
+    description = models.TextField()
+
+    def __str__(self):
+        return self.description[:60]
         
 class Membership(models.Model): 
     ROLE_CHOICES = [

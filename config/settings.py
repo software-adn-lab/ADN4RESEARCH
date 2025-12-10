@@ -98,6 +98,7 @@ TEMPLATES = [
             BASE_DIR / "ui" / "design" / "templates",
             BASE_DIR / "ui" / "interpretation" / "templates",
             BASE_DIR / "ui" / "shared" / "templates",
+            BASE_DIR / "ui" / "project" / "templates",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -221,6 +222,7 @@ USE_TZ = True
 STATICFILES_DIRS = [
     BASE_DIR / "ui" / "design",
     BASE_DIR / "ui" / "interpretation",
+    BASE_DIR / "ui" / "project",
 ]
 
 STATIC_URL = "/static/"

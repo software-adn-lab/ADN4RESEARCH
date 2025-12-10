@@ -1,7 +1,7 @@
 from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, NotFoundError, UpdateError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
 from django.http import JsonResponse
 from django.shortcuts import render
 from apps.design.shared.services.design_phase_service import DesignPhaseService

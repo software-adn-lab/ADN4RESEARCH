@@ -4,7 +4,7 @@ from django.views.decorators.http import require_POST
 
 from apps.design.search_strategy.models.keyword import ProjectKeyword
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
-from apps.project.models import Project
+from apps.project.structure.models.project_models import Project
 
 search_strategy_service = SearchStrategyService()
 

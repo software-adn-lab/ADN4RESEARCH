@@ -1,6 +1,6 @@
 from behave import given, step
 from django.contrib.auth.models import User
-from apps.project.services.project_services import ProjectService
+from apps.project.structure.services.project_services import ProjectService
 import logging
 import json
 from apps.design.research_question.services.question_services import ResearchQuestionService
