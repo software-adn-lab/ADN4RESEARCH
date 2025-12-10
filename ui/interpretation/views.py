@@ -15,9 +15,11 @@ from apps.interpretation.conclusion_assistant.models.subtheme_models import SubT
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
 from apps.interpretation.structured_data.manager import StructuredDataManager
 from apps.interpretation.visualization.engine import ResultsVisualizationEngine
+from apps.interpretation.exporter.service import FindingsExportService
 
 
 service = InterpretationService()
+export_service = FindingsExportService()
 
 
 def index(request):
@@ -179,3 +181,27 @@ def results_dashboard(request, project_id):
         "interpretation/results_dashboard.html",
         {"dashboard_data": dashboard_data, "project_id": project_id},
     )
+
+
+@require_http_methods(["GET"])
+def export_findings(request, project_id):
+    """
+    Exports findings in the requested format (PDF, CSV, JSON).
+    """
+    from django.http import HttpResponse
+    
+    format_type = request.GET.get('format', 'pdf')
+    
+    try:
+        content, mime_type, filename = export_service.export_findings(
+            project_id=str(project_id),
+            export_format=format_type
+        )
+        
+        response = HttpResponse(content.getvalue() if hasattr(content, 'getvalue') else content, content_type=mime_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        messages.error(request, f"Error exporting findings: {e}")
+        return redirect(reverse("interpretation:results_dashboard", args=[project_id]))

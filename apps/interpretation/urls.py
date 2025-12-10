@@ -34,4 +34,5 @@ urlpatterns = [
     
     # Results Dashboard
     path('dashboard/<int:project_id>/', views.results_dashboard, name='results_dashboard'),
+    path('dashboard/<int:project_id>/export/', views.export_findings, name='export_findings'),
 ]
