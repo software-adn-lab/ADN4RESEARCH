@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from django.contrib import messages
-
+from django.http import HttpResponse
 from apps.interpretation.conclusion_assistant.services.interpretation_services import (
     InterpretationService,
 )
@@ -188,20 +188,20 @@ def export_findings(request, project_id):
     """
     Exports findings in the requested format (PDF, CSV, JSON).
     """
-    from django.http import HttpResponse
-    
-    format_type = request.GET.get('format', 'pdf')
-    
+    format_type = request.GET.get("format", "pdf")
+
     try:
         content, mime_type, filename = export_service.export_findings(
-            project_id=str(project_id),
-            export_format=format_type
+            project_id=str(project_id), export_format=format_type
         )
-        
-        response = HttpResponse(content.getvalue() if hasattr(content, 'getvalue') else content, content_type=mime_type)
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        response = HttpResponse(
+            content.getvalue() if hasattr(content, "getvalue") else content,
+            content_type=mime_type,
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
-        
+
     except Exception as e:
         messages.error(request, f"Error exporting findings: {e}")
         return redirect(reverse("interpretation:results_dashboard", args=[project_id]))
