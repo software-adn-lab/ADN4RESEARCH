@@ -77,7 +77,7 @@ class ScopusApiStrategy(SearchStrategy):
             response = self.http_client.get(
                 test_url,
                 params={'query': 'TITLE(test)', 'count': 1},
-                timeout=5
+                timeout=60
             )
             
             # API is accessible if we get any response (200, 400, 401)
