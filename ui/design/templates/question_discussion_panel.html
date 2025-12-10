@@ -13,7 +13,7 @@
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                     <option value="">All Statuses</option>

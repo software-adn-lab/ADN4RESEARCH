@@ -10,7 +10,15 @@
             <p class="text-sm text-base-content/70">Design search strings for approved protocol questions.</p>
         </div>
         <div class="text-xs font-medium text-base-content/80">
-            Stage End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}
+            Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}
+            {% if project.owner == request.user %}
+            <form action="{% url 'design:consolidate_search_strategy_stage' project.id %}" method="POST"
+                class="inline-block ml-4"
+                onsubmit="return confirm('Are you sure you want to consolidate this stage? This will reject all draft strategies and finalize the design phase.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-primary">Consolidate Stage</button>
+            </form>
+            {% endif %}
         </div>
     </div>
 

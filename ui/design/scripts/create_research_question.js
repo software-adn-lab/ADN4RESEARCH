@@ -1,11 +1,122 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const fieldsContainer = document.getElementById('fields-container');
-    if (!fieldsContainer) return;
+    console.log('create_research_question.js loaded');
+    const questionModal = document.getElementById('question_modal');
+    const addQuestionBtn = document.getElementById('add-question-btn');
+    const tableBody = document.getElementById('question-table-body');
 
+    console.log('Elements found:', { questionModal, addQuestionBtn, tableBody });
+
+    // Form Elements
     const form = document.getElementById('question-form');
+    const fieldsContainer = document.getElementById('fields-container');
     const questionIdInput = document.getElementById('research-question-id');
     const autosaveStatus = document.getElementById('autosave-status');
+    const submitContainer = document.getElementById('submit-container');
+
+    // Inputs
+    const questionInput = document.getElementById('question');
+    const motivationInput = document.getElementById('motivation');
+    const frameworkInputs = document.querySelectorAll('.framework-field-input');
+
     let lastSavedData = '';
+
+    // --- 1. Modal Logic ---
+
+    if (addQuestionBtn) {
+        addQuestionBtn.addEventListener('click', () => {
+            console.log('Add Question Clicked');
+            resetForm();
+            questionModal.showModal();
+        });
+    }
+
+    if (tableBody) {
+        tableBody.addEventListener('click', (e) => {
+            console.log('Table Body Clicked', e.target);
+            const row = e.target.closest('tr.question-row');
+            if (row && !e.target.closest('.delete-btn, .view-strategy-btn, a')) {
+                // If we have JSON data, use it
+                if (row.dataset.questionJson) {
+                    try {
+                        // In Django templates, we might need to handle single quotes if not strictly JSON
+                        // But using |safe and to_json in template usually gives valid JSON
+                        // Let's assume the data attribute has the JSON string
+                        console.log('Parsing JSON:', row.dataset.questionJson);
+                        const questionData = JSON.parse(row.dataset.questionJson);
+                        populateForm(questionData);
+                        questionModal.showModal();
+                    } catch (err) {
+                        console.error("Error parsing question JSON", err);
+                    }
+                } else {
+                    // Fallback or if data is missing
+                    console.warn("No data-question-json found on row");
+                }
+            }
+        });
+    }
+
+    function resetForm() {
+        form.reset();
+        questionIdInput.value = '';
+        autosaveStatus.innerHTML = '';
+        lastSavedData = '';
+
+        // Reset framework fields manually if needed (form.reset() should handle it if they are inputs)
+        // Reset submit button state
+        updateSubmitButton('DRAFT');
+    }
+
+    function populateForm(data) {
+        resetForm();
+        questionIdInput.value = data.id || '';
+        questionInput.value = data.question || '';
+        motivationInput.value = data.motivation || '';
+
+        // Populate Framework Fields
+        if (data.framework_fields) {
+            frameworkInputs.forEach(input => {
+                const fieldName = input.dataset.field;
+                if (data.framework_fields[fieldName]) {
+                    input.value = data.framework_fields[fieldName];
+                }
+            });
+        }
+
+        // Update Submit Button based on status
+        updateSubmitButton(data.status);
+
+        // Update Form Action
+        if (data.id) {
+            form.action = submitUrlTemplate.replace('9999', data.id);
+        }
+
+        // Set initial saved data state to avoid immediate autosave trigger
+        const formData = new FormData(form);
+        lastSavedData = new URLSearchParams(formData).toString();
+    }
+
+    function updateSubmitButton(status) {
+        if (!submitContainer) return;
+
+        if (status === 'READY_TO_SEND' || status === 'SUGGESTED') {
+            submitContainer.innerHTML = `
+                <button type="submit" class="btn btn-primary text-white gap-2 px-8 animate-pulse-once">
+                    Submit Question
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    </svg>
+                </button>`;
+        } else {
+            submitContainer.innerHTML = `
+                <div class="tooltip tooltip-left" data-tip="Fill all fields to enable submission">
+                    <button class="btn btn-disabled btn-outline">Complete fields to submit</button>
+                </div>`;
+        }
+    }
+
+
+    // --- 2. Autosave Logic (Adapted) ---
 
     function debounce(func, delay) {
         let timeout;
@@ -16,15 +127,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function triggerAutosave() {
+        if (!fieldsContainer) return;
+
         const formData = new FormData(form);
         const currentDataString = new URLSearchParams(formData).toString();
-        
-        // Si no hay cambios, no hacemos nada (el icono se queda en "Saved" si ya estaba)
+
         if (currentDataString === lastSavedData) {
             return;
         }
 
-        // --- ESTADO 1: GUARDANDO (Spinner Azul) ---
+        // Saving State
         autosaveStatus.innerHTML = `
             <div class="flex items-center gap-2 text-primary transition-opacity duration-300">
                 <span class="text-xs font-bold uppercase tracking-wide">Saving...</span>
@@ -35,19 +147,18 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
 
-        fetch(autosaveUrl, { 
+        fetch(autosaveUrl, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.id) {
-                // --- ESTADO 2: GUARDADO (Check Gris - Estilo Word) ---
-                // Se queda fijo, indicando que todo está seguro en la nube.
-                autosaveStatus.innerHTML = `
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    // Saved State
+                    autosaveStatus.innerHTML = `
                     <div class="flex items-center gap-2 text-base-content/50 transition-all duration-500 ease-in-out" title="All changes saved to cloud">
                         <span class="text-xs font-bold uppercase tracking-wide">Saved</span>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
@@ -55,48 +166,31 @@ document.addEventListener('DOMContentLoaded', function () {
                         </svg>
                     </div>
                 `;
-                
-                // Actualizamos IDs y Datos
-                questionIdInput.value = data.id;
-                lastSavedData = currentDataString;
-                form.action = submitUrlTemplate.replace('9999', data.id);
 
-                // Actualizar botón Submit
-                const submitContainer = document.getElementById('submit-container');
-                if (submitContainer) {
-                    if (data.status === 'READY_TO_SEND') {
-                        submitContainer.innerHTML = `
-                            <button type="submit" class="btn btn-primary text-white gap-2 px-8 animate-pulse-once">
-                                Submit Question
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                                </svg>
-                            </button>`;
-                    } else {
-                        submitContainer.innerHTML = `
-                            <div class="tooltip tooltip-left" data-tip="Fill all fields to enable submission">
-                                <button class="btn btn-disabled btn-outline">Complete fields to submit</button>
-                            </div>`;
-                    }
+                    questionIdInput.value = data.id;
+                    lastSavedData = currentDataString;
+                    form.action = submitUrlTemplate.replace('9999', data.id);
+                    updateSubmitButton(data.status);
+
+                } else {
+                    console.error('Autosave failed:', data.error);
+                    autosaveStatus.innerHTML = `<span class="text-error text-xs font-bold">Error Saving</span>`;
                 }
-
-            } else {
-                console.error('Autosave failed:', data.error);
-                autosaveStatus.innerHTML = `
-                    <div class="flex items-center gap-2 text-error" title="Error saving">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                            <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd" />
-                        </svg>
-                        <span class="text-xs font-bold uppercase">Not Saved</span>
-                    </div>`;
-            }
-        })
-        .catch(error => {
-            console.error('Autosave request failed:', error);
-            autosaveStatus.innerHTML = `<span class="text-error text-xs font-bold">Network Error</span>`;
-        });
+            })
+            .catch(error => {
+                console.error('Autosave request failed:', error);
+                autosaveStatus.innerHTML = `<span class="text-error text-xs font-bold">Network Error</span>`;
+            });
     }
 
-    const debouncedAutosave = debounce(triggerAutosave, 2000); 
-    fieldsContainer.addEventListener('input', debouncedAutosave);
+    if (fieldsContainer) {
+        const debouncedAutosave = debounce(triggerAutosave, 2000);
+        fieldsContainer.addEventListener('input', debouncedAutosave);
+    }
+
+    // Initial check if we are on the standalone page (create_research_question.html) 
+    // and there is data pre-loaded (QUESTION_DATA global variable)
+    if (typeof QUESTION_DATA !== 'undefined' && QUESTION_DATA !== null) {
+        populateForm(QUESTION_DATA);
+    }
 });

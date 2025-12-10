@@ -14,10 +14,18 @@ class ResearchQuestionService:
     @transaction.atomic
     def add_research_question(self, project_id: int, question: str, motivation: str, researcher_id: int, framework_fields: dict) -> ResearchQuestion:
         try:
-            design_phase = DesignPhase.objects.select_related('project__research_framework').get(pk=project_id) 
+            design_phase = DesignPhase.objects.select_related('project__research_framework').get(pk=project_id)
         except DesignPhase.DoesNotExist:
-             raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
+            raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
         project = design_phase.project
+
+        # Validation: Check Stage Permissions
+        if design_phase.current_stage not in DesignPhase.RQ_EDITION_STAGES:
+            if project.owner_id != researcher_id:
+                raise ValidationError(
+                    f"Locked Stage: Only the owner can add questions during '{design_phase.get_current_stage_display()}'."
+                )
+
         if not self._is_valid_framework_fields(project.research_framework, framework_fields or {}):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")
 
@@ -36,12 +44,12 @@ class ResearchQuestionService:
         try:
             question = ResearchQuestion.objects.select_related(
                 'design_phase__project__owner',
-                'design_phase__project__research_framework' 
+                'design_phase__project__research_framework'
             ).get(id=question_id)
         except ResearchQuestion.DoesNotExist:
             raise QuestionNotFoundError("Question not found.")
         self._validate_edit_permissions(question, user)
-        updated_question = self._apply_updates(question, data)     
+        updated_question = self._apply_updates(question, data)
         return updated_question
 
     @transaction.atomic
@@ -62,7 +70,7 @@ class ResearchQuestionService:
             return question
         except ResearchQuestion.DoesNotExist:
             raise QuestionNotFoundError(f"Question with id {research_question_id} not found")
-    
+
     def get_questions_for_workspace(self, project_id: int, user, status_filter: str = None):
         try:
             owner_id = Project.objects.values_list('owner_id', flat=True).get(pk=project_id)
@@ -78,7 +86,7 @@ class ResearchQuestionService:
 
     def get_all_questions_by_user_and_project(self, project_id: int, user):
         return ResearchQuestion.objects.by_project(project_id).by_researcher(user).order_by('-modified_at')
-        
+
     def get_discussion_research_questions_by_project(self, project_id: int, status_filter: str = None):
         qs = ResearchQuestion.objects.by_project(project_id).in_discussion_phase()
         if status_filter:
@@ -170,7 +178,7 @@ class ResearchQuestionService:
         }
         if verdict not in allowed_verdicts:
             raise ValidationError(f"Estado no válido para una revisión: {verdict}")
-        
+
         question = ResearchQuestion.objects.get(id=question_id)
         self._validate_stage_modification_permissions(question.design_phase, user_id)
 
@@ -180,22 +188,22 @@ class ResearchQuestionService:
         question.reviewed_at = timezone.now()
         question.save(update_fields=['status', 'justification', 'reviewed_by', 'reviewed_at'])
         return question
-    
+
     def _validate_stage_modification_permissions(self, design_phase, user_id):
         # Validate Stage Permissions
         # Logic: If stage > RQ_DISCUSSION, only owner can review.
         stages = [s for s, _ in DesignPhase.DesignStage.choices]
         try:
-             current_idx = stages.index(design_phase.current_stage)
-             discussion_idx = stages.index(DesignPhase.DesignStage.RQ_DISCUSSION)
-             is_past_stage = current_idx > discussion_idx
+            current_idx = stages.index(design_phase.current_stage)
+            discussion_idx = stages.index(DesignPhase.DesignStage.RQ_DISCUSSION)
+            is_past_stage = current_idx > discussion_idx
         except ValueError:
-             is_past_stage = False
+            is_past_stage = False
 
         is_owner = (design_phase.project.owner.id == user_id)
-        
+
         if is_past_stage and not is_owner:
-             raise ValidationError("The Discussion stage is finished. You cannot review questions anymore.")
+            raise ValidationError("The Discussion stage is finished. You cannot review questions anymore.")
 
     def validate_reviewer_eligibility(self, question_id: int, user_id: int) -> ResearchQuestion:
         try:
@@ -218,7 +226,7 @@ class ResearchQuestionService:
         if question.researcher_id == suggester_id:  # La regla que le puse: si eres el autor no puedes sugerir acciones sobre tu misma pregunta
             raise QuestionReviewError("Cannot suggest action on your own question.")
         return question
-    
+
     def process_suggestion_action(self, question_id: int, user_id: int, action: str):
         try:
             question = ResearchQuestion.objects.get(id=question_id)
@@ -235,7 +243,7 @@ class ResearchQuestionService:
             raise QuestionReviewError("Invalid action provided.")
 
         # 3. Aplicar cambios
-        question.status = action # O el campo correspondiente
+        question.status = action  # O el campo correspondiente
         question.save()
 
         return question
@@ -269,7 +277,7 @@ class ResearchQuestionService:
         try:
             phase = project.design_phase
         except DesignPhase.DoesNotExist:
-             raise InvalidProjectStateError("Active Design phase not found.")
+            raise InvalidProjectStateError("Active Design phase not found.")
         if not phase.is_active:
             raise InvalidProjectStateError("Design phase is not active.")
         if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:

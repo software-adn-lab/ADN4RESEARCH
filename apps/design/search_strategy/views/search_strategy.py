@@ -95,22 +95,22 @@ def search_strategy_builder_view(request, project_id):
                     v_id = int(version_id_to_load)
                     version = search_strategy_service.get_version_by_id(v_id)
                     initial_visual_data = version.json_definition
-                    
+
                     messages.info(request, f"Loaded version {version.version_number} from history.")
-                    
+
                 except (ValueError, SearchStrategyVersion.DoesNotExist):
                     initial_visual_data = strategy.json_definition
                     messages.warning(request, "Could not load requested version. Loaded current draft instead.")
             else:
                 initial_visual_data = strategy.json_definition
-                
+
         except Exception as e:
             raise Http404("Error loading strategy builder.")
     context = {
         'project': project,
         'timeline_stages': timeline_stages,
         'stage_end_date': stage_end_date,
-        'active_tab': 'search_string', 
+        'active_tab': 'search_string',
         'questions_list': questions_list,
         'selected_question': selected_question,
         'strategy': strategy,
@@ -118,6 +118,7 @@ def search_strategy_builder_view(request, project_id):
         'visual_data_json': json.dumps(initial_visual_data),
     }
     return render(request, 'search_strategy_builder.html', context)
+
 
 @login_required
 @require_POST
@@ -132,24 +133,25 @@ def save_visual_strategy(request, strategy_id):
             visual_data=visual_data,
             user_id=request.user.id
         )
-        
+
         return JsonResponse({
             'status': 'success',
-            'redirect_url': reverse('design:search_results_view', args=[strategy_id]), 
+            'redirect_url': reverse('design:search_results_view', args=[strategy_id]),
             'final_string': updated_strategy.final_search_string
         })
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 
 @login_required
 def get_strategy_versions(request, question_id):
     try:
         strategy = search_strategy_service.get_strategy_for_question(question_id)
-        
+
         if not strategy:
             return JsonResponse({'versions': []})
-            
+
         versions = strategy.versions.all().order_by('-version_number').values(
             'id',
             'strategy_id',
@@ -159,23 +161,24 @@ def get_strategy_versions(request, question_id):
             'status',
             'created_at'
         )
-        
+
         data = []
         for v in versions:
             data.append({
-                'id': v['id'],  
-                'strategy_id': v['strategy_id'], 
+                'id': v['id'],
+                'strategy_id': v['strategy_id'],
                 'version': v['version_number'],
                 'string': v['final_search_string'],
                 'total_found': v['total_found'],
                 'status': v.get('status', 'DRAFT'),
                 'date': v['created_at'].strftime("%Y-%m-%d %H:%M")
             })
-            
+
         return JsonResponse({'versions': data})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 
 @login_required
 def search_results_view(request, strategy_id):
@@ -190,9 +193,9 @@ def search_results_view(request, strategy_id):
         context = {
             'project': project,
             'strategy': strategy,
-            'results': results_dto, 
-            'studies': studies, 
-            'years_range': range(2025, 2000, -1), 
+            'results': results_dto,
+            'studies': studies,
+            'years_range': range(2025, 2000, -1),
             'current_year_filter': year_filter,
             'timeline_stages': design_phase_service.get_design_timeline_context(project.id)
         }
@@ -200,13 +203,14 @@ def search_results_view(request, strategy_id):
     except SearchStrategy.DoesNotExist:
         raise Http404("Strategy not found")
 
+
 @login_required
 @require_POST
 def approve_strategy(request, strategy_id):
     try:
         strategy = search_strategy_service.change_strategy_status(
-            strategy_id, 
-            SearchStrategy.Status.APPROVED, 
+            strategy_id,
+            SearchStrategy.Status.APPROVED,
             request.user
         )
         messages.success(request, f"Strategy approved successfully!")
@@ -215,13 +219,14 @@ def approve_strategy(request, strategy_id):
         messages.error(request, str(e))
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
+
 @login_required
 @require_POST
 def reject_strategy(request, strategy_id):
     try:
         strategy = search_strategy_service.change_strategy_status(
-            strategy_id, 
-            SearchStrategy.Status.REJECTED, 
+            strategy_id,
+            SearchStrategy.Status.REJECTED,
             request.user
         )
         messages.warning(request, "Strategy rejected.")
@@ -229,7 +234,8 @@ def reject_strategy(request, strategy_id):
     except Exception as e:
         messages.error(request, str(e))
         return redirect(request.META.get('HTTP_REFERER', '/'))
-        
+
+
 @login_required
 @require_POST
 def delete_strategy_version(request, version_id):
@@ -238,3 +244,21 @@ def delete_strategy_version(request, version_id):
         return JsonResponse({'status': 'success', 'message': 'Version deleted successfully'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def consolidate_search_strategy_stage_view(request, project_id):
+    try:
+        project = project_service.get_project_by_id(project_id, user=request.user)
+        if project.owner != request.user:
+            messages.error(request, "Only the project owner can consolidate the stage.")
+            return redirect('design:open_search_strategy_panel', project_id=project_id)
+
+        design_phase_service.consolidate_search_strategy_stage(project_id, request.user)
+        messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.")
+        return redirect('design:open_search_strategy_panel', project_id=project_id)
+
+    except Exception as e:
+        messages.error(request, f"Error consolidating stage: {str(e)}")
+        return redirect('design:open_search_strategy_panel', project_id=project_id)
