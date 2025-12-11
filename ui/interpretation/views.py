@@ -15,11 +15,12 @@ from apps.interpretation.conclusion_assistant.models.subtheme_models import SubT
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
 from apps.interpretation.structured_data.manager import StructuredDataManager
 from apps.interpretation.visualization.engine import ResultsVisualizationEngine
-from apps.interpretation.exporter.service import FindingsExportService
+from apps.interpretation.facade import get_interpretation_facade
 
 
 service = InterpretationService()
-export_service = FindingsExportService()
+# Usamos la fachada para exportación en lugar del servicio directo
+interpretation_facade = get_interpretation_facade()
 
 
 def index(request):
@@ -191,7 +192,7 @@ def export_findings(request, project_id):
     format_type = request.GET.get("format", "pdf")
 
     try:
-        content, mime_type, filename = export_service.export_findings(
+        content, mime_type, filename = interpretation_facade.export_findings(
             project_id=str(project_id), export_format=format_type
         )
 

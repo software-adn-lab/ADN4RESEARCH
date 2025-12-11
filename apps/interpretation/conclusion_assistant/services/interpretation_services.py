@@ -80,6 +80,24 @@ class InterpretationService:
 
         return context, trace
 
+    def get_final_propositions(self, project_id=None):
+        """
+        Recupera todas las proposiciones interpretativas con estado FINAL.
+        TODO: Filtrar por project_id cuando el modelo lo soporte.
+        """
+        # Por ahora retornamos todas las finales, ya que no hay link directo a Project
+        # en InterpretativeProposition o Theme.
+        return InterpretativeProposition.objects.filter(
+            status=InterpretativeProposition.PropositionStatus.FINAL
+        ).select_related('subtheme__theme')
+
+    def get_all_themes(self, project_id=None):
+        """
+        Recupera todos los temas.
+        TODO: Filtrar por project_id cuando el modelo lo soporte.
+        """
+        return Theme.objects.all()
+
     def _generate_opening_message(self, subtheme):
         # Deprecated: kept for backward compatibility but prefer LLM client.
         tags = self._generate_tags(subtheme)

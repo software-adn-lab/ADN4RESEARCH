@@ -1,8 +1,7 @@
 from typing import Literal, Optional, Dict, Any
 from datetime import datetime
 
-from apps.interpretation.conclusion_assistant.models.theme_models import Theme
-from apps.interpretation.conclusion_assistant.models.proposition_models import InterpretativeProposition
+from apps.interpretation.conclusion_assistant.services.interpretation_services import InterpretationService
 from apps.interpretation.structured_data.manager import StructuredDataManager
 from apps.interpretation.visualization.engine import ResultsVisualizationEngine
 
@@ -19,6 +18,7 @@ class FindingsExportService:
     def __init__(self):
         self.data_manager = StructuredDataManager()
         self.viz_engine = ResultsVisualizationEngine()
+        self.conclusion_service = InterpretationService()
         self.pdf_exporter = PDFExporter()
         self.csv_exporter = CSVExporter()
         self.json_exporter = JSONExporter()
@@ -55,12 +55,8 @@ class FindingsExportService:
         # Get dashboard data
         dashboard_data = self.viz_engine.generate_dashboard_data(studies)
         
-        # Get propositions (findings)
-        # Note: Propositions are linked to SubThemes, which are linked to Themes
-        # We need to find a way to scope by project. For now, we get all.
-        propositions = InterpretativeProposition.objects.filter(
-            status=InterpretativeProposition.PropositionStatus.FINAL
-        ).select_related('subtheme__theme')
+        # Get propositions (findings) via Service
+        propositions = self.conclusion_service.get_final_propositions(project_id)
         
         prop_list = []
         for prop in propositions:
@@ -71,8 +67,8 @@ class FindingsExportService:
                 'subtheme': prop.subtheme.name
             })
         
-        # Get themes
-        themes = Theme.objects.all()
+        # Get themes via Service
+        themes = self.conclusion_service.get_all_themes(project_id)
         theme_names = [t.name for t in themes]
         
         package = ExportPackage(
