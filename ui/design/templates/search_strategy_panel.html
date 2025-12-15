@@ -12,7 +12,7 @@
         <div class="text-xs font-medium text-base-content/80">
             Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}
             {% if project.owner == request.user %}
-            <form action="{% url 'design:consolidate_search_strategy_stage' project.id %}" method="POST"
+            <form action="{% url 'design:consolidate_search_strategy_stage' project_id=project.id %}" method="POST"
                 class="inline-block ml-4"
                 onsubmit="return confirm('Are you sure you want to consolidate this stage? This will reject all draft strategies and finalize the design phase.');">
                 {% csrf_token %}
@@ -41,7 +41,7 @@
                     <td class="p-2 text-center">
                         <div class="flex justify-center gap-3">
 
-                            <a href="{% url 'design:search_strategy_builder_view' project.id %}?question_id={{ question.id }}"
+                            <a href="{% url 'design:search_strategy_builder_view' project_id=project.id %}?question_id={{ question.id }}"
                                 class="btn btn-square btn-sm btn-ghost text-base-content/60 tooltip"
                                 data-tip="Build Strategy">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -65,7 +65,7 @@
                             <button
                                 class="btn btn-square btn-sm btn-ghost text-base-content/60 tooltip view-strategy-btn"
                                 data-tip="View Suggested Search Strategy"
-                                data-url="{% url 'design:get_search_strategy_for_question' question.id %}"
+                                data-url="{% url 'design:get_search_strategy_for_question' project_id=project.id question_id=question.id %}"
                                 data-id="{{ question.id }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -144,6 +144,35 @@
     </div>
 </dialog>
 
+<dialog id="review_strategy_modal" class="modal">
+    <div class="modal-box">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+
+        <h3 class="font-bold text-lg" id="review-modal-title">Review Strategy</h3>
+        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+
+        <form id="review-strategy-form" method="POST" class="mt-4 space-y-4">
+            {% csrf_token %}
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Justification <span class="text-error">*</span></span>
+                </label>
+                <textarea name="justification" class="textarea textarea-bordered h-24"
+                    placeholder="Type your justification here..." required></textarea>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" id="review-confirm-btn" class="btn btn-primary">Confirm</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const tableBody = document.getElementById('question-table-body');
@@ -160,11 +189,11 @@
 </script>
 
 <script>
-    const versionsApiUrl = "{% url 'design:get_strategy_versions' 0 %}";
-    const builderUrlBase = "{% url 'design:search_strategy_builder_view' project.id %}";
-    const approveUrlBase = "{% url 'design:approve_strategy' 0 %}";
-    const rejectUrlBase = "{% url 'design:reject_strategy' 0 %}";
-    const deleteVersionApiUrl = "{% url 'design:delete_strategy_version' 0 %}";
+    const versionsApiUrl = "{% url 'design:get_strategy_versions' project_id=project.id question_id=0 %}";
+    const builderUrlBase = "{% url 'design:search_strategy_builder_view' project_id=project.id %}";
+    const approveUrlBase = "{% url 'design:approve_strategy' project_id=project.id strategy_id=0 %}";
+    const rejectUrlBase = "{% url 'design:reject_strategy' project_id=project.id strategy_id=0 %}";
+    const deleteVersionApiUrl = "{% url 'design:delete_strategy_version' project_id=project.id version_id=0 %}";
 </script>
 
 <script src="{% static 'scripts/search_strategy_panel.js' %}"></script>

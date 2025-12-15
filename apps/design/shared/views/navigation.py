@@ -1,17 +1,23 @@
 from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from apps.project.decorators import project_member_required
 from apps.design.shared.models.design_phase import DesignPhase
 
-@login_required
-def design_stages_router(request, project_id):
+
+@project_member_required
+def design_stages_router(request, project_id, project):
+    """Router that redirects to the appropriate stage view based on query param or current stage."""
     target_stage = request.GET.get('target_stage')
     stage_map = {
-        DesignPhase.DesignStage.RQ_CREATION.value: 'design:rq_workspace',
-        DesignPhase.DesignStage.RQ_DISCUSSION.value: 'design:question_discussion_panel',
-        DesignPhase.DesignStage.CRITERIA_DEFINITION.value: 'design:eligibility_criteria_panel',
-        DesignPhase.DesignStage.SEARCH_STRATEGY.value: 'design:open_search_strategy_panel',
+        DesignPhase.DesignStage.RQ_CREATION.value: 'research-questions/',
+        DesignPhase.DesignStage.RQ_DISCUSSION.value: 'discussion/',
+        DesignPhase.DesignStage.CRITERIA_DEFINITION.value: 'eligibility-criteria/',
+        DesignPhase.DesignStage.SEARCH_STRATEGY.value: 'search-strategy/',
     }
 
-    url_name = stage_map.get(target_stage, 'design:rq_workspace')
-    
-    return redirect(url_name, project_id=project_id)
+    relative_path = stage_map.get(target_stage, 'research-questions/')
+
+    # Build the full URL since we're nested under /project/<project_id>/design/
+    full_url = f'/project/{project_id}/design/{relative_path}'
+
+    return redirect(full_url)

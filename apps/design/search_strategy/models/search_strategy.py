@@ -57,7 +57,7 @@ class SearchStrategyVersion(models.Model):
     json_definition = models.JSONField(default=dict)
     total_found = models.PositiveIntegerField(default=0, help_text="Number of studies found with this strategy")
     status = models.CharField(max_length=20, choices=SearchStrategy.Status.choices, default=SearchStrategy.Status.DRAFT)
-    
+    justification = models.TextField(blank=True, null=True, help_text="Justification for approval/rejection")
     metadata_snapshot = models.JSONField(default=dict) 
     
     created_at = models.DateTimeField(auto_now_add=True)

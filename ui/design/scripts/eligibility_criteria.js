@@ -241,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded" data-placeholder="Enter motivation"></div>
             </td>
             <td class="p-2 text-center">
-                <span class="badge badge-ghost text-xs">Draft</span>
+                <span class="badge badge-neutral gap-1 text-white">Draft</span>
             </td>
             <td class="p-2 text-center">
                 <div class="flex justify-center gap-2">

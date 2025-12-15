@@ -6,7 +6,7 @@
     
     <div class="flex justify-between items-center border-b border-base-200 pb-1">
         <div class="flex items-center gap-4">
-            <a href="{% url 'design:open_search_strategy_panel' project.id %}" 
+            <a href="{% url 'design:open_search_strategy_panel' project_id=project.id %}"
                 class="btn btn-circle btn-ghost btn-sm tooltip tooltip-right"
                 data-tip="Back to Search Strategies Panel">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
@@ -116,7 +116,7 @@
 
         <script>
             const STRATEGY_ID = "{{ strategy.id }}";
-            const SAVE_URL = "{% url 'design:save_visual_strategy' strategy.id %}";
+            const SAVE_URL = "{% url 'design:save_visual_strategy' project_id=project.id strategy_id=strategy.id %}";
             const INITIAL_DATA = {{ visual_data_json|default:"{}"|safe }};
         </script>
         <script src="{% static 'scripts/search_strategy_builder.js' %}"></script>

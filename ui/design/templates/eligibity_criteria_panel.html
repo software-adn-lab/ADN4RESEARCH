@@ -25,13 +25,12 @@
     </div>
 
     <div class="space-y-8">
-
         <div class="space-y-3">
-            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2 mt-8">
                 Inclusion Criteria
             </h2>
 
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
+            <div class="border border-base-300 rounded-lg">
                 <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
@@ -58,7 +57,7 @@
                                 {% elif criterion.status == 'REJECTED' %}
                                 <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
-                                <span class="badge badge-ghost text-xs">Draft</span>
+                                <span class="badge badge-neutral text-xs text-white">Draft</span>
                                 {% endif %}
                             </td>
                             <td class="p-2 text-center">
@@ -130,7 +129,7 @@
                 Exclusion Criteria
             </h2>
 
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
+            <div class="border border-base-300 rounded-lg">
                 <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
@@ -157,7 +156,7 @@
                                 {% elif criterion.status == 'REJECTED' %}
                                 <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
-                                <span class="badge badge-ghost text-xs">Draft</span>
+                                <span class="badge badge-neutral text-xs text-white">Draft</span>
                                 {% endif %}
                             </td>
                             <td class="p-2 text-center">
@@ -227,7 +226,7 @@
 </div>
 <div class="flex text-center justify-center p-6">
     {% if is_owner and is_editable %}
-    <form method="POST" action="{% url 'design:consolidate_eligibility_stage' project.id %}"
+    <form method="POST" action="{% url 'design:consolidate_eligibility_stage' project_id=project.id %}"
         onsubmit="return confirm('Are you sure? This will REJECT all pending drafts and advance to the next stage.');">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
@@ -275,11 +274,11 @@
 
 <script>
     const URLS = {
-        create: "{% url 'design:create_criterion' project.id %}",
-        update: "{% url 'design:update_criterion' 9999 %}",
-        approve: "{% url 'design:approve_criterion' 9999 %}",
-        reject: "{% url 'design:reject_criterion' 9999 %}",
-        delete: "{% url 'design:delete_criterion' 9999 %}",
+        create: "{% url 'design:create_criterion' project_id=project.id %}",
+        update: "{% url 'design:update_criterion' project_id=project.id criterion_id=9999 %}",
+        approve: "{% url 'design:approve_criterion' project_id=project.id criterion_id=9999 %}",
+        reject: "{% url 'design:reject_criterion' project_id=project.id criterion_id=9999 %}",
+        delete: "{% url 'design:delete_criterion' project_id=project.id criterion_id=9999 %}",
     };
 </script>
 <script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
@@ -290,9 +289,19 @@
         border: 1px solid transparent;
         transition: all 0.2s ease;
     }
-    .editable-cell:hover { background-color: hsl(var(--b2) / 0.3); }
-    .editable-cell:focus { background-color: hsl(var(--b1)); }
-    .editable-cell:empty:before { content: attr(data-placeholder); color: #afafaf; }
+
+    .editable-cell:hover {
+        background-color: hsl(var(--b2) / 0.3);
+    }
+
+    .editable-cell:focus {
+        background-color: hsl(var(--b1));
+    }
+
+    .editable-cell:empty:before {
+        content: attr(data-placeholder);
+        color: #afafaf;
+    }
 </style>
 
 {% endblock eligibility_criteria_content %}

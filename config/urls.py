@@ -20,14 +20,9 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    # Admin
     path('admin/', admin.site.urls),
-
-    # Development tools
     path("__reload__/", include("django_browser_reload.urls")),
-
-    # SLR Module URLs
-    path('design/', include('apps.design.urls')),
+    path('project/<int:project_id>/design/', include('apps.design.urls')),  
     path('interpretation/', include('apps.interpretation.urls')),
     path('extraction/', include('apps.extraction.urls')),
     path('selection/', include('apps.selection.urls')),
@@ -35,7 +30,6 @@ urlpatterns = [
     path('project/', include('apps.project.urls')),
 ]
 
-# Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
