@@ -17,7 +17,7 @@ import time
 import random
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -57,6 +57,7 @@ class SciHubDownloader:
 
     def __init__(
         self,
+        storage: Any,
         enabled: bool = False,
         base_dir: str = "media/papers",
         timeout: int = 30,
@@ -65,19 +66,21 @@ class SciHubDownloader:
     ):
         """
         Args:
+            storage: Implementación de IStorage (DjangoStorage)
             enabled: Si True, permite descargas desde Sci-Hub
-            base_dir: Directorio base para guardar PDFs
+            base_dir: Directorio base para el caché (Legacy/Local cache)
             timeout: Timeout en segundos para requests
             delay_range: Rango de delays aleatorios (min, max) en segundos
             use_cache: Si True, usa caché para evitar re-descargas
         """
+        self.storage = storage
         self.enabled = enabled
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
         self.delay_range = delay_range
 
-        # Cache manager
+        # Cache manager (sigue usando disco local para metadatos/sqlite)
         self.cache = DownloadCache(base_dir) if use_cache else None
 
         # Sesión HTTP con reintentos automáticos
@@ -90,7 +93,7 @@ class SciHubDownloader:
             )
         else:
             logger.info(
-                "⚠️  SciHubDownloader HABILITADO. "
+                f"⚠️  SciHubDownloader HABILITADO con Storage: {type(storage).__name__}. "
                 "Usar SOLO como último recurso para investigación académica."
             )
 
@@ -122,12 +125,6 @@ class SciHubDownloader:
     def _get_realistic_headers(self) -> dict:
         """
         Genera headers realistas de navegador moderno.
-
-        Incluye:
-        - User-Agent aleatorio
-        - Accept headers correctos
-        - Sec-Fetch-* headers (Chrome)
-        - Accept-Language (español)
         """
         return {
             'User-Agent': random.choice(self.USER_AGENTS),
@@ -154,197 +151,223 @@ class SciHubDownloader:
 
     def download(self, doi: str, output_path: Optional[str] = None) -> Optional[str]:
         """
-        Descarga PDF desde Sci-Hub usando DOI.
+        Descarga PDF desde Sci-Hub usando DOI a través de IStorage.
 
         Args:
             doi: DOI del paper
-            output_path: Ruta donde guardar (opcional, se genera automática)
+            output_path: Ruta relativa deseada (opcional)
 
         Returns:
-            Ruta del PDF descargado o None si falla
+            Ruta relativa (key) del PDF en el storage o None
         """
         if not self.enabled:
             logger.debug("Sci-Hub deshabilitado, saltando")
             return None
 
+        logger.info(f"DEBUG: SciHubDownloader.download called for DOI: {doi}")
+        logger.info(f"DEBUG: Storage Type: {type(self.storage)}")
+        
         if not doi:
             return None
 
         # Limpiar DOI
         clean_doi = doi.strip().replace('https://doi.org/', '').replace('http://dx.doi.org/', '')
+        
+        # Determinar path relativo para IStorage
+        if output_path:
+             # Si viene un output_path, intentamos usarlo (asegurando limpieza)
+            relative_path = output_path
+        else:
+             # Generar path basado en UUID para evitar colisiones
+            filename = f"{uuid.uuid4()}.pdf"
+            # Estructura: scihub/<doi_safe>/<uuid>.pdf
+            doi_safe = clean_doi.replace('/', '_')
+            relative_path = f"scihub/{doi_safe}/{filename}"
 
-        # Verificar caché primero
-        if self.cache:
-            cached = self.cache.get_cached_paper(clean_doi)
-            if cached:
-                logger.info(f"[Sci-Hub Cache HIT] {clean_doi}")
-                return cached['file_path']
+        # ⭐ CAMBIO CRÍTICO: Manejo defensivo del error 403
+        try:
+            if self.storage.exists(relative_path):
+                logger.info(f"[Storage HIT] Archivo ya existe: {relative_path}")
+                return relative_path
+        except Exception as e:
+            # Si falla la verificación de existencia (403, permisos, etc.),
+            # continuar con la descarga en lugar de abortar
+            logger.warning(f"No se pudo verificar existencia en storage (probablemente permisos): {e}")
+            logger.info("Continuando con la descarga...")
 
+        # Verificar caché local (opcional, como backup de metadata)
+        # Nota: El caché local guarda paths absolutos antiguos, puede no coincidir con S3.
+        # Por ahora priorizamos IStorage fresh download si no existe en storage.
+        
         logger.info(f"[Sci-Hub] Intentando descargar: {clean_doi}")
 
         # Intentar con múltiples dominios
         for i, domain in enumerate(self.SCIHUB_DOMAINS):
-            # Delay entre intentos (excepto el primero)
             if i > 0:
                 self._random_delay()
 
             try:
-                pdf_path = self._download_from_domain(domain, clean_doi, output_path)
-                if pdf_path:
-                    logger.info(f"✓ [Sci-Hub] PDF descargado desde {domain}")
+                # Descargar contenido a memoria
+                pdf_content = self._download_content_from_domain(domain, clean_doi)
+                
+                if pdf_content:
+                    logger.info(f"✓ [Sci-Hub] PDF obtenido desde {domain}")
+                    
+                    # Guardar usando IStorage
+                    from django.core.files.base import ContentFile
+                    saved_path = self.storage.save(ContentFile(pdf_content), relative_path)
+                    
+                    # Verificar persistencia REAL (con manejo de errores)
+                    try:
+                        if not self.storage.exists(saved_path):
+                            logger.error(f"CRÍTICO: Sci-Hub descargó pero storage falló al guardar: {saved_path}")
+                            continue
+                    except Exception as verify_error:
+                         logger.warning(f"No se pudo verificar guardado (probablemente permisos), asumiendo éxito: {verify_error}")
+                         # Asumimos que el save() tuvo éxito si no lanzó excepción
+                        
+                    logger.info(f"✅ PDF guardado en storage: {saved_path}")
 
-                    # Guardar en caché
+                    # Actualizar caché local (metadata solamente)
                     if self.cache:
-                        self.cache.save_paper(clean_doi, f"Paper_{clean_doi}", pdf_path, f"sci-hub-{i}")
+                        # Guardamos el path del storage en el caché
+                        self.cache.save_paper(clean_doi, f"Paper_{clean_doi}", saved_path, f"sci-hub-{i}")
 
-                    return pdf_path
+                    return saved_path
 
             except requests.exceptions.Timeout:
                 logger.debug(f"Dominio {domain} timeout")
-                if self.cache:
-                    self.cache.mark_failed(clean_doi, f"sci-hub-{i}", "Timeout")
                 continue
-
             except Exception as e:
                 logger.debug(f"Dominio {domain} falló: {str(e)[:50]}")
-                if self.cache:
-                    self.cache.mark_failed(clean_doi, f"sci-hub-{i}", str(e))
                 continue
 
         logger.warning(f"[Sci-Hub] No se pudo descargar: {clean_doi}")
         return None
 
-    def _download_from_domain(
-        self,
-        domain: str,
-        doi: str,
-        output_path: Optional[str]
-    ) -> Optional[str]:
+    def _download_content_from_domain(self, domain: str, doi: str) -> Optional[bytes]:
         """
-        Intenta descargar desde un dominio específico de Sci-Hub.
-
-        Args:
-            domain: URL base de Sci-Hub
-            doi: DOI limpio
-            output_path: Ruta de salida
-
-        Returns:
-            Ruta del PDF descargado o None
+        Helper para obtener el CONTENIDO binario del PDF desde un dominio.
+        Retorna bytes o None.
         """
-        # Construir URL de Sci-Hub
         scihub_url = f"{domain}/{doi}"
-
-        # Obtener página de Sci-Hub con headers realistas
         headers = self._get_realistic_headers()
+        
+        logger.debug(f"Obteniendo página de Sci-Hub: {scihub_url}")
         response = self.session.get(scihub_url, headers=headers, timeout=self.timeout)
         response.raise_for_status()
-
-        # Parsear HTML para encontrar enlace del PDF
+        
+        # Parsear HTML
         soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Intentar extraer PDF URL
+        pdf_url = self._extract_pdf_url(soup, domain)
+        
+        if not pdf_url:
+            logger.debug(f"No se encontró URL del PDF en {domain}")
+            # Debug: guardar HTML para inspección
+            logger.debug(f"HTML preview: {str(soup)[:500]}...")
+            return None
+            
+        logger.debug(f"PDF URL encontrada: {pdf_url[:100]}...")
+        
+        # Descargar el PDF
+        pdf_response = self.session.get(pdf_url, headers=headers, timeout=self.timeout)
+        pdf_response.raise_for_status()
+        
+        content = pdf_response.content
+        
+        # Validar que es un PDF
+        if len(content) < 1000:
+            logger.warning(f"Contenido muy pequeño ({len(content)} bytes), probablemente no es un PDF")
+            return None
+            
+        if not content.startswith(b'%PDF'):
+            logger.warning("Contenido no comienza con magic bytes de PDF")
+            # Debug: mostrar primeros bytes
+            logger.debug(f"Primeros 100 bytes: {content[:100]}")
+            return None
+             
+        logger.info(f"✓ PDF válido descargado: {len(content):,} bytes")
+        return content
 
-        # Sci-Hub puede tener el PDF en diferentes elementos
+
+    def _extract_pdf_url(self, soup: BeautifulSoup, domain: str) -> Optional[str]:
+        """
+        Extrae la URL del PDF del HTML de Sci-Hub.
+        Probado con múltiples versiones del HTML de Sci-Hub (2024-2025).
+        """
         pdf_url = None
-
-        # Método 1: iframe embed
+        
+        # Estrategia 1: iframe con id="pdf"
         iframe = soup.find('iframe', {'id': 'pdf'})
         if iframe and iframe.get('src'):
             pdf_url = iframe['src']
-            logger.debug(f"Found PDF in iframe: {pdf_url[:60]}...")
-
-        # Método 2: button/link directo
+            logger.debug(f"PDF URL encontrada en iframe: {pdf_url[:80]}...")
+        
+        # Estrategia 2: embed tag
+        if not pdf_url:
+            embed = soup.find('embed', {'type': 'application/pdf'})
+            if embed and embed.get('src'):
+                pdf_url = embed['src']
+                logger.debug(f"PDF URL encontrada en embed: {pdf_url[:80]}...")
+        
+        # Estrategia 3: button con onclick
         if not pdf_url:
             pdf_button = soup.find('button', {'onclick': True})
             if pdf_button:
                 onclick = pdf_button.get('onclick', '')
                 if 'location.href=' in onclick:
-                    pdf_url = onclick.split("'")[1]
-                    logger.debug(f"Found PDF in button: {pdf_url[:60]}...")
-
-        # Método 3: embed tag
-        if not pdf_url:
-            embed = soup.find('embed', {'type': 'application/pdf'})
-            if embed and embed.get('src'):
-                pdf_url = embed['src']
-                logger.debug(f"Found PDF in embed: {pdf_url[:60]}...")
-
-        # Método 4: Buscar cualquier enlace que termine en .pdf
-        if not pdf_url:
-            for link in soup.find_all('a', href=True):
-                href = link['href']
-                if href.endswith('.pdf') or '.pdf?' in href:
-                    pdf_url = href
-                    logger.debug(f"Found PDF in link: {pdf_url[:60]}...")
-                    break
-
-        # Método 5: Buscar en atributos onclick de cualquier elemento
-        if not pdf_url:
-            for elem in soup.find_all(onclick=True):
-                onclick = elem.get('onclick', '')
-                if '.pdf' in onclick:
-                    # Extraer URL del onclick
+                    # Extraer URL entre comillas
                     import re
-                    match = re.search(r'["\']([^"\']*\.pdf[^"\']*)["\']', onclick)
+                    match = re.search(r"location\.href\s*=\s*['\"]([^'\"]+)['\"]", onclick)
                     if match:
                         pdf_url = match.group(1)
-                        logger.debug(f"Found PDF in onclick: {pdf_url[:60]}...")
-                        break
-
+                        logger.debug(f"PDF URL encontrada en button: {pdf_url[:80]}...")
+        
+        # Estrategia 4: Link directo con rel o download
         if not pdf_url:
-            logger.debug("No PDF URL found in HTML")
-            # Guardar HTML para debug
-            try:
-                with open('debug_scihub_response.html', 'w', encoding='utf-8', errors='replace') as f:
-                    f.write(str(soup.prettify()))
-                logger.debug("HTML guardado en debug_scihub_response.html")
-            except Exception:
-                pass
-            return None
-
-        # Asegurar URL absoluta
-        if pdf_url.startswith('//'):
-            pdf_url = 'https:' + pdf_url
-        elif pdf_url.startswith('/'):
-            pdf_url = domain + pdf_url
-        elif not pdf_url.startswith('http'):
-            pdf_url = domain + '/' + pdf_url
-
-        logger.debug(f"Downloading PDF from: {pdf_url[:80]}...")
-
-        # Descargar el PDF
-        pdf_response = self.session.get(pdf_url, headers=headers, timeout=self.timeout)
-        pdf_response.raise_for_status()
-
-        # Verificar que sea PDF
-        content_type = pdf_response.headers.get('Content-Type', '')
-        pdf_content = pdf_response.content
-
-        if 'pdf' not in content_type.lower() and not pdf_content.startswith(b'%PDF'):
-            logger.warning(f"Respuesta no es PDF: {content_type}")
-            return None
-
-        # Verificar tamaño mínimo (10 KB)
-        if len(pdf_content) < 10 * 1024:
-            logger.warning(f"PDF sospechosamente pequeño: {len(pdf_content)} bytes")
-            return None
-
-        # Determinar ruta de salida
-        if output_path:
-            final_path = Path(output_path)
-        else:
-            # Generar nombre único
-            filename = f"{uuid.uuid4()}.pdf"
-            final_path = self.base_dir / filename
-
-        # Guardar PDF
-        final_path.parent.mkdir(parents=True, exist_ok=True)
-        final_path.write_bytes(pdf_content)
-
-        # Log tamaño
-        size_kb = final_path.stat().st_size / 1024
-        size_mb = size_kb / 1024
-        logger.info(f"PDF guardado: {size_mb:.2f} MB ({size_kb:.2f} KB)")
-
-        return str(final_path)
+            pdf_link = soup.find('a', {'href': True, 'download': True})
+            if pdf_link:
+                pdf_url = pdf_link['href']
+                logger.debug(f"PDF URL encontrada en link download: {pdf_url[:80]}...")
+        
+        # Estrategia 5: Buscar cualquier link que apunte a .pdf
+        if not pdf_url:
+            all_links = soup.find_all('a', href=True)
+            for link in all_links:
+                href = link['href']
+                if '.pdf' in href.lower() or 'download' in href.lower():
+                    pdf_url = href
+                    logger.debug(f"PDF URL encontrada en link genérico: {pdf_url[:80]}...")
+                    break
+        
+        # Estrategia 6: Buscar en divs con id específicos de Sci-Hub
+        if not pdf_url:
+            pdf_div = soup.find('div', {'id': 'pdf'})
+            if pdf_div:
+                iframe = pdf_div.find('iframe')
+                if iframe and iframe.get('src'):
+                    pdf_url = iframe['src']
+                    logger.debug(f"PDF URL encontrada en div#pdf iframe: {pdf_url[:80]}...")
+        
+        # Normalizar URL
+        if pdf_url:
+            # Protocolo relativo
+            if pdf_url.startswith('//'):
+                pdf_url = 'https:' + pdf_url
+            # Ruta relativa
+            elif pdf_url.startswith('/'):
+                pdf_url = domain + pdf_url
+            # Sin protocolo
+            elif not pdf_url.startswith('http'):
+                pdf_url = domain + '/' + pdf_url
+            
+            logger.debug(f"PDF URL normalizada: {pdf_url[:100]}...")
+            return pdf_url
+        
+        logger.warning(f"No se pudo extraer PDF URL del HTML de {domain}")
+        return None
 
     def get_cache_stats(self) -> dict:
         """Obtiene estadísticas del caché"""

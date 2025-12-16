@@ -236,7 +236,7 @@ class Container:
             web_strategy=ieee_web_strategy,
             rate_limiter=ieee_rate_limiter,
             circuit_breaker=ieee_circuit_breaker,
-            prefer_api=True,
+            prefer_api=False,
         )
 
         return {
@@ -434,7 +434,7 @@ class Container:
 
             # Descarga y fuentes alternativas
             if cls._http_downloader is None:
-                cls._http_downloader = HttpDownloader(base_dir=storage_dir)
+                cls._http_downloader = HttpDownloader(storage=cls.get_storage())
 
             if cls._alternative_finder is None:
                 enable_scihub = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
@@ -444,6 +444,7 @@ class Container:
                 )
 
                 scihub = SciHubDownloader(
+                    storage=cls.get_storage(),
                     enabled=enable_scihub,
                     base_dir=storage_dir,
                     timeout=30,

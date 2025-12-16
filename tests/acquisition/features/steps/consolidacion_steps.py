@@ -25,6 +25,7 @@ from apps.acquisition.shared.domain.entities.study import Study
 # Mocks para testing (YA EXISTEN en shared/testing/mocks/)
 from apps.acquisition.shared.testing.mocks.mock_scopus_connector import MockScopusConnector
 from apps.acquisition.shared.testing.mocks.mock_ieee_connector import MockIeeeConnector
+from apps.acquisition.shared.testing.mocks.mock_study_repository import MockStudyRepository
 
 # Value Objects (YA EXISTEN)
 from apps.acquisition.metadata.domain.value_objects.consolidation_status import ConsolidationStatus
@@ -104,7 +105,12 @@ def step_solicito_consolidar(context):
     }
 
     # Ejecutar caso de uso
-    service = ConsolidationService(connectors=connectors)
+    # Mockear repositorio
+    mock_repo = MockStudyRepository()
+    # Pre-cargar estudios en el mock repo para que los encuentre si es necesario
+    mock_repo.save_batch(context.studies)
+    
+    service = ConsolidationService(connectors=connectors, repository=mock_repo)
     # Usar el helper privado para testing con objetos en memoria
     context.consolidation_result = service._consolidate_list(studies=context.studies)
 
@@ -222,8 +228,13 @@ def step_ingreso_manual(context):
     """El usuario envía los datos faltantes manualmente."""
     # WISHFUL THINKING: Servicio de edición manual
     from apps.acquisition.metadata.application.manual_edit_service import ManualEditService
-
-    service = ManualEditService()
+    
+    # Usar MockStudyRepository
+    mock_repo = MockStudyRepository()
+    # Guardar el estudio que vamos a editar en el repo
+    mock_repo.save(context.estudio_manual)
+    
+    service = ManualEditService(repository=mock_repo)
 
     user_input = {
         "doi": "10.5555/manual.entry",

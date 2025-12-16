@@ -47,6 +47,7 @@ class Study:
         pdf_path: Ruta al archivo PDF descargado
         pdf_source: Fuente desde donde se obtuvo el PDF (puede diferir de source)
         download_status: Estado de disponibilidad del PDF (disponible, no_disponible, pendiente)
+        page_count: Número de páginas del PDF descargado
 
         # Auditoria
         discovered_at: Timestamp de cuándo se descubrió el estudio
@@ -85,6 +86,7 @@ class Study:
     pdf_path: Optional[str] = None
     pdf_source: Optional[str] = None
     download_status: Optional[str] = None  # "texto_completo_disponible", "no_disponible", "pendiente"
+    page_count: Optional[int] = None
 
     # Auditoría
     discovered_at: datetime = field(default_factory=datetime.now)
@@ -163,6 +165,7 @@ class Study:
         self,
         pdf_path: str,
         pdf_source: Optional[str] = None,
+        page_count: Optional[int] = None,
     ) -> None:
         """
         Adjuntar el texto completo (PDF) al estudio.
@@ -191,6 +194,7 @@ class Study:
         # Actualizar datos del PDF
         self.pdf_path = pdf_path
         self.pdf_source = pdf_source if pdf_source else self.source.name
+        self.page_count = page_count
 
         # Transicionar estado
         self.status = StudyStatus.DOWNLOADED
@@ -287,6 +291,7 @@ class Study:
             "pdf_url": self.pdf_url,
             "pdf_path": self.pdf_path,
             "pdf_source": self.pdf_source,
+            "page_count": self.page_count,
             "download_status": self.download_status,
             "discovered_at": self.discovered_at.isoformat() if self.discovered_at else None,
             "enriched_at": self.enriched_at.isoformat() if self.enriched_at else None,
@@ -399,6 +404,7 @@ class Study:
             pdf_url=data.get("pdf_url"),
             pdf_path=data.get("pdf_path"),
             pdf_source=data.get("pdf_source"),
+            page_count=data.get("page_count"),
             download_status=data.get("download_status"),
             discovered_at=discovered_at,
             enriched_at=enriched_at,

@@ -111,6 +111,11 @@ class StudyModel(models.Model):
         blank=True,
         help_text="Estado de disponibilidad del PDF (texto_completo_disponible, no_disponible, pendiente)"
     )
+    page_count = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Número de páginas del PDF descargado"
+    )
 
     # Consolidación de metadatos (Feature 3)
     consolidation_status = models.CharField(
