@@ -1,115 +1,165 @@
 """
-Composite checker to orchestrate Open Access verification from multiple sources.
+ChainedOpenAccessChecker - Orquestador de verificación OA usando Chain of Responsibility.
 
-Estrategia:
-- Si el estudio ya viene marcado como OA, respeta ese hint (no llama APIs).
-- Primer checker (ej. Unpaywall) decide si es OA y opcionalmente aporta pdf_url.
-- Checker secundario (opcional) como respaldo (ej. Crossref u otro).
-- Optimización: Si el estudio viene de Scopus, NO consulta Scopus API de nuevo (ahorro de cuota).
+Este módulo actúa como wrapper/facade sobre la cadena de checkers para:
+- Respetar el hint de OA existente en el Study (evitar llamadas innecesarias)
+- Enriquecer el Study con la información encontrada (pdf_url, is_open_access)
+- Optimizar llamadas a APIs cuando el estudio viene de una fuente específica
 
-Nota: Mantiene compatibilidad con la interfaz IOpenAccessChecker (is_open_access(doi))
-pero permite pasar el Study para enriquecerlo si el checker soporta más datos
-(p. ej. get_oa_info).
+Patrón: Facade sobre Chain of Responsibility
+- Recibe el primer eslabón de la cadena
+- Añade lógica de negocio antes de delegar a la cadena
+
+Nota: Este archivo se renombrará internamente pero mantiene el nombre
+CompositeOpenAccessChecker para compatibilidad hacia atrás.
 """
-from typing import Optional, Any
+from typing import Optional, List
 import logging
 
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.value_objects.doi import DOI
+from apps.acquisition.downloads.domain.interfaces import (
+    BaseOpenAccessChecker,
+    OpenAccessResult,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class CompositeOpenAccessChecker:
+class ChainedOpenAccessChecker:
     """
-    Orquesta múltiples checkers de OA con optimización de cuota:
-    1) Respeta el hint existente (study.is_open_access == True)
-    2) Primer checker (ej. Unpaywall)
-    3) Checker secundario opcional (ej. Crossref)
-    4) Checker terciario opcional (ej. Scopus institucional)
-       - OPTIMIZACIÓN: Salta el terciario si el estudio ya viene de Scopus
-         (para no gastar cuota API consultando dos veces)
+    Orquestador de verificación de OA que envuelve una cadena de checkers.
+    
+    Este componente es un Facade que:
+    1. Respeta el hint existente (study.is_open_access == True)
+    2. Delega la verificación a la cadena de checkers
+    3. Enriquece el Study con la información encontrada
+    4. Optimiza llamadas cuando el estudio viene de fuentes específicas
+    
+    Uso:
+        # La cadena ya viene configurada desde el Container
+        chain_head = unpaywall  # -> crossref -> scopus -> None
+        
+        orchestrator = ChainedOpenAccessChecker(
+            checker_chain=chain_head,
+            skip_sources=["Scopus"]
+        )
+        
+        result = orchestrator.check_access(doi, study)
     """
 
     def __init__(
         self,
-        primary_checker: Any,
-        secondary_checker: Optional[Any] = None,
-        tertiary_checker: Optional[Any] = None,
-        skip_tertiary_for_sources: Optional[list] = None,
+        checker_chain: BaseOpenAccessChecker,
+        skip_sources: Optional[List[str]] = None,
     ):
         """
+        Inicializar el orquestador.
+
         Args:
-            primary_checker: Checker principal (ej. Unpaywall)
-            secondary_checker: Checker secundario (ej. Crossref)
-            tertiary_checker: Checker terciario (ej. Scopus Institucional)
-            skip_tertiary_for_sources: Lista de fuentes para las cuales NO consultar terciario
-                                       (ej. ['Scopus'] para no re-consultar Scopus API)
+            checker_chain: Primer eslabón de la cadena de checkers (ya encadenados)
+            skip_sources: Lista de fuentes para las cuales NO consultar la cadena completa
+                         (ej. ['Scopus'] para no re-consultar Scopus API si el estudio
+                         ya viene de Scopus)
         """
-        self.primary_checker = primary_checker
-        self.secondary_checker = secondary_checker
-        self.tertiary_checker = tertiary_checker
-        self.skip_tertiary_for_sources = skip_tertiary_for_sources or []
+        self.checker_chain = checker_chain
+        self.skip_sources = skip_sources or []
 
-        self.checkers = tuple(
-            checker for checker in (primary_checker, secondary_checker, tertiary_checker) if checker
-        )
-
-    def is_open_access(self, doi: DOI, study: Optional[Study] = None) -> bool:
+    def check_access(self, doi: DOI, study: Optional[Study] = None) -> OpenAccessResult:
         """
-        Determinar si un DOI es OA usando la cascada definida.
-
-        OPTIMIZACIÓN: Si el estudio viene de Scopus, NO consulta el tertiary_checker
-        (ScopusInstitutionalChecker) para evitar gastar cuota API dos veces.
+        Verificar Open Access usando la cadena de checkers.
 
         Args:
             doi: DOI a consultar
-            study: opcional, se enriquece si el checker provee info extra
+            study: Study opcional para enriquecer con información OA
+
+        Returns:
+            OpenAccessResult con la información encontrada
+        """
+        # 1. Respetar hint existente
+        if study and study.is_open_access is True:
+            logger.debug(f"⚡ Estudio {doi.value if doi else 'N/A'} ya marcado como OA")
+            return OpenAccessResult(
+                is_oa=True,
+                pdf_url=getattr(study, 'pdf_url', None),
+                source="Hint",
+            )
+
+        # 2. Validación básica
+        if not doi or not doi.value:
+            return OpenAccessResult.not_found(source="InvalidDOI")
+
+        # 3. Verificar si debemos saltar por fuente del estudio
+        if study and self._should_skip(study):
+            source_name = getattr(study.source, 'name', str(study.source)) if study.source else 'Unknown'
+            logger.info(
+                f"⚡ Saltando verificación OA para estudio de {source_name} "
+                f"(ya consultado en Discovery)"
+            )
+            return OpenAccessResult.not_found(source="Skipped")
+
+        # 4. Delegar a la cadena
+        result = self.checker_chain.check_access(doi)
+
+        # 5. Enriquecer el Study si encontramos OA
+        if study and result.is_oa:
+            study.is_open_access = True
+            if result.pdf_url:
+                study.pdf_url = result.pdf_url
+            logger.info(f"✅ OA encontrado para {doi.value} vía {result.source}")
+
+        return result
+
+    def is_open_access(self, doi: DOI, study: Optional[Study] = None) -> bool:
+        """
+        Wrapper para compatibilidad con IOpenAccessChecker Protocol.
+
+        Args:
+            doi: DOI a consultar
+            study: Study opcional
 
         Returns:
             True si es Open Access, False en caso contrario
         """
-        if study and study.is_open_access is True:
-            return True
+        result = self.check_access(doi, study)
+        return result.is_oa
 
-        if not doi or not doi.value:
+    def get_oa_info(self, doi: DOI) -> dict:
+        """
+        Wrapper para compatibilidad con código existente que espera Dict.
+
+        Args:
+            doi: DOI a consultar
+
+        Returns:
+            Diccionario con información OA
+        """
+        result = self.check_access(doi, study=None)
+        return {
+            "is_oa": result.is_oa,
+            "pdf_url": result.pdf_url,
+            "landing_url": result.landing_url,
+            "source": result.source,
+            "oa_type": result.oa_type,
+            "license": result.license,
+            "version": result.version,
+        }
+
+    def _should_skip(self, study: Study) -> bool:
+        """
+        Determinar si debemos saltar la verificación para este estudio.
+
+        Útil para evitar consultar Scopus API si el estudio ya viene de Scopus.
+        """
+        if not study.source:
             return False
+        
+        source_name = getattr(study.source, 'name', None)
+        if source_name is None:
+            source_name = str(study.source)
+        
+        return source_name in self.skip_sources
 
-        for checker in self.checkers:
-            if not checker:
-                continue
 
-            # Identificar por identidad, no por índice (robusto ante cambios de configuración)
-            is_tertiary = (checker is self.tertiary_checker)
-            if is_tertiary and study and study.source and hasattr(study.source, 'name') and study.source.name in self.skip_tertiary_for_sources:
-                logger.info(
-                    f"⚡ Saltando checker terciario para estudio de {study.source.name} "
-                    f"(ya consultado en Discovery)"
-                )
-                continue
-
-            try:
-                result = checker.is_open_access(doi)
-            except TypeError:
-                # Checker espera también study (firma extendida)
-                result = checker.is_open_access(doi, study)  # type: ignore[arg-type]
-
-            # Enriquecer con info detallada si existe get_oa_info
-            if hasattr(checker, "get_oa_info"):
-                try:
-                    info = checker.get_oa_info(doi)
-                    if isinstance(info, dict):
-                        if study and info.get("is_oa") is not None:
-                            study.is_open_access = bool(info.get("is_oa"))
-                        if study and info.get("pdf_url"):
-                            study.pdf_url = info.get("pdf_url")
-                except Exception:
-                    # Silencioso: no debe romper el flujo si get_oa_info falla
-                    pass
-
-            if result:
-                if study:
-                    study.is_open_access = True
-                return True
-
-        return False
+# Alias para compatibilidad hacia atrás
+CompositeOpenAccessChecker = ChainedOpenAccessChecker

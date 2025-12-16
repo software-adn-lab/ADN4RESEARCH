@@ -1,5 +1,5 @@
 """
-AlternativeSourceFinder - Búsqueda en repositorios alternativos.
+AlternativeSourceFinder - Búsqueda en repositorios alternativos (zona gris legal).
 
 ESTRATEGIA DE BÚSQUEDA:
 - Sci-Hub (con bypass anti-DDoS) - OPT-IN ⚠️

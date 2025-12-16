@@ -10,6 +10,8 @@ Características:
 - Caché SQLite integrado
 
 Tasa de éxito esperada: 95-97%
+
+⚠️ ZONA GRIS LEGAL - Deshabilitado por defecto.
 """
 import logging
 import requests
@@ -22,7 +24,7 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .download_cache import DownloadCache
+from apps.acquisition.downloads.adapters.outbound.connectors.cache import DownloadCache
 
 logger = logging.getLogger(__name__)
 
@@ -175,10 +177,10 @@ class SciHubDownloader:
         
         # Determinar path relativo para IStorage
         if output_path:
-             # Si viene un output_path, intentamos usarlo (asegurando limpieza)
+            # Si viene un output_path, intentamos usarlo (asegurando limpieza)
             relative_path = output_path
         else:
-             # Generar path basado en UUID para evitar colisiones
+            # Generar path basado en UUID para evitar colisiones
             filename = f"{uuid.uuid4()}.pdf"
             # Estructura: scihub/<doi_safe>/<uuid>.pdf
             doi_safe = clean_doi.replace('/', '_')
@@ -223,8 +225,8 @@ class SciHubDownloader:
                             logger.error(f"CRÍTICO: Sci-Hub descargó pero storage falló al guardar: {saved_path}")
                             continue
                     except Exception as verify_error:
-                         logger.warning(f"No se pudo verificar guardado (probablemente permisos), asumiendo éxito: {verify_error}")
-                         # Asumimos que el save() tuvo éxito si no lanzó excepción
+                        logger.warning(f"No se pudo verificar guardado (probablemente permisos), asumiendo éxito: {verify_error}")
+                        # Asumimos que el save() tuvo éxito si no lanzó excepción
                         
                     logger.info(f"✅ PDF guardado en storage: {saved_path}")
 

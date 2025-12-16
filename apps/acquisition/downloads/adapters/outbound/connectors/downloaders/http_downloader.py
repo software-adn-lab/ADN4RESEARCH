@@ -1,5 +1,5 @@
 """
-HttpDownloader - Implementación REAL de IDownloader para descargar PDFs vía HTTP.
+HttpDownloader - Descarga PDFs vía HTTP desde URLs Open Access.
 
 Este adaptador descarga PDFs desde URLs y los guarda en el sistema de archivos.
 """

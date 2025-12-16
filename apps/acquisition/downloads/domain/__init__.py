@@ -4,7 +4,10 @@ from .interfaces import (
     IOpenAccessChecker,
     IDownloader,
     IAlternativeSourceFinder,
-    IFileValidator
+    IFileValidator,
+    # Chain of Responsibility
+    BaseOpenAccessChecker,
+    OpenAccessResult,
 )
 from .services import FileValidator
 from .value_objects import DownloadStatus, PdfSource
@@ -15,6 +18,9 @@ __all__ = [
     'IDownloader',
     'IAlternativeSourceFinder',
     'IFileValidator',
+    # Chain of Responsibility Base
+    'BaseOpenAccessChecker',
+    'OpenAccessResult',
     # Services
     'FileValidator',
     # Value Objects
