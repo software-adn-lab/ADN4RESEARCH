@@ -74,6 +74,10 @@ claude/
 *.png
 captured_*.json
 
+# Scopus authentication state (contains session cookies)
+scopus_auth_state.json
+**/scopus_auth_state.json
+
 # Archivos JSON de test/debug
 *_results.json
 *_api_candidate_*.json

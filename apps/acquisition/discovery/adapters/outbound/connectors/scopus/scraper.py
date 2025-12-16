@@ -13,10 +13,12 @@ import time
 import json
 import re
 import random
+import os
+from pathlib import Path
 from typing import Dict, List, Any, Generator, Tuple
 from urllib.parse import urlparse
 from urllib.parse import urlencode
-from playwright.sync_api import sync_playwright, Page, BrowserContext
+from playwright.sync_api import sync_playwright, Page, BrowserContext, TimeoutError as PlaywrightTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,9 @@ class ScopusPlaywrightConnector:
     SEARCH_PATH = "/api/documents/search"  # API real sin /facets
     ABSTRACTS_PATH = "/gateway/documents/abstracts/retrieve"
 
+    # Ruta para guardar la sesión en disco (persiste entre ejecuciones)
+    AUTH_STATE_FILE = Path(__file__).parent / "scopus_auth_state.json"
+    
     # Cache de cookies a nivel de clase para reutilizar entre instancias
     _cookies_cache = None
     _cookies_cache_timestamp = None
@@ -100,29 +105,48 @@ class ScopusPlaywrightConnector:
                     '--disable-accelerated-2d-canvas',
                     '--no-first-run',
                     '--no-zygote',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--disable-infobars',
+                    '--start-maximized',
+                    '--ignore-certificate-errors'
                 ]
             )
 
             context = self._create_stealth_context(browser)
 
-            # Intentar cargar cookies del cache primero
-            cookies_loaded = False
-            if self.use_cookies_cache and self._is_cache_valid():
+            # ESTRATEGIA DE SESIÓN: Prioridad
+            # 1. Archivo en disco (persiste entre ejecuciones de tests)
+            # 2. Cache en memoria (rápido dentro de la misma ejecución)
+            # 3. Cookies preloaded
+            session_loaded = False
+            
+            # 1. Intentar cargar desde archivo
+            if self.AUTH_STATE_FILE.exists():
+                try:
+                    with open(self.AUTH_STATE_FILE, 'r') as f:
+                        saved_cookies = json.load(f)
+                    context.add_cookies(saved_cookies)
+                    logger.info("📂 Sesión cargada desde disco (scopus_auth_state.json)")
+                    session_loaded = True
+                except Exception as e:
+                    logger.warning(f"Error cargando sesión de disco: {e}")
+            
+            # 2. Intentar cache en memoria si no hay archivo
+            if not session_loaded and self.use_cookies_cache and self._is_cache_valid():
                 try:
                     context.add_cookies(self._cookies_cache)
-                    logger.info("✓ Cookies cacheadas reutilizadas (evita re-autenticación)")
-                    cookies_loaded = True
+                    logger.info("✓ Cookies cacheadas reutilizadas (memoria)")
+                    session_loaded = True
                 except Exception as e:
                     logger.warning(f"No se pudieron cargar cookies del cache: {e}")
             
-            # Si no hay cache, intentar preloaded cookies
-            if not cookies_loaded and self.preloaded_cookies:
+            # 3. Cookies preloaded como último recurso
+            if not session_loaded and self.preloaded_cookies:
                 try:
                     cookies = json.loads(self.preloaded_cookies)
                     context.add_cookies(cookies)
                     logger.info("Cookies preloaded cargadas")
-                    cookies_loaded = True
+                    session_loaded = True
                 except Exception as e:
                     logger.warning(f"No se pudieron cargar cookies preloaded: {e}")
 
@@ -130,11 +154,18 @@ class ScopusPlaywrightConnector:
             self._apply_stealth_scripts(page)
 
             try:
-                self._authenticate(page)
+                # Validar si la sesión cargada sigue activa
+                needs_login = True
                 
-                # Guardar cookies en cache después de autenticación exitosa
-                if self.use_cookies_cache:
-                    self._save_cookies_to_cache(context)
+                if session_loaded:
+                    needs_login = not self._validate_session(page)
+                    if not needs_login:
+                        logger.info("✅ Sesión existente válida - saltando login")
+                
+                if needs_login:
+                    self._authenticate(page)
+                    # Guardar sesión exitosa en disco y memoria
+                    self._save_session(context)
                 
                 results = self._execute_search_with_fallback(page, query, max_results)
 
@@ -150,46 +181,91 @@ class ScopusPlaywrightConnector:
 
         logger.info("[Scopus Playwright] Búsqueda completada")
 
+    def _validate_session(self, page: Page) -> bool:
+        """
+        Valida si la sesión cargada sigue activa navegando a Scopus.
+        
+        Returns:
+            True si la sesión es válida, False si necesita re-login
+        """
+        try:
+            logger.info("🔍 Validando sesión existente...")
+            page.goto(
+                "https://www.scopus.com/search/form.uri?display=basic",
+                timeout=15000,
+                wait_until="domcontentloaded"
+            )
+            
+            current_url = page.url
+            
+            # Si estamos en Scopus sin redirección a login = sesión válida
+            if "scopus.com" in current_url and "/login" not in current_url and "signin" not in current_url:
+                self._ensure_scopus_proxy_cookie(page)
+                return True
+            
+            logger.warning("⚠️ Sesión expirada o inválida")
+            return False
+            
+        except Exception as e:
+            logger.warning(f"Error validando sesión: {e}")
+            return False
+
+    def _save_session(self, context: BrowserContext) -> None:
+        """Guarda la sesión en disco y en cache de memoria."""
+        try:
+            cookies = context.cookies()
+            
+            # Guardar en archivo
+            with open(self.AUTH_STATE_FILE, 'w') as f:
+                json.dump(cookies, f)
+            logger.info("💾 Sesión guardada en disco (scopus_auth_state.json)")
+            
+            # Guardar en cache de memoria
+            if self.use_cookies_cache:
+                self._save_cookies_to_cache(context)
+                
+        except Exception as e:
+            logger.error(f"Error guardando sesión: {e}")
+
     def _authenticate(self, page: Page) -> None:
         """
         Autentica en Scopus vía EZproxy EPN.
-
-        Selectores específicos:
-        - Usuario: input[name="user"]
-        - Contraseña: input[name="pass"]
-        - Botón: #submit_button
+        
+        Estrategia robusta:
+        1. Navegar a EZProxy
+        2. Detectar si ya está autenticado
+        3. Buscar campos de login con selectores flexibles
+        4. Manejar reCAPTCHA si aparece
+        5. Enviar credenciales y esperar redirección
         """
-        logger.info("Navegando a EZProxy EPN...")
+        logger.info("🔑 Navegando a EZProxy EPN...")
         page.goto(self.SCOPUS_VIA_EZPROXY, wait_until="domcontentloaded", timeout=60000)
-        self._human_delay(1.0, 2.0)
+        self._human_delay(2.0, 3.0)
 
         current_url = page.url
         logger.info(f"URL inicial: {current_url}")
 
+        # Verificar si ya estamos autenticados
         if self._is_authenticated(page):
             logger.info("✓ Sesión ya autenticada (cookies válidas)")
             self._ensure_scopus_proxy_cookie(page)
             return
 
-        # Si llegamos aquí y había cookies cacheadas, significa que expiraron
+        # Si llegamos aquí con sesión cargada, significa que expiró
         if self.use_cookies_cache and self._cookies_cache:
-            logger.warning("⚠️  Cookies cacheadas no funcionaron - re-autenticando...")
+            logger.warning("⚠️ Cookies cacheadas no funcionaron - re-autenticando...")
             self.clear_cookies_cache()
+            self._delete_session_file()
 
-        logger.info("Detectado formulario de login EPN...")
+        logger.info("📝 Detectado formulario de login EPN...")
 
-        try:
-            username_field = page.wait_for_selector(
-                'input[name="user"]',
-                timeout=5000,
-                state="visible"
-            )
-            logger.debug("Campo usuario EPN encontrado")
-        except Exception as e:
+        # Buscar campo de usuario con selectores flexibles
+        username_field = self._find_username_field(page)
+        if not username_field:
             page.screenshot(path="debug_no_login_form.png")
-            logger.error(f"No se encontró formulario EPN: {e}")
             raise Exception("Formulario de login EPN no encontrado. Ver debug_no_login_form.png")
 
+        # Llenar usuario con comportamiento humano
         username_field.click()
         self._human_delay(0.3, 0.6)
         username_field.fill("")
@@ -197,18 +273,11 @@ class ScopusPlaywrightConnector:
         logger.debug(f"Usuario ingresado: {self.username[:3]}***")
         self._human_delay(0.5, 1.0)
 
-        try:
-            password_field = page.wait_for_selector(
-                'input[name="pass"]',
-                timeout=3000,
-                state="visible"
-            )
-            logger.debug("Campo contraseña EPN encontrado")
-        except Exception:
-            password_field = page.query_selector('input[type="password"]')
-            if not password_field:
-                page.screenshot(path="debug_no_password.png")
-                raise Exception("Campo contraseña no encontrado")
+        # Buscar campo de contraseña
+        password_field = self._find_password_field(page)
+        if not password_field:
+            page.screenshot(path="debug_no_password.png")
+            raise Exception("Campo contraseña no encontrado")
 
         password_field.click()
         self._human_delay(0.3, 0.6)
@@ -217,101 +286,214 @@ class ScopusPlaywrightConnector:
         logger.debug("Contraseña ingresada")
         self._human_delay(0.8, 1.5)
 
-        # Verificar si hay reCAPTCHA y si está visible
-        try:
-            logger.info("Verificando reCAPTCHA...")
-            recaptcha_iframe = page.wait_for_selector('iframe[src*="recaptcha"]', timeout=2000)
-            
-            if recaptcha_iframe and recaptcha_iframe.is_visible():
-                logger.warning("reCAPTCHA visible detectado")
-                
-                if not self.headless:
-                    logger.warning("⏳ Por favor resuelve el reCAPTCHA manualmente...")
-                    logger.warning("Esperando hasta 60 segundos...")
-                    
-                    # Esperar hasta que el botón submit esté habilitado o 60 segundos
-                    for i in range(60):
-                        try:
-                            submit_btn = page.query_selector('#submit_button')
-                            if submit_btn and not submit_btn.is_disabled():
-                                logger.info("✓ reCAPTCHA resuelto")
-                                break
-                        except Exception:
-                            pass
-                        time.sleep(1)
-                else:
-                    logger.warning("Modo headless con reCAPTCHA - puede fallar")
-                    time.sleep(2)
-            else:
-                logger.info("reCAPTCHA no visible o ya resuelto")
-        except Exception:
-            logger.info("No se detectó reCAPTCHA")
+        # DETECCIÓN DE RECAPTCHA CRÍTICA
+        if self._handle_recaptcha(page):
+            logger.info("✓ reCAPTCHA manejado")
 
-        logger.info("Enviando credenciales...")
-        try:
-            submit_btn = page.query_selector('#submit_button')
-            if submit_btn:
-                logger.info("Haciendo click en botón submit...")
-                submit_btn.click()
-                logger.info("Click realizado, esperando navegación...")
-            else:
-                logger.info("Botón no encontrado, usando Enter")
-                password_field.press('Enter')
-        except Exception as e:
-            logger.warning(f"Error en submit: {e}")
-            # La navegación puede haber comenzado de todos modos
+        # Enviar formulario
+        logger.info("📤 Enviando credenciales...")
+        self._submit_login_form(page, password_field)
 
-        logger.info("Esperando redirección post-login...")
+        # Esperar redirección post-login
+        logger.info("⏳ Esperando redirección post-login...")
         try:
-            # Esperar a que la URL cambie (salga de /login)
-            # Según el flujo HTTP: /login -> /connect -> puerto 2057
             page.wait_for_url(
                 lambda url: "/login" not in url or "2057" in url or "scopus.com" in url,
                 timeout=60000
             )
             logger.info("Redirección detectada, esperando carga completa...")
             self._human_delay(3.0, 5.0)
-        except Exception as e:
+        except PlaywrightTimeoutError as e:
             logger.warning(f"Timeout esperando redirección: {e}")
-            # Continuar de todos modos para verificar
 
         current_url = page.url
         logger.info(f"URL post-login: {current_url}")
 
         # Verificar si realmente falló el login
-        # Solo es error si estamos en /login Y hay un formulario visible
         if "/login" in current_url.lower():
-            # Verificar si hay formulario de login (indica fallo real)
-            try:
-                page.wait_for_selector('input[name="user"]', timeout=2000, state="visible")
-                # Si llegamos aquí, el formulario está visible = login falló
+            if self._is_login_form_visible(page):
                 page.screenshot(path="debug_login_failed.png")
-                
-                error_msg = "desconocido"
-                try:
-                    error_elem = page.query_selector('.error, .alert, [id*="error"]')
-                    if error_elem:
-                        error_msg = error_elem.inner_text()[:200]
-                except Exception:
-                    pass
-
+                error_msg = self._get_login_error_message(page)
                 logger.error(f"Autenticación falló. Error: {error_msg}")
                 raise Exception(
-                    "Autenticación EPN fallida.\n"
-                    "Posibles causas:\n"
-                    "  1. Credenciales incorrectas\n"
-                    "  2. reCAPTCHA bloqueó (usar headless=False)\n"
-                    "  3. Error de red o EZProxy caído\n"
+                    f"Autenticación EPN fallida.\n"
+                    f"Posibles causas:\n"
+                    f"  1. Credenciales incorrectas\n"
+                    f"  2. reCAPTCHA bloqueó (usar headless=False)\n"
+                    f"  3. Error de red o EZProxy caído\n"
                     f"  Error: {error_msg}\n"
-                    "  Ver: debug_login_failed.png"
+                    f"  Ver: debug_login_failed.png"
                 )
-            except Exception:
-                # No hay formulario visible, probablemente está en proceso de redirección
+            else:
                 logger.info("URL contiene /login pero no hay formulario visible, continuando...")
-                pass
 
         self._ensure_scopus_proxy_cookie(page)
-        logger.info("Autenticación EPN exitosa")
+        logger.info("✅ Autenticación EPN exitosa")
+
+    def _find_username_field(self, page: Page):
+        """Busca el campo de usuario con múltiples selectores."""
+        selectors = [
+            'input[name="user"]',
+            'input[name="username"]',
+            'input[id="user"]',
+            'input[id="username"]',
+            'input[type="text"][name*="user"]',
+            'input[type="text"]:first-of-type',  # Primer input de texto
+        ]
+        
+        for selector in selectors:
+            try:
+                field = page.wait_for_selector(selector, timeout=3000, state="visible")
+                if field:
+                    logger.debug(f"Campo usuario encontrado: {selector}")
+                    return field
+            except PlaywrightTimeoutError:
+                continue
+        
+        # Último intento: cualquier input de texto visible
+        try:
+            inputs = page.locator('input[type="text"]:visible').all()
+            if inputs:
+                logger.debug("Usando primer input de texto visible")
+                return inputs[0]
+        except Exception:
+            pass
+        
+        return None
+
+    def _find_password_field(self, page: Page):
+        """Busca el campo de contraseña con múltiples selectores."""
+        selectors = [
+            'input[name="pass"]',
+            'input[name="password"]',
+            'input[type="password"]',
+            'input[id="pass"]',
+            'input[id="password"]',
+        ]
+        
+        for selector in selectors:
+            try:
+                field = page.wait_for_selector(selector, timeout=2000, state="visible")
+                if field:
+                    logger.debug(f"Campo contraseña encontrado: {selector}")
+                    return field
+            except PlaywrightTimeoutError:
+                continue
+        
+        return None
+
+    def _handle_recaptcha(self, page: Page) -> bool:
+        """
+        Detecta y maneja reCAPTCHA.
+        
+        Returns:
+            True si se manejó exitosamente, False si no había CAPTCHA
+        """
+        try:
+            # Buscar iframes de reCAPTCHA
+            frames = page.frames
+            captcha_found = any("recaptcha" in f.url for f in frames)
+            
+            if not captcha_found:
+                # También buscar por selector
+                recaptcha_iframe = page.query_selector('iframe[src*="recaptcha"]')
+                captcha_found = recaptcha_iframe is not None and recaptcha_iframe.is_visible()
+            
+            if not captcha_found:
+                logger.info("✓ No se detectó reCAPTCHA")
+                return False
+            
+            logger.warning("🚨 reCAPTCHA DETECTADO")
+            
+            if self.headless:
+                logger.critical(
+                    "❌ reCAPTCHA en modo headless - FALLO INEVITABLE\n"
+                    "   Solución: Ejecutar UNA VEZ con headless=False para resolver\n"
+                    "   manualmente y guardar la sesión en scopus_auth_state.json"
+                )
+                raise Exception(
+                    "Bloqueo por reCAPTCHA en modo headless. "
+                    "Ejecute con headless=False para resolver manualmente y guardar sesión."
+                )
+            else:
+                logger.warning("⏳ Por favor resuelve el reCAPTCHA manualmente...")
+                logger.warning("   Esperando hasta 60 segundos...")
+                
+                # Esperar hasta que el submit esté habilitado o redirección
+                for i in range(60):
+                    try:
+                        # Verificar si ya redirigió
+                        if "scopus" in page.url or "2057" in page.url:
+                            logger.info("✓ Redirección detectada durante espera de CAPTCHA")
+                            return True
+                        
+                        submit_btn = page.query_selector('#submit_button')
+                        if submit_btn and not submit_btn.is_disabled():
+                            logger.info("✓ reCAPTCHA resuelto")
+                            return True
+                    except Exception:
+                        pass
+                    time.sleep(1)
+                
+                logger.warning("Timeout esperando resolución de CAPTCHA")
+                return True
+                
+        except Exception as e:
+            if "headless" in str(e).lower():
+                raise
+            logger.debug(f"Error verificando reCAPTCHA: {e}")
+            return False
+
+    def _submit_login_form(self, page: Page, password_field) -> None:
+        """Envía el formulario de login."""
+        submit_selectors = [
+            '#submit_button',
+            'button[type="submit"]',
+            'input[type="submit"]',
+            'button:has-text("Login")',
+            'button:has-text("Iniciar")',
+        ]
+        
+        for selector in submit_selectors:
+            try:
+                btn = page.query_selector(selector)
+                if btn and btn.is_visible():
+                    logger.info(f"Click en botón: {selector}")
+                    btn.click()
+                    return
+            except Exception:
+                continue
+        
+        # Fallback: Enter en campo de contraseña
+        logger.info("Botón no encontrado, usando Enter")
+        password_field.press('Enter')
+
+    def _is_login_form_visible(self, page: Page) -> bool:
+        """Verifica si el formulario de login está visible."""
+        try:
+            page.wait_for_selector('input[name="user"], input[name="username"]', timeout=2000, state="visible")
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _get_login_error_message(self, page: Page) -> str:
+        """Extrae mensaje de error de login si existe."""
+        try:
+            error_elem = page.query_selector('.error, .alert, [id*="error"], .message')
+            if error_elem:
+                return error_elem.inner_text()[:200]
+        except Exception:
+            pass
+        return "desconocido"
+
+    def _delete_session_file(self) -> None:
+        """Elimina el archivo de sesión si existe."""
+        try:
+            if self.AUTH_STATE_FILE.exists():
+                os.remove(self.AUTH_STATE_FILE)
+                logger.info("🗑️ Archivo de sesión eliminado")
+        except Exception as e:
+            logger.warning(f"Error eliminando archivo de sesión: {e}")
 
     def _is_authenticated(self, page: Page) -> bool:
         """
@@ -1141,10 +1323,18 @@ class ScopusPlaywrightConnector:
 
     @classmethod
     def clear_cookies_cache(cls):
-        """Limpia el cache de cookies (útil para tests)."""
+        """Limpia el cache de cookies en memoria y el archivo de sesión en disco."""
         cls._cookies_cache = None
         cls._cookies_cache_timestamp = None
-        logger.info("🗑️  Cache de cookies limpiado")
+        logger.info("🗑️ Cache de cookies en memoria limpiado")
+        
+        # También eliminar archivo de sesión
+        try:
+            if cls.AUTH_STATE_FILE.exists():
+                os.remove(cls.AUTH_STATE_FILE)
+                logger.info("🗑️ Archivo de sesión (scopus_auth_state.json) eliminado")
+        except Exception as e:
+            logger.warning(f"Error eliminando archivo de sesión: {e}")
 
     @classmethod
     def get_cache_info(cls) -> dict:
