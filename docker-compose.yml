@@ -52,7 +52,13 @@ services:
       /bin/sh -c " echo 'Esperando a MinIO...'; sleep 5; /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-password}; /usr/bin/mc mb myminio/${AWS_STORAGE_BUCKET_NAME:-adn4research} --ignore-existing; /usr/bin/mc anonymous set public myminio/${AWS_STORAGE_BUCKET_NAME:-adn4research}; echo 'Bucket creado y permisos configurados'; exit 0; "
     networks:
       - adn4research_network
-
+  redis:
+    image: redis:7-alpine
+    container_name: adn4research_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - adn4research_network
 volumes:
   postgres_data:
   minio_data:

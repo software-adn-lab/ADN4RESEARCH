@@ -261,6 +261,9 @@ def consolidate_search_strategy_stage_view(request, project_id, project):
 
         design_phase_service.consolidate_search_strategy_stage(project_id, request.user)
         messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.")
+        # Para mandarle a alexis
+        # Recuperar el objeto DTO de la version de la estrategia 
+        
         return redirect(build_design_url(project_id, 'search-strategy/'))
 
     except Exception as e:

@@ -263,14 +263,12 @@ if USE_S3:
 # https://redis.io/
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
-REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
+#REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
 REDIS_DB = os.environ.get("REDIS_DB", "0")
 
 # Build Redis URL
-if REDIS_PASSWORD:
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-else:
-    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Cache Configuration with Redis
 # https://docs.djangoproject.com/en/5.2/topics/cache/

@@ -75,20 +75,19 @@
         {% for study in studies %}
         <div class="card bg-base-100 border border-base-200 shadow-sm hover:border-primary/30 transition-colors">
             <div class="card-body p-4">
-                <div class="flex flex-col gap-1">
-
-                    <div class="flex gap-2">
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-5">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Title:</span>
                         <span class="font-semibold text-base-content">{{ study.title }}</span>
                     </div>
                     {% if study.source %}
-                    <div class="flex gap-2 items-start mt-1">
+                    <div class="flex gap-5 items-start mt-1">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Source:</span>
                         <span class="badge badge-sm badge-ghost font-mono">{{ study.source }}</span>
                     </div>
                     {% endif %}
                     {% if study.link %}
-                    <div class="flex gap-2 items-start mt-1">
+                    <div class="flex gap-5 items-start mt-1">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Link:</span>
                         <a href='{{ study.link }}' target="_blank"
                             class="link link-primary text-sm break-all hover:text-primary-focus flex items-center gap-1">
@@ -101,10 +100,16 @@
                         </a>
                     </div>
                     {% endif %}
-                    <div class="flex gap-2 items-center">
+                    {% if study.abstract %}
+                    <div class="flex gap-5 items-start mt-1">
+                        <span class="font-bold text-base-content/70 w-12 shrink-0">Abstract:</span>
+                        <span class="text-sm break-all">{{ study.abstract }}</span>
+                    </div>
+                    {% endif %}
+                    <!---<div class="flex gap-2 items-center">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Year:</span>
                         <span class="badge badge-sm badge-ghost font-mono">{{ study.year|default:"N/A" }}</span>
-                    </div>
+                    </div>-->
 
                 </div>
             </div>

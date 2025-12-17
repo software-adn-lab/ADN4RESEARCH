@@ -1,4 +1,7 @@
 import logging
+import hashlib
+import json
+from django.core.cache import cache
 from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db.models import Max
@@ -189,13 +192,16 @@ class SearchStrategyService:
 
     def get_search_results_dto(self, strategy_id: int):
         strategy = self.get_or_create_strategy(strategy_id)
+        strategy_hash = hashlib.md5(json.dumps(strategy.json_definition, sort_keys=True).encode()).hexdigest()
+        cache_key = f"search_preview:{strategy_id}:{strategy_hash}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return cached_result
         acquisition_facade = get_acquisition_facade()
-
-        # Translate before preview
         json_definition_translated = self.translation_service.translate_json_definition(strategy.json_definition)
-
         try:
             results_dto = acquisition_facade.preview_search(json_definition_translated)
+            cache.set(cache_key, results_dto, timeout=86400)
             return results_dto
         except Exception as e:
             raise RuntimeError(f"Error fetching search results: {e}")
