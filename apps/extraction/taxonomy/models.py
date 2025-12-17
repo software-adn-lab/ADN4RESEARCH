@@ -1,83 +1,128 @@
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+from django.core.validators import RegexValidator
+
+from ..shared.audit import AuditModel
 
 
-class Tag(models.Model):
+User = get_user_model()
+
+class TagQuerySet(models.QuerySet):
     """
-    Entidad Tag.
-    No tiene FK a ResearchQuestion, solo guarda el ID de referencia.
+    Reemplaza a TagRepository. Encapsula lógica de filtrado.
     """
-    class TagType(models.TextChoices):
-        DEDUCTIVE = 'deductive', _('Deductivo')
-        INDUCTIVE = 'inductive', _('Inductivo')
+    def mandatory(self):
+        return self.filter(is_mandatory=True)
 
-    class ApprovalStatus(models.TextChoices):
-        PENDING = 'pending', _('Pendiente de Aprobación')
-        APPROVED = 'approved', _('Aprobado')
-        REJECTED = 'rejected', _('Rechazado')
+    def deductives(self):
+        return self.filter(type='DEDUCTIVE')
 
-    name = models.CharField(max_length=100)
-    color = models.CharField(max_length=50, default='#FFFFFF')
-    justification = models.TextField(blank=True)
-    
-    # Referencia débil a Identity Management (Users)
-    # También sirve como owner_id para tags inductivos privados
-    created_by_id = models.IntegerField(null=True, db_index=True)
-    
-    # Referencia débil al Bounded Context 'Design'
-    question_id = models.IntegerField(
-        null=True, 
-        blank=True, 
-        db_index=True,
-        help_text="ID de la ResearchQuestion externa"
-    )
-    
-    # Contexto del proyecto (Multi-tenancy lógico)
-    project_id = models.IntegerField(db_index=True)
+    def visible_for(self, user):
+        """Regla de negocio: Tags públicos O tags propios del usuario."""
+        return self.filter(
+            Q(visibility='PUBLIC') | Q(created_by=user)
+        )
 
-    type = models.CharField(
-        max_length=20, 
-        choices=TagType.choices, 
-        default=TagType.DEDUCTIVE
+
+class TagTypeChoices:
+    """Opciones para el tipo de Tag."""
+    DEDUCTIVE = 'DEDUCTIVE'
+    INDUCTIVE = 'INDUCTIVE'
+
+    CHOICES = [
+        (DEDUCTIVE, 'Deductiva'),
+        (INDUCTIVE, 'Inductiva'),
+    ]
+
+class ApprovalStatusChoices:
+    """Opciones para el estado de aprobación/revisión (usado en Tag y posiblemente otros)."""
+    PENDING = 'PENDING'
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+
+    CHOICES = [
+        (PENDING, 'Pendiente'),
+        (APPROVED, 'Aprobada'),
+        (REJECTED, 'Rechazada'),
+    ]
+
+
+class VisibilityChoices:
+    """Opciones para la visibilidad (usado en Tag)."""
+    PUBLIC = 'PUBLIC'
+    PRIVATE = 'PRIVATE'
+
+    CHOICES = [
+        (PUBLIC, 'Pública'),
+        (PRIVATE, 'Privada'),
+    ]
+
+
+class Tag(AuditModel):
+    """Etiquetas que se pueden agregar a una extracción de texto (Quote)."""
+
+    hex_validator = RegexValidator(
+        regex=r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
+        message="El color debe ser un código hexadecimal válido (e.g., #FF00AA)."
     )
-    
-    # Estado de aprobación para tags inductivos
-    approval_status = models.CharField(
-        max_length=20,
-        choices=ApprovalStatus.choices,
-        default=ApprovalStatus.APPROVED
+
+    name = models.CharField(max_length=100, verbose_name="Nombre de la Etiqueta", null=True, blank=True)
+    color = models.CharField(
+        max_length=7,
+        validators=[hex_validator],
+        verbose_name="Color Hexadecimal",
+        null=True,
+        blank=True
     )
-    
-    is_mandatory = models.BooleanField(default=False)
-    is_public = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    # Para fusión de tags duplicados
-    merged_into = models.ForeignKey(
-        'self',
+    extraction_phase = models.ForeignKey(
+        'extraction.ExtractionPhase',
+        on_delete=models.CASCADE,
+        related_name='tags',
+        verbose_name="Fase de Extracción",
+        null=True
+    )
+    rq_related = models.ForeignKey(
+        'design.ResearchQuestion',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='tags',
+        verbose_name="Pregunta de Investigación Relacionada"
+    )
+    is_mandatory = models.BooleanField(
+        default=False,
+        verbose_name="Es Obligatoria"
+    )
+    created_by = models.ForeignKey(
+        User,
         on_delete=models.SET_NULL,
-        related_name='merged_from'
+        null=True,
+        related_name='created_tags',
+        verbose_name="Creado Por"
+    )
+    type = models.CharField(
+        max_length=10,
+        choices=TagTypeChoices.CHOICES,
+        default=TagTypeChoices.DEDUCTIVE,
+        verbose_name="Tipo de Etiqueta"
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=ApprovalStatusChoices.CHOICES,
+        default=ApprovalStatusChoices.PENDING,
+        verbose_name="Estado de Aprobación"
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=VisibilityChoices.CHOICES,
+        default=VisibilityChoices.PUBLIC,
+        verbose_name="Visibilidad"
     )
 
+    objects = TagQuerySet.as_manager()
+
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['name', 'project_id', 'question_id'],
-                name='unique_tag_per_context'
-            )
-        ]
+        unique_together = ('extraction_phase', 'name')
 
     def __str__(self):
-        return f"{self.name} ({self.get_type_display()})"
-    
-    @property
-    def is_active(self) -> bool:
-        """Un tag está activo si no ha sido fusionado en otro"""
-        return self.merged_into is None
-    
-    @property
-    def is_visible_to_all(self) -> bool:
-        """Visible para todos si es público y está aprobado"""
-        return self.is_public and self.approval_status == self.ApprovalStatus.APPROVED
+        return f"Tag: {self.name}"
