@@ -1,0 +1,114 @@
+<div class="space-y-6">
+
+    {% if is_owner %}
+    <div class="stats shadow w-full bg-base-50 border border-base-200">
+        <div class="stat">
+            <div class="stat-figure text-secondary">
+                <div class="radial-progress text-primary" style="--value:{{ coverage_report.coverage_ratio_percent }};" role="progressbar">
+                    {{ coverage_report.coverage_ratio_display }}
+                </div>
+            </div>
+            <div class="stat-title">Cobertura de Preguntas (RQs)</div>
+            <div class="stat-desc">Necesario para abrir la fase</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-title">Estado de Validación</div>
+            {% if coverage_report.is_fully_covered %}
+                <div class="stat-value text-success text-lg">✅ Protocolo Cubierto</div>
+            {% else %}
+                <div class="stat-value text-warning text-lg">⚠️ Faltan Preguntas</div>
+                <div class="stat-desc text-error">
+                    Faltan:
+                    {% for rq in coverage_report.missing_rqs %}
+                        <span class="badge badge-xs badge-error">{{ rq.question_text|truncatechars:15 }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold">Listado de Etiquetas</h3>
+        {% if is_owner and phase.status != 'CLOSED' %}
+            <button class="btn btn-sm btn-outline btn-primary" onclick="tag_modal.showModal()">
+                + Nueva Etiqueta
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>RQ Relacionada</th>
+                    <th>Obligatoria</th>
+                    <th>Visibilidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in tags %}
+                <tr class="hover">
+                    <td class="font-medium">
+                        <span class="w-3 h-3 rounded-full inline-block mr-2" style="background-color: {{ tag.color|default:'#ccc' }}"></span>
+                        {{ tag.name }}
+                    </td>
+                    <td><span class="badge badge-ghost badge-sm">{{ tag.get_type_display }}</span></td>
+                    <td>
+                        {% if tag.rq_related %}
+                            <div class="tooltip" data-tip="{{ tag.rq_related.question_text }}">
+                                <span class="badge badge-info badge-outline cursor-help">RQ #{{ tag.rq_related.id }}</span>
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if tag.is_mandatory %}
+                            <span class="text-error font-bold">Sí</span>
+                        {% else %}
+                            <span class="text-gray-400">No</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ tag.get_visibility_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-8 text-gray-500">No hay etiquetas definidas aún.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<dialog id="tag_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Crear Nueva Etiqueta Deductiva</h3>
+
+        <form action="{% url 'extraction:create_tag' phase.id %}" method="POST">
+            {% csrf_token %}
+
+            <div class="form-control w-full mb-3">
+                <label class="label"><span class="label-text">Nombre de la Etiqueta</span></label>
+                {{ tag_form.name }}
+            </div>
+
+            <div class="form-control w-full mb-4">
+                <label class="label"><span class="label-text">Relacionar con Pregunta (RQ)</span></label>
+                {{ tag_form.rq_related }}
+                <label class="label">
+                    <span class="label-text-alt text-warning">Nota: Si seleccionas una RQ, el tag será OBLIGATORIO y PÚBLICO automáticamente.</span>
+                </label>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="tag_modal.close()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Etiqueta</button>
+            </div>
+        </form>
+    </div>
+</dialog>

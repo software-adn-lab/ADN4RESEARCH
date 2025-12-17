@@ -1,507 +1,90 @@
 {% extends 'base.html' %}
-
-{% block title %}Dashboard - Extraction Module{% endblock %}
+{% load static %}
 
 {% block content %}
-<div x-data="dashboardApp()" x-cloak>
-    <!-- Project Header -->
-    <div class="card bg-base-100 shadow-xl mb-6">
-        <div class="card-body">
-            <div class="flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h1 class="card-title text-2xl">{{ project.name }}</h1>
-                    <p class="text-base-content/70">{{ project.description }}</p>
-                </div>
-                <div class="flex gap-2 items-center">
-                    <div class="badge badge-lg" :class="{
-                        'badge-warning': '{{ phase.status }}' === 'configuration',
-                        'badge-success': '{{ phase.status }}' === 'active',
-                        'badge-neutral': '{{ phase.status }}' === 'closed'
-                    }">
-                        <span class="capitalize">{{ phase.status }}</span>
-                    </div>
-                    {% if user.role == 'owner' and phase.status == 'configuration' %}
-                    <button class="btn btn-primary btn-sm" @click="activatePhase()">
-                        Activar Fase
+<div class="container mx-auto p-4 space-y-6">
+
+    <div class="flex flex-col md:flex-row justify-between items-center bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                Fase de Extracción: {{ project.name }}
+            </h1>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="badge {% if phase.status == 'OPEN' %}badge-success{% elif phase.status == 'CONFIG' %}badge-warning{% else %}badge-neutral{% endif %} badge-lg text-white">
+                    {{ phase.get_status_display }}
+                </span>
+                <span class="text-sm text-gray-500">Inicio: {{ phase.start_date|default:"-" }} | Fin: {{ phase.due_date|default:"-" }}</span>
+            </div>
+        </div>
+
+        {% if is_owner and phase.status == 'CONFIG' and active_tab == 'tags' %}
+             {% if can_open_phase %}
+                <form action="{% url 'extraction:open_phase' phase.id %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary text-white animate-pulse">
+                        Abrir Fase de Extracción
                     </button>
-                    {% endif %}
+                </form>
+             {% else %}
+                 <button disabled class="btn btn-disabled">
+                    Configuración Incompleta
+                 </button>
+             {% endif %}
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div role="alert" class="alert alert-{{ message.tags }} shadow-md">
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if is_restricted %}
+        <div class="hero min-h-[400px] bg-base-200 rounded-xl">
+            <div class="hero-content text-center">
+                <div class="max-w-md">
+                    <h1 class="text-5xl font-bold text-gray-400">🚧</h1>
+                    <h2 class="text-2xl font-bold mt-4">Fase en Configuración</h2>
+                    <p class="py-6">El administrador del proyecto está definiendo los tags y el protocolo de extracción. Recibirás una notificación cuando la fase esté ABIERTA.</p>
                 </div>
             </div>
-            
-            <!-- Phase Info -->
-            {% if phase.end_date %}
-            <div class="stats stats-horizontal shadow mt-4">
-                <div class="stat">
-                    <div class="stat-title">Fecha de Cierre</div>
-                    <div class="stat-value text-lg">{{ phase.end_date }}</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-title">Papers Asignados</div>
-                    <div class="stat-value text-lg">{{ total_papers }}</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-title">Completados</div>
-                    <div class="stat-value text-lg text-success">{{ completed_papers }}</div>
-                </div>
-            </div>
+        </div>
+    {% else %}
+        <div role="tablist" class="tabs tabs-boxed bg-gray-100 p-2 rounded-lg">
+
+            <a href="?tab=studies" role="tab" class="tab {% if active_tab == 'studies' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
+                Papers Asignados
+            </a>
+
+            <a href="?tab=tags" role="tab" class="tab {% if active_tab == 'tags' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
+                Etiquetas (Protocolo)
+            </a>
+
+            <a href="?tab=quotes" role="tab" class="tab {% if active_tab == 'quotes' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
+                Extracciones
+            </a>
+
+            {% if is_owner %}
+            <a href="?tab=config" role="tab" class="tab {% if active_tab == 'config' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
+                Configuración
+            </a>
             {% endif %}
         </div>
-    </div>
 
-    <!-- Tabs -->
-    <div class="tabs tabs-boxed bg-base-100 p-2 rounded-box mb-4">
-        <a class="tab tab-lg" :class="{ 'tab-active': activeTab === 'papers' }" @click="activeTab = 'papers'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Papers Asignados
-        </a>
-        <a class="tab tab-lg" :class="{ 'tab-active': activeTab === 'viewer' }" @click="activeTab = 'viewer'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            Visor PDF
-        </a>
-        <a class="tab tab-lg" :class="{ 'tab-active': activeTab === 'tags' }" @click="activeTab = 'tags'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            Tags
-        </a>
-        {% if user.role == 'owner' or phase.status == 'closed' %}
-        <a class="tab tab-lg" :class="{ 'tab-active': activeTab === 'extractions' }" @click="activeTab = 'extractions'">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            Extracciones
-        </a>
-        {% endif %}
-    </div>
-
-    <!-- Tab Content -->
-    <div class="bg-base-100 rounded-box shadow-xl p-6">
-        <!-- Tab 1: Papers -->
-        <div x-show="activeTab === 'papers'" x-transition>
-            {% include 'partials/papers_tab.html' %}
+        <div class="bg-white border border-base-200 rounded-xl shadow-md p-6 min-h-[500px]">
+            {% if active_tab == 'studies' %}
+                {% include 'partials/_tab_studies.html' %}
+            {% elif active_tab == 'tags' %}
+                {% include 'partials/_tab_tags.html' %}
+            {% elif active_tab == 'quotes' %}
+                {% include 'partials/_tab_quotes.html' %}
+            {% elif active_tab == 'config' and is_owner %}
+                {% include 'partials/_tab_config.html' %}
+            {% endif %}
         </div>
+    {% endif %}
 
-        <!-- Tab 2: PDF Viewer -->
-        <div x-show="activeTab === 'viewer'" x-transition>
-            {% include 'partials/pdf_viewer_tab.html' %}
-        </div>
-
-        <!-- Tab 3: Tags -->
-        <div x-show="activeTab === 'tags'" x-transition>
-            {% include 'partials/tags_tab.html' %}
-        </div>
-
-        <!-- Tab 4: Extractions -->
-        {% if user.role == 'owner' or phase.status == 'closed' %}
-        <div x-show="activeTab === 'extractions'" x-transition>
-            {% include 'partials/extractions_tab.html' %}
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Quote Modal -->
-    {% include 'partials/quote_modal.html' %}
-    
-    <!-- Tag Edit Modal -->
-    {% include 'partials/tag_edit_modal.html' %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function dashboardApp() {
-    let _pdfDoc = null;
-    return {
-        activeTab: 'papers',
-        
-        // Papers data
-        papers: {{ papers_json|safe }},
-        papersFilter: '',
-        papersSort: 'title',
-        papersSortAsc: true,
-        
-        // Current paper for viewer
-        currentPaper: null,
-        //pdfDoc: null,
-        pageNum: 1,
-        pageRendering: false,
-        pageNumPending: null,
-        scale: 1.0,
-        canvas: null,
-        ctx: null,
-        totalPages: 0,
-        
-        // Tags data
-        tags: {{ tags_json|safe }},
-        tagsFilter: '',
-        
-        // Quotes data
-        quotes: {{ quotes_json|safe }},
-        quotesFilter: '',
-        
-        // Modal states
-        showQuoteModal: false,
-        showTagModal: false,
-        selectedText: '',
-        selectedQuote: null,
-        selectedTag: null,
-        
-        // Quote form
-        quoteForm: {
-            text: '',
-            location: '',
-            tags: [],
-            comment: '',
-            newInductiveTag: ''
-        },
-        
-        // Computed: Filtered papers
-        get filteredPapers() {
-            let result = this.papers.filter(p => 
-                p.title.toLowerCase().includes(this.papersFilter.toLowerCase()) ||
-                (p.researcher_name && p.researcher_name.toLowerCase().includes(this.papersFilter.toLowerCase()))
-            );
-            
-            result.sort((a, b) => {
-                let valA = a[this.papersSort] || '';
-                let valB = b[this.papersSort] || '';
-                if (typeof valA === 'string') valA = valA.toLowerCase();
-                if (typeof valB === 'string') valB = valB.toLowerCase();
-                if (valA < valB) return this.papersSortAsc ? -1 : 1;
-                if (valA > valB) return this.papersSortAsc ? 1 : -1;
-                return 0;
-            });
-            
-            return result;
-        },
-        
-        // Computed: Filtered tags
-        get filteredTags() {
-            return this.tags.filter(t =>
-                t.name.toLowerCase().includes(this.tagsFilter.toLowerCase())
-            );
-        },
-        
-        // Computed: Mandatory tags
-        get mandatoryTags() {
-            return this.tags.filter(t => t.is_mandatory);
-        },
-        
-        // Computed: Public tags for selection
-        get publicTags() {
-            return this.tags.filter(t => t.is_public && t.approval_status === 'approved');
-        },
-        
-        // Methods
-        sortPapers(column) {
-            if (this.papersSort === column) {
-                this.papersSortAsc = !this.papersSortAsc;
-            } else {
-                this.papersSort = column;
-                this.papersSortAsc = true;
-            }
-        },
-        
-        openPaper(paper) {
-            this.currentPaper = paper;
-            this.activeTab = 'viewer';
-
-            console.log("Abriendo PDF:", paper.pdf_url);
-
-            this.$nextTick(() => {
-                this.initPDFViewer();
-                if (paper.pdf_url) {
-                    this.loadPDF(paper.pdf_url);
-                }
-            });
-        },
-
-        initPDFViewer() {
-            this.canvas = document.getElementById('pdf-canvas');
-            if (this.canvas) {
-                this.ctx = this.canvas.getContext('2d');
-            }
-        },
-        
-        loadPDF(url) {
-            this.pageNum = 1;
-
-            pdfjsLib.getDocument(url).promise.then((pdfDoc_) => {
-                _pdfDoc = pdfDoc_;
-                this.totalPages = _pdfDoc.numPages;
-
-                const pageInfo = document.getElementById('pdf-page-info');
-                if(pageInfo) pageInfo.textContent = `${this.pageNum} / ${this.totalPages}`;
-
-                this.renderPage(this.pageNum);
-            }).catch(err => {
-                console.error('Error cargando PDF:', err);
-                alert('Error crítico cargando el PDF.\n\nURL intentada: ' + url + '\n\nDetalle del error: ' + err.message);
-            });
-        },
-        renderPage(num) {
-            this.pageRendering = true;
-
-            // Usamos la variable privada _pdfDoc
-            _pdfDoc.getPage(num).then((page) => {
-                const viewport = page.getViewport({scale: this.scale});
-
-                // 1. Configurar Canvas
-                if (this.canvas) {
-                    this.canvas.height = viewport.height;
-                    this.canvas.width = viewport.width;
-
-                    const renderContext = {
-                        canvasContext: this.ctx,
-                        viewport: viewport
-                    };
-                    const renderTask = page.render(renderContext);
-
-                    // Esperar a que termine de pintar la imagen
-                    renderTask.promise.then(() => {
-                        this.pageRendering = false;
-                        if (this.pageNumPending !== null) {
-                            this.renderPage(this.pageNumPending);
-                            this.pageNumPending = null;
-                        }
-                    });
-                }
-
-                // 2. RENDERIZAR CAPA DE TEXTO (TEXT LAYER)
-                const textLayerDiv = document.getElementById('text-layer');
-                if (textLayerDiv) {
-                    // Limpiar capa anterior
-                    textLayerDiv.innerHTML = '';
-
-                    // Ajustar dimensiones del div al tamaño del canvas/viewport
-                    textLayerDiv.style.height = viewport.height + 'px';
-                    textLayerDiv.style.width = viewport.width + 'px';
-                    // Centrarlo igual que el canvas (si el canvas tiene mx-auto)
-                    // Esto asume que el canvas y el text-layer están en un contenedor relativo
-                    textLayerDiv.style.left = this.canvas.offsetLeft + 'px';
-                    textLayerDiv.style.top = this.canvas.offsetTop + 'px';
-
-                    // Obtener el texto del PDF
-                    page.getTextContent().then((textContent) => {
-                        // Usar la API de PDF.js para renderizar el texto
-                        pdfjsLib.renderTextLayer({
-                            textContentSource: textContent,
-                            container: textLayerDiv,
-                            viewport: viewport,
-                            textDivs: []
-                        });
-                    });
-                }
-            });
-
-            // UI Update
-            const pageInfo = document.getElementById('pdf-page-info');
-            if(pageInfo) pageInfo.textContent = `${num} / ${this.totalPages}`;
-        },
-
-        prevPage() {
-            if (this.pageNum <= 1) return;
-            this.pageNum--;
-            this.queueRenderPage(this.pageNum);
-        },
-
-        nextPage() {
-            if (this.pageNum >= this.totalPages) return;
-            this.pageNum++;
-            this.queueRenderPage(this.pageNum);
-        },
-
-        zoomIn() {
-            this.scale += 0.2;
-            this.renderPage(this.pageNum);
-        },
-
-        zoomOut() {
-            if (this.scale <= 0.6) return;
-            this.scale -= 0.2;
-            this.renderPage(this.pageNum);
-        },
-
-        queueRenderPage(num) {
-            if (this.pageRendering) {
-                this.pageNumPending = num;
-            } else {
-                this.renderPage(num);
-            }
-        },
-        
-        handleTextSelection() {
-            const selection = window.getSelection();
-            const text = selection.toString().trim();
-            if (text.length > 10) {
-                this.selectedText = text;
-                this.quoteForm.text = text;
-                this.showQuoteModal = true;
-            }
-        },
-        
-        async saveQuote() {
-            try {
-                const response = await fetch('/api/extraction/quotes/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        extraction_id: this.currentPaper.extraction_id,
-                        text_portion: this.quoteForm.text,
-                        location: this.quoteForm.location,
-                        tag_names: this.quoteForm.tags,
-                        comment: this.quoteForm.comment,
-                        new_inductive_tag: this.quoteForm.newInductiveTag || null
-                    })
-                });
-                
-                if (response.ok) {
-                    const newQuote = await response.json();
-                    this.quotes.push(newQuote);
-                    this.showQuoteModal = false;
-                    this.resetQuoteForm();
-                    showToast('Quote guardada exitosamente', 'success');
-                } else {
-                    throw new Error('Error al guardar');
-                }
-            } catch (error) {
-                showToast('Error al guardar la quote', 'error');
-            }
-        },
-        
-        resetQuoteForm() {
-            this.quoteForm = {
-                text: '',
-                location: '',
-                tags: [],
-                comment: '',
-                newInductiveTag: ''
-            };
-            this.selectedText = '';
-        },
-        
-        editTag(tag) {
-            this.selectedTag = { ...tag };
-            this.showTagModal = true;
-        },
-        
-        async saveTag() {
-            try {
-                const response = await fetch(`/api/extraction/tags/${this.selectedTag.id}/`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(this.selectedTag)
-                });
-                
-                if (response.ok) {
-                    const idx = this.tags.findIndex(t => t.id === this.selectedTag.id);
-                    if (idx !== -1) {
-                        this.tags[idx] = this.selectedTag;
-                    }
-                    this.showTagModal = false;
-                    showToast('Tag actualizado', 'success');
-                }
-            } catch (error) {
-                showToast('Error al actualizar el tag', 'error');
-            }
-        },
-        
-        async deleteTag(tag) {
-            if (!confirm('¿Está seguro de eliminar este tag?')) return;
-            
-            try {
-                const response = await fetch(`/api/extraction/tags/${tag.id}/`, {
-                    method: 'DELETE',
-                    headers: { 'X-CSRFToken': csrftoken }
-                });
-                
-                if (response.ok) {
-                    this.tags = this.tags.filter(t => t.id !== tag.id);
-                    showToast('Tag eliminado', 'success');
-                }
-            } catch (error) {
-                showToast('Error al eliminar el tag', 'error');
-            }
-        },
-        
-        async approveTag(tag) {
-            try {
-                const response = await fetch(`/api/extraction/tags/${tag.id}/approve/`, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrftoken }
-                });
-                
-                if (response.ok) {
-                    tag.approval_status = 'approved';
-                    tag.is_public = true;
-                    showToast('Tag aprobado', 'success');
-                }
-            } catch (error) {
-                showToast('Error al aprobar el tag', 'error');
-            }
-        },
-        
-        async rejectTag(tag) {
-            try {
-                const response = await fetch(`/api/extraction/tags/${tag.id}/reject/`, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrftoken }
-                });
-                
-                if (response.ok) {
-                    tag.approval_status = 'rejected';
-                    showToast('Tag rechazado', 'info');
-                }
-            } catch (error) {
-                showToast('Error al rechazar el tag', 'error');
-            }
-        },
-        
-        async activatePhase() {
-            if (!confirm('¿Está seguro de activar la fase de extracción?')) return;
-            
-            try {
-                const response = await fetch('/api/extraction/phase/activate/', {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrftoken }
-                });
-                
-                if (response.ok) {
-                    showToast('Fase activada exitosamente', 'success');
-                    location.reload();
-                }
-            } catch (error) {
-                showToast('Error al activar la fase', 'error');
-            }
-        },
-        
-        getStatusBadgeClass(status) {
-            const classes = {
-                'Pending': 'badge-warning',
-                'InProgress': 'badge-info',
-                'Done': 'badge-success'
-            };
-            return classes[status] || 'badge-neutral';
-        },
-        
-        goToQuoteInPDF(quote) {
-            // Navigate to the quote location in PDF
-            this.currentPaper = this.papers.find(p => p.extraction_id === quote.extraction_id);
-            this.activeTab = 'viewer';
-            // Scroll to location logic
-        }
-    }
-}
-</script>
 {% endblock %}
