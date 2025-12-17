@@ -35,7 +35,7 @@ def open_eligibility_criteria_panel(request, project_id, project):
         'current_stage_value': project.design_phase.current_stage,
         'is_editable': project.design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION,
     }
-    return render(request, 'eligibity_criteria_panel.html', context)
+    return render(request, 'eligibility_criteria_panel.html', context)
 
 
 @project_member_required
@@ -167,11 +167,11 @@ def delete_eligibility_criterion(request, project_id, criterion_id, project):
 @require_POST
 def consolidate_eligibility_stage(request, project_id, project):
     try:
-        stats = eligibility_service.consolidate_criteria(
+        design_phase_service.consolidate_eligibility_criteria_stage(
             project_id=project_id,
             user=request.user
         )
-        msg = f"Stage consolidated! {stats.get('auto_rejected', 0)} drafts auto-rejected."
+        msg = "Stage consolidated successfully! Proceeding to Search Strategy."
         messages.success(request, msg)
         return redirect(build_design_url(project_id, 'eligibility-criteria/'))
 

@@ -1,6 +1,7 @@
 
 from apps.design.shared.models.design_phase import DesignPhase
-from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -46,54 +47,41 @@ class DesignPhaseService:
             })
         return timeline_stages
 
-    def consolidate_search_strategy_stage(self, project_id: int, user):
+    
+    def consolidate_research_question_stage(self, project_id: int, user):
+        
         phase = DesignPhase.objects.get(pk=project_id)
-        self._validate_all_questions_have_strategies(project_id)
-        approved_strategy_ids = []
-        with transaction.atomic():
-            approved_strategy_ids = self._reject_draft_strategies(project_id)
-            self._advance_project_stage(phase)
-        self._persist_approved_search_results(approved_strategy_ids, user)
+        if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
+            raise ValidationError(f"Cannot consolidate Questions. Current stage is {phase.current_stage}")
+        service = ResearchQuestionService()
+        service.finalize_questions_stage(project_id, user)
+        phase.current_stage = DesignPhase.DesignStage.CRITERIA_DEFINITION
+        phase.save()
+        
         return phase
 
-    def _validate_all_questions_have_strategies(self, project_id: int):
-        approved_questions = ResearchQuestion.objects.filter(
-            design_phase_id=project_id,
-            status=ResearchQuestion.Status.APPROVED
-        )
-        for question in approved_questions:
-            if not SearchStrategy.objects.filter(research_question=question).exists():
-                raise ValidationError(f"Research Question '{question.question[:50]}...' does not have a search strategy defined.")
-
-    def _reject_draft_strategies(self, project_id: int) -> list[int]:
-        """
-        Rejects DRAFT versions of all strategies in the project.
-        Returns a list of IDs of APPROVED strategies that need persistence.
-        """
-        approved_ids = []
-        strategies = SearchStrategy.objects.filter(research_question__design_phase_id=project_id)
-        for strategy in strategies:
-            strategy.versions.filter(status=SearchStrategy.Status.DRAFT).update(status=SearchStrategy.Status.REJECTED)
-            if strategy.status == SearchStrategy.Status.APPROVED:
-                approved_ids.append(strategy.id)
-        return approved_ids
-
-    def _advance_project_stage(self, phase: DesignPhase):
-        if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
-            phase.current_stage = DesignPhase.DesignStage.FINISHED
-            phase.save()
-        else:
-            raise ValidationError("Project is not in Search Strategy stage.")
-
-    def _persist_approved_search_results(self, strategy_ids: list[int], user):
-        """
-        Persists studies for approved strategies using the Acquisition Facade.
-        Uses cached preview results to avoid re-fetching from external sources.
-        """
-        acquisition_facade = get_acquisition_facade()
-        search_service = SearchStrategyService()
+    def consolidate_eligibility_criteria_stage(self, project_id: int, user):
+        phase = DesignPhase.objects.get(pk=project_id)
+        if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            raise ValidationError(f"Cannot consolidate Criteria. Current stage is {phase.current_stage}")
+        service = EligibilityCriterionService()
+        service.finalize_criteria_stage(project_id, user)
+        phase.current_stage = DesignPhase.DesignStage.SEARCH_STRATEGY
+        phase.save()
         
-        for strategy_id in strategy_ids:
+        return phase
+
+    def consolidate_search_strategy_stage(self, project_id: int, user):
+        phase = DesignPhase.objects.get(pk=project_id)
+        if phase.current_stage != DesignPhase.DesignStage.SEARCH_STRATEGY:
+            raise ValidationError(f"Cannot consolidate Strategy. Current stage is {phase.current_stage}")
+
+        search_service = SearchStrategyService()
+        acquisition_facade = get_acquisition_facade()
+        approved_strategy_ids = search_service.finalize_strategies_stage(project_id, user)
+        phase.current_stage = DesignPhase.DesignStage.FINISHED
+        phase.save()
+        for strategy_id in approved_strategy_ids:
             try:
                 preview_result = search_service.get_search_results_dto(strategy_id)
                 acquisition_facade.finalize_search(
@@ -103,3 +91,4 @@ class DesignPhaseService:
                 )         
             except Exception as e:
                 raise ValidationError(f"Error persisting strategy {strategy_id}: {str(e)}")
+        return phase

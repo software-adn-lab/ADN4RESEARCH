@@ -9,6 +9,8 @@ from django.db import transaction
 from apps.acquisition.facade import get_acquisition_facade
 from apps.design.search_strategy.services.translation_service import TranslationService
 from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
+from apps.design.research_question.models.research_question import ResearchQuestion
+from django.core.exceptions import ValidationError
 
 
 class SearchStrategyService:
@@ -223,3 +225,22 @@ class SearchStrategyService:
             latest_version.save(update_fields=['status', 'justification'])
 
         return strategy
+
+    @transaction.atomic
+    def finalize_strategies_stage(self, project_id: int, user) -> list[int]:        
+        approved_questions = ResearchQuestion.objects.filter(
+            design_phase_id=project_id,
+            status=ResearchQuestion.Status.APPROVED
+        )
+        for question in approved_questions:
+            if not SearchStrategy.objects.filter(research_question=question).exists():
+                raise ValidationError(f"Research Question '{question.question[:50]}...' does not have a search strategy defined.")
+        approved_ids = []
+        strategies = SearchStrategy.objects.filter(research_question__design_phase_id=project_id)
+        
+        for strategy in strategies:
+            strategy.versions.filter(status=SearchStrategy.Status.DRAFT).update(status=SearchStrategy.Status.REJECTED)
+            if strategy.status == SearchStrategy.Status.APPROVED:
+                approved_ids.append(strategy.id)
+        
+        return approved_ids

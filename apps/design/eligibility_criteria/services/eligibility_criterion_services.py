@@ -168,7 +168,7 @@ class EligibilityCriterionService:
             raise ConsolidationError("Cannot consolidate: You need at least one approved inclusion and one approved exclusion criterion.")
 
     @transaction.atomic
-    def consolidate_criteria(self, project_id: int, user) -> dict:
+    def finalize_criteria_stage(self, project_id: int, user) -> dict:
         phase = DesignPhase.objects.select_related('project').get(pk=project_id)
         
         self._validate_consolidation_requirements(phase, user)
@@ -176,7 +176,7 @@ class EligibilityCriterionService:
         criteria = EligibilityCriterion.objects.filter(design_phase_id=project_id, status=EligibilityCriterion.CriterionStatus.DRAFT)
         
         stats = {
-            'approved': 0,
+            'approved': 0, # Should calculate real approved count if needed, but keeping existing structure
             'rejected': 0,
             'auto_rejected': 0
         }
@@ -187,8 +187,7 @@ class EligibilityCriterionService:
             criterion.reviewed_at = timezone.now()
             criterion.save()
             stats['auto_rejected'] += 1
-        phase.current_stage = DesignPhase.DesignStage.SEARCH_STRATEGY
-        phase.save()
+        
         return stats
 
     def get_criteria_by_status(self, project_id: int, status: str) -> List[EligibilityCriterion]:

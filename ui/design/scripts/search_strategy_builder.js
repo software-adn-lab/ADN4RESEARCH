@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         setupDragEvents();
 
+        // Portal loader to body to ensure it covers everything
+        const loader = document.getElementById('full-screen-loader');
+        if (loader) {
+            document.body.appendChild(loader);
+        }
+
         if (typeof INITIAL_DATA !== 'undefined' && INITIAL_DATA.main_terms) {
             loadFromJSON(INITIAL_DATA);
         } else {
@@ -384,9 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const originalText = searchBtn.innerHTML;
-        searchBtn.disabled = true;
-        searchBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Saving & Generating...';
+        const loader = document.getElementById('full-screen-loader');
+        if (loader) loader.classList.remove('hidden');
 
         fetch(SAVE_URL, {
             method: 'POST',
@@ -402,15 +407,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.location.href = data.redirect_url;
                 } else {
                     alert("Error: " + data.error);
+                    if (loader) loader.classList.add('hidden');
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert("Network error.");
-            })
-            .finally(() => {
-                searchBtn.disabled = false;
-                searchBtn.innerHTML = originalText;
+                if (loader) loader.classList.add('hidden');
             });
     }
 

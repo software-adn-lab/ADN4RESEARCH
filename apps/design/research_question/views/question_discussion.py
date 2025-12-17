@@ -60,11 +60,11 @@ def review_research_question_action(request, project_id, project):
 @require_POST
 def consolidate_discussion_stage_action(request, project_id, project):
     try:
-        stats = research_question_service.consolidate_questions(
+        design_phase_service.consolidate_research_question_stage(
             project_id=project_id,
             user=request.user
         )
-        msg = f"Stage consolidated! {stats['total_approved']} questions approved. {stats['rejected_automatically']} suggestions auto-rejected."
+        msg = "Stage consolidated successfully! Questions approved and suggestions auto-rejected. Proceeding to Criteria Definition."
         messages.success(request, msg)
         return redirect(build_design_url(project_id, 'discussion/'))
 

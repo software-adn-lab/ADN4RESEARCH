@@ -249,17 +249,15 @@ class ResearchQuestionService:
         return question
 
     @transaction.atomic
-    def consolidate_questions(self, project_id: int, user):
+    def finalize_questions_stage(self, project_id: int, user):
         project, design_phase = self._validate_consolidation_prerequisites(project_id, user)
+        
         affected_rows = design_phase.research_questions.filter(
             status=ResearchQuestion.Status.SUGGESTED
         ).update(
             status=ResearchQuestion.Status.REJECTED,
             justification="Rejected automatically via consolidation."
         )
-        design_phase.current_stage = DesignPhase.DesignStage.CRITERIA_DEFINITION
-        design_phase.save()
-
         return {
             "rejected_automatically": affected_rows,
             "total_approved": design_phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).count()
