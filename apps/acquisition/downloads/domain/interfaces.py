@@ -3,12 +3,63 @@ Domain interfaces (Ports) for downloads module.
 
 Estos Protocols definen los contratos que deben cumplir los adaptadores externos.
 Permiten desacoplar la lógica de aplicación de las implementaciones concretas.
+
+Patrones implementados:
+- Chain of Responsibility: BaseOpenAccessChecker permite encadenar checkers
+- Protocol: IOpenAccessChecker define el contrato estructural
 """
 
-from typing import Protocol, Optional
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Protocol, Optional, Dict, Any
 
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.value_objects.doi import DOI
+
+
+# ============================================================================ #
+# Value Object para resultado de verificación OA
+# ============================================================================ #
+
+
+@dataclass
+class OpenAccessResult:
+    """
+    Resultado de verificación de Open Access.
+    
+    Value Object que encapsula toda la información de una consulta OA.
+    Usar este objeto en lugar de diccionarios para type-safety.
+    """
+    is_oa: bool
+    pdf_url: Optional[str] = None
+    landing_url: Optional[str] = None
+    source: Optional[str] = None
+    oa_type: Optional[str] = None
+    license: Optional[str] = None
+    version: Optional[str] = None
+    
+    @classmethod
+    def not_found(cls, source: str = "Unknown") -> "OpenAccessResult":
+        """Factory method para resultado negativo."""
+        return cls(is_oa=False, source=source)
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "OpenAccessResult":
+        """Factory method para crear desde diccionario."""
+        return cls(
+            is_oa=bool(data.get("is_oa", False)),
+            pdf_url=data.get("pdf_url"),
+            landing_url=data.get("landing_url"),
+            source=data.get("source"),
+            oa_type=data.get("oa_type"),
+            license=data.get("license"),
+            version=data.get("version"),
+        )
+
+
+# ============================================================================ #
+# Protocol (Structural Typing)
+# ============================================================================ #
 
 
 class IOpenAccessChecker(Protocol):
@@ -26,6 +77,126 @@ class IOpenAccessChecker(Protocol):
             True si el estudio es Open Access, False en caso contrario
         """
         ...
+
+
+# ============================================================================ #
+# Chain of Responsibility Base Class
+# ============================================================================ #
+
+
+class BaseOpenAccessChecker(ABC):
+    """
+    Clase base abstracta para checkers de Open Access con Chain of Responsibility.
+    
+    Implementa el patrón Chain of Responsibility para encadenar múltiples
+    fuentes de verificación de OA (Unpaywall -> Crossref -> Scopus).
+    
+    Cada checker intenta resolver la búsqueda; si no puede, la pasa al siguiente.
+    
+    Uso típico:
+        # Configurar la cadena (en Container o DI)
+        scopus = ScopusChecker(api_key="...", next_checker=None)
+        crossref = CrossrefChecker(email="...", next_checker=scopus)
+        unpaywall = UnpaywallChecker(email="...", next_checker=crossref)
+        
+        # Inyectar el primero al caso de uso
+        result = unpaywall.check_access(doi)
+    
+    Ventajas:
+        - Orden configurable sin modificar código
+        - Cada checker tiene una única responsabilidad
+        - Fácil agregar/quitar checkers de la cadena
+        - Mejor testabilidad (mock del next_checker)
+    """
+    
+    def __init__(self, next_checker: Optional["BaseOpenAccessChecker"] = None):
+        """
+        Inicializar checker con siguiente eslabón de la cadena.
+        
+        Args:
+            next_checker: Siguiente checker a consultar si este no encuentra OA.
+                         None significa que este es el último de la cadena.
+        """
+        self._next_checker = next_checker
+    
+    @property
+    def source_name(self) -> str:
+        """Nombre de la fuente (para logging y resultados)."""
+        return self.__class__.__name__.replace("Checker", "").replace("OpenAccess", "")
+    
+    @abstractmethod
+    def check_access(self, doi: DOI) -> OpenAccessResult:
+        """
+        Verificar Open Access para un DOI.
+        
+        Implementar en cada subclase con la lógica específica de la fuente.
+        Si encuentra OA, retornar OpenAccessResult con is_oa=True.
+        Si no encuentra, llamar a self._pass_to_next(doi).
+        
+        Args:
+            doi: DOI a verificar
+            
+        Returns:
+            OpenAccessResult con la información encontrada
+        """
+        pass
+    
+    def _pass_to_next(self, doi: DOI) -> OpenAccessResult:
+        """
+        Pasar la responsabilidad al siguiente eslabón de la cadena.
+        
+        Llamar este método cuando el checker actual no encuentra OA
+        o falla al consultar su fuente.
+        
+        Args:
+            doi: DOI a verificar
+            
+        Returns:
+            OpenAccessResult del siguiente checker, o resultado vacío si no hay más
+        """
+        if self._next_checker is not None:
+            return self._next_checker.check_access(doi)
+        return OpenAccessResult.not_found(source="EndOfChain")
+    
+    def is_open_access(self, doi: DOI, study: Optional[Study] = None) -> bool:
+        """
+        Implementación del contrato IOpenAccessChecker.
+        
+        Wrapper que mantiene compatibilidad con la firma del Protocol,
+        mientras usa internamente check_access.
+        
+        Args:
+            doi: DOI a verificar
+            study: Estudio opcional (ignorado, para compatibilidad)
+            
+        Returns:
+            True si es Open Access, False en caso contrario
+        """
+        result = self.check_access(doi)
+        return result.is_oa
+    
+    def get_oa_info(self, doi: DOI) -> Dict[str, Any]:
+        """
+        Obtener información completa de OA como diccionario.
+        
+        Mantiene compatibilidad con el código existente que espera Dict.
+        
+        Args:
+            doi: DOI a verificar
+            
+        Returns:
+            Diccionario con información OA
+        """
+        result = self.check_access(doi)
+        return {
+            "is_oa": result.is_oa,
+            "pdf_url": result.pdf_url,
+            "landing_url": result.landing_url,
+            "source": result.source,
+            "oa_type": result.oa_type,
+            "license": result.license,
+            "version": result.version,
+        }
 
 
 class IDownloader(Protocol):

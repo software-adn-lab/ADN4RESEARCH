@@ -237,6 +237,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Storage configuration
 # S3-compatible storage (AWS S3, MinIO, etc.)
 USE_S3 = os.environ.get("USE_S3", "false").lower() == "true"
+print(f"DEBUG: USE_S3={USE_S3} (from env: {os.environ.get('USE_S3')})")
 
 if USE_S3:
     # S3 Storage Settings

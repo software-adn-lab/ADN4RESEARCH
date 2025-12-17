@@ -109,3 +109,15 @@ class DjangoStorage:
             URL completa (para S3) o ruta relativa (para local).
         """
         return _get_storage().url(path)
+
+    def size(self, path: str) -> int:
+        """
+        Obtener el tamaño del archivo.
+
+        Args:
+            path: Ruta al archivo.
+
+        Returns:
+            Tamaño del archivo en bytes.
+        """
+        return _get_storage().size(path)

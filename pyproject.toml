@@ -43,6 +43,7 @@ dj-database-url = "^3.0.1"
 spacy = "^3.8.9"
 google-generativeai = "^0.8.5"
 markdown = ">=3.5"
+pypdf = ">=5.0.0"
 
 # Web Scraping
 requests = ">=2.31.0"
@@ -64,6 +65,7 @@ flake8-bugbear = "*"
 django-stubs = "^5.2.7"
 django-stubs-ext = "^5.2.7"
 hypothesis = "^6.148.3"
+pytest = "^9.0.2"
 [tool.behave]
 junit = true
 junit_directory = "tests"

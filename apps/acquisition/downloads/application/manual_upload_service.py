@@ -73,7 +73,24 @@ class ManualUploadService:
         # 3. Vincular el archivo al estudio
         study.pdf_path = file_path
         study.pdf_source = PdfSource.MANUAL.value
+        
+        # Count pages
+        study.page_count = self._count_pages(file_path)
+        
         study.download_status = DownloadStatus.DISPONIBLE.value
 
         # 4. Retornar el estudio actualizado
         return study
+
+    def _count_pages(self, pdf_path: str) -> int | None:
+        """Count pages of the uploaded PDF."""
+        try:
+            from pypdf import PdfReader
+            import os
+            
+            if os.path.exists(pdf_path):
+                reader = PdfReader(pdf_path)
+                return len(reader.pages)
+            return None
+        except Exception:
+            return None

@@ -32,26 +32,20 @@ from apps.acquisition.discovery.application.discovery_service import DiscoverySe
 from apps.acquisition.shared.application.acquisition_orchestrator import AcquisitionOrchestrator
 
 from apps.acquisition.downloads.application.fulltext_service import FullTextService
-from apps.acquisition.downloads.application.open_access_checker import CompositeOpenAccessChecker
+from apps.acquisition.downloads.application.open_access_checker import ChainedOpenAccessChecker
 from apps.acquisition.downloads.application.manual_upload_service import ManualUploadService
 from apps.acquisition.downloads.application.manual_upload_app_service import (
     ManualUploadAppService,
 )
 from apps.acquisition.downloads.domain.services.file_validator import FileValidator
+from apps.acquisition.downloads.domain.interfaces import BaseOpenAccessChecker
 
-from apps.acquisition.downloads.adapters.outbound.connectors.unpaywall_checker import (
+from apps.acquisition.downloads.adapters.outbound.connectors import (
     UnpaywallChecker,
-)
-from apps.acquisition.downloads.adapters.outbound.connectors.crossref_open_access_checker import (
     CrossrefOpenAccessChecker,
-)
-from apps.acquisition.downloads.adapters.outbound.connectors.scopus_institutional_checker import (
     ScopusInstitutionalChecker,
-)
-from apps.acquisition.downloads.adapters.outbound.connectors.http_downloader import (
     HttpDownloader,
-)
-from apps.acquisition.downloads.adapters.outbound.connectors.alternative_source_finder import (
+    SciHubDownloader,
     AlternativeSourceFinder,
 )
 from apps.acquisition.downloads.adapters.outbound.storage.local_file_storage import (
@@ -110,10 +104,8 @@ class Container:
     _manual_edit_service: Optional[ManualEditService] = None
     _consolidation_service: Optional[ConsolidationService] = None
 
-    # Descargas (Feature 4)
-    _unpaywall_checker: Optional[UnpaywallChecker] = None
-    _crossref_checker: Optional[CrossrefOpenAccessChecker] = None
-    _scopus_oa_checker: Optional[ScopusInstitutionalChecker] = None
+    # Descargas (Feature 4) - Chain of Responsibility
+    _oa_checker_chain: Optional[BaseOpenAccessChecker] = None  # Cabeza de la cadena
     _http_downloader: Optional[HttpDownloader] = None
     _alternative_finder: Optional[AlternativeSourceFinder] = None
     _fulltext_service_production: Optional[FullTextService] = None
@@ -236,7 +228,7 @@ class Container:
             web_strategy=ieee_web_strategy,
             rate_limiter=ieee_rate_limiter,
             circuit_breaker=ieee_circuit_breaker,
-            prefer_api=True,
+            prefer_api=False,
         )
 
         return {
@@ -394,10 +386,8 @@ class Container:
         """
         Servicio de descarga de textos completos (Feature 4 - PRODUCCIÓN).
 
-        Conectores reales:
-        - UnpaywallChecker (Open Access)
-        - CrossrefOpenAccessChecker
-        - ScopusInstitutionalChecker (opcional, si hay API key)
+        Conectores reales (Chain of Responsibility):
+        - UnpaywallChecker -> CrossrefOpenAccessChecker -> ScopusInstitutionalChecker
         - HttpDownloader (descarga de PDFs)
         - AlternativeSourceFinder (incluye Sci-Hub opcional)
 
@@ -422,28 +412,40 @@ class Container:
             storage_dir = os.getenv("PAPERS_STORAGE_DIR", "media/papers")
             scopus_api_key = os.getenv("SCOPUS_API_KEY")
 
-            # Conectores OA
-            if cls._unpaywall_checker is None:
-                cls._unpaywall_checker = UnpaywallChecker(email=email)
+            # ----------------------------------------------------------------- #
+            # Construir Chain of Responsibility para OA Checkers
+            # Orden: Unpaywall -> Crossref -> Scopus (si hay API key)
+            # ----------------------------------------------------------------- #
+            if cls._oa_checker_chain is None:
+                # Último eslabón: Scopus (si hay API key)
+                scopus_checker = None
+                if scopus_api_key:
+                    scopus_checker = ScopusInstitutionalChecker(
+                        api_key=scopus_api_key,
+                        next_checker=None,  # Fin de la cadena
+                    )
 
-            if cls._crossref_checker is None:
-                cls._crossref_checker = CrossrefOpenAccessChecker(email=email)
+                # Eslabón medio: Crossref -> Scopus
+                crossref_checker = CrossrefOpenAccessChecker(
+                    email=email,
+                    next_checker=scopus_checker,
+                )
 
-            if cls._scopus_oa_checker is None and scopus_api_key:
-                cls._scopus_oa_checker = ScopusInstitutionalChecker(api_key=scopus_api_key)
+                # Primer eslabón: Unpaywall -> Crossref
+                cls._oa_checker_chain = UnpaywallChecker(
+                    email=email,
+                    next_checker=crossref_checker,
+                )
 
             # Descarga y fuentes alternativas
             if cls._http_downloader is None:
-                cls._http_downloader = HttpDownloader(base_dir=storage_dir)
+                cls._http_downloader = HttpDownloader(storage=cls.get_storage())
 
             if cls._alternative_finder is None:
                 enable_scihub = os.getenv("ENABLE_SCIHUB", "false").lower() == "true"
 
-                from apps.acquisition.downloads.adapters.outbound.connectors.scihub_downloader import (
-                    SciHubDownloader,
-                )
-
                 scihub = SciHubDownloader(
+                    storage=cls.get_storage(),
                     enabled=enable_scihub,
                     base_dir=storage_dir,
                     timeout=30,
@@ -456,12 +458,10 @@ class Container:
                     enable_scihub=enable_scihub,
                 )
 
-            oa_checker = CompositeOpenAccessChecker(
-                primary_checker=cls._unpaywall_checker,
-                secondary_checker=cls._crossref_checker,
-                tertiary_checker=cls._scopus_oa_checker,
-                # No gastar cuota de Scopus OA para estudios que ya vienen de Scopus
-                skip_tertiary_for_sources=["Scopus"],
+            # Orquestador que envuelve la cadena con lógica adicional
+            oa_checker = ChainedOpenAccessChecker(
+                checker_chain=cls._oa_checker_chain,
+                skip_sources=["Scopus"],  # No gastar cuota si ya viene de Scopus
             )
 
             cls._fulltext_service_production = FullTextService(

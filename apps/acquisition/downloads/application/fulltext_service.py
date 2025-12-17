@@ -322,6 +322,11 @@ class FullTextService:
             # Éxito: se obtuvo el PDF válido
             study.pdf_path = pdf_path
             study.pdf_source = pdf_source.value
+            
+            # Contar páginas (Feature pedido: study cache page count)
+            page_count = self._count_pages(pdf_path)
+            study.page_count = page_count
+            
             study.download_status = DownloadStatus.DISPONIBLE.value
         else:
             # Fallo: no se pudo obtener el PDF o no era válido
@@ -336,3 +341,26 @@ class FullTextService:
             "not_available": 0,
             "errors": 0,
         }
+
+    def _count_pages(self, pdf_path: str) -> Optional[int]:
+        """
+        Contar las páginas del PDF descargado.
+        
+        Args:
+            pdf_path: Ruta al archivo PDF.
+            
+        Returns:
+            Número de páginas o None si falla.
+        """
+        try:
+            # Importación dentro del método para evitar errores si no está instalada la lib
+            from pypdf import PdfReader
+            import os
+            
+            if os.path.exists(pdf_path):
+                reader = PdfReader(pdf_path)
+                return len(reader.pages)
+            return None
+        except Exception as e:
+            logger.warning(f"No se pudieron contar las páginas de {pdf_path}: {e}")
+            return None

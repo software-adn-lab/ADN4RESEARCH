@@ -282,12 +282,7 @@ class DownloadsLiveTest(BaseLiveTest):
                            "El download_status debe estar definido")
         
         print(f"\n✅ Estado actualizado correctamente")
-
-
-if __name__ == '__main__':
-    unittest.main()
-
-
+    
     def test_download_cascade_with_scihub(self):
         """
         Validar que la cascada de descargas incluye Sci-Hub como último recurso.
@@ -323,7 +318,7 @@ if __name__ == '__main__':
             title="Test Study for Cascade",
             link="https://example.com/test-cascade",
             source="Manual",
-            doi="10.1109/TSE.2020.2994247"  # DOI real de IEEE
+            doi="10.1109/ICSE-SEET52601.2021.00012"  # DOI que sabemos que funciona
         )
         
         # NO establecer pdf_url para forzar cascada completa
