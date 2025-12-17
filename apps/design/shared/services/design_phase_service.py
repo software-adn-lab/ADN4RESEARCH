@@ -48,6 +48,15 @@ class DesignPhaseService:
 
     def consolidate_search_strategy_stage(self, project_id: int, user):
         phase = DesignPhase.objects.get(pk=project_id)
+        self._validate_all_questions_have_strategies(project_id)
+        approved_strategy_ids = []
+        with transaction.atomic():
+            approved_strategy_ids = self._reject_draft_strategies(project_id)
+            self._advance_project_stage(phase)
+        self._persist_approved_search_results(approved_strategy_ids, user)
+        return phase
+
+    def _validate_all_questions_have_strategies(self, project_id: int):
         approved_questions = ResearchQuestion.objects.filter(
             design_phase_id=project_id,
             status=ResearchQuestion.Status.APPROVED
@@ -56,51 +65,41 @@ class DesignPhaseService:
             if not SearchStrategy.objects.filter(research_question=question).exists():
                 raise ValidationError(f"Research Question '{question.question[:50]}...' does not have a search strategy defined.")
 
-        approved_strategy_ids = []
+    def _reject_draft_strategies(self, project_id: int) -> list[int]:
+        """
+        Rejects DRAFT versions of all strategies in the project.
+        Returns a list of IDs of APPROVED strategies that need persistence.
+        """
+        approved_ids = []
+        strategies = SearchStrategy.objects.filter(research_question__design_phase_id=project_id)
+        for strategy in strategies:
+            strategy.versions.filter(status=SearchStrategy.Status.DRAFT).update(status=SearchStrategy.Status.REJECTED)
+            if strategy.status == SearchStrategy.Status.APPROVED:
+                approved_ids.append(strategy.id)
+        return approved_ids
 
-        with transaction.atomic():
-            strategies = SearchStrategy.objects.filter(research_question__design_phase_id=project_id)
-            print(f"DEBUG: Found {len(strategies)} strategies for project {project_id}")
-            
-            for strategy in strategies:
-                print(f"DEBUG: Strategy {strategy.id} status: {strategy.status}")
-                strategy.versions.filter(status=SearchStrategy.Status.DRAFT).update(status=SearchStrategy.Status.REJECTED)
-                
-                if strategy.status == SearchStrategy.Status.APPROVED:
-                    approved_strategy_ids.append(strategy.id)
+    def _advance_project_stage(self, phase: DesignPhase):
+        if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
+            phase.current_stage = DesignPhase.DesignStage.FINISHED
+            phase.save()
+        else:
+            raise ValidationError("Project is not in Search Strategy stage.")
 
-            if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
-                phase.current_stage = DesignPhase.DesignStage.FINISHED
-                phase.save()
-            else:
-                raise ValidationError("Project is not in Search Strategy stage.")
-
-        # Persist results using Acquisition Facade (leveraging Redis cache via Service)
+    def _persist_approved_search_results(self, strategy_ids: list[int], user):
+        """
+        Persists studies for approved strategies using the Acquisition Facade.
+        Uses cached preview results to avoid re-fetching from external sources.
+        """
         acquisition_facade = get_acquisition_facade()
         search_service = SearchStrategyService()
         
-        for strategy_id in approved_strategy_ids:
+        for strategy_id in strategy_ids:
             try:
-                # This call handles cached retrieval internally
                 preview_result = search_service.get_search_results_dto(strategy_id)
-                
-                print(f"DEBUG: Consolidating Strategy {strategy_id}")
-                print(f"DEBUG: Preview Result Total Found: {preview_result.total_found}")
-                print(f"DEBUG: Studies in DTO: {len(preview_result.studies)}")
-                
-                final_result = acquisition_facade.finalize_search(
+                acquisition_facade.finalize_search(
                     design_strategy_id=strategy_id,
                     preview_result=preview_result,
                     user=user
-                )
-                print(f"DEBUG: Persisted studies: {len(final_result.studies_persisted)}")
-                
+                )         
             except Exception as e:
-                # Log error but don't block the consolidation of other strategies?
-                # Or raise to rollback? User preference implied synchronous success.
-                # For now we'll allow it to fail hard (ValidationError) effectively rolling back if atomic wasn't closed
-                # Wait, we are outside the atomic block for facade calls to allow partial progress? No, consistency is key.
-                # Re-raising ensures the user knows something failed.
                 raise ValidationError(f"Error persisting strategy {strategy_id}: {str(e)}")
-
-        return phase
