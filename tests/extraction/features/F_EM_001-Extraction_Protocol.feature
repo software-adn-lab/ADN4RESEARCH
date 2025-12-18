@@ -4,28 +4,33 @@ Característica: Refinamiento del protocolo de extracción
   Como Dueño de la investigación,
   Quiero definir y aprobar el conjunto de tags que serán utilizados obligatoriamente.
 
-  Antecedentes:
-    Dado que la fase de extracción está activa
-
-  Esquema del escenario: Extracción obligatoria de Tags Deductivos acorde a su relación con Preguntas de Investigación
-    Dadas las Preguntas de Investigación del proyecto son: <PIs_Existentes>
-    Cuando el Owner define los Tags Deductivos y las PIs relacionadas: <Tags_Definidos>
-    Entonces se debe marcar el conjunto de tags obligatorios como: <Tags_Obligatorios_Esperados>
-    Y se debe determinar la visibilidad de la lista de tags para los Researchers como: <Visibilidad_Esperada>
+#PROTOCOLO DE EXTRACCION
+#Puede ser precondicion que la fase de extraccion haya terminado
+  Esquema del escenario: Validación de cobertura de Preguntas de Investigación para visibilidad pública
+    Dado que existe una Fase de Extracción en configuración
+    Y las Preguntas de Investigación del proyecto son: <RQ_list>
+    Cuando el Owner define los Tags Deductivos y las PIs relacionadas: <tag_list>
+    Entonces se debe marcar el conjunto de tags obligatorios como: <mandatory_tags>
+    Y el estado sugerido de la fase debe mantenerse en: <status_phase>
 
     Ejemplos:
-      | PIs_Existentes | Tags_Definidos | Tags_Obligatorios_Esperados | Visibilidad_Esperada |
-      | ["Cómo afectan las nuevas tecnologías a la eficiencia operativa de las empresas?", "Cuáles son los costos asociados con la implementación de tecnologías emergentes?"] | [{"Tag": "Eficiencia", "PI_Relacionada": "<Ninguna>"}, {"Tag": "Costos", "PI_Relacionada": "<Ninguna>"}, {"Tag": "Tiempo", "PI_Relacionada": "<Ninguna>"}, {"Tag": "Impacto Ambiental", "PI_Relacionada": "<Ninguna>"}] | [] | No Pública |
-      | ["Cómo afectan las nuevas tecnologías a la eficiencia operativa de las empresas?", "Cuáles son los costos asociados con la implementación de tecnologías emergentes?"] | [{"Tag": "Eficiencia", "PI_Relacionada": "Cómo afectan las nuevas tecnologías a la eficiencia operativa de las empresas?"}, {"Tag": "Costos", "PI_Relacionada": "Cuáles son los costos asociados con la implementación de tecnologías emergentes?"}, {"Tag": "Tiempo", "PI_Relacionada": "<Ninguna>"}, {"Tag": "Impacto Ambiental", "PI_Relacionada": "<Ninguna>"}] | ["Eficiencia", "Costos"] | Pública |
+      | RQ_list                                              | tag_list                                                                                                 | mandatory_tags                          | status_phase |
+      | ["¿Cómo afecta la IA?", "¿Costo de implementación?"] | [{"Tag": "Tecnología", "PI": "¿Cómo afecta la IA?"}, {"Tag": "Presupuesto", "PI": "¿Costo de implementación?"}] | ["Tecnología", "Presupuesto"]           | OPEN         |
+      | ["¿Cómo afecta la IA?", "¿Costo de implementación?"] | [{"Tag": "Tecnología", "PI": "¿Cómo afecta la IA?"}, {"Tag": "General", "PI": "<Ninguna>"}]                     | ["Tecnología"]                          | CONFIG       |
+      | ["¿Cómo afecta la IA?"]                              | [{"Tag": "General", "PI": "<Ninguna>"}]                                                                         | []                                      | CONFIG       |
+
 
   Esquema del escenario: Validar que un paper no puede marcarse como "Completo" si faltan extracciones obligatorias
-    Dada una lista de tags obligatorios para la extracción: <Tags_Obligatorios>
-    Y se han registrado las extracciones para los siguientes tags: <Tags_Extraidos>
+    Dado que existe una Fase de Extracción en estado "Abierta"
+    Y una lista de tags obligatorios para la extracción: <mandatory_tags>
+    Y se han registrado las extracciones para los siguientes tags: <extracteded_tags>
     Cuando el investigador intenta marcar el paper como "Completo"
-    Entonces el estado del paper debe ser "<Estado_Esperado>"
-    Y se debe notificar al investigador sobre los tags pendientes: <Tags_Pendientes_Esperados>
+    Entonces el estado del paper debe ser <paper_status>
+    Y se debe notificar al investigador sobre los tags pendientes: <missing_tags>
 
     Ejemplos:
-      | Tags_Obligatorios | Tags_Extraidos | Estado_Esperado | Tags_Pendientes_Esperados |
-      | ["Eficiencia", "Costos", "Tiempo", "Impacto Ambiental"] | ["Tiempo", "Impacto Ambiental"] | Pendiente | ["Eficiencia", "Costos"] |
-      | ["Eficiencia", "Costos", "Tiempo"] | ["Eficiencia", "Costos", "Tiempo"] | Completo | [] |
+      | mandatory_tags                                          | extracteded_tags                   | paper_status | missing_tags             |
+      | ["Eficiencia", "Costos", "Tiempo", "Impacto Ambiental"] | ["Tiempo", "Impacto Ambiental"]    | Pendiente    | ["Eficiencia", "Costos"] |
+      | ["Eficiencia", "Costos", "Tiempo"]                      | ["Eficiencia", "Costos", "Tiempo"] | Completo     | []                       |
+
+

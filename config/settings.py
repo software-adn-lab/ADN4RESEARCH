@@ -97,6 +97,7 @@ TEMPLATES = [
         "DIRS": [
             BASE_DIR / "ui" / "design" / "templates",
             BASE_DIR / "ui" / "interpretation" / "templates",
+            BASE_DIR / "ui" / "extraction" / "templates",
             BASE_DIR / "ui" / "shared" / "templates",
             BASE_DIR / "ui" / "project" / "templates",
         ],
@@ -272,17 +273,17 @@ REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Cache Configuration with Redis
 # https://docs.djangoproject.com/en/5.2/topics/cache/
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "KEY_PREFIX": "adn4research",
-        "TIMEOUT": 300,  # 5 minutes default
-    }
-}
+#CACHES = {
+#    "default": {
+#        "BACKEND": "django_redis.cache.RedisCache",
+#        "LOCATION": REDIS_URL,
+#        "OPTIONS": {
+#            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#        },
+#        "KEY_PREFIX": "adn4research",
+#        "TIMEOUT": 300,  # 5 minutes default
+#    }
+#}
 
 # Session backend using Redis
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
