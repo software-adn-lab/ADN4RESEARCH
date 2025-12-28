@@ -11,7 +11,7 @@ from apps.project.decorators import project_member_required, build_design_url
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.shared.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
 from apps.project.structure.services.project_services import ProjectService
 
 search_strategy_service = SearchStrategyService()

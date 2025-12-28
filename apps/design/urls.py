@@ -3,7 +3,7 @@ from django.urls import path
 from apps.design.eligibility_criteria.views import eligibility_criterion
 from apps.design.research_question.views import research_question, question_discussion
 from apps.design.search_strategy.views import project_keyword, search_strategy
-from apps.design.shared.views import navigation
+from apps.design.design_phase_logic.views import navigation
 
 app_name = 'design'
 

@@ -7,7 +7,8 @@ from apps.design.search_strategy.models.search_strategy import SearchStrategy, S
 from django.db.models import Max
 from django.db import transaction
 from apps.acquisition.facade import get_acquisition_facade
-from apps.design.search_strategy.services.translation_service import TranslationService
+from apps.design.search_strategy.services.nlp.translation_service import TranslationService
+
 from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
 from apps.design.research_question.models.research_question import ResearchQuestion
 from django.core.exceptions import ValidationError
