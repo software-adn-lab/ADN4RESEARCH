@@ -373,6 +373,106 @@ class AcquisitionFacade:
             logger.error(f"[FACADE] Health check failed: {e}", exc_info=True)
             return False
 
+    def get_studies_by_project(
+        self,
+        project_id: int,
+        include_metadata: bool = True,
+        status_filter: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Obtener todos los estudios asociados a un proyecto.
+
+        Usado por módulo Project para listar estudios de un proyecto SLR.
+        Los estudios se obtienen a través de la cadena:
+        Project → DesignPhase → ResearchQuestion → SearchStrategy → SearchExecution → Study
+
+        Args:
+            project_id: ID del proyecto (design.DesignPhase.project_id)
+            include_metadata: Si True, incluye metadatos completos (authors, abstract, etc.)
+            status_filter: Opcional, filtrar por estado (discovered, enriched, downloaded, failed)
+
+        Returns:
+            Lista de dicts con datos de cada estudio:
+            - id: UUID del estudio
+            - title: Título
+            - source: Fuente académica
+            - status: Estado del workflow
+            - doi: DOI (si existe)
+            - year: Año de publicación
+            - download_status: Estado de disponibilidad del PDF
+            - (si include_metadata=True): authors, abstract, keywords, journal
+        """
+        logger.info(f"[FACADE] Getting studies for project {project_id}")
+
+        try:
+            # Importación local para evitar ciclos
+            from apps.acquisition.models import StudyModel, SearchExecutionModel
+            from apps.design.search_strategy.models.search_strategy import SearchStrategy
+
+            # Obtener todas las estrategias del proyecto
+            strategies = SearchStrategy.objects.by_project(project_id)
+            strategy_ids = list(strategies.values_list('id', flat=True))
+
+            if not strategy_ids:
+                logger.info(f"[FACADE] No strategies found for project {project_id}")
+                return []
+
+            # Obtener todas las ejecuciones de esas estrategias
+            executions = SearchExecutionModel.objects.filter(
+                strategy_id__in=strategy_ids
+            )
+            execution_ids = list(executions.values_list('id', flat=True))
+
+            if not execution_ids:
+                logger.info(f"[FACADE] No executions found for project {project_id}")
+                return []
+
+            # Obtener todos los estudios vinculados a esas ejecuciones
+            # Usamos distinct() para evitar duplicados por M2M
+            # Ordenamos por discovered_at para resultados consistentes
+            studies_qs = StudyModel.objects.filter(
+                executions__id__in=execution_ids
+            ).distinct().order_by('-discovered_at')
+
+            # Aplicar filtro de estado si se especifica
+            if status_filter:
+                studies_qs = studies_qs.filter(status=status_filter)
+
+            # Construir respuesta
+            result = []
+            for study in studies_qs:
+                study_dict = {
+                    "id": str(study.uuid),
+                    "title": study.title,
+                    "link": study.link,
+                    "source": study.source,
+                    "status": study.status,
+                    "doi": study.doi,
+                    "year": study.year,
+                    "download_status": study.download_status,
+                    "pdf_path": study.pdf_path,
+                    "consolidation_status": study.consolidation_status,
+                    "discovered_at": study.discovered_at.isoformat() if study.discovered_at else None,
+                }
+
+                if include_metadata:
+                    study_dict.update({
+                        "authors": study.authors or [],
+                        "abstract": study.abstract,
+                        "keywords": study.keywords or [],
+                        "journal": study.journal,
+                        "field_origins": study.field_origins or {},
+                    })
+
+                result.append(study_dict)
+
+            logger.info(f"[FACADE] Found {len(result)} studies for project {project_id}")
+            return result
+
+        except Exception as e:
+            logger.error(f"[FACADE] Get studies by project failed: {e}", exc_info=True)
+            raise
+
     # ==========================================================================
     # MÉTODOS PARA GESTIÓN MANUAL (Fallback cuando los robots fallan)
     # ==========================================================================
@@ -563,6 +663,18 @@ print(f"Enriquecidos {enrichment_result.enriched_count} estudios")
 facade = get_acquisition_facade()
 download_result = facade.download_fulltexts(study_ids)
 print(f"Descargados {download_result.downloaded_count} PDFs")
+
+# Desde Project (obtener todos los estudios de un proyecto):
+facade = get_acquisition_facade()
+project_studies = facade.get_studies_by_project(project_id=1)
+print(f"El proyecto tiene {len(project_studies)} estudios")
+
+# Filtrar solo estudios descargados:
+downloaded_studies = facade.get_studies_by_project(
+    project_id=1, 
+    status_filter="downloaded"
+)
+print(f"Estudios con PDF disponible: {len(downloaded_studies)}")
 
 # Gestión Manual (cuando los robots fallan):
 facade = get_acquisition_facade()
