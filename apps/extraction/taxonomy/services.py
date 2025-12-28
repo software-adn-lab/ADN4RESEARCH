@@ -2,7 +2,7 @@ from typing import List, Optional, Dict
 from django.db import transaction
 
 # Modelos y Opciones de Extracción
-from .models import  Tag, TagTypeChoices, VisibilityChoices
+from .models import  Tag, TagTypeChoices, VisibilityChoices, ApprovalStatusChoices
 
 class TagDefinitionService:
     """
@@ -14,7 +14,7 @@ class TagDefinitionService:
         
         is_mandatory = True if rq_id else False
         
-        visibility = VisibilityChoices.PUBLIC if is_mandatory else VisibilityChoices.PRIVATE
+        visibility = VisibilityChoices.PUBLIC
 
         tag = Tag.objects.create(
             extraction_phase_id=phase_id,
@@ -24,6 +24,6 @@ class TagDefinitionService:
             is_mandatory=is_mandatory,
             visibility=visibility,
             created_by=user,
-            status='APROVED'
+            status=ApprovalStatusChoices.APPROVED
         )
         return tag

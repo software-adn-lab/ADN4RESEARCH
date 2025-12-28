@@ -224,6 +224,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "ui" / "design",
     BASE_DIR / "ui" / "interpretation",
     BASE_DIR / "ui" / "project",
+    BASE_DIR / "ui" / "extraction",
 ]
 
 STATIC_URL = "/static/"
