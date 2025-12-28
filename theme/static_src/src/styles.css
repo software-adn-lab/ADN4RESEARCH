@@ -3,11 +3,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer components {
   .parent {
     @apply grid grid-cols-5 grid-rows-5 gap-2;
   }
-    
+
   .hamburguer-menu {
     @apply row-span-5;
   }
@@ -18,6 +19,98 @@
 
   .body-content {
     @apply col-span-4 row-span-4 col-start-2 row-start-2;
+  }
+
+  /* --- PDF Viewer Components --- */
+
+  /* Contenedor principal */
+  #pdf-viewer-container {
+    @apply w-full h-full overflow-y-auto overflow-x-hidden scroll-smooth p-5;
+    background-color: #525659;
+    /* Color específico del visor */
+  }
+
+  /* Página individual */
+  .page-container {
+    @apply relative block bg-white mx-auto mb-5;
+    /* Sombra personalizada para dar efecto de hoja */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* --- Text Layer (PDF.js specific) --- */
+  /* Mantenemos CSS puro aquí porque estas clases requieren precisión de píxel 
+       que las utilidades de Tailwind podrían alterar sutilmente */
+
+  .textLayer {
+    @apply absolute top-0 left-0 overflow-hidden opacity-100;
+    line-height: 1.0;
+  }
+
+  .textLayer span {
+    @apply absolute cursor-text whitespace-pre text-transparent;
+    transform-origin: 0% 0%;
+  }
+
+  /* Selección de texto en el PDF */
+  .textLayer span::selection {
+    background: rgba(59, 130, 246, 0.3);
+    /* blue-500 con opacidad */
+    color: transparent;
+  }
+
+  /* --- Highlight & Annotations --- */
+
+  .highlight-quote {
+    @apply cursor-pointer transition-colors duration-200 border-b-2;
+    /* Usamos !important para asegurar que sobreescriba estilos nativos del PDF si existen */
+    background-color: rgba(255, 215, 0, 0.4) !important;
+    /* Amarillo transparente */
+    color: transparent !important;
+    border-bottom-color: #FFD700;
+  }
+
+  .highlight-quote:hover {
+    background-color: rgba(255, 215, 0, 0.7) !important;
+  }
+
+  * --- Annotation Layer (Links) --- */ .annotationLayer {
+    @apply absolute top-0 left-0;
+    pointer-events: none;
+    /* Permite clicks solo en elementos internos */
+  }
+
+  .annotationLayer section {
+    @apply absolute;
+    pointer-events: auto;
+    /* Los links son clicables */
+  }
+
+  /* Links dentro del PDF */
+  .annotationLayer .linkAnnotation>a {
+    @apply absolute top-0 left-0 w-full h-full;
+    font-size: 1em;
+    background-color: rgba(255, 255, 0, 0.1);
+    /* Highlight sutil amarillo */
+    transition: background-color 0.2s;
+  }
+
+  .annotationLayer .linkAnnotation>a:hover {
+    background-color: rgba(255, 255, 0, 0.3);
+    /* Más visible en hover */
+    cursor: pointer;
+  }
+
+  /* Links externos (diferentes de links internos) */
+  .annotationLayer .linkAnnotation.external>a {
+    border-bottom: 1px dashed #3b82f6;
+    /* blue-500 */
+  }
+
+  /* Pop-ups y tooltips de anotaciones */
+  .annotationLayer .popup {
+    @apply absolute bg-yellow-100 border border-yellow-300 rounded shadow-lg p-2 text-xs;
+    z-index: 200;
+    max-width: 300px;
   }
 }
 
