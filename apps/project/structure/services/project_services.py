@@ -4,7 +4,7 @@ from apps.project.structure.models.project_models import Project, ResearchFramew
 from typing import List
 from django.db import transaction
 from django.db.models import Q
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 
 class ProjectService:

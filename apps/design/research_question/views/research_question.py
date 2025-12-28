@@ -4,12 +4,13 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
 from apps.project.decorators import project_member_required, build_design_url
 from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError, ResearchQuestionError
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
-from apps.design.shared.services.design_phase_service import DesignPhaseService
+from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
+
 
 research_question_service = ResearchQuestionService()
 keyword_processor_service = KeywordProcessorService()

@@ -6,7 +6,7 @@ from django.contrib import messages
 from apps.project.decorators import project_member_required, build_design_url
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.shared.services.design_phase_service import DesignPhaseService
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 research_question_service = ResearchQuestionService()
 design_phase_service = DesignPhaseService()

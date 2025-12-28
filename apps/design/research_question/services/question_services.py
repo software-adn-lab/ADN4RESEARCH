@@ -6,7 +6,7 @@ from django.db import transaction
 from apps.design.exceptions.research_question_exceptions import InvalidFrameworkFieldsError, ProjectNotFoundError, QuestionReviewError, QuestionSubmissionError, QuestionNotFoundError, ResearchQuestionError
 from apps.project.structure.models.project_models import Project
 from django.contrib.auth.models import User
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 from django.utils import timezone
 
 class ResearchQuestionService:

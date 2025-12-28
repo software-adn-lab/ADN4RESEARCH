@@ -4,7 +4,7 @@ from apps.design.exceptions.eligibility_criteria_exceptions import CreationError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DatabaseError, transaction
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 class EligibilityCriterionService:
 

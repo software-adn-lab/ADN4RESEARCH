@@ -8,7 +8,7 @@ from apps.design.exceptions.eligibility_criteria_exceptions import CreationError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.shared.services.design_phase_service import DesignPhaseService
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 eligibility_service = EligibilityCriterionService()
 design_phase_service = DesignPhaseService()

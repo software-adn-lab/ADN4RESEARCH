@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.urls import reverse
 from apps.project.decorators import project_member_required
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 
 @project_member_required

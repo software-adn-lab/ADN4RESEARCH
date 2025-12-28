@@ -4,7 +4,7 @@ from apps.project.structure.services.project_services import ProjectService
 import logging
 import json
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 research_question_service = ResearchQuestionService()
 

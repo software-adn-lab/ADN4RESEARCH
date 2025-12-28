@@ -33,7 +33,9 @@ class DesignPhase(BasePhase):
     project = models.OneToOneField('project.Project', related_name='design_phase', on_delete=models.CASCADE, primary_key=True)
     current_stage = models.CharField(max_length=20, choices=DesignStage.choices, default=DesignStage.RQ_CREATION)
     objects = DesignPhaseQuerySet.as_manager()
-
+    # TODO fechas de las etapas controladas por la fase de diseño
+    fecha_inicio_creacion_pregunta = models.DateTimeField(null=True, blank=True)
+    
     def save(self, *args, **kwargs):
         self.full_clean()
         # Si llegamos a FINISHED, cerramos la fase automáticamente
