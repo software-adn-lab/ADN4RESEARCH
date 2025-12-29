@@ -206,12 +206,50 @@ class PaperWorkspaceView(LoginRequiredMixin, DetailView):
         context['mandatory_tags'] = mandatory_tags
 
         # Quotes existentes
-        quotes_list = list(
-            self.object.quotes.values('id', 'text_fragment', 'location')
+        quotes_queryset = (
+            self.object.quotes
+            .prefetch_related('tags')  # ⬅️ Optimización N+1
+            .all()
         )
-        print(f"\nQuotes Count: {len(quotes_list)}")
         
-        context['quotes_list'] = quotes_list
+        # Convertir a lista para poder ordenar
+        quotes_list = list(quotes_queryset)
+        
+        # Ordenar por página
+        quotes_list.sort(key=lambda q: q.location.get('page', 0))
+        
+        # DEBUG
+        print("\n" + "="*60)
+        print("QUOTES DEBUG")
+        print("="*60)
+        print(f"Quotes Count: {len(quotes_list)}")
+        
+        for quote in quotes_list[:3]:  # Primeras 3
+            print(f"\nQuote ID: {quote.id}")
+            print(f"  Text: {quote.text_fragment[:50]}...")
+            print(f"  Page: {quote.location.get('page', '?')}")
+            print(f"  Tags count: {quote.tags.count()}")
+            
+            for tag in quote.tags.all():
+                print(f"    - Tag: {tag.name} (ID: {tag.id}, Color: {tag.color})")
+        print("="*60 + "\n")
+        
+        # Para template (objetos Quote)
+        context['quotes_ordered'] = quotes_list
+        
+        # Para JavaScript (serializar manualmente)
+        context['quotes_list_json'] = [
+            {
+                'id': q.id,
+                'text_fragment': q.text_fragment,
+                'location': q.location,
+                'tags': [
+                    {'id': t.id, 'name': t.name}
+                    for t in q.tags.all()
+                ]
+            }
+            for q in quotes_list
+        ]
         
         print("="*60 + "\n")
         
@@ -336,6 +374,51 @@ class QuoteCreateView(LoginRequiredMixin, View):
         return (
             user == project.owner or
             paper.assigned_to == user or
+            user.is_staff or
+            user.is_superuser
+        )
+
+# apps/extraction/core/views.py
+
+class QuoteDeleteView(LoginRequiredMixin, View):
+    """API para eliminar quotes."""
+    
+    def delete(self, request, quote_id):
+        try:
+            quote = get_object_or_404(Quote, pk=quote_id)
+            
+            logger.info(f"Delete quote requested: {quote_id} by user {request.user}")
+            
+            # Validar permisos
+            if not self._user_can_delete_quote(request.user, quote):
+                logger.error(f"Permission denied for user {request.user}")
+                return JsonResponse({
+                    'error': 'No tienes permiso para eliminar esta quote'
+                }, status=403)
+            
+            # Eliminar
+            quote.delete()
+            logger.info(f"Quote {quote_id} deleted successfully")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Quote eliminada exitosamente'
+            }, status=200)
+            
+        except Exception as e:
+            logger.exception("Error deleting quote")
+            return JsonResponse({
+                'error': 'Error al eliminar la quote',
+                'detail': str(e)
+            }, status=500)
+    
+    def _user_can_delete_quote(self, user, quote):
+        """Valida si el usuario puede eliminar la quote."""
+        project = quote.paper_extraction.extraction_phase.project
+        
+        return (
+            user == quote.created_by or  # Creador
+            user == project.owner or     # Owner del proyecto
             user.is_staff or
             user.is_superuser
         )

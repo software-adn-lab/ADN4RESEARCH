@@ -25,7 +25,7 @@
 
 <!-- Datos JSON para JavaScript -->
 <script id="quotes-data" type="application/json">
-{{ quotes_list|safe }}
+{{ quotes_list_json|safe }}
 </script>
 
 <!-- Scripts -->
@@ -37,9 +37,10 @@
     window.WORKSPACE_CONFIG = {
         pdfUrl: "{% url 'extraction:serve_pdf' paper.id %}",
         apiUrl: "{% url 'extraction:quote_create' %}",
+        deleteApiUrl: "{% url 'extraction:quote_delete' 0 %}".replace('/0/', '/'),
         csrfToken: "{{ csrf_token }}",
         paperId: {{ paper.id }},
-        existingQuotes: {{ quotes_list|safe }}
+        existingQuotes: {{ quotes_list_json|safe }}
     };
     
     console.log('✅ Config ready');

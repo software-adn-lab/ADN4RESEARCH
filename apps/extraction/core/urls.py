@@ -6,6 +6,7 @@ from .views import (
     PDFServeView,
     PaperWorkspaceView,
     QuoteCreateView,
+    QuoteDeleteView,
 )
 
 urlpatterns = [
@@ -22,4 +23,9 @@ urlpatterns = [
     path('quotes/create/', 
          QuoteCreateView.as_view(), 
          name='quote_create'),
+
+    path('quotes/delete/<int:quote_id>/', 
+         QuoteDeleteView.as_view(), 
+         name='quote_delete'),
+
 ]

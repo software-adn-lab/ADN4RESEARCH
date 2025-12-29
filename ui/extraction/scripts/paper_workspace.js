@@ -45,6 +45,7 @@ async function initWorkspace() {
         // 2. Inicializar Quote Manager INMEDIATAMENTE
         quoteManager = new QuoteManager({
             apiUrl: CONFIG.apiUrl,
+            deleteApiUrl: CONFIG.deleteApiUrl,
             csrfToken: CONFIG.csrfToken,
             paperId: CONFIG.paperId,
             pdfViewer: null,  // ⬅️ null temporalmente

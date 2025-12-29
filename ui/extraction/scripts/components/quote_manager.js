@@ -11,7 +11,8 @@ class QuoteManager {
         this.pdfViewer = options.pdfViewer;
         this.tagManager = options.tagManager;
 
-        // ✅ Guardar selección actual (fallback si pdfViewer no está disponible)
+        this.deleteApiUrl = options.deleteApiUrl || '/extraction/quotes/delete/';
+
         this.currentSelection = { text: '', page: 1 };
 
         this.modal = document.getElementById('quote_modal');
@@ -31,6 +32,14 @@ class QuoteManager {
         // Escuchar clicks en quotes existentes
         if (this.quotesList) {
             this.quotesList.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-quote-btn');
+                if (deleteBtn) {
+                    e.stopPropagation();
+                    const quoteId = deleteBtn.dataset.quoteId;
+                    this.handleDeleteQuote(quoteId);
+                    return;
+                }
+
                 const quoteCard = e.target.closest('.quote-card');
                 if (quoteCard) {
                     this.handleQuoteClick(quoteCard);
@@ -252,6 +261,87 @@ class QuoteManager {
         }, 10);
 
         console.log('✅ Quote added to sidebar');
+    }
+
+    async handleDeleteQuote(quoteId) {
+        console.log(`🗑️ Delete quote requested: ${quoteId}`);
+
+        // Confirmación
+        const confirmed = confirm('¿Estás seguro de que deseas eliminar esta extracción?');
+
+        if (!confirmed) {
+            console.log('   ❌ Delete cancelled');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.deleteApiUrl}${quoteId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': this.csrfToken
+                }
+            });
+
+            if (response.ok) {
+                console.log('✅ Quote deleted successfully');
+
+                // Remover del DOM
+                const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
+                if (quoteCard) {
+                    quoteCard.style.opacity = '0';
+                    quoteCard.style.transform = 'translateX(20px)';
+                    quoteCard.style.transition = 'all 0.3s ease-out';
+
+                    setTimeout(() => {
+                        quoteCard.remove();
+
+                        // Verificar si ya no hay quotes
+                        const remainingQuotes = document.querySelectorAll('.quote-card');
+                        if (remainingQuotes.length === 0) {
+                            this.showEmptyState();
+                        }
+                    }, 300);
+                }
+
+                // Actualizar contador
+                this.updateQuoteCount(-1);
+
+                // Remover de existingQuotes del pdfViewer
+                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
+                    this.pdfViewer.existingQuotes = this.pdfViewer.existingQuotes.filter(
+                        q => q.id !== parseInt(quoteId)
+                    );
+
+                    // Re-renderizar highlights (remover el eliminado)
+                    this.pdfViewer.refreshAllHighlights();
+                }
+
+                this.showSuccessNotification('Quote eliminada exitosamente');
+
+            } else {
+                const error = await response.json();
+                console.error('❌ Backend error:', error);
+                alert(`Error al eliminar: ${error.error || 'Error desconocido'}`);
+            }
+        } catch (error) {
+            console.error('❌ Network error:', error);
+            alert(`Error de red: ${error.message}`);
+        }
+    }
+
+
+    showEmptyState() {
+        if (!this.quotesList) return;
+
+        this.quotesList.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-40 text-gray-400" id="empty-quotes-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mb-2 opacity-50">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <p class="text-sm font-medium">Sin extracciones</p>
+                <p class="text-xs">Selecciona texto para comenzar</p>
+            </div>
+        `;
     }
 
     /**
