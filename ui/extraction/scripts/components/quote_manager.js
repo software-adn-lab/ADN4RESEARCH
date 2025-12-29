@@ -1,5 +1,3 @@
-// ui/extraction/static/scripts/components/quote_manager.js
-
 /**
  * QuoteManager Component
  * Maneja la creación y visualización de quotes
@@ -12,26 +10,24 @@ class QuoteManager {
         this.paperId = options.paperId;
         this.pdfViewer = options.pdfViewer;
         this.tagManager = options.tagManager;
-        
+
+        // ✅ Guardar selección actual (fallback si pdfViewer no está disponible)
+        this.currentSelection = { text: '', page: 1 };
+
         this.modal = document.getElementById('quote_modal');
         this.form = document.getElementById('quote-form');
         this.textDisplay = document.getElementById('modal_text_display');
         this.pageIndicator = document.getElementById('page-indicator-modal');
         this.quotesList = document.getElementById('quotes-list-container');
-        
+
         if (!this.modal || !this.form) {
             throw new Error('Quote modal or form not found');
         }
     }
-    
+
     init() {
         console.log('💬 Initializing Quote Manager...');
-        
-        // Escuchar selecciones de texto
-        document.addEventListener('textSelected', (e) => {
-            this.handleTextSelection(e.detail);
-        });
-        
+
         // Escuchar clicks en quotes existentes
         if (this.quotesList) {
             this.quotesList.addEventListener('click', (e) => {
@@ -41,52 +37,64 @@ class QuoteManager {
                 }
             });
         }
-        
+
         // Manejar submit del formulario
         this.form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSubmit();
         });
-        
+
         // Exponer función globalmente
         window.scrollToText = (text, page) => this.scrollToText(text, page);
-        
+
         console.log('✅ Quote Manager ready');
     }
-    
+
     handleTextSelection(selection) {
         console.log(`✂️ Text selected: page ${selection.page}`);
-        
+
+        // ✅ Guardar selección en QuoteManager (fallback)
+        this.currentSelection = selection;
+
         // Actualizar UI del modal
         if (this.textDisplay) {
             this.textDisplay.value = selection.text;
         }
-        
+
         if (this.pageIndicator) {
             this.pageIndicator.textContent = `Detectado en página: ${selection.page}`;
         }
-        
+
         // Resetear tags
-        this.tagManager.resetSelection();
-        
+        if (this.tagManager) {
+            this.tagManager.resetSelection();
+        }
+
         // Abrir modal
-        this.modal.showModal();
+        if (this.modal) {
+            this.modal.showModal();
+        }
     }
-    
+
     handleQuoteClick(quoteCard) {
         const page = parseInt(quoteCard.dataset.page);
         const text = quoteCard.dataset.text;
-        
+
         this.scrollToText(text, page);
     }
-    
+
     scrollToText(text, page) {
         console.log(`📍 Scrolling to text on page ${page}`);
-        
-        // Scroll a la página
-        this.pdfViewer.scrollToPage(page);
-        
-        // Intentar resaltar el texto
+
+        if (this.pdfViewer) {
+            this.pdfViewer.scrollToPage(page);
+        } else {
+            const pageElement = document.getElementById(`page-${page}`);
+            if (pageElement) {
+                pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
         setTimeout(() => {
             const found = window.find(text, false, false, true, false, true, false);
             if (!found) {
@@ -94,19 +102,35 @@ class QuoteManager {
             }
         }, 600);
     }
-    
+
     async handleSubmit() {
         console.log('📤 Submitting quote...');
-        
+
         const selectedTags = this.tagManager.getSelectedTags();
-        
+
         if (selectedTags.length === 0) {
             alert("Selecciona al menos una etiqueta.");
             return;
         }
-        
-        const selection = this.pdfViewer.getCurrentSelection();
-        
+
+        // ✅ Intentar obtener selección de pdfViewer, sino usar fallback
+        let selection;
+
+        if (this.pdfViewer && typeof this.pdfViewer.getCurrentSelection === 'function') {
+            selection = this.pdfViewer.getCurrentSelection();
+            console.log('   Using selection from pdfViewer:', selection);
+        } else {
+            selection = this.currentSelection;
+            console.log('   Using fallback selection:', selection);
+        }
+
+        // Validar que tenemos datos
+        if (!selection || !selection.text) {
+            console.error('❌ No selection data available');
+            alert('Error: No se detectó texto seleccionado. Por favor, intenta de nuevo.');
+            return;
+        }
+
         const payload = {
             text_fragment: selection.text,
             paper_extraction_id: this.paperId,
@@ -115,9 +139,9 @@ class QuoteManager {
                 page: selection.page || 1
             }
         };
-        
+
         console.log('🚀 Payload:', payload);
-        
+
         try {
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
@@ -127,16 +151,22 @@ class QuoteManager {
                 },
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 console.log('✅ Quote saved:', data);
-                
+
                 // Cerrar modal
                 this.modal.close();
-                
-                // Recargar para actualizar la lista
-                window.location.reload();
+
+                // ✅ OPCIÓN 1: Sin recargar (mejor UX)
+                this.addQuoteToSidebar(data.quote);
+                this.updateQuoteCount();
+                this.showSuccessNotification('Quote guardada exitosamente');
+
+                // ✅ OPCIÓN 2: Con recarga (comentar la línea anterior y descomentar esta)
+                // window.location.reload();
+
             } else {
                 const error = await response.json();
                 console.error('❌ Backend error:', error);
@@ -146,6 +176,118 @@ class QuoteManager {
             console.error('❌ Network error:', error);
             alert(`Error de red: ${error.message}`);
         }
+    }
+
+    /**
+     * Agregar quote al sidebar dinámicamente (sin recargar)
+     */
+    addQuoteToSidebar(quote) {
+        const quotesList = document.getElementById('quotes-list-container');
+
+        if (!quotesList) {
+            console.warn('⚠️ Quotes list container not found, will reload instead');
+            window.location.reload();
+            return;
+        }
+
+        // Remover mensaje de "sin quotes" si existe
+        const emptyState = quotesList.querySelector('#empty-quotes-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        // Crear elemento de quote
+        const quoteCard = document.createElement('div');
+        quoteCard.className = 'quote-card card bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all group rounded-lg';
+        quoteCard.dataset.quoteId = quote.id;
+        quoteCard.dataset.page = quote.location.page || 1;
+        quoteCard.dataset.text = quote.text_fragment;
+
+        // Construir HTML de tags
+        const tagsHtml = quote.tags.map(tag => `
+            <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ring-gray-500/10"
+                  style="background-color: ${tag.color}20; color: ${tag.color}; border-color: ${tag.color}40;">
+                ${tag.name}
+            </span>
+        `).join('');
+
+        quoteCard.innerHTML = `
+            <div class="card-body p-3">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="badge badge-ghost badge-xs font-mono">Pg. ${quote.location.page || '?'}</span>
+                    <span class="badge badge-success badge-xs gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        NUEVO
+                    </span>
+                </div>
+
+                <p class="text-xs text-gray-600 line-clamp-3 italic group-hover:text-gray-900 border-l-2 border-gray-300 pl-2 group-hover:border-primary transition-colors">
+                    "${quote.text_fragment}"
+                </p>
+
+                <div class="flex flex-wrap gap-1 mt-2">
+                    ${tagsHtml}
+                </div>
+            </div>
+        `;
+
+        // Click handler
+        quoteCard.addEventListener('click', () => {
+            this.scrollToText(quote.text_fragment, quote.location.page);
+        });
+
+        // Agregar al inicio de la lista
+        quotesList.insertBefore(quoteCard, quotesList.firstChild);
+
+        // Animación de entrada
+        quoteCard.style.opacity = '0';
+        quoteCard.style.transform = 'translateY(-10px)';
+        quoteCard.style.transition = 'all 0.3s ease-out';
+
+        setTimeout(() => {
+            quoteCard.style.opacity = '1';
+            quoteCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        console.log('✅ Quote added to sidebar');
+    }
+
+    /**
+     * Actualizar contador de quotes
+     */
+    updateQuoteCount() {
+        const counter = document.getElementById('quotes-count');
+        if (counter) {
+            const currentCount = parseInt(counter.textContent) || 0;
+            counter.textContent = currentCount + 1;
+            console.log('✅ Quote count updated');
+        }
+    }
+
+    /**
+     * Mostrar notificación de éxito
+     */
+    showSuccessNotification(message) {
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success fixed bottom-4 right-4 w-auto shadow-lg z-50 animate-fade-in';
+        toast.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>${message}</span>
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            toast.style.transition = 'all 0.3s ease-out';
+
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 }
 

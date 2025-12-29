@@ -29,47 +29,58 @@ let pdfViewer = null;
 let tagManager = null;
 let quoteManager = null;
 
+// ui/extraction/static/scripts/paper_workspace.js
+
 async function initWorkspace() {
     console.log('🚀 Initializing workspace...');
 
     try {
-        // 1. Inicializar PDF Viewer
-        pdfViewer = new PDFViewer({
-            containerSelector: '#pdf-viewer-container',
-            loaderSelector: '#pdf-loader',
-            pdfUrl: CONFIG.pdfUrl,
-            existingQuotes: CONFIG.existingQuotes
-        });
-        
-        await pdfViewer.init();
-        
-        // 2. Inicializar Tag Manager
+        // 1. Inicializar Tag Manager (síncrono)
         tagManager = new TagManager({
             containerSelector: '#tags-container',
             searchInputSelector: '#tag-search-input'
         });
-        
         tagManager.init();
-        
-        // 3. Inicializar Quote Manager
+
+        // 2. Inicializar Quote Manager INMEDIATAMENTE
         quoteManager = new QuoteManager({
             apiUrl: CONFIG.apiUrl,
             csrfToken: CONFIG.csrfToken,
             paperId: CONFIG.paperId,
-            pdfViewer: pdfViewer,
+            pdfViewer: null,  // ⬅️ null temporalmente
             tagManager: tagManager
         });
-        
         quoteManager.init();
-        
-        console.log('✅ Workspace initialized successfully');
-        
+
+        // 3. Inicializar PDF Viewer (asíncrono, SIN await)
+        pdfViewer = new PDFViewer({
+            containerSelector: '#pdf-viewer-container',
+            loaderSelector: '#pdf-loader',
+            pdfUrl: CONFIG.pdfUrl,
+            existingQuotes: CONFIG.existingQuotes,
+            onSelectionChange: (selection) => {  // ✅ NUEVO: Callback directo
+                quoteManager.handleTextSelection(selection);
+            }
+        });
+
+        // ✅ NO usar await - dejamos que cargue en paralelo
+        pdfViewer.init().then(() => {
+            console.log('✅ PDF Viewer fully loaded');
+
+            // ✅ Conectar pdfViewer con quoteManager después de cargar
+            quoteManager.pdfViewer = pdfViewer;
+        }).catch((error) => {
+            console.error('❌ Error loading PDF:', error);
+        });
+
+        console.log('✅ Workspace initialized (PDF loading in background)');
+
     } catch (error) {
         console.error('❌ Error initializing workspace:', error);
     }
 }
 
-// Arrancar cuando el DOM esté listo
+// Inicializar cuando el DOM esté listo
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWorkspace);
 } else {
