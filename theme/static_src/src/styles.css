@@ -60,16 +60,14 @@
 
   /* --- Highlight & Annotations --- */
 
-  .highlight-quote {
+  .textLayer .highlight-quote {
     @apply cursor-pointer transition-colors duration-200 border-b-2;
-    /* Usamos !important para asegurar que sobreescriba estilos nativos del PDF si existen */
     background-color: rgba(255, 215, 0, 0.4) !important;
-    /* Amarillo transparente */
     color: transparent !important;
     border-bottom-color: #FFD700;
   }
 
-  .highlight-quote:hover {
+  .textLayer .highlight-quote:hover {
     background-color: rgba(255, 215, 0, 0.7) !important;
   }
 

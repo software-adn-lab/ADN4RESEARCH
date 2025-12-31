@@ -12,6 +12,12 @@ class PDFViewer {
         this.currentSelection = { text: '', page: 1 };
         this.renderedPages = new Set();  // ✅ Trackear páginas renderizadas
 
+        console.log('🔧 PDFViewer constructor called');
+        console.log('   Options:', options);
+        console.log('   existingQuotes:', this.existingQuotes);
+        console.log('   existingQuotes length:', this.existingQuotes.length);
+
+
         if (!this.container) {
             throw new Error('PDF container not found');
         }
@@ -248,7 +254,7 @@ class PDFViewer {
             await textLayerRender.promise;
 
             // Aplicar highlights
-            this.highlightQuotes(textLayer);
+            this.highlightQuotesOnPage(textLayer, pageNumber);
 
             this.renderedPages.add(pageNumber);
 
@@ -259,39 +265,185 @@ class PDFViewer {
         }
     }
 
-    // ✅ ELIMINAR o COMENTAR styleTextSpans()
-    // Esta función estaba sobrescribiendo los estilos de PDF.js
-    /*
-    styleTextSpans(textLayerDiv) {
-        // NO USAR - Interfiere con el posicionamiento de PDF.js
-    }
-    */
-
-    highlightQuotes(textLayerDiv) {
-        const textSpans = textLayerDiv.querySelectorAll('span');
-
-        this.existingQuotes.forEach(quote => {
-            const searchText = quote.text_fragment.trim();
-            if (!searchText) return;
-
-            textSpans.forEach(span => {
-                // ✅ Evitar duplicar highlights
-                if (span.classList.contains('highlight-quote')) {
-                    return;
-                }
-
-                if (span.textContent.includes(searchText) && span.textContent.trim().length > 5) {
-                    span.classList.add('highlight-quote');
-                    span.title = `Quote ID: ${quote.id}`;
-
-                    // ✅ Click para ir a la quote en el sidebar
-                    span.style.cursor = 'pointer';
-                    span.addEventListener('click', () => {
-                        this.scrollToQuoteInSidebar(quote.id);
-                    });
-                }
-            });
+    highlightQuotesOnPage(textLayer, pageNumber) {
+        // Filtrar quotes de esta página
+        const quotesOnPage = this.existingQuotes.filter(quote => {
+            const quotePage = quote.location?.page || 0;
+            return quotePage === pageNumber;
         });
+
+        if (quotesOnPage.length === 0) {
+            console.log(`   ℹ️ No quotes on page ${pageNumber}`);
+            return;
+        }
+
+        console.log(`   🎨 Highlighting ${quotesOnPage.length} quotes on page ${pageNumber}`);
+
+        const textSpans = textLayer.querySelectorAll('span');
+
+        quotesOnPage.forEach(quote => {
+            const searchText = quote.text_fragment.trim();
+            if (!searchText || searchText.length < 5) {
+                console.log(`      ⚠️ Skipping quote ${quote.id} (text too short)`);
+                return;
+            }
+
+            console.log(`      🔍 Searching for: "${searchText.substring(0, 50)}..."`);
+
+            // Buscar el texto en los spans
+            this.highlightTextInSpans(textSpans, searchText, quote);
+        });
+    }
+
+    /**
+     * ✅ AGREGAR ESTE MÉTODO: Buscar y resaltar texto en los spans de la página
+     */
+    highlightTextInSpans(textSpans, searchText, quote) {
+        let foundSpans = [];
+        const normalizedSearch = searchText.toLowerCase().trim();
+
+        // Buscar spans que contengan el texto
+        textSpans.forEach(span => {
+            const spanText = span.textContent.toLowerCase().trim();
+
+            // Buscar coincidencia
+            if (spanText.includes(normalizedSearch) || normalizedSearch.includes(spanText)) {
+                foundSpans.push(span);
+            }
+        });
+
+        // Si no encontramos coincidencia exacta, buscar por fragmentos
+        if (foundSpans.length === 0) {
+            foundSpans = this.findTextAcrossSpans(textSpans, searchText);
+        }
+
+        // Aplicar highlight
+        if (foundSpans.length > 0) {
+            foundSpans.forEach(span => {
+                if (span.classList.contains('highlight-quote')) {
+                    return; // Ya está resaltado
+                }
+
+                span.classList.add('highlight-quote');
+                span.dataset.quoteId = quote.id;
+                span.title = `Quote ID: ${quote.id}`;
+
+                // Click para ir a la quote en el sidebar
+                span.style.cursor = 'pointer';
+                span.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.scrollToQuoteInSidebar(quote.id);
+                });
+            });
+
+            console.log(`         ✅ Highlighted (${foundSpans.length} spans)`);
+        } else {
+            console.log(`         ⚠️ Text not found in page`);
+        }
+    }
+
+    /**
+     * ✅ AGREGAR ESTE MÉTODO: Buscar texto que puede estar dividido en múltiples spans
+     */
+    findTextAcrossSpans(textSpans, searchText) {
+        const foundSpans = [];
+        const normalizedSearch = searchText.replace(/\s+/g, ' ').trim().toLowerCase();
+
+        // Construir texto concatenado
+        for (let i = 0; i < textSpans.length; i++) {
+            let combinedText = '';
+            let tempSpans = [];
+
+            // Intentar concatenar spans consecutivos
+            for (let j = i; j < Math.min(i + 30, textSpans.length); j++) {
+                const span = textSpans[j];
+                combinedText += span.textContent;
+                tempSpans.push(span);
+
+                const normalizedCombined = combinedText.replace(/\s+/g, ' ').trim().toLowerCase();
+
+                // Buscar coincidencia parcial (al menos 80% del texto)
+                if (normalizedCombined.includes(normalizedSearch.substring(0, Math.floor(normalizedSearch.length * 0.8)))) {
+                    return tempSpans;
+                }
+            }
+        }
+
+        return foundSpans;
+    }
+
+    /**
+     * ✅ AGREGAR ESTE MÉTODO: Scroll a una quote en el sidebar
+     */
+    scrollToQuoteInSidebar(quoteId) {
+        console.log(`📍 Scrolling to quote ${quoteId} in sidebar`);
+
+        const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
+
+        if (quoteCard) {
+            quoteCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Animación de highlight temporal
+            quoteCard.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(() => {
+                quoteCard.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            }, 2000);
+        }
+    }
+
+    /**
+     * ✅ AGREGAR ESTE MÉTODO: Re-aplicar highlights en una página específica
+     */
+    rehighlightPage(pageNumber) {
+        console.log(`🎨 Re-highlighting page ${pageNumber}...`);
+
+        const pageDiv = document.getElementById(`page-${pageNumber}`);
+
+        if (!pageDiv) {
+            console.warn(`   ⚠️ Page ${pageNumber} not rendered yet`);
+            return;
+        }
+
+        const textLayer = pageDiv.querySelector('.textLayer');
+
+        if (!textLayer) {
+            console.warn(`   ⚠️ Text layer not found on page ${pageNumber}`);
+            return;
+        }
+
+        // Re-aplicar highlights
+        this.highlightQuotesOnPage(textLayer, pageNumber);
+
+        console.log(`   ✅ Page ${pageNumber} re-highlighted`);
+    }
+
+    /**
+     * ✅ AGREGAR ESTE MÉTODO: Refrescar todos los highlights
+     */
+    refreshAllHighlights() {
+        console.log('🔄 Refreshing all highlights...');
+
+        this.renderedPages.forEach(pageNumber => {
+            const pageDiv = document.getElementById(`page-${pageNumber}`);
+            if (!pageDiv) return;
+
+            const textLayer = pageDiv.querySelector('.textLayer');
+            if (!textLayer) return;
+
+            // Remover highlights existentes
+            const highlightedSpans = textLayer.querySelectorAll('.highlight-quote');
+            highlightedSpans.forEach(span => {
+                span.classList.remove('highlight-quote');
+                delete span.dataset.quoteId;
+                span.title = '';
+                span.style.cursor = '';
+            });
+
+            // Re-aplicar
+            this.highlightQuotesOnPage(textLayer, pageNumber);
+        });
+
+        console.log('✅ All highlights refreshed');
     }
 
     setupEventListeners() {
@@ -355,6 +507,22 @@ class PDFViewer {
         if (pageElement) {
             pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             console.log(`✅ Scrolled to page ${pageNumber}`);
+        }
+    }
+
+    scrollToQuoteInSidebar(quoteId) {
+        console.log(`📍 Scrolling to quote ${quoteId} in sidebar`);
+
+        const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
+
+        if (quoteCard) {
+            quoteCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Animación de highlight temporal
+            quoteCard.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(() => {
+                quoteCard.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            }, 2000);
         }
     }
 

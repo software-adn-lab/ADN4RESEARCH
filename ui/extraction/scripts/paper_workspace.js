@@ -53,6 +53,11 @@ async function initWorkspace() {
         });
         quoteManager.init();
 
+        console.log('📊 CONFIG.existingQuotes:', CONFIG.existingQuotes);
+        console.log('📊 Type:', typeof CONFIG.existingQuotes);
+        console.log('📊 Is Array:', Array.isArray(CONFIG.existingQuotes));
+        console.log('📊 Length:', CONFIG.existingQuotes?.length);
+
         // 3. Inicializar PDF Viewer (asíncrono, SIN await)
         pdfViewer = new PDFViewer({
             containerSelector: '#pdf-viewer-container',

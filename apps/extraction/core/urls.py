@@ -24,8 +24,8 @@ urlpatterns = [
          QuoteCreateView.as_view(), 
          name='quote_create'),
 
-    path('quotes/delete/<int:quote_id>/', 
-         QuoteDeleteView.as_view(), 
-         name='quote_delete'),
+    path('quotes/delete/<int:quote_id>', 
+        QuoteDeleteView.as_view(), 
+        name='quote_delete'),
 
 ]

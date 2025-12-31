@@ -1,3 +1,5 @@
+// ui/extraction/static/scripts/components/quote_manager.js
+
 /**
  * QuoteManager Component
  * Maneja la creación y visualización de quotes
@@ -11,7 +13,7 @@ class QuoteManager {
         this.pdfViewer = options.pdfViewer;
         this.tagManager = options.tagManager;
 
-        this.deleteApiUrl = options.deleteApiUrl || '/extraction/quotes/delete/';
+        this.deleteApiUrl = options.deleteApiUrl;
 
         this.currentSelection = { text: '', page: 1 };
 
@@ -33,9 +35,16 @@ class QuoteManager {
         if (this.quotesList) {
             this.quotesList.addEventListener('click', (e) => {
                 const deleteBtn = e.target.closest('.delete-quote-btn');
+                console.log('   Delete button found:', deleteBtn);
+
                 if (deleteBtn) {
                     e.stopPropagation();
+                    e.preventDefault();  // ✅ NUEVO: Prevenir comportamiento default
+
                     const quoteId = deleteBtn.dataset.quoteId;
+                    console.log('   Quote ID:', quoteId);
+                    console.log('🗑️ Delete button clicked for quote:', quoteId);
+
                     this.handleDeleteQuote(quoteId);
                     return;
                 }
@@ -167,6 +176,17 @@ class QuoteManager {
 
                 // Cerrar modal
                 this.modal.close();
+                // ✅ Agregar a existingQuotes del pdfViewer
+                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
+                    this.pdfViewer.existingQuotes.push(data.quote);
+                    console.log('   Added to pdfViewer.existingQuotes');
+
+                    // ✅ Re-highlight la página donde se creó
+                    const pageNumber = data.quote.location?.page;
+                    if (pageNumber && this.pdfViewer.rehighlightPage) {
+                        this.pdfViewer.rehighlightPage(pageNumber);
+                    }
+                }
 
                 // ✅ OPCIÓN 1: Sin recargar (mejor UX)
                 this.addQuoteToSidebar(data.quote);
@@ -270,22 +290,28 @@ class QuoteManager {
         const confirmed = confirm('¿Estás seguro de que deseas eliminar esta extracción?');
 
         if (!confirmed) {
-            console.log('   ❌ Delete cancelled');
+            console.log('   ❌ Delete cancelled by user');
             return;
         }
 
         try {
-            const response = await fetch(`${this.deleteApiUrl}${quoteId}/`, {
+            const deleteUrl = `${this.deleteApiUrl}${quoteId}`;
+            console.log('   DELETE URL:', deleteUrl);
+
+            const response = await fetch(deleteUrl, {
                 method: 'DELETE',
                 headers: {
                     'X-CSRFToken': this.csrfToken
                 }
             });
 
-            if (response.ok) {
-                console.log('✅ Quote deleted successfully');
+            console.log('   Response status:', response.status);
 
-                // Remover del DOM
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Quote deleted successfully:', data);
+
+                // Remover del DOM con animación
                 const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
                 if (quoteCard) {
                     quoteCard.style.opacity = '0';
@@ -295,7 +321,7 @@ class QuoteManager {
                     setTimeout(() => {
                         quoteCard.remove();
 
-                        // Verificar si ya no hay quotes
+                        // Verificar si quedan quotes
                         const remainingQuotes = document.querySelectorAll('.quote-card');
                         if (remainingQuotes.length === 0) {
                             this.showEmptyState();
@@ -311,12 +337,20 @@ class QuoteManager {
                     this.pdfViewer.existingQuotes = this.pdfViewer.existingQuotes.filter(
                         q => q.id !== parseInt(quoteId)
                     );
-
-                    // Re-renderizar highlights (remover el eliminado)
-                    this.pdfViewer.refreshAllHighlights();
+                    console.log('   Removed from pdfViewer.existingQuotes');
                 }
 
                 this.showSuccessNotification('Quote eliminada exitosamente');
+                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
+                    this.pdfViewer.existingQuotes = this.pdfViewer.existingQuotes.filter(
+                        q => q.id !== parseInt(quoteId)
+                    );
+
+                    // ✅ Refrescar highlights de todas las páginas
+                    if (this.pdfViewer.refreshAllHighlights) {
+                        this.pdfViewer.refreshAllHighlights();
+                    }
+                }
 
             } else {
                 const error = await response.json();

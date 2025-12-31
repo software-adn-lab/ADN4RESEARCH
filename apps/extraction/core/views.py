@@ -378,16 +378,14 @@ class QuoteCreateView(LoginRequiredMixin, View):
             user.is_superuser
         )
 
-# apps/extraction/core/views.py
-
 class QuoteDeleteView(LoginRequiredMixin, View):
     """API para eliminar quotes."""
     
     def delete(self, request, quote_id):
         try:
-            quote = get_object_or_404(Quote, pk=quote_id)
+            logger.info(f"Delete request for quote {quote_id} by user {request.user}")
             
-            logger.info(f"Delete quote requested: {quote_id} by user {request.user}")
+            quote = get_object_or_404(Quote, pk=quote_id)
             
             # Validar permisos
             if not self._user_can_delete_quote(request.user, quote):
@@ -396,13 +394,18 @@ class QuoteDeleteView(LoginRequiredMixin, View):
                     'error': 'No tienes permiso para eliminar esta quote'
                 }, status=403)
             
+            # Guardar info antes de eliminar
+            quote_id_deleted = quote.id
+            
             # Eliminar
             quote.delete()
-            logger.info(f"Quote {quote_id} deleted successfully")
+            
+            logger.info(f"Quote {quote_id_deleted} deleted successfully")
             
             return JsonResponse({
                 'success': True,
-                'message': 'Quote eliminada exitosamente'
+                'message': 'Quote eliminada exitosamente',
+                'quote_id': quote_id_deleted
             }, status=200)
             
         except Exception as e:
@@ -417,8 +420,8 @@ class QuoteDeleteView(LoginRequiredMixin, View):
         project = quote.paper_extraction.extraction_phase.project
         
         return (
-            user == quote.created_by or  # Creador
-            user == project.owner or     # Owner del proyecto
+            user == quote.created_by or
+            user == project.owner or
             user.is_staff or
             user.is_superuser
         )

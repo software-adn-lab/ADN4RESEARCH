@@ -44,6 +44,13 @@
     };
     
     console.log('✅ Config ready');
+    console.log('Delete API URL:', window.WORKSPACE_CONFIG.deleteApiUrl);
+    console.log('📊 Existing quotes:', window.WORKSPACE_CONFIG.existingQuotes);
+    console.log('📊 Quotes count:', window.WORKSPACE_CONFIG.existingQuotes.length);
+    
+    if (window.WORKSPACE_CONFIG.existingQuotes.length > 0) {
+        console.log('📊 First quote:', window.WORKSPACE_CONFIG.existingQuotes[0]);
+    }
 </script>
 
 <script src="{% static 'scripts/components/tag_manager.js' %}"></script>
