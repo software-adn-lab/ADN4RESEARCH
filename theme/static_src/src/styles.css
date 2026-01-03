@@ -58,20 +58,30 @@
     color: transparent;
   }
 
-  /* --- Highlight & Annotations --- */
-
+  /* Highlight completo */
   .textLayer .highlight-quote {
-    @apply cursor-pointer transition-colors duration-200 border-b-2;
+    @apply cursor-pointer transition-colors duration-200;
     background-color: rgba(255, 215, 0, 0.4) !important;
     color: transparent !important;
-    border-bottom-color: #FFD700;
   }
 
   .textLayer .highlight-quote:hover {
     background-color: rgba(255, 215, 0, 0.7) !important;
   }
 
-  * --- Annotation Layer (Links) --- */ .annotationLayer {
+  /* ✅ Highlight parcial (usa background-image inline) */
+  .textLayer .highlight-quote-partial {
+    @apply cursor-pointer transition-opacity duration-200;
+    color: transparent !important;
+    /* background-image se aplica inline con linear-gradient */
+  }
+
+  .textLayer .highlight-quote-partial:hover {
+    opacity: 0.8;
+  }
+
+  /* --- Annotation Layer (Links) --- */
+  .annotationLayer {
     @apply absolute top-0 left-0;
     pointer-events: none;
     /* Permite clicks solo en elementos internos */

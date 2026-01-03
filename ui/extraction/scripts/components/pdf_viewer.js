@@ -265,111 +265,402 @@ class PDFViewer {
         }
     }
 
+    /**
+     * ✅ REEMPLAZAR: Aplicar highlights a quotes existentes en una página
+     */
     highlightQuotesOnPage(textLayer, pageNumber) {
-        // Filtrar quotes de esta página
         const quotesOnPage = this.existingQuotes.filter(quote => {
             const quotePage = quote.location?.page || 0;
             return quotePage === pageNumber;
         });
 
         if (quotesOnPage.length === 0) {
-            console.log(`   ℹ️ No quotes on page ${pageNumber}`);
             return;
         }
 
         console.log(`   🎨 Highlighting ${quotesOnPage.length} quotes on page ${pageNumber}`);
 
-        const textSpans = textLayer.querySelectorAll('span');
-
         quotesOnPage.forEach(quote => {
             const searchText = quote.text_fragment.trim();
             if (!searchText || searchText.length < 5) {
-                console.log(`      ⚠️ Skipping quote ${quote.id} (text too short)`);
                 return;
             }
 
             console.log(`      🔍 Searching for: "${searchText.substring(0, 50)}..."`);
-
-            // Buscar el texto en los spans
-            this.highlightTextInSpans(textSpans, searchText, quote);
+            this.highlightTextInPage(textLayer, searchText, quote);
         });
     }
 
-    /**
-     * ✅ AGREGAR ESTE MÉTODO: Buscar y resaltar texto en los spans de la página
-     */
-    highlightTextInSpans(textSpans, searchText, quote) {
-        let foundSpans = [];
-        const normalizedSearch = searchText.toLowerCase().trim();
+    highlightTextInPage(textLayer, searchText, quote) {
+        const textSpans = Array.from(textLayer.querySelectorAll('span'));
 
-        // Buscar spans que contengan el texto
-        textSpans.forEach(span => {
-            const spanText = span.textContent.toLowerCase().trim();
+        // 1. Construir texto completo con mapeo de caracteres
+        let fullText = '';
+        const charMap = [];
 
-            // Buscar coincidencia
-            if (spanText.includes(normalizedSearch) || normalizedSearch.includes(spanText)) {
-                foundSpans.push(span);
-            }
-        });
+        textSpans.forEach((span, spanIndex) => {
+            const spanText = span.textContent;
 
-        // Si no encontramos coincidencia exacta, buscar por fragmentos
-        if (foundSpans.length === 0) {
-            foundSpans = this.findTextAcrossSpans(textSpans, searchText);
-        }
-
-        // Aplicar highlight
-        if (foundSpans.length > 0) {
-            foundSpans.forEach(span => {
-                if (span.classList.contains('highlight-quote')) {
-                    return; // Ya está resaltado
-                }
-
-                span.classList.add('highlight-quote');
-                span.dataset.quoteId = quote.id;
-                span.title = `Quote ID: ${quote.id}`;
-
-                // Click para ir a la quote en el sidebar
-                span.style.cursor = 'pointer';
-                span.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.scrollToQuoteInSidebar(quote.id);
+            for (let i = 0; i < spanText.length; i++) {
+                charMap.push({
+                    span: span,
+                    spanIndex: spanIndex,
+                    charIndex: i,
+                    globalPos: fullText.length
                 });
-            });
 
-            console.log(`         ✅ Highlighted (${foundSpans.length} spans)`);
-        } else {
-            console.log(`         ⚠️ Text not found in page`);
-        }
-    }
+                fullText += spanText[i];
+            }
+        });
 
-    /**
-     * ✅ AGREGAR ESTE MÉTODO: Buscar texto que puede estar dividido en múltiples spans
-     */
-    findTextAcrossSpans(textSpans, searchText) {
-        const foundSpans = [];
-        const normalizedSearch = searchText.replace(/\s+/g, ' ').trim().toLowerCase();
+        // 2. Normalizar y buscar
+        const normalizedFull = this.normalizeText(fullText);
+        const normalizedSearch = this.normalizeText(searchText);
 
-        // Construir texto concatenado
-        for (let i = 0; i < textSpans.length; i++) {
-            let combinedText = '';
-            let tempSpans = [];
+        let foundIndex = normalizedFull.indexOf(normalizedSearch);
 
-            // Intentar concatenar spans consecutivos
-            for (let j = i; j < Math.min(i + 30, textSpans.length); j++) {
-                const span = textSpans[j];
-                combinedText += span.textContent;
-                tempSpans.push(span);
+        if (foundIndex === -1) {
+            // Búsqueda parcial
+            const searchLengths = [100, 50, 30];
+            for (const len of searchLengths) {
+                const shortSearch = normalizedSearch.substring(0, len);
+                foundIndex = normalizedFull.indexOf(shortSearch);
+                if (foundIndex !== -1) break;
+            }
 
-                const normalizedCombined = combinedText.replace(/\s+/g, ' ').trim().toLowerCase();
-
-                // Buscar coincidencia parcial (al menos 80% del texto)
-                if (normalizedCombined.includes(normalizedSearch.substring(0, Math.floor(normalizedSearch.length * 0.8)))) {
-                    return tempSpans;
-                }
+            if (foundIndex === -1) {
+                console.log(`         ❌ Text not found`);
+                return;
             }
         }
 
-        return foundSpans;
+        // 3. Encontrar posición real
+        const realStart = this.findRealPosition(fullText, normalizedFull, foundIndex);
+        const realEnd = this.findRealPosition(fullText, normalizedFull, foundIndex + normalizedSearch.length);
+
+        console.log(`         ✅ Found at ${foundIndex}, real position: ${realStart} to ${realEnd}`);
+
+        // 4. Agrupar por span
+        const spansToHighlight = new Map();
+
+        for (let pos = realStart; pos < realEnd && pos < charMap.length; pos++) {
+            const charInfo = charMap[pos];
+            const spanIdx = charInfo.spanIndex;
+
+            if (!spansToHighlight.has(spanIdx)) {
+                spansToHighlight.set(spanIdx, {
+                    span: charInfo.span,
+                    firstCharIndex: charInfo.charIndex,
+                    lastCharIndex: charInfo.charIndex
+                });
+            } else {
+                const info = spansToHighlight.get(spanIdx);
+                info.lastCharIndex = charInfo.charIndex;
+            }
+        }
+
+        console.log(`         🎯 Highlighting ${spansToHighlight.size} spans`);
+
+        // 5. Aplicar highlight con medición precisa
+        spansToHighlight.forEach((info) => {
+            const span = info.span;
+            const spanText = span.textContent;
+            const startChar = info.firstCharIndex;
+            const endChar = info.lastCharIndex + 1;
+
+            // Si cubre todo el span
+            if (startChar === 0 && endChar >= spanText.length) {
+                this.applyFullHighlight(span, quote);
+                return;
+            }
+
+            // Si es parcial, calcular posición y ancho
+            this.applyPartialHighlight(span, spanText, startChar, endChar, quote);
+        });
+    }
+
+    /**
+     * ✅ NUEVO: Aplicar highlight completo (todo el span)
+     */
+    applyFullHighlight(span, quote) {
+        span.classList.add('highlight-quote');
+        span.dataset.quoteId = quote.id;
+        span.title = `Quote ID: ${quote.id}`;
+        span.style.cursor = 'pointer';
+
+        span.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.scrollToQuoteInSidebar(quote.id);
+        }, { once: true });
+    }
+
+    /**
+     * ✅ NUEVO: Aplicar highlight parcial usando ::before
+     */
+    applyPartialHighlight(span, spanText, startChar, endChar, quote) {
+        // Obtener estilos del span
+        const computedStyle = window.getComputedStyle(span);
+        const fontSize = parseFloat(computedStyle.fontSize);
+        const fontFamily = computedStyle.fontFamily;
+        const transform = computedStyle.transform;
+
+        // Extraer scaleX del transform
+        let scaleX = 1;
+        if (transform && transform !== 'none') {
+            const matrix = transform.match(/matrix\(([^)]+)\)/);
+            if (matrix) {
+                const values = matrix[1].split(',').map(v => parseFloat(v.trim()));
+                scaleX = values[0];
+            }
+        }
+
+        // Medir anchos
+        const textBefore = spanText.substring(0, startChar);
+        const textHighlight = spanText.substring(startChar, endChar);
+
+        const widthBefore = this.measureTextWithDOM(textBefore, fontSize, fontFamily, scaleX).width;
+        const widthHighlight = this.measureTextWithDOM(textHighlight, fontSize, fontFamily, scaleX).width;
+        const totalWidth = this.measureTextWithDOM(spanText, fontSize, fontFamily, scaleX).width;
+
+
+        console.log(`            Partial highlight in span:`);
+        console.log(`              Text: "${spanText}"`);
+        console.log(`              Before: "${textBefore}" (${widthBefore.toFixed(2)}px)`);
+        console.log(`              Highlight: "${textHighlight}" (${widthHighlight.toFixed(2)}px)`);
+        console.log(`              Total width: ${totalWidth.toFixed(2)}px`);
+
+        // Calcular porcentajes para el gradiente
+        const startPercent = (widthBefore / totalWidth) * 100;
+        const endPercent = ((widthBefore + widthHighlight) / totalWidth) * 100;
+
+        console.log(`              Gradient: ${startPercent.toFixed(2)}% to ${endPercent.toFixed(2)}%`);
+
+        // Aplicar gradiente como background
+        span.classList.add('highlight-quote-partial');
+        span.dataset.quoteId = quote.id;
+        span.title = `Quote ID: ${quote.id}`;
+        span.style.cursor = 'pointer';
+
+        // ✅ Usar background-image con linear-gradient
+        const gradient = `linear-gradient(to right, 
+        transparent 0%, 
+        transparent ${startPercent}%, 
+        rgba(255, 215, 0, 0.4) ${startPercent}%, 
+        rgba(255, 215, 0, 0.4) ${endPercent}%, 
+        transparent ${endPercent}%, 
+        transparent 100%)`;
+
+        span.style.backgroundImage = gradient;
+        span.style.backgroundSize = '100% 100%';
+        span.style.backgroundRepeat = 'no-repeat';
+
+        span.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.scrollToQuoteInSidebar(quote.id);
+        }, { once: true });
+    }
+
+    /**
+     * ✅ NUEVO: Medir ancho de texto usando Canvas
+     */
+    measureText(text, fontSize, fontFamily, scaleX = 1) {
+        // Crear canvas temporal si no existe
+        if (!this.measureCanvas) {
+            this.measureCanvas = document.createElement('canvas');
+            this.measureCtx = this.measureCanvas.getContext('2d');
+        }
+
+        // Configurar fuente
+        this.measureCtx.font = `${fontSize}px ${fontFamily}`;
+
+        // Medir texto
+        const metrics = this.measureCtx.measureText(text);
+
+        return {
+            width: metrics.width * scaleX,
+            height: fontSize
+        };
+    }
+    measureTextWithDOM(text, fontSize, fontFamily, scaleX = 1) {
+        // Crear span temporal para medir
+        if (!this.measureSpan) {
+            this.measureSpan = document.createElement('span');
+            this.measureSpan.style.position = 'absolute';
+            this.measureSpan.style.visibility = 'hidden';
+            this.measureSpan.style.whiteSpace = 'pre';
+            this.measureSpan.style.pointerEvents = 'none';
+            document.body.appendChild(this.measureSpan);
+        }
+
+        // Aplicar estilos
+        this.measureSpan.style.fontSize = `${fontSize}px`;
+        this.measureSpan.style.fontFamily = fontFamily;
+        this.measureSpan.style.transform = `scaleX(${scaleX})`;
+        this.measureSpan.textContent = text;
+
+        // Medir
+        const rect = this.measureSpan.getBoundingClientRect();
+
+        return {
+            width: rect.width,
+            height: rect.height
+        };
+    }
+
+    /**
+     * ✅ NUEVO: Aplicar highlight a un span completo
+     */
+    applyHighlightToSpan(span, quote) {
+        span.classList.add('highlight-quote');
+        span.dataset.quoteId = quote.id;
+        span.title = `Quote ID: ${quote.id}`;
+        span.style.cursor = 'pointer';
+
+        span.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.scrollToQuoteInSidebar(quote.id);
+        }, { once: true });
+    }
+
+    /**
+     * ✅ NUEVO: Dividir span y aplicar highlight solo a la parte seleccionada
+     */
+    splitAndHighlightSpan(originalSpan, startChar, endChar, quote) {
+        const fullText = originalSpan.textContent;
+
+        // Dividir en 3 partes
+        const beforeText = fullText.substring(0, startChar);
+        const highlightText = fullText.substring(startChar, endChar);
+        const afterText = fullText.substring(endChar);
+
+        // Crear contenedor wrapper
+        const wrapper = document.createElement('span');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline';
+
+        // Copiar estilos críticos del span original
+        const computedStyle = window.getComputedStyle(originalSpan);
+        wrapper.style.fontFamily = computedStyle.fontFamily;
+        wrapper.style.fontSize = computedStyle.fontSize;
+        wrapper.style.transform = computedStyle.transform;
+
+        // Crear spans para cada parte
+        if (beforeText) {
+            const beforeSpan = this.createTextSpan(beforeText, originalSpan);
+            wrapper.appendChild(beforeSpan);
+        }
+
+        if (highlightText) {
+            const highlightSpan = this.createTextSpan(highlightText, originalSpan);
+            this.applyHighlightToSpan(highlightSpan, quote);
+            wrapper.appendChild(highlightSpan);
+        }
+
+        if (afterText) {
+            const afterSpan = this.createTextSpan(afterText, originalSpan);
+            wrapper.appendChild(afterSpan);
+        }
+
+        // Reemplazar span original con el wrapper
+        originalSpan.replaceWith(wrapper);
+
+        console.log(`            Split span: "${beforeText}" | "${highlightText}" | "${afterText}"`);
+    }
+
+    /**
+     * ✅ NUEVO: Crear span de texto con estilos del original
+     */
+    createTextSpan(text, originalSpan) {
+        const span = document.createElement('span');
+        span.textContent = text;
+
+        // Copiar atributos importantes
+        const computedStyle = window.getComputedStyle(originalSpan);
+
+        span.style.color = 'transparent'; // Para que el text layer funcione
+        span.style.position = 'relative';
+        span.style.whiteSpace = 'pre';
+        span.style.cursor = 'text';
+
+        return span;
+    }
+
+    /**
+ * ✅ REEMPLAZAR: Normalización mejorada
+ */
+    normalizeText(text) {
+        return text
+            .replace(/[\r\n]+/g, ' ')           // Saltos de línea → espacio
+            .replace(/\s+/g, ' ')               // Múltiples espacios → uno
+            .replace(/\s*([.,!?;:)\]}>])\s*/g, '$1') // Quitar espacios después de puntuación de cierre
+            .replace(/\s*([\[{(<])\s*/g, '$1')  // Quitar espacios antes de puntuación de apertura
+            .replace(/\s*-\s*/g, '-')           // Quitar espacios alrededor de guiones
+            .replace(/['']/g, "'")              // Normalizar apóstrofes
+            .replace(/[""]/g, '"')              // Normalizar comillas
+            .replace(/–/g, '-')                 // En dash
+            .replace(/—/g, '-')                 // Em dash
+            .replace(/…/g, '...')               // Ellipsis
+            .normalize('NFD')                   // Normalizar Unicode
+            .replace(/[\u0300-\u036f]/g, '')    // Remover acentos
+            .trim()
+            .toLowerCase();
+    }
+
+    /**
+     * ✅ ACTUALIZAR: Mejor mapeo de posiciones
+     */
+    findRealPosition(originalText, normalizedText, normalizedPos) {
+        if (normalizedPos === 0) return 0;
+        if (normalizedPos >= normalizedText.length) return originalText.length;
+
+        let realPos = 0;
+        let normPos = 0;
+
+        while (realPos < originalText.length && normPos < normalizedPos) {
+            const char = originalText[realPos];
+
+            // Si es whitespace en el original
+            if (/\s/.test(char)) {
+                realPos++;
+
+                // Si en el normalizado hay espacio, avanzar
+                if (normPos < normalizedText.length && normalizedText[normPos] === ' ') {
+                    normPos++;
+                }
+                // Si no, seguir (espacios colapsados)
+                continue;
+            }
+
+            // Si es puntuación que puede tener espacios removidos
+            if (/[.,!?;:)\]}>'\-–—]/.test(char)) {
+                realPos++;
+
+                if (normPos < normalizedText.length) {
+                    const normChar = normalizedText[normPos];
+
+                    // Si el char normalizado coincide, avanzar
+                    if (char.toLowerCase() === normChar ||
+                        (char === '–' && normChar === '-') ||
+                        (char === '—' && normChar === '-') ||
+                        (char === "'" && normChar === "'") ||
+                        (char === '"' && normChar === '"')) {
+                        normPos++;
+                    }
+                }
+                continue;
+            }
+
+            // Caracter normal
+            const normChar = normalizedText[normPos];
+
+            if (char.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === normChar) {
+                normPos++;
+            }
+
+            realPos++;
+        }
+
+        return realPos;
     }
 
     /**
