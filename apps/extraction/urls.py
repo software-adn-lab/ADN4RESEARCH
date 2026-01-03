@@ -1,3 +1,19 @@
+"""
+URL Router Principal - Delega a cada Bounded Context.
+Referencia: https://docs.djangoproject.com/en/stable/topics/http/urls/#including-other-urlconfs
+"""
+from django.urls import path, include
+
+app_name = 'extraction'
+
+urlpatterns = [
+    # Delega a cada bounded context
+    path('', include('apps.extraction.planning.urls')),      # Dashboard, config, etc.
+    path('paper/', include('apps.extraction.core.urls')),    # Papers, PDFs y quotes
+    path('tags/', include('apps.extraction.taxonomy.urls')), # Gestión de tags
+]
+
+"""
 from django.urls import path
 
 from .core.views import PDFServeView, PaperWorkspaceView, QuoteCreateView
@@ -22,3 +38,4 @@ urlpatterns = [
     path('paper/<int:paper_id>/pdf/', PDFServeView.as_view(), name='serve_pdf'),
     path('paper/<int:pk>/workspace/', PaperWorkspaceView.as_view(), name='paper_workspace'),
 ]
+"""
