@@ -1,11 +1,13 @@
 from behave import given, when, then, step
 from django.contrib.auth.models import User
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
 from apps.design.research_question.models.research_question import ResearchQuestion
 import logging
 from django.core.exceptions import ValidationError
 
 research_question_service = ResearchQuestionService()
+design_phase_service = DesignPhaseService()
 
 @given('que existen preguntas en el proyecto como:')
 def step_dado_existen_preguntas_sugeridas(context):
@@ -31,11 +33,9 @@ def step_dado_existen_preguntas_sugeridas(context):
     
 @when('consolide el estado de las preguntas de investigación de mi proyecto')
 def step_cuando_consolido_estado_preguntas(context):
-    stats = research_question_service.consolidate_questions(
-        project_id=context.project.id,
-        user=context.owner 
-    )
-    assert stats["total_approved"] > 0
+    design_phase_service.consolidate_research_question_stage(project_id=context.project.id, user=context.owner)
+    total_approved = ResearchQuestion.objects.filter(design_phase=context.phase, status=ResearchQuestion.Status.APPROVED).count()
+    assert total_approved > 0
 
 @then('las preguntas de investigación "APPROVED" deben ser parte del protocolo de diseño del proyecto')
 def step_preguntas_approved_son_protocolo(context):
@@ -57,7 +57,7 @@ def step_solo_owner_puede_cambiar_preguntas(context):
         research_question_service.update_research_question(
             question_id=target_question.id,
             user=context.researcher,
-            question="Intento de edición", 
+        question="Intento de edición", 
             motivation="Intento de saltar el bloqueo"
         )
         assert False # Si es false entonces no se cambio la pregunta por el investigador

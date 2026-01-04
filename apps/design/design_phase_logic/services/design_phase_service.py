@@ -1,5 +1,7 @@
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
+from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db import transaction
 from django.core.exceptions import ValidationError
