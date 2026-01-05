@@ -7,12 +7,11 @@ from apps.design.design_phase_logic.protocols.design_protocol import (
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 
-
 class DesignProtocolProvider(IDesignProtocol):
     """
-    Implementación concreta de IDesignProtocol.
+    Clase que implementa a la interfaz IDesignProtocol.
 
-    Retorna solo id y texto de los artefactos aprobados.
+    Retorna solo id y texto de los artefactos aprobados segun lo conversado con seleccion y extraccion.
     """
 
     def get_protocol_questions(self, project_id: int) -> List[QuestionDTO]:

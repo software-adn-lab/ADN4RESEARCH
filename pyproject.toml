@@ -54,6 +54,7 @@ python-dotenv = ">=1.0.0"
 tenacity = ">=8.2.3"
 dotenv = "^0.9.9"
 googletrans = "^4.0.2"
+freezegun = "^1.5.5"
 
 [tool.poetry.group.dev.dependencies]
 # Development dependencies for linting and type checking

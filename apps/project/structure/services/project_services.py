@@ -88,7 +88,6 @@ class ProjectService:
         Obtiene las preguntas buscando explícitamente la fase asociada al proyecto.
         """
         try:
-            # SEMÁNTICA CLARA: "Dame la fase cuyo project_id sea X"
             design_phase = DesignPhase.objects.get(project_id=project_id)
             return design_phase.research_questions.all().order_by('-created_at')
         except DesignPhase.DoesNotExist:
