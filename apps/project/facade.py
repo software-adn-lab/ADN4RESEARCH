@@ -116,7 +116,7 @@ class ProjectFacade:
 
         # Delegar a AcquisitionFacade que ya implementa la lógica
         from apps.acquisition.facade import get_acquisition_facade
-
+        
         acquisition_facade = get_acquisition_facade()
         return acquisition_facade.get_studies_by_project(
             project_id=project_id,
@@ -139,12 +139,12 @@ class ProjectFacade:
         logger.info(f"[PROJECT_FACADE] Getting study counts for project {project_id}")
 
         studies = self.get_studies_by_project(project_id, include_metadata=False)
-
+        
         counts = {}
         for study in studies:
             status = study.get("status", "unknown")
             counts[status] = counts.get(status, 0) + 1
-
+        
         return counts
 
     def is_healthy(self) -> bool:
