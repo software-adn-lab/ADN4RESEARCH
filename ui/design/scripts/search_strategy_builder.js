@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveAndSearch() {
         const visualData = collectData();
         if (visualData.main_terms.length === 0) {
-            alert("Please add at least one main term group.");
+            showToast("Please add at least one main term group.", ToastType.WARNING);
             return;
         }
 
@@ -406,13 +406,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.status === 'success') {
                     window.location.href = data.redirect_url;
                 } else {
-                    alert("Error: " + data.error);
+                    showToast("Error: " + data.error, ToastType.ERROR);
                     if (loader) loader.classList.add('hidden');
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert("Network error.");
+                showToast("Network error.", ToastType.ERROR);
                 if (loader) loader.classList.add('hidden');
             });
     }

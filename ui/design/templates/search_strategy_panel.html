@@ -10,14 +10,15 @@
             <p class="text-sm text-base-content/70">Design search strings for approved protocol questions.</p>
         </div>
         <div class="text-xs font-medium text-base-content/80">
-            Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}
-            {% if project.owner == request.user %}
-            <form action="{% url 'design:consolidate_search_strategy_stage' project_id=project.id %}" method="POST"
-                class="inline-block ml-4"
-                onsubmit="return confirm('Are you sure you want to consolidate this stage? This will reject all draft strategies and finalize the design phase.');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-primary">Consolidate Stage</button>
-            </form>
+            {% if current_stage_plan %}
+            <div class="flex flex-col items-end mr-2">
+                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="text-base-content/70">
+                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            {% else %}
+            <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
             {% endif %}
         </div>
     </div>
@@ -85,118 +86,136 @@
                 {% endfor %}
             </tbody>
         </table>
+        
+    </div>
+    <div class="flex text-center justify-center p-6">
+        {% if project.owner == request.user %}
+        <form action="{% url 'design:consolidate_search_strategy_stage' project_id=project.id %}" method="POST"
+            class="inline-block ml-4"
+            onsubmit="return confirm('Are you sure you want to consolidate this stage? This will reject all draft strategies and finalize the design phase.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            Consolidate Stage
+        </button>
+        </form>
+        {% endif %}
     </div>
 </div>
 
 <dialog id="strategy_versions_modal" class="modal">
     <div class="modal-box w-11/12 max-w-4xl">
-        <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                </form>
 
-        <h3 class="font-bold text-lg mb-4">Strategy Version History</h3>
+                <h3 class="font-bold text-lg mb-4">Strategy Version History</h3>
 
-        <div class="overflow-x-auto">
-            <table class="table table-zebra w-full">
-                <thead>
-                    <tr class="bg-base-200">
-                        <th class="w-16 text-center">Ver.</th>
-                        <th>Search String</th>
-                        <th class="w-24 text-center">Results</th>
-                        <th class="w-24 text-center">Status</th>
-                        <th class="w-32">Date</th>
-                        <th class="w-32 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="versions-table-body">
-                    <tr>
-                        <td colspan="6" class="text-center">Loading...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr class="bg-base-200">
+                                <th class="w-16 text-center">Ver.</th>
+                                <th>Search String</th>
+                                <th class="w-24 text-center">Results</th>
+                                <th class="w-24 text-center">Status</th>
+                                <th class="w-32">Date</th>
+                                <th class="w-32 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="versions-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+    </dialog>
 
-<dialog id="my_modal_3" class="modal">
-    <div class="modal-box w-11/12 max-w-2xl">
-        <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
-        <h3 id="modal-strategy-name" class="text-lg font-bold">Search Strategy</h3>
-        <div class="py-4">
-            <p class="font-semibold text-base-content/80">Generated Search String:</p>
+    <dialog id="my_modal_3" class="modal">
+        <div class="modal-box w-11/12 max-w-2xl">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+            <h3 id="modal-strategy-name" class="text-lg font-bold">Search Strategy</h3>
+            <div class="py-4">
+                <p class="font-semibold text-base-content/80">Generated Search String:</p>
             <div id="modal-search-string" class="p-3 mt-2 bg-base-200 rounded-md text-sm font-mono break-words mb-4">
-                Loading...
-            </div>
-            <div class="flex justify-end">
-                <a id="test-strategy-btn" href="#" class="btn btn-primary btn-sm hidden">
-                    Test Search Strategy Suggestion
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-4 h-4 ml-2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                </a>
+                    Loading...
+                </div>
+                <div class="flex justify-end">
+                    <a id="test-strategy-btn" href="#" class="btn btn-primary btn-sm hidden">
+                        Test Search Strategy Suggestion
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-4 h-4 ml-2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-</dialog>
+    </dialog>
 
-<dialog id="review_strategy_modal" class="modal">
-    <div class="modal-box">
-        <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    <dialog id="review_strategy_modal" class="modal">
+        <div class="modal-box">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+
+            <h3 class="font-bold text-lg" id="review-modal-title">Review Strategy</h3>
+            <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+
+            <form id="review-strategy-form" method="POST" class="mt-4 space-y-4">
+                {% csrf_token %}
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Justification <span class="text-error">*</span></span>
+                    </label>
+                    <textarea name="justification" class="textarea textarea-bordered h-24"
+                        placeholder="Type your justification here..." required></textarea>
+                </div>
+
+                <div class="modal-action">
+                    <button type="submit" id="review-confirm-btn" class="btn btn-primary">Confirm</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
         </form>
+    </dialog>
 
-        <h3 class="font-bold text-lg" id="review-modal-title">Review Strategy</h3>
-        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.getElementById('question-table-body');
+            if (tableBody) {
+                tableBody.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr[data-href]');
+                    // Añade .view-strategy-btn a la lista de exclusiones
+                    if (row && !e.target.closest('.edit-btn, .delete-btn, .view-strategy-btn')) {
+                        window.location.href = row.dataset.href;
+                    }
+                });
+            }
+        });
+    </script>
 
-        <form id="review-strategy-form" method="POST" class="mt-4 space-y-4">
-            {% csrf_token %}
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Justification <span class="text-error">*</span></span>
-                </label>
-                <textarea name="justification" class="textarea textarea-bordered h-24"
-                    placeholder="Type your justification here..." required></textarea>
-            </div>
+    <script>
+        const versionsApiUrl = "{% url 'design:get_strategy_versions' project_id=project.id question_id=0 %}";
+        const builderUrlBase = "{% url 'design:search_strategy_builder_view' project_id=project.id %}";
+        const approveUrlBase = "{% url 'design:approve_strategy' project_id=project.id strategy_id=0 %}";
+        const rejectUrlBase = "{% url 'design:reject_strategy' project_id=project.id strategy_id=0 %}";
+        const deleteVersionApiUrl = "{% url 'design:delete_strategy_version' project_id=project.id version_id=0 %}";
+    </script>
 
-            <div class="modal-action">
-                <button type="submit" id="review-confirm-btn" class="btn btn-primary">Confirm</button>
-            </div>
-        </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+    <script src="{% static 'scripts/search_strategy_panel.js' %}"></script>
+    <script src="{% static 'scripts/generate_search_string.js' %}"></script>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const tableBody = document.getElementById('question-table-body');
-        if (tableBody) {
-            tableBody.addEventListener('click', (e) => {
-                const row = e.target.closest('tr[data-href]');
-                // Añade .view-strategy-btn a la lista de exclusiones
-                if (row && !e.target.closest('.edit-btn, .delete-btn, .view-strategy-btn')) {
-                    window.location.href = row.dataset.href;
-                }
-            });
-        }
-    });
-</script>
-
-<script>
-    const versionsApiUrl = "{% url 'design:get_strategy_versions' project_id=project.id question_id=0 %}";
-    const builderUrlBase = "{% url 'design:search_strategy_builder_view' project_id=project.id %}";
-    const approveUrlBase = "{% url 'design:approve_strategy' project_id=project.id strategy_id=0 %}";
-    const rejectUrlBase = "{% url 'design:reject_strategy' project_id=project.id strategy_id=0 %}";
-    const deleteVersionApiUrl = "{% url 'design:delete_strategy_version' project_id=project.id version_id=0 %}";
-</script>
-
-<script src="{% static 'scripts/search_strategy_panel.js' %}"></script>
-<script src="{% static 'scripts/generate_search_string.js' %}"></script>
-
-{% endblock search_string_content %}
+    {% endblock search_string_content %}

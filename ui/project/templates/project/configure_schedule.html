@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-base-100 p-6">
+    <div class="max-w-4xl mx-auto">
+
+        <div class="flex flex-col mb-8 text-center">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Configure Project Schedule
+            </h1>
+            <p class="text-base-content/60 mt-2">
+                Define the timeline for your research project and its design stages.
+            </p>
+        </div>
+
+        <form method="post" action="{% url 'project:save_schedule_action' project_id=project.id %}" class="space-y-8">
+            {% csrf_token %}
+
+            {# Card: Project Timeline #}
+            <div class="card bg-base-100 shadow-xl border border-base-200">
+                <div class="card-body">
+                    <h2 class="card-title text-primary mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Overall Project Timeline
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-semibold">Project Start
+                                    Date</span></label>
+                            <input type="date" name="project_start_date"
+                                class="input input-bordered w-full input-disabled bg-base-200" value="{% now 'Y-m-d' %}"
+                                readonly />
+                        </div>
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-semibold">Project End Date</span></label>
+                            <input type="date" name="project_end_date"
+                                class="input input-bordered w-full input-disabled bg-base-200"
+                                value="{{ project.end_date|date:'Y-m-d' }}" readonly />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Card: Design Stages #}
+            <div class="card bg-base-100 shadow-xl border border-base-200">
+                <div class="card-body">
+                    <h2 class="card-title text-secondary mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        Design Phase Stages
+                    </h2>
+
+                    <div class="alert alert-info shadow-sm text-sm mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            class="stroke-current shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Please set the planned start and end dates for each stage of the design phase.</span>
+                    </div>
+
+                    <div class="space-y-6">
+                        {% for stage in stages %}
+                        <div
+                            class="p-4 bg-base-50 rounded-lg border border-base-200 hover:border-secondary/30 transition-colors">
+                            <h3 class="font-bold text-lg mb-3">{{ stage.label }}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="form-control">
+                                    <label class="label"><span
+                                            class="label-text text-xs uppercase tracking-wide opacity-70">Start
+                                            Date</span></label>
+                                    <input type="date" name="stage_{{ stage.key }}_start"
+                                        class="input input-bordered input-sm w-full" required />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span
+                                            class="label-text text-xs uppercase tracking-wide opacity-70">End
+                                            Date</span></label>
+                                    <input type="date" name="stage_{{ stage.key }}_end"
+                                        class="input input-bordered input-sm w-full" required />
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="flex justify-end gap-4">
+                <button type="submit" class="btn btn-primary btn-lg shadow-lg gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Save Configuration & Start
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

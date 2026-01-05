@@ -65,14 +65,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Recargar la página para actualizar la tabla y estados
                     window.location.reload();
                 } else {
-                    alert('Error: ' + data.message);
+                    showToast('Error: ' + data.message, ToastType.ERROR);
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An unexpected error occurred.');
+                showToast('An unexpected error occurred.', ToastType.ERROR);
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             });

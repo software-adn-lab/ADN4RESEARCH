@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } catch (error) {
                 console.error(`${actionType} failed:`, error);
-                alert(`Error: ${error.message}`);
+                showToast(`Error: ${error.message}`, ToastType.ERROR);
             }
         });
     }
@@ -223,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     tr.remove();
                 } catch (error) {
                     console.error('Delete failed:', error);
-                    alert(`Error: ${error.message}`);
+                    showToast(`Error: ${error.message}`, ToastType.ERROR);
                 }
             }
         });

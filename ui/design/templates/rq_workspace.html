@@ -5,10 +5,20 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-base-content">Research Question Workspace</h1>
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            {% if current_stage_plan %}
+            <div class="flex flex-col items-end mr-2">
+                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="text-base-content/70">
+                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            {% else %}
+            <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
+            {% endif %}
             <form method="GET" action="">
                 <div class="form-control">
-                    <select name="status" id="status-filter" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
+                    <select name="status" id="status-filter" class="select select-bordered select-sm w-40"
+                        onchange="this.form.submit()">
                         <option value="">All Statuses</option>
 
                         <option value="DRAFT" 
@@ -84,8 +94,9 @@
                                     {% elif question.status == 'READY_TO_SEND' %}
                                     <div class="badge badge-warning gap-1 text-white">Ready to send</div>
                                     {% else %}
-                                    <div class="badge badge-neutral gap-1 text-white">{{ question.get_status_display }}</div>
-                                    {% endif %}
+                                    <div class="badge badge-neutral gap-1 text-white">{{ question.get_status_display }}<
+                                            div>
+                                            {% endif %}
                                 </td>
 
                                 <td class="p-2 text-center">
@@ -109,20 +120,6 @@
                                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
                                             </svg>
                                         </a>
-                                        <!-- Search Strategy Button (NEW) -->
-                                        {% if question.question %}
-                                        <button
-                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
-                                            title="View Search Strategy"
-                                            data-url="{% url 'design:get_search_strategy_for_question' project_id=project.id question_id=question.id %}"
-                                            data-question-id="{{ question.id }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-                                            </svg>
-                                        </button>
-                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -167,6 +164,7 @@
                                     <div contenteditable="true"
                                         class="editable-cell focus:outline-none w-full p-1 rounded"
                                         data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}
+
                                     </div>
                                 </td>
                                 <td class="p-2 text-center">
@@ -224,7 +222,7 @@
         <div class="py-4">
             <p class="font-semibold text-base-content/80">Generated Search String:</p>
             <div id="modal-search-string" class="p-3 mt-2 bg-base-200 rounded-md text-sm font-mono break-words">
-            Loading...
+                Loading...
             </div>
         </div>
     </div>

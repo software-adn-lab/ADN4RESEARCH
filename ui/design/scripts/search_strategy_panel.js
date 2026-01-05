@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => {
                 console.error('Action failed:', error);
-                alert('Action failed. See console.');
+                showToast('Action failed. See console.', ToastType.ERROR);
             });
     }
 

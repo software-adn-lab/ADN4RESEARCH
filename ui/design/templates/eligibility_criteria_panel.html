@@ -12,7 +12,16 @@
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            {% if current_stage_plan %}
+            <div class="flex flex-col items-end mr-2">
+                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="text-base-content/70">
+                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            {% else %}
+            <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
+            {% endif %}
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
@@ -244,64 +253,64 @@
 <dialog id="review_modal" class="modal">
     <div class="modal-box">
         <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                </form>
 
-        <h3 class="font-bold text-lg" id="modal-title">Review Criterion</h3>
-        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+                <h3 class="font-bold text-lg" id="modal-title">Review Criterion</h3>
+                <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
 
-        <form id="review-form" class="mt-4 space-y-4">
-            <input type="hidden" name="criterion_id" id="modal-criterion-id">
-            <input type="hidden" name="action_type" id="modal-action-type"> <!-- 'approve' or 'reject' -->
+                <form id="review-form" class="mt-4 space-y-4">
+                    <input type="hidden" name="criterion_id" id="modal-criterion-id">
+                    <input type="hidden" name="action_type" id="modal-action-type"> <!-- 'approve' or 'reject' -->
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Justification</span>
-                </label>
-                <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
-                    placeholder="Type your justification..."></textarea>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Justification <span class="text-error">*</span></span>
+                        </label>
+                        <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
+                            required placeholder="Type your justification..."></textarea>
+                    </div>
+
+                    <div class="modal-action">
+                        <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
+                    </div>
+                </form>
             </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+            </dialog>
 
-            <div class="modal-action">
-                <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
-            </div>
-        </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+            <script>
+                const URLS = {
+                    create: "{% url 'design:create_criterion' project_id=project.id %}",
+                    update: "{% url 'design:update_criterion' project_id=project.id criterion_id=9999 %}",
+                    approve: "{% url 'design:approve_criterion' project_id=project.id criterion_id=9999 %}",
+                    reject: "{% url 'design:reject_criterion' project_id=project.id criterion_id=9999 %}",
+                    delete: "{% url 'design:delete_criterion' project_id=project.id criterion_id=9999 %}",
+                };
+            </script>
+            <script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
 
-<script>
-    const URLS = {
-        create: "{% url 'design:create_criterion' project_id=project.id %}",
-        update: "{% url 'design:update_criterion' project_id=project.id criterion_id=9999 %}",
-        approve: "{% url 'design:approve_criterion' project_id=project.id criterion_id=9999 %}",
-        reject: "{% url 'design:reject_criterion' project_id=project.id criterion_id=9999 %}",
-        delete: "{% url 'design:delete_criterion' project_id=project.id criterion_id=9999 %}",
-    };
-</script>
-<script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
+            <style>
+                .editable-cell {
+                    min-height: 2rem;
+                    border: 1px solid transparent;
+                    transition: all 0.2s ease;
+                }
 
-<style>
-    .editable-cell {
-        min-height: 2rem;
-        border: 1px solid transparent;
-        transition: all 0.2s ease;
-    }
+                .editable-cell:hover {
+                    background-color: hsl(var(--b2) / 0.3);
+                }
 
-    .editable-cell:hover {
-        background-color: hsl(var(--b2) / 0.3);
-    }
+                .editable-cell:focus {
+                    background-color: hsl(var(--b1));
+                }
 
-    .editable-cell:focus {
-        background-color: hsl(var(--b1));
-    }
+                .editable-cell:empty:before {
+                    content: attr(data-placeholder);
+                    color: #afafaf;
+                }
+            </style>
 
-    .editable-cell:empty:before {
-        content: attr(data-placeholder);
-        color: #afafaf;
-    }
-</style>
-
-{% endblock eligibility_criteria_content %}
+            {% endblock eligibility_criteria_content %}
