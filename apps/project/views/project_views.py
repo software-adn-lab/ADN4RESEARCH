@@ -35,7 +35,7 @@ def save_project_action(request):
         try:
             project = _create_project_from_forms(request.user, project_form, specific_objective_formset, expected_result_formset)
             messages.success(request, "Project Created Successfully")
-            return redirect('design:design_stages', project_id=project.id)
+            return redirect('project:configure_schedule', project_id=project.id)
         except ProjectCreationError as e:
             project_form.add_error(None, str(e))
     context = {
