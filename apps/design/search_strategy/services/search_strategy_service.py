@@ -228,7 +228,7 @@ class SearchStrategyService:
         return strategy
 
     @transaction.atomic
-    def finalize_strategies_stage(self, project_id: int, user) -> list[int]:        
+    def finalize_strategies_stage(self, project_id: int, user) -> list[int]:
         approved_questions = ResearchQuestion.objects.filter(
             design_phase_id=project_id,
             status=ResearchQuestion.Status.APPROVED
@@ -238,10 +238,13 @@ class SearchStrategyService:
                 raise ValidationError(f"Research Question '{question.question[:50]}...' does not have a search strategy defined.")
         approved_ids = []
         strategies = SearchStrategy.objects.filter(research_question__design_phase_id=project_id)
-        
+
         for strategy in strategies:
             strategy.versions.filter(status=SearchStrategy.Status.DRAFT).update(status=SearchStrategy.Status.REJECTED)
             if strategy.status == SearchStrategy.Status.APPROVED:
                 approved_ids.append(strategy.id)
-        
+
+        if not approved_ids:
+            raise ValidationError("At least one search strategy must be approved to consolidate the stage.")
+
         return approved_ids

@@ -2,20 +2,24 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog
+from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog, DesignStagePlan
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 from apps.acquisition.facade import get_acquisition_facade
 
+
 class DesignPhaseService:
 
-    def get_current_stage_deadline(self, project_id: int):
+    def get_current_stage_plan(self, project_id: int) -> DesignStagePlan | None:
+        """
+        Retorna el plan (fechas) de la etapa actual.
+        """
         try:
             phase = DesignPhase.objects.get(pk=project_id)
-            return phase.end_date
+            return DesignStagePlan.objects.filter(phase=phase, stage=phase.current_stage).first()
         except DesignPhase.DoesNotExist:
-            return None
+            return None    
 
     def get_design_timeline_context(self, project_id: int):
         """
@@ -30,7 +34,7 @@ class DesignPhaseService:
         design_flow = DesignPhase.DESIGN_FLOW
         timeline_stages = []
         is_past = True
-        
+
         for stage_key in design_flow:
             status = 'upcoming'
             if stage_key == current_stage:
@@ -40,7 +44,7 @@ class DesignPhaseService:
                 status = 'finished'
             elif is_past:
                 status = 'completed'
-            
+
             # Recuperamos la etiqueta legible del enum
             label = DesignPhase.DesignStage(stage_key).label
 
@@ -57,17 +61,17 @@ class DesignPhaseService:
         Cierra la etapa de Preguntas e inicia Criterios.
         """
         phase = DesignPhase.objects.get(pk=project_id)
-        
+
         if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
             raise ValidationError(f"Cannot consolidate Questions. Current stage is {phase.current_stage}")
-        
+
         # 1. Ejecutar lógica de dominio específica del sub-módulo
         service = ResearchQuestionService()
         service.finalize_questions_stage(project_id, user)
-        
+
         # 2. Transición de estado con auditoría
         self._transition_stage(phase, DesignPhase.DesignStage.CRITERIA_DEFINITION)
-        
+
         return phase
 
     @transaction.atomic
@@ -83,7 +87,7 @@ class DesignPhaseService:
         service.finalize_criteria_stage(project_id, user)
         # 2. Transición de estado con auditoría
         self._transition_stage(phase, DesignPhase.DesignStage.SEARCH_STRATEGY)
-        
+
         return phase
 
     @transaction.atomic
@@ -100,7 +104,7 @@ class DesignPhaseService:
         approved_strategy_ids = search_service.finalize_strategies_stage(project_id, user)
         # 2. Transición de estado con auditoría
         self._transition_stage(phase, DesignPhase.DesignStage.FINISHED)
-        
+
         # 3. Disparar procesos externos (Acquisition)
         # Nota: Esto podría ir en un evento/señal para desacoplar más, pero por ahora es válido aquí.
         for strategy_id in approved_strategy_ids:
@@ -110,10 +114,10 @@ class DesignPhaseService:
                     design_strategy_id=strategy_id,
                     preview_result=preview_result,
                     user=user
-                )         
+                )
             except Exception as e:
                 # Si falla la integración, hacemos rollback de toda la transacción
-                raise ValidationError(f"Error persisting strategy {strategy_id}: {str(e)}")       
+                raise ValidationError(f"Error persisting strategy {strategy_id}: {str(e)}")
         return phase
 
     def _transition_stage(self, phase: DesignPhase, next_stage: str):
@@ -124,17 +128,17 @@ class DesignPhaseService:
         # 1. Cerrar el log de la etapa actual
         # Buscamos el último log abierto para esta etapa
         current_log = DesignStageLog.objects.filter(
-            phase=phase, 
-            stage=phase.current_stage, 
+            phase=phase,
+            stage=phase.current_stage,
             end_date__isnull=True
         ).last()
-        
+
         if current_log:
             current_log.end_date = timezone.now()
             current_log.save()
         # 2. Actualizar la fase
         phase.current_stage = next_stage
-        phase.save() # El método save() del modelo maneja el is_active = False si es FINISHED
+        phase.save()  # El método save() del modelo maneja el is_active = False si es FINISHED
         # 3. Crear el log para la nueva etapa (si no es el estado final de cierre)
         if next_stage != DesignPhase.DesignStage.FINISHED:
             DesignStageLog.objects.create(
@@ -142,3 +146,25 @@ class DesignPhaseService:
                 stage=next_stage,
                 start_date=timezone.now()
             )
+
+    @transaction.atomic
+    def initialize_design_schedule(self, project_id: int, schedule_data: list[dict]) -> int:
+        """
+        Implementación concreta del contrato de inicialización.
+        """
+        phase = DesignPhase.objects.get(pk=project_id)
+        phase.planned_stages.all().delete()
+        new_plans = []
+        for item in schedule_data:
+            if item['stage'] not in DesignPhase.DesignStage.values:
+                raise ValueError(f"Código de etapa inválido recibido: {item['stage']}")
+            new_plans.append(DesignStagePlan(
+                phase=phase,
+                stage=item['stage'],
+                planned_start_date=item['start'],
+                planned_end_date=item['end']
+            ))
+        # 4. Persistencia eficiente
+        DesignStagePlan.objects.bulk_create(new_plans)
+
+        return len(new_plans)

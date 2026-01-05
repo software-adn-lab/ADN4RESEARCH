@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.design.design_phase_logic.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog, DesignStagePlan
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.search_strategy.models.keyword import Keyword, ExclusionTerm, ProjectKeyword
@@ -16,3 +16,5 @@ admin.site.register(SearchStrategy)
 admin.site.register(ProjectKeyword)
 admin.site.register(DesignPhase)
 admin.site.register(SearchStrategyVersion)
+admin.site.register(DesignStageLog)
+admin.site.register(DesignStagePlan)
