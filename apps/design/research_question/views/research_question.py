@@ -9,6 +9,7 @@ from apps.project.decorators import project_member_required, build_design_url
 from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError, ResearchQuestionError
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.research_question.selectors import ResearchQuestionSelector
 from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
 from apps.project.structure.services.project_services import ProjectService
 
@@ -21,12 +22,12 @@ design_phase_service = DesignPhaseService()
 def open_questions_workspace_view(request, project_id, project):
     status_filter = request.GET.get('status')
 
-    questions = research_question_service.get_questions_for_workspace(
+    questions = ResearchQuestionSelector.get_list_for_workspace(
         project_id=project_id,
         user=request.user,
         status_filter=status_filter
     )
-    
+
     project_service = ProjectService()
     project_keywords = project_service.get_project_keyterms(project_id)
 
@@ -57,9 +58,9 @@ def create_research_question(request, project_id, project):
 
 @project_member_required
 def send_research_question_for_review(request, project_id, question_id, project):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-    except QuestionNotFoundError:
+    # We use the selector to check existence, but the service to perform the action
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found")
 
     try:
@@ -72,11 +73,11 @@ def send_research_question_for_review(request, project_id, question_id, project)
 
 @project_member_required
 def edit_research_question(request, project_id, question_id, project):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-    except QuestionNotFoundError:
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found or access denied")
 
+    # DTO to Dict for JSON serialization
     question_data = {
         "id": question.id,
         "suggested_question": question.question,
@@ -96,9 +97,8 @@ def edit_research_question(request, project_id, question_id, project):
 
 @project_member_required
 def delete_research_question(request, project_id, question_id, project):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-    except QuestionNotFoundError:
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found or access denied")
 
     try:

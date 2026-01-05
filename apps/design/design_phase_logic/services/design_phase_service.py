@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog, DesignStagePlan
+from apps.design.design_phase_logic.dtos import DesignTimelineStageDTO
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
@@ -19,11 +20,11 @@ class DesignPhaseService:
             phase = DesignPhase.objects.get(pk=project_id)
             return DesignStagePlan.objects.filter(phase=phase, stage=phase.current_stage).first()
         except DesignPhase.DoesNotExist:
-            return None    
+            return None
 
-    def get_design_timeline_context(self, project_id: int):
+    def get_design_timeline_context(self, project_id: int) -> list[DesignTimelineStageDTO]:
         """
-        Retorna el estado de la línea de tiempo para el frontend.
+        Retorna el estado de la línea de tiempo.
         """
         try:
             phase = DesignPhase.objects.get(pk=project_id)
@@ -48,11 +49,11 @@ class DesignPhaseService:
             # Recuperamos la etiqueta legible del enum
             label = DesignPhase.DesignStage(stage_key).label
 
-            timeline_stages.append({
-                'key': stage_key,
-                'label': label,
-                'status': status
-            })
+            timeline_stages.append(DesignTimelineStageDTO(
+                key=stage_key,
+                label=label,
+                status=status
+            ))
         return timeline_stages
 
     @transaction.atomic
