@@ -18,8 +18,8 @@ design_phase_service = DesignPhaseService()
 def open_eligibility_criteria_panel(request, project_id, project):
     status_filter = request.GET.get('status')
 
+    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
     inclusion_criteria = eligibility_service.get_inclusion_criteria(project_id, status_filter=status_filter)
     exclusion_criteria = eligibility_service.get_exclusion_criteria(project_id, status_filter=status_filter)
 
@@ -28,7 +28,7 @@ def open_eligibility_criteria_panel(request, project_id, project):
         'inclusion_criteria': inclusion_criteria,
         'exclusion_criteria': exclusion_criteria,
         'timeline_stages': timeline_stages,
-        'stage_end_date': stage_end_date,
+        'current_stage_plan': current_stage_plan,
         'current_status_filter': status_filter,
         'active_tab': 'eligibility_criteria_panel',
         'is_owner': project.owner == request.user,
@@ -173,7 +173,7 @@ def consolidate_eligibility_stage(request, project_id, project):
         )
         msg = "Stage consolidated successfully! Proceeding to Search Strategy."
         messages.success(request, msg)
-        return redirect(build_design_url(project_id, 'eligibility-criteria/'))
+        return redirect(build_design_url(project_id, 'search-strategy/'))
 
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}")

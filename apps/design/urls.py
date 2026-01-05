@@ -4,12 +4,14 @@ from apps.design.eligibility_criteria.views import eligibility_criterion
 from apps.design.research_question.views import research_question, question_discussion
 from apps.design.search_strategy.views import project_keyword, search_strategy
 from apps.design.design_phase_logic.views import navigation
+from apps.design.shared.views import dashboard
 
 app_name = 'design'
 
 urlpatterns = [
     # Stage Navigation Router
     path('', navigation.design_stages_router, name='design_stages'),
+    path('dashboard/', dashboard.dashboard_view, name='dashboard'),
 
     # Research Questions
     path('research-questions/', research_question.open_questions_workspace_view, name='rq_workspace'),

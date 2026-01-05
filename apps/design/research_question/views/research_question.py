@@ -10,7 +10,7 @@ from apps.design.exceptions.research_question_exceptions import QuestionNotFound
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
-
+from apps.project.structure.services.project_services import ProjectService
 
 research_question_service = ResearchQuestionService()
 keyword_processor_service = KeywordProcessorService()
@@ -26,17 +26,19 @@ def open_questions_workspace_view(request, project_id, project):
         user=request.user,
         status_filter=status_filter
     )
-    from apps.project.structure.services.project_services import ProjectService
+    
     project_service = ProjectService()
     project_keywords = project_service.get_project_keyterms(project_id)
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
+
+    # Updated to get full plan (start and end date)
+    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
 
     context = {
         'project': project,
         'questions': questions,
         'keywords': project_keywords,
-        'stage_end_date': stage_end_date,
+        'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'active_tab': 'rq_workspace',
         'current_status_filter': status_filter,

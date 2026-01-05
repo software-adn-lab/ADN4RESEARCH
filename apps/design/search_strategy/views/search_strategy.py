@@ -23,13 +23,13 @@ design_phase_service = DesignPhaseService()
 @project_member_required
 def open_search_strategy_panel(request, project_id, project):
     protocol_questions = project.protocol_questions
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
+    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
 
     context = {
         'project': project,
         'protocol_questions': protocol_questions,
-        'stage_end_date': stage_end_date,
+        'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'active_tab': 'search_string',
     }
@@ -64,7 +64,7 @@ def generate_and_save_search_string_for_question(request, project_id, question_i
 @project_member_required
 def search_strategy_builder_view(request, project_id, project):
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
+    stage_end_date = design_phase_service.get_current_stage_plan(project_id)
     question_id = request.GET.get('question_id')
     version_id_to_load = request.GET.get('version_id')
     selected_question = None
@@ -264,7 +264,7 @@ def consolidate_search_strategy_stage_view(request, project_id, project):
         # Para mandarle a alexis
         # Recuperar el objeto DTO de la version de la estrategia 
         
-        return redirect(build_design_url(project_id, 'search-strategy/'))
+        return redirect(build_design_url(project_id, 'eligibility-criteria/'))
 
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}")

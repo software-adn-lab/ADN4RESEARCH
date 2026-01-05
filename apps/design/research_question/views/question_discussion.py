@@ -17,14 +17,14 @@ def question_discussion_panel_view(request, project_id, project):
     status_filter = request.GET.get('status')
 
     questions = research_question_service.get_discussion_research_questions_by_project(project_id, status_filter=status_filter)
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
+    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
     timeline_stages = design_phase_service.get_design_timeline_context(project_id)
 
     context = {
         'project': project,
         'questions': questions,
         'is_owner': project.owner == request.user,
-        'stage_end_date': stage_end_date,
+        'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'current_status_filter': status_filter,
         'active_tab': 'question_discussion_panel',
@@ -64,9 +64,9 @@ def consolidate_discussion_stage_action(request, project_id, project):
             project_id=project_id,
             user=request.user
         )
-        msg = "Stage consolidated successfully! Questions approved and suggestions auto-rejected. Proceeding to Criteria Definition."
+        msg = "Stage consolidated successfully! Questions approved and suggestions auto-rejected. Proceeding to Eligibility Criteria Definition."
         messages.success(request, msg)
-        return redirect(build_design_url(project_id, 'discussion/'))
+        return redirect(build_design_url(project_id, 'eligibility-criteria/'))
 
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}")
