@@ -3,7 +3,7 @@ from django import template
 register = template.Library()
 
 
-@register.inclusion_tag('design/partials/status_filter.html')
+@register.inclusion_tag('partials/status_filter.html')
 def render_status_filter(current_filter=None):
     """
     Renders a status filter dropdown for the Research Question workspace.

@@ -65,4 +65,4 @@ def dashboard_view(request, project_id, project_dto):
             'search_strategies': approved_strategies,
         }
     }
-    return render(request, 'design/dashboard.html', context)
+    return render(request, 'dashboard.html', context)
