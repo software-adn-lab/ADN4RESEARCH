@@ -1,61 +1,50 @@
-<!-- ui/extraction/templates/partials/pdf_workspace/quote_modal.html -->
-<dialog id="quote_modal" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box w-11/12 max-w-2xl bg-white">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Nueva Extracción
-        </h3>
-
-        <form id="quote-form">
+<!-- partials/pdf_workspace/quote_modal.html -->
+<dialog id="quote_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Nueva Extracción</h3>
+        
+        <form id="quote-form" method="post">
+            {% csrf_token %}
+            
+            <!-- ✅ ID debe ser "selected-text" -->
             <div class="form-control mb-4">
-                <label class="label"><span class="label-text font-semibold">Texto Seleccionado</span></label>
-                <textarea id="modal_text_display" 
-                          class="textarea textarea-bordered h-28 bg-gray-50 text-sm leading-relaxed focus:outline-none resize-none" 
+                <label class="label">
+                    <span class="label-text">Texto Seleccionado</span>
+                </label>
+                <textarea id="selected-text" 
+                          class="textarea textarea-bordered" 
+                          rows="4" 
                           readonly></textarea>
                 <label class="label">
-                    <span class="label-text-alt text-gray-400" id="page-indicator-modal">Detectado en página: ?</span>
+                    <!-- ✅ ID debe ser "page-info" -->
+                    <span id="page-info" class="label-text-alt text-gray-500"></span>
                 </label>
             </div>
 
-            <div class="form-control mb-2">
-                <label class="label"><span class="label-text font-bold">Asignar Etiquetas</span></label>
-                <input type="text" 
-                       id="tag-search-input" 
-                       class="input input-bordered input-sm w-full" 
-                       placeholder="🔍 Escribe para filtrar etiquetas...">
-            </div>
-
-            <div class="border border-base-300 rounded-lg h-48 overflow-y-auto bg-base-100" id="tags-container">
-                {% for tag in available_tags %}
-                <label class="cursor-pointer flex items-center justify-between p-3 hover:bg-base-200 border-b border-base-100 transition-colors tag-item group" 
-                       data-name="{{ tag.name|lower }}"
-                       data-tag-id="{{ tag.id }}">
-                    <div class="flex items-center gap-3">
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Etiquetas</span>
+                </label>
+                
+                <div class="border rounded p-2 max-h-48 overflow-y-auto">
+                    {% for tag in available_tags %}
+                    <label class="flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer">
                         <input type="checkbox" 
                                name="tags" 
-                               value="{{ tag.id }}" 
-                               class="checkbox checkbox-sm checkbox-primary rounded" />
-                        <span class="text-sm font-medium group-hover:text-primary transition-colors">{{ tag.name }}</span>
-                    </div>
-                    <span class="badge badge-xs border-none" style="background-color: {{ tag.color }};"></span>
-                </label>
-                {% empty %}
-                    <div class="p-6 text-center text-gray-400">No hay etiquetas disponibles en esta fase.</div>
-                {% endfor %}
-                <div id="no-tags-msg" class="hidden p-4 text-center text-sm text-gray-400 italic">
-                    No se encontraron etiquetas con ese nombre.
+                               value="{{ tag.id }}"
+                               class="checkbox checkbox-sm checkbox-primary">
+                        <span class="text-sm">{{ tag.name }}</span>
+                        <span class="badge badge-xs ml-auto" 
+                              style="background-color: {{ tag.color }}"></span>
+                    </label>
+                    {% endfor %}
                 </div>
             </div>
 
-            <div class="modal-action mt-6">
-                <button type="button" class="btn btn-ghost" onclick="quote_modal.close()">Cancelar</button>
-                <button type="submit" class="btn btn-primary text-white px-8">Guardar</button>
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="quote_modal.close()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
             </div>
         </form>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
 </dialog>

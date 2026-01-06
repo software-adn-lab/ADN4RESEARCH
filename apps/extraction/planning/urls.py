@@ -1,26 +1,26 @@
 """
-URLs del Bounded Context: Planning (Fases de Extracción)
+URLs - Planning Bounded Context
+Incluye tags como recursos anidados de phases.
 """
-from django.urls import path
-from .views import (
-    ExtractionDashboardView,
-    PhaseConfigUpdateView,
-    OpenPhaseView,
-)
+from django.urls import path, include
+from . import views
 
-# NO necesitas app_name aquí (ya está en el padre)
 urlpatterns = [
-    # Dashboard principal
-    path('<int:phase_id>/', 
-         ExtractionDashboardView.as_view(), 
-         name='dashboard'),
+    # Phase detail (dashboard)
+    path('<int:pk>/', 
+         views.ExtractionPhaseDetailView.as_view(), 
+         name='phase_detail'),
     
-    # Acciones de fase
-    path('<int:phase_id>/config/update/', 
-         PhaseConfigUpdateView.as_view(), 
-         name='update_config'),
+    # Phase config update
+    path('<int:pk>/config/', 
+         views.PhaseConfigUpdateView.as_view(), 
+         name='phase_config_update'),
     
-    path('<int:phase_id>/open/', 
-         OpenPhaseView.as_view(), 
-         name='open_phase'),
+    # Phase open
+    path('<int:pk>/open/', 
+         views.PhaseOpenView.as_view(), 
+         name='phase_open'),
+    
+    path('<int:phase_id>/tags/', 
+         include('apps.extraction.taxonomy.urls')),
 ]

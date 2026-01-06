@@ -1,31 +1,25 @@
 """
-URLs del Bounded Context: Core (Papers y Quotes)
+URLs - Core Bounded Context
 """
 from django.urls import path
-from .views import (
-    PDFServeView,
-    PaperWorkspaceView,
-    QuoteCreateView,
-    QuoteDeleteView,
-)
+from . import views
 
 urlpatterns = [
-    # Gestión de Papers
-    path('<int:paper_id>/pdf/', 
-         PDFServeView.as_view(), 
-         name='serve_pdf'),
+    # Papers
+    path('<int:pk>/', 
+         views.PaperDetailView.as_view(), 
+         name='paper_detail'),
     
-    path('<int:pk>/workspace/', 
-         PaperWorkspaceView.as_view(), 
-         name='paper_workspace'),
+    path('<int:pk>/pdf/', 
+         views.PaperPDFView.as_view(), 
+         name='paper_pdf'),
     
-    # Gestión de Quotes
+    # Quotes (API endpoints - sin DRF)
     path('quotes/create/', 
-         QuoteCreateView.as_view(), 
+         views.QuoteCreateView.as_view(), 
          name='quote_create'),
-
-    path('quotes/delete/<int:quote_id>', 
-        QuoteDeleteView.as_view(), 
-        name='quote_delete'),
-
+    
+    path('quotes/<int:pk>/delete/', 
+         views.QuoteDeleteView.as_view(), 
+         name='quote_delete'),
 ]

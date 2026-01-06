@@ -65,19 +65,48 @@ class PaperExtraction(AuditModel):
 
     def get_missing_mandatory_tags(self):
         """
-        Identifica qué tags obligatorios de la fase NO se han usado en este paper.
+        Tags obligatorios que NO se han usado en este paper.
         """
         mandatory_tags = self.extraction_phase.tags.mandatory()
         used_tag_ids = self.quotes.values_list('tags__id', flat=True).distinct()
         return mandatory_tags.exclude(id__in=used_tag_ids)
+    
+    def get_used_mandatory_tags(self):
+        """
+        Tags obligatorios que SÍ se han usado en este paper.
+        """
+        mandatory_tags = self.extraction_phase.tags.mandatory()
+        used_tag_ids = self.quotes.values_list('tags__id', flat=True).distinct()
+        return mandatory_tags.filter(id__in=used_tag_ids)
+    
+    def get_all_used_tags(self):
+        """
+        Todos los tags (obligatorios y opcionales) usados en este paper.
+        """
+        from apps.extraction.taxonomy.models import Tag
+        return Tag.objects.filter(
+            quotes__paper_extraction=self
+        ).distinct()
+    
+    def get_coverage_percentage(self):
+        """
+        Porcentaje de tags obligatorios cubiertos (0-100).
+        """
+        mandatory_tags = self.extraction_phase.tags.mandatory()
+        
+        if not mandatory_tags.exists():
+            return 100
+        
+        used_count = self.get_used_mandatory_tags().count()
+        total_count = mandatory_tags.count()
+        
+        return int((used_count / total_count) * 100)
 
     def is_complete_compliant(self):
+        """
+        Retorna True si todos los tags obligatorios han sido cubiertos.
+        """
         return not self.get_missing_mandatory_tags().exists()
-
-    def get_used_tags(self):
-        """Retorna un QuerySet con los tags únicos ya usados en este paper"""
-        #return Tag.objects.filter(quotes__paper_extraction=self).distinct()
-        return null
 
     class Meta:
         verbose_name = "Extracción de Paper"

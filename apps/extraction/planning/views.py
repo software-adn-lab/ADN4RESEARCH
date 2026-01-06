@@ -1,65 +1,75 @@
 """
-Bounded Context: Planning
-Responsabilidad: Gestión del ciclo de vida de fases de extracción
+Views - Planning Bounded Context
 """
-from django.shortcuts import render, get_object_or_404, redirect
-from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.views.generic import DetailView, UpdateView, View
 
-# Imports dentro del mismo bounded context
-from .models import ExtractionPhase, ExtractionStatusChoices
 from .forms import ExtractionPhaseConfigForm
+from .models import ExtractionPhase, ExtractionStatusChoices
 from .services import PhaseLifecycleService
-
-# Imports de otros bounded contexts (Dependency explícita)
-from apps.extraction.taxonomy.services import TagDefinitionService
+from apps.extraction.shared.exceptions import BusinessRuleViolation
+from apps.extraction.shared.mixins import OwnerRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.core.models import PaperExtraction, Quote
 
-# Imports del shared kernel
-from apps.extraction.shared.exceptions import BusinessRuleViolation
-from apps.extraction.shared.mixins import OwnerRequiredMixin
 
-
-class ExtractionDashboardView(LoginRequiredMixin, View):
-    """Vista principal del dashboard de extracción."""
+class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
+    """
+    Dashboard principal de una fase de extracción.
+    Maneja tabs via query parameter (?tab=...)
+    """
     
+    model = ExtractionPhase
     template_name = 'dashboard.html'
-
-    def get(self, request, phase_id):
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
-        project = phase.project
-
-        is_owner = (request.user == project.owner)
+    context_object_name = 'phase'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        phase = self.object
+        user = self.request.user
+        
+        # Permisos
+        is_owner = user == phase.project.owner
         is_researcher = not is_owner
-
-        active_tab = request.GET.get('tab', 'studies')
-        phase_is_config = phase.status == ExtractionStatusChoices.CONFIG
-        is_restricted = is_researcher and phase_is_config
-
-        if is_restricted:
-            return render(request, self.template_name, {
-                'phase': phase,
-                'project': project,
-                'is_owner': False,
+        
+        # Tab activo
+        active_tab = self.request.GET.get('tab', 'studies')
+        
+        # Restringir acceso en CONFIG
+        if is_researcher and phase.status == ExtractionStatusChoices.CONFIG:
+            context.update({
                 'is_restricted': True,
-                'active_tab': 'restricted'
+                'is_owner': False,
+                'active_tab': 'restricted',
+                'project': phase.project
             })
-
-        context = {
-            'phase': phase,
-            'project': project,
+            return context
+        
+        # Contexto base
+        context.update({
+            'project': phase.project,
             'is_owner': is_owner,
             'active_tab': active_tab,
             'is_restricted': False,
-        }
-
+        })
+        
+        # Formularios (solo owner)
         if is_owner:
             context['config_form'] = ExtractionPhaseConfigForm(instance=phase)
-            context['tag_form'] = DeductiveTagForm(project=project)
-
-        if active_tab == 'tags':
+            context['tag_form'] = DeductiveTagForm(project=phase.project)
+        
+        # Cargar datos según tab
+        self._load_tab_data(context, phase, active_tab, is_owner, is_researcher)
+        
+        return context
+    
+    def _load_tab_data(self, context, phase, tab, is_owner, is_researcher):
+        """Cargar datos específicos del tab activo (lazy loading)."""
+        
+        if tab == 'tags':
             context['tags'] = phase.tags.all().order_by('-created_at')
             
             if is_owner:
@@ -67,69 +77,67 @@ class ExtractionDashboardView(LoginRequiredMixin, View):
                 report = service.get_protocol_coverage(phase)
                 context['coverage_report'] = report
                 context['can_open_phase'] = report.is_fully_covered
-
-        elif active_tab == 'studies':
+        
+        elif tab == 'studies':
+            papers_qs = PaperExtraction.objects.filter(extraction_phase=phase)
+            
             if is_researcher:
-                papers = PaperExtraction.objects.filter(
-                    extraction_phase=phase,
-                    assigned_to=request.user
-                ).select_related('study')
-            else:
-                papers = phase.papers_to_extract.all().select_related(
-                    'study', 'assigned_to'
-                )
-            context['papers'] = papers
-
-        elif active_tab == 'quotes':
+                papers_qs = papers_qs.filter(assigned_to=self.request.user)
+            
+            context['papers'] = papers_qs.select_related('study', 'assigned_to')
+        
+        elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
                 paper_extraction__extraction_phase=phase
             )
-
+            
             if is_researcher:
-                quotes_qs = quotes_qs.filter(created_by=request.user)
-
+                quotes_qs = quotes_qs.filter(created_by=self.request.user)
+            
             context['quotes'] = quotes_qs.select_related(
-                'paper_extraction__study', 
+                'paper_extraction__study',
                 'created_by'
             ).prefetch_related('tags')
 
-        return render(request, self.template_name, context)
 
-
-class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, View):
-    """Actualiza la configuración de una fase."""
+class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
+    """
+    Actualizar configuración de una fase.
+    Usa UpdateView genérico de Django.
+    """
     
-    def post(self, request, phase_id):
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
-        
-        if phase.status == ExtractionStatusChoices.CLOSED:
-            messages.error(request, "No se puede editar una fase cerrada.")
-            return redirect('extraction:dashboard', phase_id=phase_id)
-
-        form = ExtractionPhaseConfigForm(request.POST, instance=phase)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Configuración actualizada.")
-        else:
-            messages.error(request, "Error en la configuración.")
-        
-        return redirect('extraction:dashboard', phase_id=phase_id)
-
-
-class OpenPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View):
-    """Abre una fase de extracción (transición de estado)."""
+    model = ExtractionPhase
+    form_class = ExtractionPhaseConfigForm
     
-    def post(self, request, phase_id):
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
+    def form_valid(self, form):
+        """Validar estado antes de guardar."""
+        if self.object.status == ExtractionStatusChoices.CLOSED:
+            messages.error(self.request, "No se puede editar una fase cerrada.")
+            return redirect(self.get_success_url())
         
+        messages.success(self.request, "Configuración actualizada.")
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('extraction:phase_detail', args=[self.object.pk])
+
+
+class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Transición de estado: CONFIG -> OPEN
+    """
+    
+    def post(self, request, pk):
+        phase = get_object_or_404(ExtractionPhase, pk=pk)
         service = PhaseLifecycleService()
+        
         try:
             service.attempt_open_phase(phase)
             messages.success(
-                request, 
+                request,
                 "¡Fase Abierta! Los investigadores pueden empezar."
             )
         except BusinessRuleViolation as e:
             messages.error(request, str(e))
-
-        return redirect('extraction:dashboard', phase_id=phase_id)
+        
+        return redirect('extraction:phase_detail', pk=pk)

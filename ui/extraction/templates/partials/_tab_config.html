@@ -1,28 +1,51 @@
 <div class="max-w-2xl mx-auto">
     <h3 class="text-lg font-bold mb-6">Configuración de la Fase</h3>
 
-    <form action="{% url 'extraction:update_config' phase.id %}" method="POST" class="space-y-4">
+    <form action="{% url 'extraction:phase_config_update' pk=phase.id %}" method="POST" class="space-y-4">
         {% csrf_token %}
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-control">
-                <label class="label"><span class="label-text">Fecha de Inicio</span></label>
+                <label class="label">
+                    <span class="label-text">Fecha de Inicio</span>
+                </label>
                 {{ config_form.start_date }}
+                {% if config_form.start_date.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            {{ config_form.start_date.errors.0 }}
+                        </span>
+                    </label>
+                {% endif %}
             </div>
 
             <div class="form-control">
-                <label class="label"><span class="label-text">Fecha de Vencimiento</span></label>
+                <label class="label">
+                    <span class="label-text">Fecha de Vencimiento</span>
+                </label>
                 {{ config_form.due_date }}
+                {% if config_form.due_date.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            {{ config_form.due_date.errors.0 }}
+                        </span>
+                    </label>
+                {% endif %}
             </div>
         </div>
-
+<!---
         <div class="alert alert-info mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
             <span>La visibilidad de la lista de tags se gestiona automáticamente según el estado de la fase.</span>
         </div>
+-->
 
         <div class="flex justify-end mt-6">
-            <button type="submit" class="btn btn-primary" {% if phase.status == 'CLOSED' %}disabled{% endif %}>
+            <button type="submit" 
+                    class="btn btn-primary" 
+                    {% if phase.status == 'CLOSED' %}disabled{% endif %}>
                 Guardar Cambios
             </button>
         </div>

@@ -4,7 +4,6 @@
  * QuoteManager Component
  * Maneja la creación y visualización de quotes
  */
-
 class QuoteManager {
     constructor(options) {
         this.apiUrl = options.apiUrl;
@@ -12,7 +11,6 @@ class QuoteManager {
         this.paperId = options.paperId;
         this.pdfViewer = options.pdfViewer;
         this.tagManager = options.tagManager;
-
         this.deleteApiUrl = options.deleteApiUrl;
 
         this.currentSelection = { text: '', page: 1 };
@@ -31,41 +29,61 @@ class QuoteManager {
     init() {
         console.log('💬 Initializing Quote Manager...');
 
-        // Escuchar clicks en quotes existentes
-        if (this.quotesList) {
-            this.quotesList.addEventListener('click', (e) => {
-                const deleteBtn = e.target.closest('.delete-quote-btn');
-                console.log('   Delete button found:', deleteBtn);
+        // 1. Verificar que el contenedor existe
+        if (!this.quotesList) {
+            console.error('❌ Error CRÍTICO: No se encontró el elemento con id "quotes-list-container"');
+            return;
+        }
 
-                if (deleteBtn) {
-                    e.stopPropagation();
-                    e.preventDefault();  // ✅ NUEVO: Prevenir comportamiento default
+        console.log('✅ Container found, adding listener to:', this.quotesList);
 
-                    const quoteId = deleteBtn.dataset.quoteId;
-                    console.log('   Quote ID:', quoteId);
-                    console.log('🗑️ Delete button clicked for quote:', quoteId);
+        // 2. Listener con Logs de Depuración
+        this.quotesList.addEventListener('click', (e) => {
+            // Log para ver qué estás clickeando exactamente
+            console.log('⚡ Click detectado en:', e.target);
 
+            // Buscar el botón (incluso si clickeaste el SVG o el Path interno)
+            const deleteBtn = e.target.closest('.delete-quote-btn');
+
+            console.log('   ¿Es botón de borrar?:', deleteBtn ? 'SÍ' : 'NO');
+
+            if (deleteBtn) {
+                // DETENER TODO: Evita que el click pase a la tarjeta y haga scroll
+                e.stopPropagation();
+                e.preventDefault();
+
+                const quoteId = deleteBtn.dataset.quoteId;
+                console.log('   Intentando borrar ID:', quoteId);
+
+                if (quoteId) {
                     this.handleDeleteQuote(quoteId);
-                    return;
+                } else {
+                    console.error('❌ El botón no tiene atributo data-quote-id', deleteBtn);
+                    alert('Error: Botón sin ID de quote');
                 }
+                return; // Importante: Salir aquí para no ejecutar el click de la tarjeta
+            }
 
-                const quoteCard = e.target.closest('.quote-card');
-                if (quoteCard) {
-                    this.handleQuoteClick(quoteCard);
-                }
+            // Si no fue el botón de borrar, verificamos si fue la tarjeta
+            const quoteCard = e.target.closest('.quote-card');
+            if (quoteCard) {
+                console.log('   Click en tarjeta (scroll)');
+                this.handleQuoteClick(quoteCard);
+            }
+        });
+
+        // Submit del formulario
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleSubmit();
             });
         }
 
-        // Manejar submit del formulario
-        this.form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleSubmit();
-        });
-
-        // Exponer función globalmente
+        // Helper global
         window.scrollToText = (text, page) => this.scrollToText(text, page);
 
-        console.log('✅ Quote Manager ready');
+        console.log('✅ Listeners listos');
     }
 
     handleTextSelection(selection) {
@@ -282,79 +300,48 @@ class QuoteManager {
 
         console.log('✅ Quote added to sidebar');
     }
-
     async handleDeleteQuote(quoteId) {
         console.log(`🗑️ Delete quote requested: ${quoteId}`);
 
-        // Confirmación
-        const confirmed = confirm('¿Estás seguro de que deseas eliminar esta extracción?');
-
-        if (!confirmed) {
-            console.log('   ❌ Delete cancelled by user');
+        if (!confirm('¿Estás seguro de que deseas eliminar esta extracción?')) {
             return;
         }
 
         try {
             const deleteUrl = `${this.deleteApiUrl}${quoteId}`;
-            console.log('   DELETE URL:', deleteUrl);
 
             const response = await fetch(deleteUrl, {
                 method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': this.csrfToken
-                }
+                headers: { 'X-CSRFToken': this.csrfToken }
             });
 
-            console.log('   Response status:', response.status);
-
             if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Quote deleted successfully:', data);
+                console.log('✅ Quote deleted successfully');
 
-                // Remover del DOM con animación
-                const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
+                // 1. Remover del Sidebar visualmente
+                const quoteCard = document.querySelector(`.quote-card[data-quote-id="${quoteId}"]`);
                 if (quoteCard) {
-                    quoteCard.style.opacity = '0';
                     quoteCard.style.transform = 'translateX(20px)';
-                    quoteCard.style.transition = 'all 0.3s ease-out';
-
+                    quoteCard.style.opacity = '0';
                     setTimeout(() => {
                         quoteCard.remove();
-
-                        // Verificar si quedan quotes
-                        const remainingQuotes = document.querySelectorAll('.quote-card');
-                        if (remainingQuotes.length === 0) {
-                            this.showEmptyState();
-                        }
+                        // Verificar si quedó vacío para mostrar el placeholder
+                        if (!document.querySelector('.quote-card')) this.showEmptyState();
                     }, 300);
                 }
 
-                // Actualizar contador
+                // 2. Actualizar contador (-1)
                 this.updateQuoteCount(-1);
 
-                // Remover de existingQuotes del pdfViewer
-                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
-                    this.pdfViewer.existingQuotes = this.pdfViewer.existingQuotes.filter(
-                        q => q.id !== parseInt(quoteId)
-                    );
-                    console.log('   Removed from pdfViewer.existingQuotes');
+                // 3. Quitar highlight del PDF (sin recargar)
+                if (this.pdfViewer && typeof this.pdfViewer.removeQuoteHighlight === 'function') {
+                    this.pdfViewer.removeQuoteHighlight(quoteId);
                 }
 
-                this.showSuccessNotification('Quote eliminada exitosamente');
-                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
-                    this.pdfViewer.existingQuotes = this.pdfViewer.existingQuotes.filter(
-                        q => q.id !== parseInt(quoteId)
-                    );
-
-                    // ✅ Refrescar highlights de todas las páginas
-                    if (this.pdfViewer.refreshAllHighlights) {
-                        this.pdfViewer.refreshAllHighlights();
-                    }
-                }
+                this.showSuccessNotification('Quote eliminada');
 
             } else {
                 const error = await response.json();
-                console.error('❌ Backend error:', error);
                 alert(`Error al eliminar: ${error.error || 'Error desconocido'}`);
             }
         } catch (error) {
@@ -363,6 +350,14 @@ class QuoteManager {
         }
     }
 
+    updateQuoteCount(delta = 1) {
+        const counter = document.getElementById('quotes-count');
+        if (counter) {
+            let currentCount = parseInt(counter.textContent) || 0;
+            const newCount = Math.max(0, currentCount + delta);
+            counter.textContent = newCount;
+        }
+    }
 
     showEmptyState() {
         if (!this.quotesList) return;
@@ -378,21 +373,7 @@ class QuoteManager {
         `;
     }
 
-    /**
-     * Actualizar contador de quotes
-     */
-    updateQuoteCount() {
-        const counter = document.getElementById('quotes-count');
-        if (counter) {
-            const currentCount = parseInt(counter.textContent) || 0;
-            counter.textContent = currentCount + 1;
-            console.log('✅ Quote count updated');
-        }
-    }
 
-    /**
-     * Mostrar notificación de éxito
-     */
     showSuccessNotification(message) {
         const toast = document.createElement('div');
         toast.className = 'alert alert-success fixed bottom-4 right-4 w-auto shadow-lg z-50 animate-fade-in';
