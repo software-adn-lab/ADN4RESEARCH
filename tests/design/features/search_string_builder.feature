@@ -53,7 +53,8 @@ Característica: Construir cadena de búsqueda
         | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
 
     Escenario: Probar cadena de búsqueda generada
-        Dado que selecciono una pregunta de investigación del protocolo de diseño del proyecto
+        Dado que la etapa de "estrategia" esta activa en la fase de diseño
+        Y que selecciono una pregunta de investigación del protocolo de diseño del proyecto
         Y que tengo la lista de términos clave y sinónimos de dicha pregunta
         Cuando pruebo la cadena de búsqueda que he construido
         Y el sistema traduce la cadena de búsqueda a inglés

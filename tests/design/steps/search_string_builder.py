@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
 from apps.project.structure.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.research_question.models.research_question import ResearchQuestion
 
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
@@ -30,7 +31,6 @@ def step_dado_creo_pregunta_investigacion(context, pregunta_investigacion, frame
 @when('el sistema procesa los campos del framework de la pregunta para sugerir términos clave')
 def step_cuando_sistema_procesa_campos_framework_pregunta(context):
     keyword_processor_service.suggest_and_store_key_terms(research_question_id=context.research_question.id)
-
 
 @then('la lista de términos clave del proyecto debe contener {expected_terms}')
 def step_entonces_lista_terminos_clave(context, expected_terms):
@@ -80,15 +80,14 @@ def step_entonces_estrategia_sugerida_sera(context):
 
 @given('que selecciono una pregunta de investigación del protocolo de diseño del proyecto')
 def step_selecciono_pregunta_investigacion(context):
-    context.research_question = research_question_service.add_research_question(
-        project_id=context.project.id,
+    context.research_question = ResearchQuestion.objects.create(
+        design_phase=context.project.design_phase,
         question="Protocol Question?",
-        researcher_id=context.researcher.id,
+        researcher=context.researcher,
         motivation="Default Motivation",
-        framework_fields={"Population": "Test", "Intervention": "Test", "Comparison": "Test", "Outcome": "Test"}
+        framework_fields={"Population": "Test", "Intervention": "Test", "Comparison": "Test", "Outcome": "Test"},
+        status=ResearchQuestion.Status.APPROVED
     )
-    context.research_question.status = "APPROVED"
-    context.research_question.save()
     assert context.research_question is not None
     assert context.research_question in context.project.protocol_questions
 
@@ -103,6 +102,9 @@ def step_tengo_lista_terminos_sinonimos(context):
         keyword_data=keyword_data,
         user=context.researcher
     )
+    # Assign created_by to researcher for access control validation
+    context.strategy.created_by = context.researcher
+    context.strategy.save(update_fields=['created_by'])
 
 @when('pruebo la cadena de búsqueda que he construido')
 def step_pruebo_cadena_busqueda(context):

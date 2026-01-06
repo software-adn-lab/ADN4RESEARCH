@@ -1,0 +1,106 @@
+\u26a0\ufe0f  AlternativeSourceFinder: Sci-Hub HABILITADO. Usar solo para investigación académica personal.
+Failed to instantiate GeminiLLMClient, falling back to DefaultLLMClient: GEMINI_API_KEY environment variable is not set
+Failed to instantiate GeminiLLMClient, falling back to DefaultLLMClient: GEMINI_API_KEY environment variable is not set
+Creating test database for alias 'default'...
+DEBUG: USE_S3=True (from env: True)
+USING RUNNER: behave.runner:Runner
+Característica: Construir cadena de búsqueda # tests/design/features/search_string_builder.feature:2
+  Como investigador
+  Quiero construir cadenas de busqueda basado en sugerencias
+  Para optimizar el tiempo que gasto en construirlasC:\Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Project.end_date received a naive datetime (2026-01-06 18:34:22.864867) while time zone support is active.
+  warnings.warn(
+
+  Antecedentes:   # tests/design/features/search_string_builder.feature:11
+
+  Esquema del escenario: Proveer términos clave a partir de campos del framework -- @1.1                                                        # tests/design/features/search_string_builder.feature:29
+    Dado que estoy asignado a un proyecto de investigación                                                                                      # tests/design/steps/common_steps.py:13
+    Y que la fase de diseño esta activa                                                                                                         # tests/design/steps/common_steps.py:58
+    Y el proyecto tiene como framework investigativo a PICO                                                                                     # tests/design/steps/common_steps.py:18
+    Dado que he redactado una pregunta de investigación completa para el proyecto:                                                              # tests/design/steps/common_steps.py:22
+      """
+      {
+          "question": "¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?",
+          "motivation": "Es necesario para el proyecto",
+          "framework_fields": {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}
+      }
+      """
+    Cuando el sistema procesa los campos del framework de la pregunta para sugerir términos clave                                               # tests/design/steps/search_string_builder.py:30
+    Entonces la lista de términos clave del proyecto debe contener physical therapy,improvement in mobility,older adults,traditional medication # tests/design/steps/search_string_builder.py:35
+C:\Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Project.end_date received a naive datetime (2026-01-06 18:34:26.087379) while time zone support is active.
+  warnings.warn(
+
+  Esquema del escenario: Generar sugerencia de estrategia de búsqueda de una pregunta de investigación -- @1.1   # tests/design/features/search_string_builder.feature:53
+    Dado que estoy asignado a un proyecto de investigación                                                       # tests/design/steps/common_steps.py:13
+    Y que la fase de diseño esta activa                                                                          # tests/design/steps/common_steps.py:58
+    Y el proyecto tiene como framework investigativo a PICO                                                      # tests/design/steps/common_steps.py:18
+    Dado que he redactado una pregunta de investigación completa para el proyecto:                               # tests/design/steps/common_steps.py:22
+      """
+      {
+          "question": "¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?",
+          "motivation": "Es necesario para el proyecto",
+          "framework_fields": {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}
+      }
+      """
+    Y he identificado los sinónimos de los términos clave:                                                       # tests/design/steps/search_string_builder.py:46
+      | termino_clave            | sinonimos                    |
+      | "medicación tradicional" | tradición, medicina          |
+      | "terapia física"         | rehabilitación, recuperación |
+      | "adultos mayores"        | ancianos, viejos             |
+      | "mejora en movilidad"    |                              |
+    Cuando el sistema genere la sugerencia de estratégia de búsqueda                                             # tests/design/steps/search_string_builder.py:64
+    Entonces la estratégia de búsqueda sugerida será:                                                            # tests/design/steps/search_string_builder.py:69
+      """
+          ("traditional medication" OR "tradition" OR "medicine") AND ("physical therapy" OR "rehabilitation" OR "recovery") AND ("older adults" OR "elderly" OR "old") AND ("improvement in mobility")
+      """
+C:\Project\ADN4RESEARCH\venv\Lib\site-packages\django\db\models\fields\__init__.py:1671: RuntimeWarning: DateTimeField Project.end_date received a naive datetime (2026-01-06 18:34:30.844705) while time zone support is active.
+  warnings.warn(
+
+  Escenario: Probar cadena de búsqueda generada                                            # tests/design/features/search_string_builder.feature:55
+    Dado que estoy asignado a un proyecto de investigación                                 # tests/design/steps/common_steps.py:13
+    Y que la fase de diseño esta activa                                                    # tests/design/steps/common_steps.py:58
+    Y el proyecto tiene como framework investigativo a PICO                                # tests/design/steps/common_steps.py:18
+    Dado que selecciono una pregunta de investigación del protocolo de diseño del proyecto # tests/design/steps/search_string_builder.py:81
+    Y que tengo la lista de términos clave y sinónimos de dicha pregunta                   # tests/design/steps/search_string_builder.py:95
+    Cuando pruebo la cadena de búsqueda que he construido                                  # tests/design/steps/search_string_builder.py:107
+    Y el sistema traduce la cadena de búsqueda a inglés                                    # tests/design/steps/search_string_builder.py:118
+    Entonces se recibirán resultados de dicha búsqueda desde el módulo de adquisición      # tests/design/steps/search_string_builder.py:123
+      Traceback (most recent call last):
+        File "C:\Project\ADN4RESEARCH\venv\Lib\site-packages\behave\model.py", line 1909, in run
+          match.run(runner.context)
+          ~~~~~~~~~^^^^^^^^^^^^^^^^
+        File "C:\Project\ADN4RESEARCH\venv\Lib\site-packages\behave\matchers.py", line 104, in run
+          self.func(context, *args, **kwargs)
+          ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "tests\design\steps\search_string_builder.py", line 131, in step_recibiran_resultados_adquisicion
+          context.strategy = search_strategy_service.save_strategy_from_visual_builder(
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+              strategy_id=context.strategy.id,
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              visual_data=context.visual_data,
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              user_id=context.researcher.id
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          )
+          ^
+        File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\contextlib.py", line 85, in inner
+          return func(*args, **kwds)
+        File "C:\Project\ADN4RESEARCH\apps\design\search_strategy\services\search_strategy_service.py", line 191, in save_strategy_from_visual_builder
+          raise ValidationError("You do not have permission to edit this strategy.")
+      django.core.exceptions.ValidationError: ['You do not have permission to edit this strategy.']
+      
+      Captured logging:
+      INFO:httpx:HTTP Request: GET https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&hl=en&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&ie=UTF-8&oe=UTF-8&otf=1&ssel=0&tsel=0&tk=xxxx&q=Term1 "HTTP/2 200 OK"
+      INFO:httpx:HTTP Request: GET https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&hl=en&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&ie=UTF-8&oe=UTF-8&otf=1&ssel=0&tsel=0&tk=xxxx&q=Syn1%2C+Syn2 "HTTP/2 200 OK"
+      INFO:httpx:HTTP Request: GET https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&hl=en&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&ie=UTF-8&oe=UTF-8&otf=1&ssel=0&tsel=0&tk=xxxx&q=Term2 "HTTP/2 200 OK"
+
+    Y se creará una versión borrador de la estratégia de busqueda                          # None
+
+Destroying test database for alias 'default'...
+
+Errored scenarios:
+  tests/design/features/search_string_builder.feature:55  Probar cadena de búsqueda generada
+
+0 features passed, 0 failed, 1 error, 0 skipped
+2 scenarios passed, 0 failed, 1 error, 0 skipped
+20 steps passed, 0 failed, 1 error, 1 skipped
+Took 0m7.722s
