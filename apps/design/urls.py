@@ -21,6 +21,7 @@ urlpatterns = [
     path('research-questions/<int:question_id>/delete/', research_question.delete_research_question, name='delete_research_question'),
     path('research-questions/<int:question_id>/submit/', research_question.send_research_question_for_review, name='send_research_question_for_review'),
     path('research-questions/<int:question_id>/generate-strategy/', search_strategy.generate_and_save_search_string_for_question, name='get_search_strategy_for_question'),
+    path('research-questions/consolidate/', research_question.consolidate_creation_stage_view, name='consolidate_creation_stage'),
 
     # Discussion Stage
     path('discussion/', question_discussion.question_discussion_panel_view, name='question_discussion_panel'),

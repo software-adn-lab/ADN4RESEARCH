@@ -141,3 +141,21 @@ def autosave_research_question(request, project_id, project):
             return JsonResponse({'error': f'Internal Error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'errors': form.errors}, status=400)
+
+
+@project_member_required
+@require_POST
+def consolidate_creation_stage_view(request, project_id, project):
+    try:
+        if project.owner != request.user:
+            messages.error(request, "Only the project owner can consolidate the stage.")
+            return redirect(build_design_url(project_id, 'research-questions/'))
+
+        design_phase_service.consolidate_creation_stage(project_id, request.user)
+        messages.success(request, "Stage consolidated successfully! Discussion Phase started.")
+
+        return redirect(build_design_url(project_id, 'discussion/'))
+
+    except Exception as e:
+        messages.error(request, f"Error consolidating stage: {str(e)}")
+        return redirect(build_design_url(project_id, 'research-questions/'))

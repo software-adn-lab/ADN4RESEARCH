@@ -40,9 +40,9 @@ def step_dado_plan_aprobado(context):
     # CORRECCIÓN 2: Forzamos is_active=True explícitamente al crearla
     phase = DesignPhase.objects.create(
         project=project,
-        is_active=True  
+        is_active=True
     )
-    
+
     # 4. Poblar el Plan
     for row in context.table:
         stage_key = getattr(DesignPhase.DesignStage, row['etapa'])
@@ -68,55 +68,63 @@ def step_etapa_activa(context, stage_name):
     context.phase.current_stage = target_stage
     context.phase.save()
 
-    plan = DesignStagePlan.objects.get(phase=context.phase, stage=target_stage)
+    try:
+        plan = DesignStagePlan.objects.get(phase=context.phase, stage=target_stage)
+        start_date = datetime.combine(plan.planned_start_date, datetime.min.time())
+    except DesignStagePlan.DoesNotExist:
+        start_date = timezone.now()
 
     DesignStageLog.objects.create(
         phase=context.phase,
         stage=target_stage,
-        start_date=timezone.now()
+        start_date=start_date
     )
-    log = DesignStageLog.objects.last()
-    log.start_date = datetime.combine(plan.planned_start_date, datetime.min.time())
-    log.save()
+
 
 @given('que se ha aprobado una pregunta')
 def step_aprobado_pregunta(context):
     ResearchQuestion.objects.create(
-            design_phase=context.phase,           
-            question="pregunta aprobada",
-            motivation="Setup automático de prueba BDD",
-            researcher=context.researcher,
-            framework_fields={"Population": "Population details",
-                              "Intervention": "Intervention details",
-                              "Comparison": "Comparison details",
-                              "Outcome": "Outcome details",
-                              },
-            status="APPROVED"          
-        )
+        design_phase=context.phase,
+        question="pregunta aprobada",
+        motivation="Setup automático de prueba BDD",
+        researcher=context.researcher,
+        framework_fields={"Population": "Population details",
+                          "Intervention": "Intervention details",
+                          "Comparison": "Comparison details",
+                          "Outcome": "Outcome details",
+                          },
+        status="APPROVED"
+    )
     pass
+
 
 @when('el owner consolide la etapa "{stage_name}"')
 def step_impl(context, stage_name):
     service = DesignPhaseService()
-    
+
     # Mapeo de strings a métodos del servicio
     if stage_name == 'RQ_CREATION':
-        # Nota: Si tu servicio requiere estar en DISCUSSION para consolidar preguntas,
-        # asegúrate de que el flujo sea correcto. 
-        # Si RQ_CREATION es automático, ajusta esto.
-        pass 
+        service.consolidate_creation_stage(context.project_id, context.user)
     elif stage_name == 'RQ_DISCUSSION':
         # CORRECCIÓN AQUÍ: Quitamos el 'pass' y llamamos al servicio real
         service.consolidate_research_question_stage(context.project_id, context.user)
 
     elif stage_name == 'CRITERIA_DEFINITION':
         service.consolidate_eligibility_criteria_stage(context.project_id, context.user)
-    
+
     elif stage_name == 'SEARCH_STRATEGY':
         service.consolidate_search_strategy_stage(context.project_id, context.user)
-        
+
     else:
         raise ValueError(f"Etapa no soportada en steps: {stage_name}")
+
+
+@then('la etapa activa debe ser "{stage_name}"')
+def step_etapa_activa_debe_ser(context, stage_name):
+    phase = DesignPhase.objects.get(pk=context.project_id)
+    target_stage = getattr(DesignPhase.DesignStage, stage_name)
+    assert phase.current_stage == target_stage, \
+        f"Etapa incorrecta. Esperada: {target_stage}, Actual: {phase.current_stage}"
 
 
 @then('la etapa "{stage_name}" inicia realmente el "{date_str}"')
