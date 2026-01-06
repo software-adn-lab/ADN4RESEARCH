@@ -17,21 +17,7 @@ class EligibilityCriterionService:
             except DesignPhase.DoesNotExist:
                 raise CreationError("Design Phase not found for this project.")
 
-            # Authorization Check (Create/Edit)
-            # Creating a criterion is effectively editing the criteria list.
-            # We can reuse can_edit_question logic or assume if they can access the workspace they can create draft.
-            # But strictly, we should check if the stage allows editing.
-            # Let's assume creating is allowed if the user is a member and stage is correct.
-            # DesignAccessPolicy.can_edit_question checks stage. We might need a specific can_edit_criteria.
-            # For now, using can_edit_question as a proxy for "can edit design artifacts in this phase"
-            # OR better, check stage directly via Policy if we had a method.
-            # Let's use a manual check consistent with Policy philosophy or add a method to Policy.
-            # Given I cannot easily add to Policy right now without context switching, I will implement logic consistent with it here
-            # or reuse can_edit_question which checks for RQ_DEFINITION.
-            # Wait, Criteria has its own stage: CRITERIA_DEFINITION.
-
-            # Let's implement the check here using the Policy's logic style or if possible, just check the stage.
-            if design_phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION and not (design_phase.project.owner == researcher):
+            if not DesignAccessPolicy.can_create_criteria(researcher, design_phase):
                 raise CreationError("Cannot create criteria in this stage.")
 
             criterion = EligibilityCriterion(
@@ -62,19 +48,8 @@ class EligibilityCriterionService:
         criterion = self._get_criterion_model(criterion_id)
 
         # Authorization Check
-        # We need to check if user can edit THIS criterion.
-        # Policy doesn't have can_edit_criterion yet.
-        # Logic: Owner always can. Researcher can if it's theirs AND stage is CRITERIA_DEFINITION.
-
-        is_owner = (criterion.design_phase.project.owner == user)
-        is_author = (criterion.researcher == user)
-        is_correct_stage = (criterion.design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION)
-
-        if not is_owner:
-            if not is_author:
-                raise UpdateError("You do not have permission to edit this criterion.")
-            if not is_correct_stage:
-                raise UpdateError("Cannot edit criteria in this stage.")
+        if not DesignAccessPolicy.can_edit_criteria(user, criterion):
+            raise UpdateError("You do not have permission to edit this criterion.")
 
         criterion.description = description
         criterion.motivation = motivation
@@ -94,7 +69,7 @@ class EligibilityCriterionService:
         criterion = self._get_criterion_model(criterion_id)
 
         # Authorization Check (Review)
-        if not DesignAccessPolicy.can_review_question(user, criterion.design_phase):  # Reusing review permission
+        if not DesignAccessPolicy.can_review_criteria(user, criterion.design_phase):
             raise UpdateError("You do not have permission to review criteria.")
 
         # Requirement: "un researcher no puede rechazar o aprobar su propia creacion"
@@ -115,16 +90,8 @@ class EligibilityCriterionService:
         """Delete an eligibility criterion."""
         criterion = self._get_criterion_model(criterion_id)
         if user:
-            # Reuse update permission logic
-            is_owner = (criterion.design_phase.project.owner == user)
-            is_author = (criterion.researcher == user)
-            is_correct_stage = (criterion.design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION)
-
-            if not is_owner:
-                if not is_author:
-                    raise UpdateError("You do not have permission to delete this criterion.")
-                if not is_correct_stage:
-                    raise UpdateError("Cannot delete criteria in this stage.")
+            if not DesignAccessPolicy.can_edit_criteria(user, criterion):
+                raise UpdateError("You do not have permission to delete this criterion.")
 
         try:
             criterion.delete()
@@ -135,7 +102,7 @@ class EligibilityCriterionService:
         criterion = self._get_criterion_model(criterion_id)
 
         # Authorization Check (Review)
-        if not DesignAccessPolicy.can_review_question(user, criterion.design_phase):  # Reusing review permission
+        if not DesignAccessPolicy.can_review_criteria(user, criterion.design_phase):
             raise UpdateError("You do not have permission to review criteria.")
 
         if criterion.researcher == user and not criterion.design_phase.project.owner == user:
@@ -155,7 +122,7 @@ class EligibilityCriterionService:
         if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
             raise UpdateError("This stage has already been consolidated.")
 
-        if phase.project.owner != user:
+        if not DesignAccessPolicy.can_consolidate_stage(user, phase):
             raise UpdateError("Only the project owner can consolidate the stage.")
 
         has_inclusion = EligibilityCriterion.objects.filter(

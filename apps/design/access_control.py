@@ -69,3 +69,52 @@ class DesignAccessPolicy:
         Rule: Same as edit.
         """
         return DesignAccessPolicy.can_edit_question(user, question)
+
+    @staticmethod
+    def can_create_criteria(user: User, phase: DesignPhase) -> bool:
+        """
+        Determines if a user can create criteria in this phase.
+        Rule:
+        - If stage is CRITERIA_DEFINITION:
+            - Owner and Researchers can create.
+        - If stage is past CRITERIA_DEFINITION:
+            - Only Owner can create.
+        """
+        is_owner = DesignAccessPolicy.is_owner(user, phase.project)
+        if phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            return True
+        return is_owner
+
+    @staticmethod
+    def can_edit_criteria(user: User, criterion) -> bool:
+        """
+        Determines if a user can edit a specific eligibility criterion.
+        Rule:
+        - If stage is CRITERIA_DEFINITION:
+            - Owner can always edit.
+            - Researcher can edit their own criteria.
+        - If stage is past CRITERIA_DEFINITION:
+            - Only Owner can edit.
+        """
+        phase = criterion.design_phase
+        is_owner = DesignAccessPolicy.is_owner(user, phase.project)
+
+        if phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            return is_owner or (criterion.researcher_id == user.id)
+
+        return is_owner
+
+    @staticmethod
+    def can_review_criteria(user: User, phase: DesignPhase) -> bool:
+        """
+        Determines if a user can review (Approve/Reject) criteria.
+        Rule:
+        - If stage is CRITERIA_DEFINITION:
+            - Owner and Researchers can review (peer review).
+        - If stage is past CRITERIA_DEFINITION:
+            - Only Owner can review.
+        """
+        is_owner = DesignAccessPolicy.is_owner(user, phase.project)
+        if phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            return True
+        return is_owner

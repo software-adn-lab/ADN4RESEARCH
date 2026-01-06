@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let draggedData = null;
 
-    init();
+    // init(); // Moved to end of scope
 
     function init() {
         setupDragEvents();
@@ -49,9 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // LÓGICA DE ACTUALIZACIÓN EN TIEMPO REAL
+    // LÓGICA DE ACTUALIZACIÓN EN TIEMPO REAL (BACKEND)
     // ==========================================
-    function updateStringPreview() {
+    const debouncedUpdatePreview = debounce(() => {
         const data = collectData();
 
         if (data.main_terms.length === 0) {
@@ -61,22 +61,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Reconstrucción lógica Booleana (Espejo del Python)
-        const groups = data.main_terms.map(group => {
-            const terms = [`"${group.term}"`, ...group.synonyms.map(s => `"${s}"`)];
-            return `(${terms.join(' OR ')})`;
-        });
+        livePreview.textContent = 'Generating preview...';
+        livePreview.classList.add('opacity-50');
 
-        let finalString = groups.join(' AND ');
+        fetch(PREVIEW_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ visual_data: data })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    livePreview.textContent = data.preview_string;
+                    livePreview.classList.remove('text-base-content/50', 'opacity-50');
+                    livePreview.classList.add('text-primary');
+                } else {
+                    livePreview.textContent = 'Error generating preview.';
+                    console.error(data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Preview error:', err);
+                livePreview.textContent = 'Network error generating preview.';
+            });
 
-        if (data.exclusions.length > 0) {
-            const notTerms = data.exclusions.map(e => `"${e}"`).join(' OR ');
-            finalString += ` AND NOT (${notTerms})`;
-        }
+    }, 500); // 500ms debounce
 
-        livePreview.textContent = finalString;
-        livePreview.classList.remove('text-base-content/50');
-        livePreview.classList.add('text-primary');
+    function updateStringPreview() {
+        debouncedUpdatePreview();
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     // ==========================================
@@ -431,4 +458,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cookieValue;
     }
+    init();
 });

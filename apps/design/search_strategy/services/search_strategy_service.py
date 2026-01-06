@@ -76,8 +76,13 @@ class SearchStrategyService:
         version = SearchStrategyVersion.objects.get(id=version_id)
         version.delete()
 
-    # TRABAJO PARA SUGERIDOS SIN SINONIMOS Y CON SINONIMOS
-    def _link_project_keywords_to_strategy(self, strategy: SearchStrategy, keyword_data: list[dict], clear_previous: bool = True):
+    def _update_strategy_keywords(self, strategy: SearchStrategy, keyword_data: list[dict], clear_previous: bool = True):
+        """
+        Updates the keywords associated with a search strategy.
+        :param strategy: The SearchStrategy instance.
+        :param keyword_data: List of dicts with 'term' and optional 'synonyms'.
+        :param clear_previous: If True, removes existing keywords before adding new ones.
+        """
         design_phase_id = strategy.research_question.design_phase_id
         with transaction.atomic():
             if clear_previous:
@@ -104,20 +109,18 @@ class SearchStrategyService:
             if keywords_to_link:
                 Keyword.objects.bulk_create(keywords_to_link, ignore_conflicts=True)
 
-    # SOLO PARA LO SUGERIDO (SIN SINONIMOS)
-    def populate_strategy_from_structured_data(self, strategy_id: int, keyword_data: list[dict]):
-        strategy = SearchStrategy.objects.select_related('research_question').get(id=strategy_id)
-        self._link_project_keywords_to_strategy(strategy, keyword_data)
-
     def sync_suggested_terms_with_strategy(self, research_question_id: int, suggested_terms: list[str]) -> SearchStrategy:
+        """
+        Syncs suggested terms from NLP service to the strategy.
+        """
         strategy = self._get_or_create_strategy(research_question_id)
         keyword_data = [{'term': term, 'synonyms': ''} for term in suggested_terms]
-        self._link_project_keywords_to_strategy(strategy, keyword_data)
+        self._update_strategy_keywords(strategy, keyword_data)
         return strategy
 
     def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
-        self._link_project_keywords_to_strategy(strategy, keyword_data)
+        self._update_strategy_keywords(strategy, keyword_data)
         if user:
             strategy.last_modified_by = user
             strategy.save(update_fields=['last_modified_by'])
@@ -188,7 +191,7 @@ class SearchStrategyService:
         return strategy
 
     def get_search_results_dto(self, strategy_id: int):
-        strategy = self.get_or_create_strategy(strategy_id)
+        strategy = SearchStrategy.objects.get(id=strategy_id)
         return self.preview_service.get_search_results_dto(strategy)
 
     def change_strategy_status(self, strategy_id: int, status: str, user, justification: str = None) -> SearchStrategy:

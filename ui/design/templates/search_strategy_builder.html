@@ -132,34 +132,36 @@
                         </button>
                     </div>
                 </div>
+                <script src="{% static 'scripts/search_strategy_builder.js' %}?v={% now 'U' %}"></script>
+
+                {% else %}
+                <div class="hero min-h-[400px] bg-base-200 rounded-xl">
+                    <div class="hero-content text-center">
+                        <div class="max-w-md">
+                            <h1 class="text-2xl font-bold opacity-50">Select a Research Question</h1>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Full Screen Loader Overlay -->
+                <div id="full-screen-loader" style="z-index: 99999 !important;"
+                    class="fixed inset-0 bg-black/50 hidden flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+                    <div class="bg-base-100 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-4">
+                        <span class="loading loading-spinner loading-lg text-primary"></span>
+                        <p class="text-lg font-semibold animate-pulse">Searching results...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    {% if strategy %}
     <script>
-        const STRATEGY_ID = "{{ strategy.id }}";
-        const SAVE_URL = "{% url 'design:save_visual_strategy' project_id=project.id strategy_id=strategy.id %}";
-        const INITIAL_DATA = {{ visual_data_json|default:"{}"|safe }};
+        const PREVIEW_URL = "{% url 'design:preview_search_string' project_id=project.id %}";
+        const SAVE_URL = "{% url 'design:save_visual_strategy' strategy_id=strategy.id project_id=project.id %}";
+        const INITIAL_DATA = {{ strategy.json_definition|default:"{}"|safe }};
+
     </script>
-    <script src="{% static 'scripts/search_strategy_builder.js' %}?v={% now 'U' %}"></script>
-
-    {% else %}
-    <div class="hero min-h-[400px] bg-base-200 rounded-xl">
-        <div class="hero-content text-center">
-            <div class="max-w-md">
-                <h1 class="text-2xl font-bold opacity-50">Select a Research Question</h1>
-            </div>
-        </div>
-    </div>
     {% endif %}
-
-    <!-- Full Screen Loader Overlay -->
-    <div id="full-screen-loader" style="z-index: 99999 !important;"
-        class="fixed inset-0 bg-black/50 hidden flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-base-100 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-4">
-            <span class="loading loading-spinner loading-lg text-primary"></span>
-            <p class="text-lg font-semibold animate-pulse">Searching results...</p>
-        </div>
-    </div>
-</div>
-{% endblock %}
+    {% endblock %}

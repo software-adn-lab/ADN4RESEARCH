@@ -145,6 +145,29 @@ def save_visual_strategy(request, project_id, strategy_id, project):
 
 
 @project_member_required
+@require_POST
+def preview_search_string(request, project_id, project):
+    try:
+        data = json.loads(request.body)
+        visual_data = data.get('visual_data')
+
+        if not visual_data:
+            return JsonResponse({'error': 'No data provided'}, status=400)
+
+        # Use the service's builder directly to generate the string
+        # We don't save anything, just return the string
+        preview_string = search_strategy_service.string_builder.build_from_json(visual_data)
+
+        return JsonResponse({
+            'status': 'success',
+            'preview_string': preview_string
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@project_member_required
 def get_strategy_versions(request, project_id, question_id, project):
     try:
         # Use Selector to get DTO

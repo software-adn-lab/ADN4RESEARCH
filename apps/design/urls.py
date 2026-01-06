@@ -44,6 +44,7 @@ urlpatterns = [
     # Search Strategy
     path('search-strategy/', search_strategy.open_search_strategy_panel, name='open_search_strategy_panel'),
     path('search-strategy/builder/', search_strategy.search_strategy_builder_view, name='search_strategy_builder_view'),
+    path('search-strategy/preview/', search_strategy.preview_search_string, name='preview_search_string'),
     path('search-strategy/<int:strategy_id>/save/', search_strategy.save_visual_strategy, name='save_visual_strategy'),
     path('search-strategy/<int:strategy_id>/results/', search_strategy.search_results_view, name='search_results_view'),
     path('search-strategy/<int:strategy_id>/approve/', search_strategy.approve_strategy, name='approve_strategy'),
