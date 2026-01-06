@@ -44,6 +44,8 @@ def open_questions_workspace_view(request, project_id, project):
         'timeline_stages': timeline_stages,
         'active_tab': 'rq_workspace',
         'current_status_filter': status_filter,
+        'is_owner': project.owner == request.user,
+        'current_stage': project.design_phase.current_stage,
     }
     return render(request, 'rq_workspace.html', context)
 

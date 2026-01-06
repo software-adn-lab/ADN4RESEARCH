@@ -57,7 +57,18 @@ class DesignPhaseService:
         service = ResearchQuestionService()
         service.finalize_questions_stage(project_id, user)
 
-        # 2. Transición de estado con auditoría
+        # 1.5. Actualizar Cronograma (Dynamic Schedule)
+        try:
+            next_stage_plan = DesignStagePlan.objects.get(
+                phase=phase,
+                stage=DesignPhase.DesignStage.CRITERIA_DEFINITION
+            )
+            next_stage_plan.planned_start_date = timezone.now().date()
+            next_stage_plan.save()
+        except DesignStagePlan.DoesNotExist:
+            pass
+
+        # 2. Transición de estado con auditor ía
         self._transition_stage(phase, DesignPhase.DesignStage.CRITERIA_DEFINITION)
 
         return phase
@@ -70,9 +81,22 @@ class DesignPhaseService:
         phase = DesignPhase.objects.get(pk=project_id)
         if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
             raise ValidationError(f"Cannot consolidate Criteria. Current stage is {phase.current_stage}")
+
         # 1. Ejecutar lógica de dominio específica del sub-módulo
         service = EligibilityCriterionService()
         service.finalize_criteria_stage(project_id, user)
+
+        # 1.5. Actualizar Cronograma (Dynamic Schedule)
+        try:
+            next_stage_plan = DesignStagePlan.objects.get(
+                phase=phase,
+                stage=DesignPhase.DesignStage.SEARCH_STRATEGY
+            )
+            next_stage_plan.planned_start_date = timezone.now().date()
+            next_stage_plan.save()
+        except DesignStagePlan.DoesNotExist:
+            pass
+
         # 2. Transición de estado con auditoría
         self._transition_stage(phase, DesignPhase.DesignStage.SEARCH_STRATEGY)
 
