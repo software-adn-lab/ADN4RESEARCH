@@ -118,7 +118,7 @@ class SearchStrategyService:
         self._update_strategy_keywords(strategy, keyword_data)
         return strategy
 
-    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user) -> SearchStrategy:
+    def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user: User) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
         self._update_strategy_keywords(strategy, keyword_data)
         if user:
@@ -194,7 +194,7 @@ class SearchStrategyService:
         strategy = SearchStrategy.objects.get(id=strategy_id)
         return self.preview_service.get_search_results_dto(strategy)
 
-    def change_strategy_status(self, strategy_id: int, status: str, user, justification: str = None) -> SearchStrategy:
+    def change_strategy_status(self, strategy_id: int, status: str, user: User, justification: str = None) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
 
         # Authorization Check (Review)
@@ -220,7 +220,7 @@ class SearchStrategyService:
         return strategy
 
     @transaction.atomic
-    def finalize_strategies_stage(self, project_id: int, user) -> list[int]:
+    def finalize_strategies_stage(self, project_id: int, user: User) -> dict:
         # Authorization is handled by DesignPhaseService.consolidate_search_strategy_stage calling this.
         # But we can add a check here too if needed.
 

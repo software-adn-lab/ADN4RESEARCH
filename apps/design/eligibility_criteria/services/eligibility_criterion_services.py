@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DatabaseError, transaction
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
 from apps.design.access_control import DesignAccessPolicy
+from django.contrib.auth.models import User
 
 
 class EligibilityCriterionService:
@@ -86,7 +87,7 @@ class EligibilityCriterionService:
             raise UpdateError(f"Error rejecting: {str(e)}")
         return criterion
 
-    def delete_eligibility_criterion(self, criterion_id: int, user=None) -> None:
+    def delete_eligibility_criterion(self, criterion_id: int, user: User = None) -> None:
         """Delete an eligibility criterion."""
         criterion = self._get_criterion_model(criterion_id)
         if user:
@@ -118,7 +119,7 @@ class EligibilityCriterionService:
             raise UpdateError(f"Error approving: {str(e)}")
         return criterion
 
-    def _validate_consolidation_requirements(self, phase, user):
+    def _validate_consolidation_requirements(self, phase: DesignPhase, user: User) -> None:
         if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
             raise UpdateError("This stage has already been consolidated.")
 

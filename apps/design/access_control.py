@@ -34,7 +34,6 @@ class DesignAccessPolicy:
         return is_owner
 
     @staticmethod
-    @staticmethod
     def can_review_question(user: User, phase: DesignPhase, question=None) -> bool:
         """
         Determines if a user can review (Approve/Reject) questions.

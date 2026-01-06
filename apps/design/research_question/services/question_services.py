@@ -13,7 +13,6 @@ from apps.design.research_question.selectors import ResearchQuestionSelector
 
 
 class ResearchQuestionService:
-    # METODOS CRUD - en una segunda version
     @transaction.atomic
     def add_research_question(self, project_id: int, question: str, motivation: str, researcher_id: int, framework_fields: dict) -> ResearchQuestion:
         try:
@@ -80,7 +79,7 @@ class ResearchQuestionService:
     # def get_questions_for_workspace... -> Use ResearchQuestionSelector.get_list_for_workspace
 
     @transaction.atomic
-    def autosave_question(self, cleaned_data, user, project_id, question_id) -> ResearchQuestion:
+    def autosave_question(self, cleaned_data, user: User, project_id: int, question_id: int) -> ResearchQuestion:
         payload = {
             'question': cleaned_data.get('question', ''),
             'motivation': cleaned_data.get('motivation', ''),
@@ -169,7 +168,7 @@ class ResearchQuestionService:
         return question
 
     @transaction.atomic
-    def finalize_questions_stage(self, project_id: int, user):
+    def finalize_questions_stage(self, project_id: int, user: User) -> dict:
         # This is a high-level orchestration method
         try:
             design_phase = DesignPhase.objects.select_related('project').get(pk=project_id)

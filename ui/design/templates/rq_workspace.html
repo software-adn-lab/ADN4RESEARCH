@@ -1,4 +1,5 @@
 {% extends 'base_tabs.html'%}
+{% load design_tags %}
 {% block rq_workspace_content %}
 <div class="p-6" data-project-id="{{ project.id }}">
     {% csrf_token %}
@@ -15,29 +16,7 @@
             {% else %}
             <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
             {% endif %}
-            <form method="GET" action="">
-                <div class="form-control">
-                    <select name="status" id="status-filter" class="select select-bordered select-sm w-40"
-                        onchange="this.form.submit()">
-                        <option value="">All Statuses</option>
-
-                        <option value="DRAFT" 
-                                {% if current_status_filter == 'DRAFT' %}selected{% endif %}>
-                            Draft
-                        </option>
-
-                        <option value="READY_TO_SEND" 
-                                {% if current_status_filter == 'READY_TO_SEND' %}selected{% endif %}>
-                            Ready to send
-                        </option>
-
-                        <option value="SUGGESTED" 
-                                {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>
-                            Suggested
-                        </option>
-                    </select>
-                </div>
-            </form>
+            {% render_status_filter current_filter=current_status_filter %}
         </div>
 
     </div>
