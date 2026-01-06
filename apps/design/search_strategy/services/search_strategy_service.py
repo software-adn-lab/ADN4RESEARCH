@@ -3,6 +3,8 @@ from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db.models import Max
 from django.db import transaction
+from googletrans import Translator
+from asgiref.sync import async_to_sync
 
 from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
 from apps.design.research_question.models.research_question import ResearchQuestion
@@ -10,12 +12,14 @@ from django.core.exceptions import ValidationError
 from apps.design.access_control import DesignAccessPolicy
 from django.contrib.auth.models import User
 from apps.design.search_strategy.services.search_preview_service import SearchPreviewService
+from apps.design.search_strategy.services.nlp.translation_service import TranslationService
 
 
 class SearchStrategyService:
     def __init__(self):
         self.string_builder = SearchStringBuilder()
         self.preview_service = SearchPreviewService()
+        self.translation_service = TranslationService()
 
     @transaction.atomic
     def generate_and_save_search_string(self, strategy_id: int, user_id: int) -> SearchStrategy:
@@ -93,11 +97,17 @@ class SearchStrategyService:
                 term_text = item.get('term')
                 if not term_text:
                     continue
+
+                # TRANSLATE term and synonyms from ES to EN before saving
+                synonyms_text = item.get('synonyms', '')
+                translated_term = self._translate_text(term_text)
+                translated_synonyms = self._translate_text(synonyms_text) if synonyms_text else ''
+
                 project_keyword, created = ProjectKeyword.objects.update_or_create(
                     design_phase_id=design_phase_id,
-                    term=term_text,
+                    term=translated_term,
                     defaults={
-                        'synonyms': item.get('synonyms', '')
+                        'synonyms': translated_synonyms
                     }
                 )
                 if not clear_previous:
@@ -243,3 +253,23 @@ class SearchStrategyService:
             raise ValidationError("At least one search strategy must be approved to consolidate the stage.")
 
         return approved_ids
+
+    def _translate_text(self, text: str) -> str:
+        """
+        Helper method to translate a single text string from Spanish to English.
+        Uses TranslationService with async_to_sync for individual translation.
+        Returns original text if translation fails.
+        """
+        if not text or not text.strip():
+            return text
+
+        try:
+            async def _do_translate():
+                translator = Translator()
+                result = await translator.translate(text, src='es', dest='en')
+                return result.text
+
+            return async_to_sync(_do_translate)()
+        except Exception as e:
+            logging.error(f"Translation error for '{text}': {e}")
+            return text  # Fallback to original text if translation fails
