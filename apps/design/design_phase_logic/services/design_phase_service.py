@@ -51,37 +51,6 @@ class DesignPhaseService:
         return phase
 
     @transaction.atomic
-    def consolidate_creation_stage(self, project_id: int, user):
-        """
-        Cierra la etapa de Creación e inicia Discusión.
-        Ajusta dinámicamente el cronograma: la fecha de inicio planificada de RQ_DISCUSSION
-        se convierte en la fecha actual.
-        """
-        phase = DesignPhase.objects.get(pk=project_id)
-
-        if phase.current_stage != DesignPhase.DesignStage.RQ_CREATION:
-            raise ValidationError(f"Cannot consolidate Creation. Current stage is {phase.current_stage}")
-
-        # 1. Actualizar Cronograma (Dynamic Schedule)
-        # Buscamos el plan de la siguiente etapa (RQ_DISCUSSION)
-        try:
-            next_stage_plan = DesignStagePlan.objects.get(
-                phase=phase,
-                stage=DesignPhase.DesignStage.RQ_DISCUSSION
-            )
-            # Reseteamos el inicio planificado a HOY
-            next_stage_plan.planned_start_date = timezone.now().date()
-            next_stage_plan.save()
-        except DesignStagePlan.DoesNotExist:
-            # Si no hay plan, no pasa nada (o podríamos crearlo, pero asumimos que existe)
-            pass
-
-        # 2. Transición de estado con auditoría
-        self._transition_stage(phase, DesignPhase.DesignStage.RQ_DISCUSSION)
-
-        return phase
-
-    @transaction.atomic
     def consolidate_research_question_stage(self, project_id: int, user):
         """
         Cierra la etapa de Preguntas e inicia Criterios.
