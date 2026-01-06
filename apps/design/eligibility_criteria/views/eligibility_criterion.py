@@ -7,7 +7,9 @@ from apps.project.decorators import project_member_required, build_design_url
 from apps.design.exceptions.eligibility_criteria_exceptions import CreationError, NotFoundError, UpdateError
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
+from apps.design.eligibility_criteria.selectors import EligibilityCriterionSelector
 from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.selectors import DesignPhaseSelector
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 eligibility_service = EligibilityCriterionService()
@@ -18,10 +20,11 @@ design_phase_service = DesignPhaseService()
 def open_eligibility_criteria_panel(request, project_id, project):
     status_filter = request.GET.get('status')
 
-    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
-    inclusion_criteria = eligibility_service.get_inclusion_criteria(project_id, status_filter=status_filter)
-    exclusion_criteria = eligibility_service.get_exclusion_criteria(project_id, status_filter=status_filter)
+    current_stage_plan = DesignPhaseSelector.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
+
+    inclusion_criteria = EligibilityCriterionSelector.get_inclusion_criteria(project_id, status_filter=status_filter)
+    exclusion_criteria = EligibilityCriterionSelector.get_exclusion_criteria(project_id, status_filter=status_filter)
 
     context = {
         'project': project,
