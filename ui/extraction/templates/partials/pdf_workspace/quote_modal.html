@@ -1,50 +1,135 @@
 <!-- partials/pdf_workspace/quote_modal.html -->
 <dialog id="quote_modal" class="modal">
-    <div class="modal-box">
+    <div class="modal-box max-w-lg">
         <h3 class="font-bold text-lg mb-4">Nueva Extracción</h3>
         
         <form id="quote-form" method="post">
             {% csrf_token %}
             
-            <!-- ✅ ID debe ser "selected-text" -->
+            <!-- Texto Seleccionado -->
             <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">Texto Seleccionado</span>
+                <label class="label mb-1">
+                    <span class="label-text font-medium">Texto Seleccionado</span>
                 </label>
                 <textarea id="selected-text" 
-                          class="textarea textarea-bordered" 
+                          class="textarea textarea-bordered w-full mb-2 focus:outline-none text-sm" 
                           rows="4" 
                           readonly></textarea>
-                <label class="label">
-                    <!-- ✅ ID debe ser "page-info" -->
+                <label class="label pt-0">
                     <span id="page-info" class="label-text-alt text-gray-500"></span>
                 </label>
             </div>
 
+            <!-- Etiquetas con Búsqueda -->
             <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">Etiquetas</span>
+                <label class="label mb-1">
+                    <span class="label-text font-medium">Etiquetas</span>
+                    <span class="label-text-alt text-xs" id="tags-counter">
+                        0 seleccionadas
+                    </span>
                 </label>
                 
-                <div class="border rounded p-2 max-h-48 overflow-y-auto">
+                <!-- ✅ Input de Búsqueda -->
+                <div class="relative mb-2">
+                    <input type="text" 
+                           id="tag-search-input"
+                           class="input input-sm input-bordered w-full pr-8 focus:outline-none" 
+                           placeholder="🔍 Buscar etiquetas..."
+                           autocomplete="off">
+                    <!-- Botón Limpiar (oculto por defecto) -->
+                    <button type="button" 
+                            id="clear-search-btn"
+                            class="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 hidden"
+                            title="Limpiar búsqueda">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Lista de Tags Filtrable -->
+                <div id="tags-list-container" class="border border-gray-300 rounded p-2 max-h-48 overflow-y-auto">
                     {% for tag in available_tags %}
-                    <label class="flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer">
+                    <label class="tag-item flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer rounded transition-colors"
+                           data-tag-name="{{ tag.name|lower }}"
+                           data-tag-id="{{ tag.id }}">
                         <input type="checkbox" 
                                name="tags" 
                                value="{{ tag.id }}"
-                               class="checkbox checkbox-sm checkbox-primary">
-                        <span class="text-sm">{{ tag.name }}</span>
-                        <span class="badge badge-xs ml-auto" 
-                              style="background-color: {{ tag.color }}"></span>
+                               class="checkbox checkbox-sm checkbox-primary tag-checkbox">
+                        <span class="text-sm flex-1">{{ tag.name }}</span>
+                        <span class="badge badge-xs" 
+                              style="background-color: {{ tag.color }}20; color: {{ tag.color }}; border: 1px solid {{ tag.color }}40;">
+                        </span>
                     </label>
+                    {% empty %}
+                    <div class="text-center text-gray-400 py-4 text-xs">
+                        No hay etiquetas disponibles
+                    </div>
                     {% endfor %}
+                </div>
+                
+                <!-- Mensaje cuando no hay resultados -->
+                <div id="no-tags-message" class="hidden text-center text-gray-400 py-4 text-xs border rounded mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    No se encontraron etiquetas
                 </div>
             </div>
 
             <div class="modal-action">
-                <button type="button" class="btn" onclick="quote_modal.close()">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar</button>
+                <button type="button" class="btn btn-sm" onclick="quote_modal.close()">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Guardar
+                </button>
             </div>
         </form>
     </div>
 </dialog>
+<style>
+    .tag-item {
+    transition: all 0.2s ease;
+}
+
+.tag-item:hover {
+    transform: translateX(2px);
+}
+
+/* Highlight del input de búsqueda */
+#tag-search-input:focus {
+    border-color: hsl(var(--p));
+    box-shadow: 0 0 0 3px hsl(var(--p) / 0.1);
+}
+
+/* Scrollbar personalizado para lista de tags */
+#tags-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#tags-list-container::-webkit-scrollbar-track {
+    background: hsl(var(--b2));
+}
+
+#tags-list-container::-webkit-scrollbar-thumb {
+    background: hsl(var(--bc) / 0.3);
+    border-radius: 3px;
+}
+
+#tags-list-container::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--bc) / 0.5);
+}
+
+/* Animación de fade para mensaje de "no encontrado" */
+#no-tags-message {
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>

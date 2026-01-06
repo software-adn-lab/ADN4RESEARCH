@@ -1,267 +1,139 @@
-// ui/extraction/static/scripts/components/quote_manager.js
-
 /**
  * QuoteManager Component
- * Maneja la creación y visualización de quotes
+ * Responsabilidad: CRUD de quotes, gestión del modal, actualización del sidebar
  */
+
 class QuoteManager {
-    constructor(options) {
-        this.apiUrl = options.apiUrl;
-        this.csrfToken = options.csrfToken;
-        this.paperId = options.paperId;
-        this.pdfViewer = options.pdfViewer;
-        this.tagManager = options.tagManager;
-        this.deleteApiUrl = options.deleteApiUrl;
-
-        this.currentSelection = { text: '', page: 1 };
-
+    constructor(config) {
+        this.config = config;
+        this.currentSelection = null;
         this.modal = document.getElementById('quote_modal');
         this.form = document.getElementById('quote-form');
-        this.textDisplay = document.getElementById('modal_text_display');
-        this.pageIndicator = document.getElementById('page-indicator-modal');
         this.quotesList = document.getElementById('quotes-list-container');
-
-        if (!this.modal || !this.form) {
-            throw new Error('Quote modal or form not found');
-        }
+        
+        console.log('💬 QuoteManager initialized');
     }
 
     init() {
-        console.log('💬 Initializing Quote Manager...');
+        this.setupEventListeners();
+    }
 
-        // 1. Verificar que el contenedor existe
-        if (!this.quotesList) {
-            console.error('❌ Error CRÍTICO: No se encontró el elemento con id "quotes-list-container"');
-            return;
-        }
-
-        console.log('✅ Container found, adding listener to:', this.quotesList);
-
-        // 2. Listener con Logs de Depuración
-        this.quotesList.addEventListener('click', (e) => {
-            // Log para ver qué estás clickeando exactamente
-            console.log('⚡ Click detectado en:', e.target);
-
-            // Buscar el botón (incluso si clickeaste el SVG o el Path interno)
-            const deleteBtn = e.target.closest('.delete-quote-btn');
-
-            console.log('   ¿Es botón de borrar?:', deleteBtn ? 'SÍ' : 'NO');
-
-            if (deleteBtn) {
-                // DETENER TODO: Evita que el click pase a la tarjeta y haga scroll
-                e.stopPropagation();
-                e.preventDefault();
-
-                const quoteId = deleteBtn.dataset.quoteId;
-                console.log('   Intentando borrar ID:', quoteId);
-
-                if (quoteId) {
-                    this.handleDeleteQuote(quoteId);
-                } else {
-                    console.error('❌ El botón no tiene atributo data-quote-id', deleteBtn);
-                    alert('Error: Botón sin ID de quote');
-                }
-                return; // Importante: Salir aquí para no ejecutar el click de la tarjeta
-            }
-
-            // Si no fue el botón de borrar, verificamos si fue la tarjeta
-            const quoteCard = e.target.closest('.quote-card');
-            if (quoteCard) {
-                console.log('   Click en tarjeta (scroll)');
-                this.handleQuoteClick(quoteCard);
-            }
-        });
-
-        // Submit del formulario
+    setupEventListeners() {
+        // Submit formulario
         if (this.form) {
             this.form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.handleSubmit();
+                this.createQuote();
             });
         }
 
-        // Helper global
-        window.scrollToText = (text, page) => this.scrollToText(text, page);
+        // Escuchar evento de selección de texto
+        window.addEventListener('text:selected', (e) => {
+            this.showQuoteModal(e.detail.text, e.detail.page);
+        });
 
-        console.log('✅ Listeners listos');
+        // Escuchar clicks en quotes del sidebar
+        window.addEventListener('quote:click', (e) => {
+            this.scrollToQuoteInSidebar(e.detail.quoteId);
+        });
     }
 
-    handleTextSelection(selection) {
-        console.log(`✂️ Text selected: page ${selection.page}`);
+    showQuoteModal(text, page) {
+        this.currentSelection = { text, page };
 
-        // ✅ Guardar selección en QuoteManager (fallback)
-        this.currentSelection = selection;
+        const textArea = document.getElementById('selected-text');
+        const pageInfo = document.getElementById('page-info');
 
-        // Actualizar UI del modal
-        if (this.textDisplay) {
-            this.textDisplay.value = selection.text;
-        }
-
-        if (this.pageIndicator) {
-            this.pageIndicator.textContent = `Detectado en página: ${selection.page}`;
-        }
-
-        // Resetear tags
-        if (this.tagManager) {
-            this.tagManager.resetSelection();
-        }
-
-        // Abrir modal
-        if (this.modal) {
-            this.modal.showModal();
-        }
-    }
-
-    handleQuoteClick(quoteCard) {
-        const page = parseInt(quoteCard.dataset.page);
-        const text = quoteCard.dataset.text;
-
-        this.scrollToText(text, page);
-    }
-
-    scrollToText(text, page) {
-        console.log(`📍 Scrolling to text on page ${page}`);
-
-        if (this.pdfViewer) {
-            this.pdfViewer.scrollToPage(page);
-        } else {
-            const pageElement = document.getElementById(`page-${page}`);
-            if (pageElement) {
-                pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        setTimeout(() => {
-            const found = window.find(text, false, false, true, false, true, false);
-            if (!found) {
-                console.warn('⚠️ Text not found in viewport');
-            }
-        }, 600);
-    }
-
-    async handleSubmit() {
-        console.log('📤 Submitting quote...');
-
-        const selectedTags = this.tagManager.getSelectedTags();
-
-        if (selectedTags.length === 0) {
-            alert("Selecciona al menos una etiqueta.");
+        if (!textArea || !this.modal) {
+            console.error('❌ Modal elements not found');
             return;
         }
 
-        // ✅ Intentar obtener selección de pdfViewer, sino usar fallback
-        let selection;
-
-        if (this.pdfViewer && typeof this.pdfViewer.getCurrentSelection === 'function') {
-            selection = this.pdfViewer.getCurrentSelection();
-            console.log('   Using selection from pdfViewer:', selection);
-        } else {
-            selection = this.currentSelection;
-            console.log('   Using fallback selection:', selection);
+        textArea.value = text;
+        if (pageInfo) {
+            pageInfo.textContent = `Página ${page}`;
         }
 
-        // Validar que tenemos datos
-        if (!selection || !selection.text) {
-            console.error('❌ No selection data available');
-            alert('Error: No se detectó texto seleccionado. Por favor, intenta de nuevo.');
+        // Reset tags
+        this.form.querySelectorAll('input[name="tags"]').forEach(cb => {
+            cb.checked = false;
+        });
+
+        this.modal.showModal();
+    }
+
+    async createQuote() {
+        const formData = new FormData(this.form);
+        const tags = formData.getAll('tags').map(id => parseInt(id));
+
+        if (tags.length === 0) {
+            alert('Selecciona al menos una etiqueta');
             return;
         }
 
         const payload = {
-            text_fragment: selection.text,
-            paper_extraction_id: this.paperId,
-            tags: selectedTags,
-            location: {
-                page: selection.page || 1
-            }
+            text_fragment: this.currentSelection.text,
+            paper_extraction_id: this.config.paperId,
+            tags: tags,
+            location: { page: this.currentSelection.page }
         };
 
-        console.log('🚀 Payload:', payload);
-
         try {
-            const response = await fetch(this.apiUrl, {
+            const response = await fetch(this.config.quoteCreateUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.config.csrfToken
                 },
                 body: JSON.stringify(payload)
             });
 
+            const responseData = await response.json();
+
             if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Quote saved:', data);
-
-                // Cerrar modal
+                console.log('✅ Quote created:', responseData.quote);
+                
                 this.modal.close();
-                // ✅ Agregar a existingQuotes del pdfViewer
-                if (this.pdfViewer && this.pdfViewer.existingQuotes) {
-                    this.pdfViewer.existingQuotes.push(data.quote);
-                    console.log('   Added to pdfViewer.existingQuotes');
-
-                    // ✅ Re-highlight la página donde se creó
-                    const pageNumber = data.quote.location?.page;
-                    if (pageNumber && this.pdfViewer.rehighlightPage) {
-                        this.pdfViewer.rehighlightPage(pageNumber);
-                    }
-                }
-
-                // ✅ OPCIÓN 1: Sin recargar (mejor UX)
-                this.addQuoteToSidebar(data.quote);
-                this.updateQuoteCount();
-                this.showSuccessNotification('Quote guardada exitosamente');
-
-                // ✅ OPCIÓN 2: Con recarga (comentar la línea anterior y descomentar esta)
-                // window.location.reload();
+                this.addQuoteToSidebar(responseData.quote);
+                
+                // Disparar eventos para otros componentes
+                window.dispatchEvent(new CustomEvent('quote:created', { 
+                    detail: { quote: responseData.quote } 
+                }));
+                
+                this.showSuccessNotification('Quote creada exitosamente');
+                window.getSelection().removeAllRanges();
 
             } else {
-                const error = await response.json();
-                console.error('❌ Backend error:', error);
-                alert(`Error: ${error.error || JSON.stringify(error)}`);
+                alert(`Error: ${responseData.error}`);
             }
         } catch (error) {
             console.error('❌ Network error:', error);
-            alert(`Error de red: ${error.message}`);
+            alert('Error de red');
         }
     }
 
-    /**
-     * Agregar quote al sidebar dinámicamente (sin recargar)
-     */
     addQuoteToSidebar(quote) {
-        const quotesList = document.getElementById('quotes-list-container');
+        if (!this.quotesList) return;
 
-        if (!quotesList) {
-            console.warn('⚠️ Quotes list container not found, will reload instead');
-            window.location.reload();
-            return;
-        }
+        const emptyState = this.quotesList.querySelector('#empty-quotes-state');
+        if (emptyState) emptyState.remove();
 
-        // Remover mensaje de "sin quotes" si existe
-        const emptyState = quotesList.querySelector('#empty-quotes-state');
-        if (emptyState) {
-            emptyState.remove();
-        }
-
-        // Crear elemento de quote
         const quoteCard = document.createElement('div');
-        quoteCard.className = 'quote-card card bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-primary cursor-pointer transition-all group rounded-lg';
+        quoteCard.className = 'card bg-white border hover:shadow-md transition group quote-card';
         quoteCard.dataset.quoteId = quote.id;
         quoteCard.dataset.page = quote.location.page || 1;
-        quoteCard.dataset.text = quote.text_fragment;
 
-        // Construir HTML de tags
         const tagsHtml = quote.tags.map(tag => `
-            <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ring-gray-500/10"
-                  style="background-color: ${tag.color}20; color: ${tag.color}; border-color: ${tag.color}40;">
+            <span class="badge badge-xs" style="background-color: ${tag.color}20; color: ${tag.color}">
                 ${tag.name}
             </span>
         `).join('');
 
         quoteCard.innerHTML = `
             <div class="card-body p-3">
-                <div class="flex justify-between items-start mb-1">
-                    <span class="badge badge-ghost badge-xs font-mono">Pg. ${quote.location.page || '?'}</span>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="badge badge-ghost badge-xs">Pg. ${quote.location.page || '?'}</span>
                     <span class="badge badge-success badge-xs gap-1">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -269,128 +141,50 @@ class QuoteManager {
                         NUEVO
                     </span>
                 </div>
-
-                <p class="text-xs text-gray-600 line-clamp-3 italic group-hover:text-gray-900 border-l-2 border-gray-300 pl-2 group-hover:border-primary transition-colors">
+                <p class="text-xs text-gray-600 line-clamp-3 italic cursor-pointer hover:text-gray-900 border-l-2 border-gray-300 pl-2 hover:border-primary transition-colors"
+                   onclick="scrollToQuote(${quote.id}, ${quote.location.page || 1})">
                     "${quote.text_fragment}"
                 </p>
-
-                <div class="flex flex-wrap gap-1 mt-2">
-                    ${tagsHtml}
-                </div>
+                <div class="flex flex-wrap gap-1 mt-2">${tagsHtml}</div>
             </div>
         `;
 
-        // Click handler
-        quoteCard.addEventListener('click', () => {
-            this.scrollToText(quote.text_fragment, quote.location.page);
-        });
+        this.quotesList.insertBefore(quoteCard, this.quotesList.firstChild);
 
-        // Agregar al inicio de la lista
-        quotesList.insertBefore(quoteCard, quotesList.firstChild);
-
-        // Animación de entrada
+        // Animación
         quoteCard.style.opacity = '0';
         quoteCard.style.transform = 'translateY(-10px)';
         quoteCard.style.transition = 'all 0.3s ease-out';
-
         setTimeout(() => {
             quoteCard.style.opacity = '1';
             quoteCard.style.transform = 'translateY(0)';
         }, 10);
-
-        console.log('✅ Quote added to sidebar');
     }
-    async handleDeleteQuote(quoteId) {
-        console.log(`🗑️ Delete quote requested: ${quoteId}`);
 
-        if (!confirm('¿Estás seguro de que deseas eliminar esta extracción?')) {
-            return;
-        }
-
-        try {
-            const deleteUrl = `${this.deleteApiUrl}${quoteId}`;
-
-            const response = await fetch(deleteUrl, {
-                method: 'DELETE',
-                headers: { 'X-CSRFToken': this.csrfToken }
-            });
-
-            if (response.ok) {
-                console.log('✅ Quote deleted successfully');
-
-                // 1. Remover del Sidebar visualmente
-                const quoteCard = document.querySelector(`.quote-card[data-quote-id="${quoteId}"]`);
-                if (quoteCard) {
-                    quoteCard.style.transform = 'translateX(20px)';
-                    quoteCard.style.opacity = '0';
-                    setTimeout(() => {
-                        quoteCard.remove();
-                        // Verificar si quedó vacío para mostrar el placeholder
-                        if (!document.querySelector('.quote-card')) this.showEmptyState();
-                    }, 300);
-                }
-
-                // 2. Actualizar contador (-1)
-                this.updateQuoteCount(-1);
-
-                // 3. Quitar highlight del PDF (sin recargar)
-                if (this.pdfViewer && typeof this.pdfViewer.removeQuoteHighlight === 'function') {
-                    this.pdfViewer.removeQuoteHighlight(quoteId);
-                }
-
-                this.showSuccessNotification('Quote eliminada');
-
-            } else {
-                const error = await response.json();
-                alert(`Error al eliminar: ${error.error || 'Error desconocido'}`);
-            }
-        } catch (error) {
-            console.error('❌ Network error:', error);
-            alert(`Error de red: ${error.message}`);
+    scrollToQuoteInSidebar(quoteId) {
+        const quoteCard = document.querySelector(`[data-quote-id="${quoteId}"]`);
+        if (quoteCard) {
+            quoteCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            quoteCard.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(() => {
+                quoteCard.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            }, 2000);
         }
     }
-
-    updateQuoteCount(delta = 1) {
-        const counter = document.getElementById('quotes-count');
-        if (counter) {
-            let currentCount = parseInt(counter.textContent) || 0;
-            const newCount = Math.max(0, currentCount + delta);
-            counter.textContent = newCount;
-        }
-    }
-
-    showEmptyState() {
-        if (!this.quotesList) return;
-
-        this.quotesList.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-40 text-gray-400" id="empty-quotes-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mb-2 opacity-50">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-                <p class="text-sm font-medium">Sin extracciones</p>
-                <p class="text-xs">Selecciona texto para comenzar</p>
-            </div>
-        `;
-    }
-
 
     showSuccessNotification(message) {
         const toast = document.createElement('div');
-        toast.className = 'alert alert-success fixed bottom-4 right-4 w-auto shadow-lg z-50 animate-fade-in';
+        toast.className = 'alert alert-success fixed bottom-4 right-4 w-auto shadow-lg z-50';
         toast.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>${message}</span>
         `;
-
         document.body.appendChild(toast);
-
         setTimeout(() => {
             toast.style.opacity = '0';
-            toast.style.transform = 'translateY(20px)';
-            toast.style.transition = 'all 0.3s ease-out';
-
+            toast.style.transition = 'all 0.3s';
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
