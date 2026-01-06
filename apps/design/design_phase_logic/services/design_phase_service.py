@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog, DesignStagePlan
-from apps.design.design_phase_logic.dtos import DesignTimelineStageDTO
+from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog, DesignStagePlan
 from apps.design.eligibility_criteria.services.eligibility_criterion_services import EligibilityCriterionService
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
@@ -11,50 +11,6 @@ from apps.acquisition.facade import get_acquisition_facade
 
 
 class DesignPhaseService:
-
-    def get_current_stage_plan(self, project_id: int) -> DesignStagePlan | None:
-        """
-        Retorna el plan (fechas) de la etapa actual.
-        """
-        try:
-            phase = DesignPhase.objects.get(pk=project_id)
-            return DesignStagePlan.objects.filter(phase=phase, stage=phase.current_stage).first()
-        except DesignPhase.DoesNotExist:
-            return None
-
-    def get_design_timeline_context(self, project_id: int) -> list[DesignTimelineStageDTO]:
-        """
-        Retorna el estado de la línea de tiempo.
-        """
-        try:
-            phase = DesignPhase.objects.get(pk=project_id)
-        except DesignPhase.DoesNotExist:
-            return []
-
-        current_stage = phase.current_stage
-        design_flow = DesignPhase.DESIGN_FLOW
-        timeline_stages = []
-        is_past = True
-
-        for stage_key in design_flow:
-            status = 'upcoming'
-            if stage_key == current_stage:
-                is_past = False
-                status = 'current'
-            elif stage_key == DesignPhase.DesignStage.FINISHED:
-                status = 'finished'
-            elif is_past:
-                status = 'completed'
-
-            # Recuperamos la etiqueta legible del enum
-            label = DesignPhase.DesignStage(stage_key).label
-
-            timeline_stages.append(DesignTimelineStageDTO(
-                key=stage_key,
-                label=label,
-                status=status
-            ))
-        return timeline_stages
 
     @transaction.atomic
     def consolidate_research_question_stage(self, project_id: int, user):
