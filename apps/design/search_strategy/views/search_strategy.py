@@ -10,8 +10,11 @@ from django.urls import reverse
 from apps.project.decorators import project_member_required, build_design_url
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
+from apps.design.search_strategy.selectors import SearchStrategySelector
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.research_question.selectors import ResearchQuestionSelector
 from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.selectors import DesignPhaseSelector
 from apps.project.structure.services.project_services import ProjectService
 
 search_strategy_service = SearchStrategyService()
@@ -23,8 +26,8 @@ design_phase_service = DesignPhaseService()
 @project_member_required
 def open_search_strategy_panel(request, project_id, project):
     protocol_questions = project.protocol_questions
-    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
+    current_stage_plan = DesignPhaseSelector.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
 
     context = {
         'project': project,
@@ -40,14 +43,15 @@ def open_search_strategy_panel(request, project_id, project):
 @require_POST
 def generate_and_save_search_string_for_question(request, project_id, question_id, project):
     try:
-        strategy = search_strategy_service.get_strategy_for_question(question_id)
-        logging.debug(f"Generating search string for strategy ID: {strategy.id if strategy else 'None'}")
+        # Use Selector to get DTO
+        strategy_dto = SearchStrategySelector.get_by_question_id(question_id)
+        logging.debug(f"Generating search string for strategy ID: {strategy_dto.id if strategy_dto else 'None'}")
 
-        if not strategy:
+        if not strategy_dto:
             return JsonResponse({'error': 'Strategy not found'}, status=404)
 
         updated_strategy = search_strategy_service.generate_and_save_search_string(
-            strategy_id=strategy.id,
+            strategy_id=strategy_dto.id,
             user_id=request.user.id
         )
 
@@ -63,31 +67,37 @@ def generate_and_save_search_string_for_question(request, project_id, question_i
 
 @project_member_required
 def search_strategy_builder_view(request, project_id, project):
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
-    stage_end_date = design_phase_service.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
+    stage_end_date = DesignPhaseSelector.get_current_stage_plan(project_id)
     question_id = request.GET.get('question_id')
     version_id_to_load = request.GET.get('version_id')
     selected_question = None
     strategy = None
     pool_keywords = []
     initial_visual_data = {}
-    questions_list = research_question_service.get_questions_for_workspace(project_id, request.user)
+    questions_list = ResearchQuestionSelector.get_list_for_workspace(project_id, request.user)
 
     if question_id:
         try:
-            selected_question = research_question_service.get_research_question_by_id(question_id, request.user)
+            selected_question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+            # This is a write/create operation, so we keep using the Service
             strategy = search_strategy_service.get_or_create_strategy(selected_question.id)
             pool_keywords = project_service.get_project_keyterms(project_id)
 
             if version_id_to_load:
                 try:
                     v_id = int(version_id_to_load)
-                    version = search_strategy_service.get_version_by_id(v_id)
-                    initial_visual_data = version.json_definition
-                    messages.info(request, f"Loaded version {version.version_number} from history.")
-                except (ValueError, SearchStrategyVersion.DoesNotExist):
+                    version = SearchStrategySelector.get_version_by_id(v_id)
+                    if version:
+                        initial_visual_data = version.json_definition
+                        messages.info(request, f"Loaded version {version.version_number} from history.")
+                    else:
+                        # Fallback if version not found
+                        initial_visual_data = strategy.json_definition
+                        messages.warning(request, "Could not load requested version. Loaded current draft instead.")
+                except ValueError:
                     initial_visual_data = strategy.json_definition
-                    messages.warning(request, "Could not load requested version. Loaded current draft instead.")
+                    messages.warning(request, "Invalid version ID. Loaded current draft instead.")
             else:
                 initial_visual_data = strategy.json_definition
 
@@ -137,24 +147,17 @@ def save_visual_strategy(request, project_id, strategy_id, project):
 @project_member_required
 def get_strategy_versions(request, project_id, question_id, project):
     try:
-        strategy = search_strategy_service.get_strategy_for_question(question_id)
+        # Use Selector to get DTO
+        strategy_dto = SearchStrategySelector.get_by_question_id(question_id)
 
-        if not strategy:
+        if not strategy_dto:
             return JsonResponse({'versions': []})
 
-        versions = strategy.versions.all().order_by('-version_number').values(
-            'id',
-            'strategy_id',
-            'version_number',
-            'final_search_string',
-            'total_found',
-            'status',
-            'justification',
-            'created_at'
-        )
+        # Use Selector to get versions list
+        versions_data = SearchStrategySelector.get_versions_for_strategy(strategy_dto.id)
 
         data = []
-        for v in versions:
+        for v in versions_data:
             data.append({
                 'id': v['id'],
                 'strategy_id': v['strategy_id'],
@@ -175,7 +178,11 @@ def get_strategy_versions(request, project_id, question_id, project):
 @project_member_required
 def search_results_view(request, project_id, strategy_id, project):
     try:
-        strategy = search_strategy_service.get_strategy_by_id(strategy_id)
+        # Use Selector to get DTO
+        strategy_dto = SearchStrategySelector.get_by_id(strategy_id)
+        if not strategy_dto:
+            raise Http404("Strategy not found")
+
         results_dto = search_strategy_service.get_search_results_dto(strategy_id)
         year_filter = request.GET.get('year')
         studies = getattr(results_dto, 'studies', []) if results_dto else []
@@ -185,16 +192,16 @@ def search_results_view(request, project_id, strategy_id, project):
 
         context = {
             'project': project,
-            'strategy': strategy,
+            'strategy': strategy_dto,  # Passing DTO instead of Model
             'results': results_dto,
             'studies': studies,
             'years_range': range(2025, 2000, -1),
             'current_year_filter': year_filter,
-            'timeline_stages': design_phase_service.get_design_timeline_context(project.id)
+            'timeline_stages': DesignPhaseSelector.get_design_timeline_context(project.id)
         }
         return render(request, 'search_results.html', context)
-    except SearchStrategy.DoesNotExist:
-        raise Http404("Strategy not found")
+    except Exception as e:
+        raise Http404(f"Strategy not found or error: {str(e)}")
 
 
 @project_member_required
@@ -261,9 +268,7 @@ def consolidate_search_strategy_stage_view(request, project_id, project):
 
         design_phase_service.consolidate_search_strategy_stage(project_id, request.user)
         messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.")
-        # Para mandarle a alexis
-        # Recuperar el objeto DTO de la version de la estrategia 
-        
+
         return redirect(build_design_url(project_id, 'eligibility-criteria/'))
 
     except Exception as e:

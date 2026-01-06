@@ -1,23 +1,21 @@
 import logging
-import hashlib
-import json
-from django.core.cache import cache
 from apps.design.search_strategy.models.keyword import Keyword, ProjectKeyword
 from apps.design.search_strategy.models.search_strategy import SearchStrategy, SearchStrategyVersion
 from django.db.models import Max
 from django.db import transaction
-from apps.acquisition.facade import get_acquisition_facade
-from apps.design.search_strategy.services.nlp.translation_service import TranslationService
 
 from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
 from apps.design.research_question.models.research_question import ResearchQuestion
 from django.core.exceptions import ValidationError
+from apps.design.access_control import DesignAccessPolicy
+from django.contrib.auth.models import User
+from apps.design.search_strategy.services.search_preview_service import SearchPreviewService
 
 
 class SearchStrategyService:
     def __init__(self):
-        self.translation_service = TranslationService()
         self.string_builder = SearchStringBuilder()
+        self.preview_service = SearchPreviewService()
 
     @transaction.atomic
     def generate_and_save_search_string(self, strategy_id: int, user_id: int) -> SearchStrategy:
@@ -117,9 +115,6 @@ class SearchStrategyService:
         self._link_project_keywords_to_strategy(strategy, keyword_data)
         return strategy
 
-    def get_strategy_for_question(self, question_id: int) -> SearchStrategy | None:
-        return SearchStrategy.objects.filter(research_question_id=question_id).first()
-
     def create_or_update_strategy_with_keywords(self, research_question_id: int, keyword_data: list[dict], user) -> SearchStrategy:
         strategy = self._get_or_create_strategy(research_question_id)
         self._link_project_keywords_to_strategy(strategy, keyword_data)
@@ -131,8 +126,8 @@ class SearchStrategyService:
     def get_or_create_strategy(self, research_question_id: int) -> SearchStrategy:
         return self._get_or_create_strategy(research_question_id)
 
-    def get_strategy_by_id(self, strategy_id: int) -> SearchStrategy:
-        return SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
+    # get_strategy_by_id moved to Selector
+    # get_strategy_for_question moved to Selector
 
     def get_or_create_project_keyword(self, project_id: int, term: str, synonyms: str) -> ProjectKeyword:
         keyword, created = ProjectKeyword.objects.update_or_create(
@@ -171,7 +166,13 @@ class SearchStrategyService:
 
     @transaction.atomic
     def save_strategy_from_visual_builder(self, strategy_id: int, visual_data: dict, user_id: int) -> SearchStrategy:
-        strategy = SearchStrategy.objects.get(id=strategy_id)
+        strategy = SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
+        user = User.objects.get(id=user_id)
+
+        # Authorization Check (Edit)
+        if not DesignAccessPolicy.can_edit_question(user, strategy.research_question):
+            raise ValidationError("You do not have permission to edit this strategy.")
+
         new_search_string = self.string_builder.build_from_json(visual_data)
         if strategy.final_search_string == new_search_string and strategy.json_definition == visual_data:
             return strategy
@@ -180,37 +181,25 @@ class SearchStrategyService:
         strategy.status = SearchStrategy.Status.DRAFT
         strategy.last_modified_by_id = user_id
         strategy.save()
-        acquisition_facade = get_acquisition_facade()
-        try:
-            translated_json = self.translation_service.translate_json_definition(visual_data)
-            preview_result = acquisition_facade.preview_search(translated_json)
-            count = getattr(preview_result, 'total_found', 0)
 
-        except Exception as e:
-            print(f"Error fetching search preview: {e}")
-            count = 0
+        count = self.preview_service.translate_and_preview(visual_data)
         self.create_version_snapshot(strategy.id, user_id, total_found=count)
 
         return strategy
 
     def get_search_results_dto(self, strategy_id: int):
         strategy = self.get_or_create_strategy(strategy_id)
-        strategy_hash = hashlib.md5(json.dumps(strategy.json_definition, sort_keys=True).encode()).hexdigest()
-        cache_key = f"search_preview:{strategy_id}:{strategy_hash}"
-        cached_result = cache.get(cache_key)
-        if cached_result:
-            return cached_result
-        acquisition_facade = get_acquisition_facade()
-        json_definition_translated = self.translation_service.translate_json_definition(strategy.json_definition)
-        try:
-            results_dto = acquisition_facade.preview_search(json_definition_translated)
-            cache.set(cache_key, results_dto, timeout=86400)
-            return results_dto
-        except Exception as e:
-            raise RuntimeError(f"Error fetching search results: {e}")
+        return self.preview_service.get_search_results_dto(strategy)
 
     def change_strategy_status(self, strategy_id: int, status: str, user, justification: str = None) -> SearchStrategy:
-        strategy = SearchStrategy.objects.get(id=strategy_id)
+        strategy = SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
+
+        # Authorization Check (Review)
+        if status in [SearchStrategy.Status.APPROVED, SearchStrategy.Status.REJECTED]:
+            # Reusing review permission from question/phase
+            if not DesignAccessPolicy.can_review_question(user, strategy.research_question.design_phase):
+                raise ValidationError("You do not have permission to review strategies.")
+
         strategy.status = status
         strategy.last_modified_by = user
         if status == SearchStrategy.Status.APPROVED:
@@ -229,6 +218,9 @@ class SearchStrategyService:
 
     @transaction.atomic
     def finalize_strategies_stage(self, project_id: int, user) -> list[int]:
+        # Authorization is handled by DesignPhaseService.consolidate_search_strategy_stage calling this.
+        # But we can add a check here too if needed.
+
         approved_questions = ResearchQuestion.objects.filter(
             design_phase_id=project_id,
             status=ResearchQuestion.Status.APPROVED
