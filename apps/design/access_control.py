@@ -117,3 +117,30 @@ class DesignAccessPolicy:
         if phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
             return True
         return is_owner
+
+    @staticmethod
+    def can_edit_strategy(user: User, strategy) -> bool:
+        """
+        Determines if a user can edit a search strategy.
+        Rule: Same as questions/criteria.
+        - Owner of project can always edit.
+        - Researcher who created the strategy can edit their own.
+        """
+        phase = strategy.research_question.design_phase
+        is_owner = DesignAccessPolicy.is_owner(user, phase.project)
+
+        if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
+            return is_owner or (strategy.created_by_id == user.id)
+
+        return is_owner
+
+    @staticmethod
+    def can_review_strategy(user: User, phase: DesignPhase) -> bool:
+        """
+        Determines if a user can review (Approve/Reject) search strategies.
+        Rule: Collaborative - all project members can review.
+        """
+        is_owner = DesignAccessPolicy.is_owner(user, phase.project)
+        if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
+            return True  # Collaborative: All project members can review
+        return is_owner

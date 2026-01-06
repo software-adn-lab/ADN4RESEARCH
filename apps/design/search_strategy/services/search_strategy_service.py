@@ -183,7 +183,7 @@ class SearchStrategyService:
         user = User.objects.get(id=user_id)
 
         # Authorization Check (Edit)
-        if not DesignAccessPolicy.can_edit_question(user, strategy.research_question):
+        if not DesignAccessPolicy.can_edit_strategy(user, strategy):
             raise ValidationError("You do not have permission to edit this strategy.")
 
         new_search_string = self.string_builder.build_from_json(visual_data)
