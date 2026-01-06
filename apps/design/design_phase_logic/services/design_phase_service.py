@@ -11,36 +11,43 @@ from apps.acquisition.facade import get_acquisition_facade
 
 
 class DesignPhaseService:
+    def _consolidate_stage(
+        self,
+        project_id: int,
+        user,
+        current_stage: DesignPhase.DesignStage,
+        next_stage: DesignPhase.DesignStage,
+        finalize_callback: callable = None
+    ) -> tuple:
+
+        phase = DesignPhase.objects.get(pk=project_id)
+        # 1. Validar etapa actual
+        if phase.current_stage != current_stage:
+            raise ValidationError(
+                f"Cannot consolidate {current_stage.label}. "
+                f"Current stage is {phase.current_stage}"
+            )
+        # 2. Ejecutar lógica de dominio específica (si existe)
+        callback_result = None
+        if finalize_callback:
+            callback_result = finalize_callback(project_id, user)
+        # 3. Transición de estado (incluye actualización de cronograma automáticamente)
+        self._transition_stage(phase, next_stage)
+        return phase, callback_result
 
     @transaction.atomic
     def consolidate_creation_stage(self, project_id: int, user):
         """
         Cierra la etapa de Creación e inicia Discusión.
-        Ajusta dinámicamente el cronograma: la fecha de inicio planificada de RQ_DISCUSSION
-        se convierte en la fecha actual.
+        No requiere lógica de dominio específica.
         """
-        phase = DesignPhase.objects.get(pk=project_id)
-
-        if phase.current_stage != DesignPhase.DesignStage.RQ_CREATION:
-            raise ValidationError(f"Cannot consolidate Creation. Current stage is {phase.current_stage}")
-
-        # 1. Actualizar Cronograma (Dynamic Schedule)
-        # Buscamos el plan de la siguiente etapa (RQ_DISCUSSION)
-        try:
-            next_stage_plan = DesignStagePlan.objects.get(
-                phase=phase,
-                stage=DesignPhase.DesignStage.RQ_DISCUSSION
-            )
-            # Reseteamos el inicio planificado a HOY
-            next_stage_plan.planned_start_date = timezone.now().date()
-            next_stage_plan.save()
-        except DesignStagePlan.DoesNotExist:
-            # Si no hay plan, no pasa nada (o podríamos crearlo, pero asumimos que existe)
-            pass
-
-        # 2. Transición de estado con auditoría
-        self._transition_stage(phase, DesignPhase.DesignStage.RQ_DISCUSSION)
-
+        phase, _ = self._consolidate_stage(
+            project_id=project_id,
+            user=user,
+            current_stage=DesignPhase.DesignStage.RQ_CREATION,
+            next_stage=DesignPhase.DesignStage.RQ_DISCUSSION,
+            finalize_callback=None
+        )
         return phase
 
     @transaction.atomic
@@ -48,29 +55,16 @@ class DesignPhaseService:
         """
         Cierra la etapa de Preguntas e inicia Criterios.
         """
-        phase = DesignPhase.objects.get(pk=project_id)
-
-        if phase.current_stage != DesignPhase.DesignStage.RQ_DISCUSSION:
-            raise ValidationError(f"Cannot consolidate Questions. Current stage is {phase.current_stage}")
-
-        # 1. Ejecutar lógica de dominio específica del sub-módulo
-        service = ResearchQuestionService()
-        service.finalize_questions_stage(project_id, user)
-
-        # 1.5. Actualizar Cronograma (Dynamic Schedule)
-        try:
-            next_stage_plan = DesignStagePlan.objects.get(
-                phase=phase,
-                stage=DesignPhase.DesignStage.CRITERIA_DEFINITION
-            )
-            next_stage_plan.planned_start_date = timezone.now().date()
-            next_stage_plan.save()
-        except DesignStagePlan.DoesNotExist:
-            pass
-
-        # 2. Transición de estado con auditor ía
-        self._transition_stage(phase, DesignPhase.DesignStage.CRITERIA_DEFINITION)
-
+        def finalize_questions(proj_id, usr):
+            service = ResearchQuestionService()
+            return service.finalize_questions_stage(proj_id, usr)
+        phase, _ = self._consolidate_stage(
+            project_id=project_id,
+            user=user,
+            current_stage=DesignPhase.DesignStage.RQ_DISCUSSION,
+            next_stage=DesignPhase.DesignStage.CRITERIA_DEFINITION,
+            finalize_callback=finalize_questions
+        )
         return phase
 
     @transaction.atomic
@@ -78,28 +72,16 @@ class DesignPhaseService:
         """
         Cierra la etapa de Criterios e inicia Estrategia de Búsqueda.
         """
-        phase = DesignPhase.objects.get(pk=project_id)
-        if phase.current_stage != DesignPhase.DesignStage.CRITERIA_DEFINITION:
-            raise ValidationError(f"Cannot consolidate Criteria. Current stage is {phase.current_stage}")
-
-        # 1. Ejecutar lógica de dominio específica del sub-módulo
-        service = EligibilityCriterionService()
-        service.finalize_criteria_stage(project_id, user)
-
-        # 1.5. Actualizar Cronograma (Dynamic Schedule)
-        try:
-            next_stage_plan = DesignStagePlan.objects.get(
-                phase=phase,
-                stage=DesignPhase.DesignStage.SEARCH_STRATEGY
-            )
-            next_stage_plan.planned_start_date = timezone.now().date()
-            next_stage_plan.save()
-        except DesignStagePlan.DoesNotExist:
-            pass
-
-        # 2. Transición de estado con auditoría
-        self._transition_stage(phase, DesignPhase.DesignStage.SEARCH_STRATEGY)
-
+        def finalize_criteria(proj_id, usr):
+            service = EligibilityCriterionService()
+            return service.finalize_criteria_stage(proj_id, usr)
+        phase, _ = self._consolidate_stage(
+            project_id=project_id,
+            user=user,
+            current_stage=DesignPhase.DesignStage.CRITERIA_DEFINITION,
+            next_stage=DesignPhase.DesignStage.SEARCH_STRATEGY,
+            finalize_callback=finalize_criteria
+        )
         return phase
 
     @transaction.atomic
@@ -164,8 +146,8 @@ class DesignPhaseService:
     def _transition_stage(self, phase: DesignPhase, next_stage: str):
         """
         Método helper privado para manejar la lógica repetitiva de cerrar logs y abrir nuevos.
-        Garantiza la trazabilidad (RNF-03).
-        También reprograma el inicio de la siguiente etapa a HOY (Dynamic Schedule).
+        Garantiza la trazabilidad(RNF - 03).
+        También reprograma el inicio de la siguiente etapa a HOY(Dynamic Schedule).
         """
         # 1. Cerrar el log de la etapa actual
         current_log = DesignStageLog.objects.filter(
