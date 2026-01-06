@@ -108,13 +108,42 @@ class DesignPhaseService:
                 raise ValidationError(f"Error persisting strategy {strategy_id}: {str(e)}")
         return phase
 
+    @transaction.atomic
+    def check_deadlines_and_consolidate(self, system_user):
+        """
+        Checks for expired stages and consolidates them automatically.
+        Currently only enforces RQ_CREATION deadline.
+        """
+        active_phases = DesignPhase.objects.filter(
+            current_stage=DesignPhase.DesignStage.RQ_CREATION,
+            is_active=True
+        )
+        today = timezone.now().date()
+        count = 0
+
+        for phase in active_phases:
+            try:
+                plan = DesignStagePlan.objects.get(
+                    phase=phase,
+                    stage=DesignPhase.DesignStage.RQ_CREATION
+                )
+                if today >= plan.planned_end_date:
+                    self.consolidate_creation_stage(phase.project_id, system_user)
+                    count += 1
+            except DesignStagePlan.DoesNotExist:
+                continue
+            except Exception:
+                # Log error but continue processing others
+                continue
+        return count
+
     def _transition_stage(self, phase: DesignPhase, next_stage: str):
         """
         Método helper privado para manejar la lógica repetitiva de cerrar logs y abrir nuevos.
         Garantiza la trazabilidad (RNF-03).
+        También reprograma el inicio de la siguiente etapa a HOY (Dynamic Schedule).
         """
         # 1. Cerrar el log de la etapa actual
-        # Buscamos el último log abierto para esta etapa
         current_log = DesignStageLog.objects.filter(
             phase=phase,
             stage=phase.current_stage,
@@ -124,11 +153,21 @@ class DesignPhaseService:
         if current_log:
             current_log.end_date = timezone.now()
             current_log.save()
+
         # 2. Actualizar la fase
         phase.current_stage = next_stage
-        phase.save()  # El método save() del modelo maneja el is_active = False si es FINISHED
-        # 3. Crear el log para la nueva etapa (si no es el estado final de cierre)
+        phase.save()
+
+        # 3. Dynamic Schedule: Reset planned start date of next stage to TODAY
         if next_stage != DesignPhase.DesignStage.FINISHED:
+            try:
+                next_plan = DesignStagePlan.objects.get(phase=phase, stage=next_stage)
+                next_plan.planned_start_date = timezone.now().date()
+                next_plan.save()
+            except DesignStagePlan.DoesNotExist:
+                pass
+
+            # 4. Crear el log para la nueva etapa
             DesignStageLog.objects.create(
                 phase=phase,
                 stage=next_stage,

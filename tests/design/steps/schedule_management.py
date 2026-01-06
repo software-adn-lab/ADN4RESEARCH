@@ -5,12 +5,10 @@ from freezegun import freeze_time
 from django.utils import timezone
 from datetime import datetime, date
 from django.contrib.auth import get_user_model
-
-
+from django.core.management import call_command
 from apps.design.design_phase_logic.models.design_phase import (
     DesignPhase, DesignStagePlan, DesignStageLog
 )
-
 from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
 
 User = get_user_model()
@@ -22,6 +20,10 @@ def step_dado_plan_aprobado(context):
     # Usamos get_or_create para evitar errores si el usuario ya existe por otro test
     user, _ = User.objects.get_or_create(username='owner', defaults={'password': 'password'})
     context.user = user
+
+    # Crear superuser para el comando de sistema
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('admin', 'admin@example.com', 'password')
 
     # 2. Setup Proyecto
     # IMPORTANTE: Guardamos el OBJETO en context.project para futuros pasos
@@ -117,6 +119,11 @@ def step_impl(context, stage_name):
 
     else:
         raise ValueError(f"Etapa no soportada en steps: {stage_name}")
+
+
+@when('el sistema realice la verificación de fechas límite')
+def step_ejecutar_comando_verificacion(context):
+    call_command('check_stage_deadlines')
 
 
 @then('la etapa activa debe ser "{stage_name}"')
