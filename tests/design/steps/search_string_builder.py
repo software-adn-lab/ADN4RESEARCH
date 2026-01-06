@@ -88,7 +88,6 @@ def step_selecciono_pregunta_investigacion(context):
     assert context.research_question is not None
     assert context.research_question in context.project.protocol_questions
 
-
 @step('que tengo la lista de términos clave y sinónimos de dicha pregunta')
 def step_tengo_lista_terminos_sinonimos(context):
     keyword_data = [
@@ -101,7 +100,6 @@ def step_tengo_lista_terminos_sinonimos(context):
         user=context.researcher
     )
 
-
 @when('pruebo la cadena de búsqueda que he construido')
 def step_pruebo_cadena_busqueda(context):
     # Suponiendo el drag and drop jeje
@@ -112,8 +110,6 @@ def step_pruebo_cadena_busqueda(context):
         ],
         "exclusions": []
     }
-    mock_facade = MagicMock()
-    mock_facade.preview_search.return_value = MagicMock(total_found=150)
 
 @step('el sistema traduce la cadena de búsqueda a inglés')
 def step_sistema_traduce_cadena(context):
@@ -122,11 +118,12 @@ def step_sistema_traduce_cadena(context):
 
 @then('se recibirán resultados de dicha búsqueda desde el módulo de adquisición')
 def step_recibiran_resultados_adquisicion(context):
-    with patch('apps.design.search_strategy.services.search_strategy_service.get_acquisition_facade') as mock_get_facade:
-        mock_facade = MagicMock()
-        mock_facade.preview_search.return_value = MagicMock(total_found=150)
-        mock_get_facade.return_value = mock_facade
+    mock_facade = MagicMock()
+    mock_facade.preview_search.return_value = MagicMock(total_found=150)
+    original_facade = search_strategy_service.preview_service.acquisition_facade
+    search_strategy_service.preview_service.acquisition_facade = mock_facade
 
+    try:
         context.strategy = search_strategy_service.save_strategy_from_visual_builder(
             strategy_id=context.strategy.id,
             visual_data=context.visual_data,
@@ -134,11 +131,13 @@ def step_recibiran_resultados_adquisicion(context):
         )
         mock_facade.preview_search.assert_called_once()
         context.search_results_count = 150
+    finally:
+        search_strategy_service.preview_service.acquisition_facade = original_facade
 
 @step('se creará una versión borrador de la estratégia de busqueda')
 def step_creara_version_borrador(context):
     strategy = SearchStrategy.objects.get(id=context.strategy.id)
     assert strategy.status == SearchStrategy.Status.DRAFT
-    latest_version = strategy.versions.latest('created_at')  # esto para el memento/snapshot que cree
+    latest_version = strategy.versions.latest('created_at')
     assert latest_version.total_found == 150
     assert latest_version.version_number > 0
