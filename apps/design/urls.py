@@ -6,6 +6,7 @@ from apps.design.research_question.views import research_question, question_disc
 from apps.design.search_strategy.views import project_keyword, search_strategy
 from apps.design.design_phase_logic.views import navigation
 from apps.design.shared.views import dashboard
+from apps.design.design_phase_logic.views import schedule_management as design_phase_views
 
 app_name = 'design'
 
@@ -19,6 +20,7 @@ question_patterns = [
     path('<int:question_id>/submit/', research_question.send_research_question_for_review, name='submit'),
     path('<int:question_id>/generate-strategy/', search_strategy.generate_and_save_search_string_for_question, name='generate_strategy'),
     path('consolidate/', research_question.consolidate_creation_stage_view, name='consolidate_creation'),
+    path('schedule/manage/', design_phase_views.manage_schedule_view, name='manage_schedule'),
 ]
 
 # Discussion Stage URL patterns

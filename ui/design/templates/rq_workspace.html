@@ -194,6 +194,18 @@
             Consolidate Stage
         </button>
     </form>
+    {% endif %}    
+    {% if is_owner %}
+    <button type="button" 
+            onclick="document.getElementById('schedule_manager_modal').showModal()"
+            class="btn btn-outline btn-primary gap-2 hover:btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+             stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" 
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        </svg>
+        Manage Timeline
+    </button>
     {% endif %}
 </div>
 
@@ -224,7 +236,93 @@
         </div>
     </div>
 </dialog>
-
+<!-- Schedule Manager Modal -->
+<dialog id="schedule_manager_modal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        
+        <h3 class="font-bold text-xl mb-2">Manage Project Timeline</h3>
+        <p class="text-sm text-base-content/70 mb-4">
+            Edit stage dates. Dates must be between 
+            <strong>{{ project.created_at|date:"Y-m-d" }}</strong> and 
+            <strong>{{ project.end_date|date:"Y-m-d" }}</strong>
+        </p>
+        
+        <form method="POST" action="{% url 'design:questions:manage_schedule' project_id=project.id %}">
+            {% csrf_token %}
+            
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead class="bg-base-200">
+                        <tr>
+                            <th class="w-1/4">Stage</th>
+                            <th class="w-1/4">Status</th>
+                            <th class="w-1/4">Start Date</th>
+                            <th class="w-1/4">End Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stage_plan in timeline_stages %}
+                        <tr class="{% if stage_plan.stage == current_stage %}bg-primary/10{% endif %}">
+                            <td class="font-semibold">
+                                {{ stage_plan.get_stage_display }}
+                                {% if stage_plan.stage == current_stage %}
+                                <span class="badge badge-primary badge-sm ml-2">ACTIVE</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stage_plan.actual_end_date %}
+                                <span class="badge badge-success gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Closed
+                                </span>
+                                {% else %}
+                                <span class="badge badge-ghost">Open</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="date" 
+                                       name="stage_{{ stage_plan.stage }}_start"
+                                       value="{{ stage_plan.planned_start_date|date:'Y-m-d' }}"
+                                       min="{{ project.created_at|date:'Y-m-d' }}"
+                                       max="{{ project.end_date|date:'Y-m-d' }}"
+                                       class="input input-bordered input-sm w-full">
+                            </td>
+                            <td>
+                                <input type="date" 
+                                       name="stage_{{ stage_plan.stage }}_end"
+                                       value="{{ stage_plan.planned_end_date|date:'Y-m-d' }}"
+                                       min="{{ project.created_at|date:'Y-m-d' }}"
+                                       max="{{ project.end_date|date:'Y-m-d' }}"
+                                       class="input input-bordered input-sm w-full">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-base-content/50">
+                                No schedule defined yet
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" onclick="this.closest('dialog').close()" 
+                        class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 <script>
     const KEYWORD_URLS = {
         create: "{% url 'design:keywords:create' project_id=project.id %}",

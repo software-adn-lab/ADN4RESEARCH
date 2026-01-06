@@ -39,6 +39,8 @@ def step_entonces_lista_terminos_clave(context, expected_terms):
     project_keyword_list = {kw.term for kw in project_keywords}
     logging.info(f"Expected terms: {expected_terms_list}")
     logging.info(f"Project keywords: {project_keyword_list}")
+    logging.info(f"Expected terms: {expected_terms_list}")
+    logging.info(f"Project keywords: {project_keyword_list}")
     assert set(expected_terms_list) == set(project_keyword_list)
 
 @step('he identificado los sinónimos de los términos clave:')
@@ -72,6 +74,8 @@ def step_entonces_estrategia_sugerida_sera(context):
     normalized_actual = " ".join(actual_string.split())
     logging.info(f"Expected search string: {normalized_expected}")
     logging.info(f"Actual search string: {normalized_actual}")
+    logging.info(f"Expected search string: {expected_string}")
+    logging.info(f"Actual search string: {actual_string}")
     assert normalized_expected == normalized_actual
 
 @given('que selecciono una pregunta de investigación del protocolo de diseño del proyecto')

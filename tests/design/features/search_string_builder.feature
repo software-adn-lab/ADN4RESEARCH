@@ -26,7 +26,7 @@ Característica: Construir cadena de búsqueda
         Entonces la lista de términos clave del proyecto debe contener <expected_terms>
         Ejemplos:
         | framework_fields                                                                                                                                           | expected_terms |
-        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |
+        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
             
     Esquema del escenario: Generar sugerencia de estrategia de búsqueda de una pregunta de investigación
         Dado que he redactado una pregunta de investigación completa para el proyecto:
@@ -46,11 +46,11 @@ Característica: Construir cadena de búsqueda
         Cuando el sistema genere la sugerencia de estratégia de búsqueda
         Entonces la estratégia de búsqueda sugerida será:
         """
-            ("medicación tradicional" OR "tradición" OR "medicina") AND ("terapia física" OR "rehabilitación" OR "recuperación") AND ("adultos mayores" OR "ancianos" OR "viejos") AND ("mejora en movilidad")
+            ("traditional medication" OR "tradition" OR "medicine") AND ("physical therapy" OR "rehabilitation" OR "recovery") AND ("older adults" OR "elderly" OR "old") AND ("improvement in mobility")
         """
         Ejemplos:
         | framework_fields                                                                                                                                           | expected_terms |
-        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | adultos mayores,terapia física,medicación tradicional,mejora en movilidad |
+        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
 
     Escenario: Probar cadena de búsqueda generada
         Dado que selecciono una pregunta de investigación del protocolo de diseño del proyecto
