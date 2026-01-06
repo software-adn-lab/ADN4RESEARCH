@@ -1,12 +1,16 @@
 from django.shortcuts import redirect
-from django.urls import reverse
-from apps.project.decorators import project_member_required
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
+# REFACTORED: Import decorator from shared module
+from apps.shared.decorators import project_member_required
 
 
 @project_member_required
-def design_stages_router(request, project_id, project):
-    """Router that redirects to the appropriate stage view based on query param or current stage."""
+def design_stages_router(request, project_id, project_dto):
+    """
+    Router that redirects to the appropriate stage view based on query param or current stage.
+
+    CHANGED: project parameter is now project_dto (dict from IProjectManagement)
+    """
     target_stage = request.GET.get('target_stage')
     stage_map = {
         DesignPhase.DesignStage.RQ_CREATION.value: 'research-questions/',

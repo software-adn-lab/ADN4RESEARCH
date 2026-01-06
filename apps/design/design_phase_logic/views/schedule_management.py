@@ -1,18 +1,30 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.core.exceptions import ValidationError
+# REFACTORED: Import decorator from shared module
+from apps.shared.decorators import project_member_required
 from apps.design.design_phase_logic.selectors import DesignPhaseSelector
 from apps.design.design_phase_logic.models.design_phase import DesignStagePlan
-from apps.project.decorators import project_member_required
+
 
 @project_member_required
 @require_http_methods(["GET", "POST"])
-def manage_schedule_view(request, project_id, project):
+def manage_schedule_view(request, project_id, project_dto):
     """
     GET: Renderiza modal con cronograma editable
     POST: Actualiza fechas de stages
+
+    CHANGED: project parameter is now project_dto (dict from IProjectManagement)
     """
+    # REFACTORED: Check ownership via IProjectManagement (will add later)
+    # For now, we need project model - temporary workaround
+    from apps.project.structure.models.project_models import Project
+    project = Project.objects.get(pk=project_id)
+
     # Validar que sea owner
     if project.owner != request.user:
         messages.error(request, "Only project owner can manage schedule.")

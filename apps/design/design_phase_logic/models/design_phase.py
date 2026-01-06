@@ -1,11 +1,13 @@
 from django.db import models
 from django.utils import timezone
-from apps.project.structure.models.project_models import BasePhase
+# REFACTORED: Import BasePhase from Project API (conceptually correct + clean architecture)
+from apps.project.api.models import BasePhase
+
 
 class DesignPhaseQuerySet(models.QuerySet):
     def active(self):
         return self.filter(is_active=True)
-    
+
     def by_project(self, project_id):
         return self.filter(pk=project_id)
 
@@ -13,7 +15,7 @@ class DesignPhase(BasePhase):
     class DesignStage(models.TextChoices):
         RQ_CREATION = 'RQ_CREATION', 'Research Question Creation'
         RQ_DISCUSSION = 'RQ_DISCUSSION', 'Discussion'
-        CRITERIA_DEFINITION = 'CRITERIA_DEFINITION', 'Eligibility Criteria Definition' 
+        CRITERIA_DEFINITION = 'CRITERIA_DEFINITION', 'Eligibility Criteria Definition'
         SEARCH_STRATEGY = 'SEARCH_STRATEGY', 'Search Strategy Building'
         FINISHED = 'FINISHED', 'Finalized'
 
@@ -21,19 +23,19 @@ class DesignPhase(BasePhase):
         DesignStage.RQ_CREATION,
         DesignStage.RQ_DISCUSSION,
     ]
-    
+
     DESIGN_FLOW = [
-            DesignStage.RQ_CREATION, 
-            DesignStage.RQ_DISCUSSION, 
-            DesignStage.CRITERIA_DEFINITION,
-            DesignStage.SEARCH_STRATEGY,
-            DesignStage.FINISHED
+        DesignStage.RQ_CREATION,
+        DesignStage.RQ_DISCUSSION,
+        DesignStage.CRITERIA_DEFINITION,
+        DesignStage.SEARCH_STRATEGY,
+        DesignStage.FINISHED
     ]
 
     project = models.OneToOneField('project.Project', related_name='design_phase', on_delete=models.CASCADE, primary_key=True)
     current_stage = models.CharField(max_length=20, choices=DesignStage.choices, default=DesignStage.RQ_CREATION)
     objects = DesignPhaseQuerySet.as_manager()
-    
+
     def save(self, *args, **kwargs):
         self.full_clean()
         # Si llegamos a FINISHED, cerramos la fase automáticamente
@@ -41,7 +43,7 @@ class DesignPhase(BasePhase):
             self.is_active = False
             self.end_date = timezone.now()
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Design Phase: {self.project_id} ({self.current_stage})"
 
@@ -52,14 +54,14 @@ class DesignStageLog(models.Model):
     """
     phase = models.ForeignKey(DesignPhase, related_name='stage_logs', on_delete=models.CASCADE)
     stage = models.CharField(max_length=20, choices=DesignPhase.DesignStage.choices)
-    
+
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['start_date']
         verbose_name = "Stage Execution Log"
-        
+
     def close(self):
         self.end_date = timezone.now()
         self.save()
@@ -74,7 +76,7 @@ class DesignStagePlan(models.Model):
     """
     phase = models.ForeignKey(DesignPhase, related_name='planned_stages', on_delete=models.CASCADE)
     stage = models.CharField(max_length=20, choices=DesignPhase.DesignStage.choices)
-    
+
     planned_start_date = models.DateField()
     planned_end_date = models.DateField()
 

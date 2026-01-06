@@ -9,6 +9,7 @@ from apps.design.research_question.models.research_question import ResearchQuest
 from apps.design.eligibility_criteria.models.eligibility_criteria import EligibilityCriterion
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
+
 class DesignProtocolProvider(IDesignProtocol):
     """
     Clase que implementa a la interfaz IDesignProtocol.
@@ -60,6 +61,7 @@ class DesignProtocolProvider(IDesignProtocol):
         protocol_exclusion_criteria = [{'id': c['id'], 'description': c['description']} for c in criteria]
         return protocol_exclusion_criteria
 
+
 class DesignManagementProvider(IDesignManagement):
     """
     Implementa IDesignManagement.
@@ -82,7 +84,7 @@ class DesignManagementProvider(IDesignManagement):
         return self._service.initialize_design_schedule(project_id, schedule_data)
 
     def get_design_stages_info(self) -> List[dict]:
-        
+
         stages_info = []
         for stage_key in DesignPhase.DESIGN_FLOW:
             label = DesignPhase.DesignStage(stage_key).label
@@ -91,3 +93,20 @@ class DesignManagementProvider(IDesignManagement):
                 'label': label
             })
         return stages_info
+
+    def initialize_design_phase(self, project_id: int) -> int:
+        """
+        Create DesignPhase for project with initial stage.
+
+        This is called by ProjectService during project creation
+        to avoid circular import (ProjectService → DesignPhase).
+        """
+        # Import here to avoid circular dependency at module level
+        from apps.design.design_phase_logic.models.design_phase import DesignPhase
+
+        phase = DesignPhase.objects.create(
+            project_id=project_id,
+            current_stage=DesignPhase.DesignStage.RQ_CREATION,
+            is_active=True
+        )
+        return phase.project_id

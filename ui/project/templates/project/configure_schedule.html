@@ -46,7 +46,51 @@
                     </div>
                 </div>
             </div>
+                        {# NEW CARD: Design Phase Duration #}
+            <div class="card bg-base-100 shadow-xl border border-base-200">
+                <div class="card-body">
+                    <h2 class="card-title text-accent mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Design Phase Start/End
+                    </h2>
 
+                    <div class="alert alert-warning shadow-sm text-sm mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            class="stroke-current shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span>Dates must be between <strong>{{ project_start }}</strong> and <strong>{{ project_end }}</strong></span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-semibold">Design Phase Start</span></label>
+                            <input type="date" 
+                                   name="design_phase_start" 
+                                   id="design_phase_start"
+                                   class="input input-bordered w-full" 
+                                   min="{{ project_start|date:'Y-m-d' }}"
+                                   max="{{ project_end|date:'Y-m-d' }}"
+                                   required />
+                        </div>
+                        <div class="form-control w-full">
+                            <label class="label"><span class="label-text font-semibold">Design Phase End</span></label>
+                            <input type="date" 
+                                   name="design_phase_end" 
+                                   id="design_phase_end"
+                                   class="input input-bordered w-full" 
+                                   min="{{ project_start|date:'Y-m-d' }}"
+                                   max="{{ project_end|date:'Y-m-d' }}"
+                                   required />
+                        </div>
+                    </div>
+                </div>
+            </div>
             {# Card: Design Stages #}
             <div class="card bg-base-100 shadow-xl border border-base-200">
                 <div class="card-body">
@@ -79,7 +123,9 @@
                                             class="label-text text-xs uppercase tracking-wide opacity-70">Start
                                             Date</span></label>
                                     <input type="date" name="stage_{{ stage.key }}_start"
-                                        class="input input-bordered input-sm w-full" required />
+                                        class="input input-bordered input-sm w-full stage-date-input" 
+                                        disabled
+                                        required />
                                 </div>
                                 <div class="form-control">
                                     <label class="label"><span
@@ -100,14 +146,16 @@
                 <button type="submit" class="btn btn-primary btn-lg shadow-lg gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            d="M    16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clip-rule="evenodd" />
-                    </svg>
-                    Save Configuration & Start
-                </button>
+                        </svg>
+                        Save Configuration & Start
+                        </button>
             </div>
 
         </form>
     </div>
 </div>
+<script src="{% static 'scripts/configure_schedule.js' %}"></script>
+
 {% endblock %}

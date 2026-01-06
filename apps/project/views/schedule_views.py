@@ -23,7 +23,9 @@ def configure_schedule_view(request, project_id):
 
     context = {
         'project': project,
-        'stages': stages_info
+        'stages': stages_info,
+        'project_start': project.created_at.date(),
+        'project_end': project.end_date.date() if project.end_date else None,
     }
     return render(request, 'project/configure_schedule.html', context)
 
@@ -44,6 +46,30 @@ def save_schedule_action(request, project_id):
     stages_to_process = [s for s in all_stages if s['key'] != 'FINISHED']
 
     try:
+        # NEW: Extract and validate Design Phase dates FIRST
+        phase_start_str = request.POST.get('design_phase_start')
+        phase_end_str = request.POST.get('design_phase_end')
+
+        if not phase_start_str or not phase_end_str:
+            raise ValueError("Design Phase start and end dates are required")
+
+        phase_start = parse_date(phase_start_str)
+        phase_end = parse_date(phase_end_str)
+
+        # Validate phase dates are within project bounds
+        project_start = project.created_at.date()
+        project_end = project.end_date.date() if project.end_date else None
+
+        if phase_start < project_start:
+            raise ValueError(f"Design Phase cannot start before project start ({project_start})")
+
+        if project_end and phase_end > project_end:
+            raise ValueError(f"Design Phase cannot end after project end ({project_end})")
+
+        if phase_start >= phase_end:
+            raise ValueError("Design Phase start must be before end date")
+
+        # Continue with stage processing
         rq_creation_start = None
         search_strategy_end = None
 
@@ -57,6 +83,13 @@ def save_schedule_action(request, project_id):
 
             start_date = parse_date(start_str)
             end_date = parse_date(end_str)
+
+            # NEW: Validate stage dates are within PHASE bounds
+            if start_date < phase_start:
+                raise ValueError(f"{stage['label']}: Cannot start before Design Phase start ({phase_start})")
+
+            if end_date > phase_end:
+                raise ValueError(f"{stage['label']}: Cannot end after Design Phase end ({phase_end})")
 
             # Capture specific dates for auto-calculation
             if stage_key == 'RQ_CREATION':
@@ -73,15 +106,13 @@ def save_schedule_action(request, project_id):
         # 3. Call Design API
         provider.initialize_design_schedule(project.id, schedule_dtos)
 
-        # 4. Activate Phase and Auto-Calculate Dates
+        # 4. Activate Phase and Set User-Provided Dates
         design_phase = project.design_phase
         design_phase.is_active = True
 
-        # Auto-calculate phase dates
-        if rq_creation_start:
-            design_phase.start_date = rq_creation_start
-        if search_strategy_end:
-            design_phase.end_date = search_strategy_end
+        # Use user-provided phase dates (not auto-calculated)
+        design_phase.start_date = phase_start
+        design_phase.end_date = phase_end
 
         design_phase.save()
 
