@@ -292,7 +292,7 @@ def consolidate_search_strategy_stage_view(request, project_id, project):
         design_phase_service.consolidate_search_strategy_stage(project_id, request.user)
         messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.")
 
-        return redirect(build_design_url(project_id, 'eligibility-criteria/'))
+        return redirect('design:dashboard', project_id=project_id)
 
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}")

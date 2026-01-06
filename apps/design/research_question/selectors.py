@@ -62,3 +62,11 @@ class ResearchQuestionSelector:
         qs = qs.order_by('-modified_at')
 
         return [ResearchQuestionSelector.get_question_dto(q, user) for q in qs]
+
+    @staticmethod
+    def count_approved(project_id: int) -> int:
+        """Count approved research questions for dashboard."""
+        return ResearchQuestion.objects.filter(
+            design_phase_id=project_id,
+            status='APPROVED'
+        ).count()

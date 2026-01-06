@@ -57,3 +57,21 @@ class EligibilityCriterionSelector:
             criteria_type=EligibilityCriterion.CriterionType.EXCLUSION,
             status_filter=status_filter
         )
+
+    @staticmethod
+    def count_approved_inclusion(project_id: int) -> int:
+        """Count approved inclusion criteria for dashboard."""
+        return EligibilityCriterion.objects.filter(
+            design_phase_id=project_id,
+            type=EligibilityCriterion.CriterionType.INCLUSION,
+            status='APPROVED'
+        ).count()
+
+    @staticmethod
+    def count_approved_exclusion(project_id: int) -> int:
+        """Count approved exclusion criteria for dashboard."""
+        return EligibilityCriterion.objects.filter(
+            design_phase_id=project_id,
+            type=EligibilityCriterion.CriterionType.EXCLUSION,
+            status='APPROVED'
+        ).count()

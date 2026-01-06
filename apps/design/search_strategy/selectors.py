@@ -77,3 +77,11 @@ class SearchStrategySelector:
             return SearchStrategySelector.get_version_dto(version)
         except SearchStrategyVersion.DoesNotExist:
             return None
+
+    @staticmethod
+    def count_approved(project_id: int) -> int:
+        """Count approved search strategy versions for dashboard."""
+        return SearchStrategyVersion.objects.filter(
+            strategy__research_question__design_phase_id=project_id,
+            status='APPROVED'
+        ).count()

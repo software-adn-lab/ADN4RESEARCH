@@ -74,10 +74,6 @@ class ResearchQuestionService:
             raise ResearchQuestionError("Cannot delete an APPROVED question directly. Change its status first.")
         question.delete()
 
-    # Queries delegated to Selectors (kept here for backward compatibility if needed, but should be removed in Views)
-    # def get_research_question_by_id... -> Use ResearchQuestionSelector.get_by_id
-    # def get_questions_for_workspace... -> Use ResearchQuestionSelector.get_list_for_workspace
-
     @transaction.atomic
     def autosave_question(self, cleaned_data, user: User, project_id: int, question_id: int) -> ResearchQuestion:
         payload = {
