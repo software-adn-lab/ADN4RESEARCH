@@ -7,6 +7,7 @@ from apps.project.decorators import project_member_required, build_design_url
 from apps.design.research_question.services.question_services import ResearchQuestionService
 from apps.design.research_question.selectors import ResearchQuestionSelector
 from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.selectors import DesignPhaseSelector
 from apps.design.design_phase_logic.models.design_phase import DesignPhase
 
 research_question_service = ResearchQuestionService()
@@ -18,8 +19,8 @@ def question_discussion_panel_view(request, project_id, project):
     status_filter = request.GET.get('status')
 
     questions = ResearchQuestionSelector.get_list_for_discussion(project_id, request.user, status_filter=status_filter)
-    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
+    current_stage_plan = DesignPhaseSelector.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
 
     context = {
         'project': project,

@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.selectors import DesignPhaseSelector
 from apps.project.decorators import project_member_required, build_design_url
 from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError, ResearchQuestionError
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
@@ -31,9 +32,9 @@ def open_questions_workspace_view(request, project_id, project):
     project_service = ProjectService()
     project_keywords = project_service.get_project_keyterms(project_id)
 
-    # Updated to get full plan (start and end date)
-    current_stage_plan = design_phase_service.get_current_stage_plan(project_id)
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
+    # Updated to use Selector for read operations
+    current_stage_plan = DesignPhaseSelector.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
 
     context = {
         'project': project,
