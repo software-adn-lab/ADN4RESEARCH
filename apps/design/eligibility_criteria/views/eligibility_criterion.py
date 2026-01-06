@@ -176,7 +176,7 @@ def consolidate_eligibility_stage(request, project_id, project):
         )
         msg = "Stage consolidated successfully! Proceeding to Search Strategy."
         messages.success(request, msg)
-        return redirect(build_design_url(project_id, 'search-strategy/'))
+        return redirect(build_design_url(project_id, 'strategies/'))
 
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}")

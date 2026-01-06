@@ -6,7 +6,7 @@
 
     <div class="flex flex-col gap-4 mb-8">
         <div>
-            <a href="{% url 'design:open_search_strategy_panel' project_id=project.id %}"
+            <a href="{% url 'design:strategies:panel' project_id=project.id %}"
                 class="btn btn-sm btn-ghost gap-2 pl-0 hover:bg-transparent hover:text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                     stroke="currentColor" class="w-4 h-4">
@@ -44,7 +44,7 @@
                 </div>
 
                 <div class="flex gap-2 mt-4 md:mt-0">
-                    {% url 'design:approve_strategy' project_id=project.id strategy_id=strategy.id as approve_url %}
+                    {% url 'design:strategies:approve' project_id=project.id strategy_id=strategy.id as approve_url %}
                     <button type="button" onclick="openReviewModal('{{ approve_url }}', 'Approve')"
                         class="btn btn-success btn-sm text-white gap-2 shadow-sm hover:shadow-md transition-all"
                         title="Approve this strategy">
@@ -56,7 +56,7 @@
                         Approve Strategy
                     </button>
 
-                    {% url 'design:reject_strategy' project_id=project.id strategy_id=strategy.id as reject_url %}
+                    {% url 'design:strategies:reject' project_id=project.id strategy_id=strategy.id as reject_url %}
                     <button type="button" onclick="openReviewModal('{{ reject_url }}', 'Reject')"
                         class="btn btn-error btn-outline btn-sm gap-2 hover:text-white" title="Reject this strategy">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

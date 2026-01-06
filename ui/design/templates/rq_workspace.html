@@ -90,7 +90,7 @@
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
                                         </button>
-                                        <a href="{% url 'design:delete_research_question' project_id=project.id question_id=question.id %}"
+                                        <a href="{% url 'design:questions:delete' project_id=project.id question_id=question.id %}"
                                             class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
                                             title="Delete"
                                             onclick="return confirm('Are you sure you want to delete this question?');">
@@ -210,12 +210,12 @@
 
 <script>
     const KEYWORD_URLS = {
-        create: "{% url 'design:create_project_keyword' project_id=project.id %}",
-        update: "{% url 'design:update_project_keyword' project_id=project.id keyword_id=9999 %}",
-        delete: "{% url 'design:delete_project_keyword' project_id=project.id keyword_id=9999 %}",
+        create: "{% url 'design:keywords:create' project_id=project.id %}",
+        update: "{% url 'design:keywords:update' project_id=project.id keyword_id=9999 %}",
+        delete: "{% url 'design:keywords:delete' project_id=project.id keyword_id=9999 %}",
     };
-    const autosaveUrl = "{% url 'design:autosave_research_question' project_id=project.id %}";
-    const submitUrlTemplate = "{% url 'design:send_research_question_for_review' project_id=project.id question_id=9999 %}";
+    const autosaveUrl = "{% url 'design:questions:autosave' project_id=project.id %}";
+    const submitUrlTemplate = "{% url 'design:questions:submit' project_id=project.id question_id=9999 %}";
 </script>
 {% load static %}
 <script src="{% static 'scripts/project_keywords.js' %}"></script>

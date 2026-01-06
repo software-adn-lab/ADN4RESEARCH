@@ -8,8 +8,8 @@
 
 <script>
     const QUESTION_DATA = {{ question_json| safe |default: "null" }};
-    const submitUrlTemplate = "{% url 'design:send_research_question_for_review' 9999 %}";
-    const autosaveUrl = "{% url 'design:autosave_research_question' %}";
+    const submitUrlTemplate = "{% url 'design:questions:submit' 9999 %}";
+    const autosaveUrl = "{% url 'design:questions:autosave' %}";
 </script>
 <script src="{% static 'scripts/create_research_question.js' %}"></script>
 

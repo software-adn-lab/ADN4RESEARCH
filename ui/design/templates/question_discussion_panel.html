@@ -118,7 +118,7 @@
 </div>
 <div class="flex text-center justify-center p-6">
     {% if is_owner and is_editable %}
-    <form method="POST" action="{% url 'design:consolidate_discussion_stage' project_id=project.id %}"
+    <form method="POST" action="{% url 'design:discussion:consolidate' project_id=project.id %}"
         onsubmit="return confirm('Are you sure? This will REJECT all pending suggestions and advance to the next stage.');">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
@@ -166,7 +166,7 @@
 </dialog>
 
 <script>
-    const reviewUrl = "{% url 'design:review_research_question_action' project_id=project.id %}";
+    const reviewUrl = "{% url 'design:discussion:review' project_id=project.id %}";
 </script>
 <script src="{% static 'scripts/question_discussion.js' %}"></script>
 
