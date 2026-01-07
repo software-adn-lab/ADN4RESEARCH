@@ -126,8 +126,6 @@ class PaperExtractionService:
         Raises:
             BusinessRuleViolation: Si no cumple las reglas de negocio
             
-        Referencia Django:
-        https://docs.djangoproject.com/en/stable/topics/db/transactions/
         """
         logger.info(
             f"Attempting to complete paper: "

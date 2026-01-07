@@ -161,8 +161,7 @@ class Tag(AuditModel):
         null=True,
         blank=True,
         related_name='tags',
-        verbose_name="Pregunta de Investigación Relacionada",
-        db_column='question_id'
+        verbose_name="Pregunta de Investigación Relacionada"
     )
     is_mandatory = models.BooleanField(
         default=False,
