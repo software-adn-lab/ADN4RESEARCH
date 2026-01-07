@@ -45,41 +45,7 @@ class TagManager {
         this.updateMissingTagsAlert();
     }
 
-    updateCoveragePercentage() {
-        const allMandatoryBadges = document.querySelectorAll('[data-tag-id]');
-        const coveredBadges = document.querySelectorAll('[data-tag-id].badge-success');
-        
-        const totalMandatory = allMandatoryBadges.length;
-        const coveredCount = coveredBadges.length;
-        
-        if (totalMandatory === 0) return;
-        
-        const percentage = Math.round((coveredCount / totalMandatory) * 100);
-
-        const progressContainer = document.querySelector('#coverage-progress-container');
-        if (progressContainer) {
-            const progressBar = progressContainer.querySelector('.progress');
-            if (progressBar) {
-                progressBar.value = percentage;
-                progressBar.classList.remove('progress-success', 'progress-warning', 'progress-error');
-                
-                if (percentage === 100) progressBar.classList.add('progress-success');
-                else if (percentage >= 50) progressBar.classList.add('progress-warning');
-                else progressBar.classList.add('progress-error');
-            }
-
-            const badge = progressContainer.querySelector('.badge');
-            if (badge) {
-                badge.textContent = `${percentage}%`;
-                badge.classList.remove('badge-warning', 'badge-success', 'badge-error');
-                
-                if (percentage === 100) badge.classList.add('badge-success');
-                else if (percentage >= 50) badge.classList.add('badge-warning');
-                else badge.classList.add('badge-error');
-            }
-        }
-    }
-
+/*
     updateMissingTagsAlert() {
         const allMandatoryBadges = document.querySelectorAll('[data-tag-id]');
         const missingTags = [];
@@ -128,6 +94,72 @@ class TagManager {
             alertContainer.appendChild(warningAlert);
         }
     }
+        updateCoveragePercentage() {
+        console.group('🔍 Debug: updateCoveragePercentage');
+
+        // 1. Identificar qué estamos seleccionando como "Total"
+        // ⚠️ OJO: Esto selecciona CUALQUIER elemento con data-tag-id en toda la página
+        const allMandatoryBadges = document.querySelectorAll('#mandatory-tags-container [data-tag-id]');
+        
+        // 2. Identificar cuáles considera "Cubiertos"
+        const coveredBadges = document.querySelectorAll('[data-tag-id].badge-success');
+        
+        const totalMandatory = allMandatoryBadges.length;
+        const coveredCount = coveredBadges.length;
+        
+        console.log(`📊 Conteo: ${coveredCount} cubiertos de ${totalMandatory} totales.`);
+        
+        // Loguear los IDs para ver si hay duplicados o elementos incorrectos
+        const totalIds = Array.from(allMandatoryBadges).map(el => el.dataset.tagId);
+        console.log('📋 IDs Totales encontrados:', totalIds);
+        
+        const coveredIds = Array.from(coveredBadges).map(el => el.dataset.tagId);
+        console.log('✅ IDs Cubiertos detectados:', coveredIds);
+
+        if (totalMandatory === 0) {
+            console.warn('⚠️ No se encontraron etiquetas obligatorias. Saliendo.');
+            console.groupEnd();
+            return;
+        }
+        
+        const percentage = Math.round((coveredCount / totalMandatory) * 100);
+        console.log(`🧮 Cálculo: (${coveredCount} / ${totalMandatory}) * 100 = ${percentage}%`);
+
+        const progressContainer = document.querySelector('#coverage-progress-container');
+        
+        if (!progressContainer) {
+            console.error('❌ No se encontró el contenedor #coverage-progress-container en el DOM');
+        } else {
+            const progressBar = progressContainer.querySelector('.progress');
+            const badge = progressContainer.querySelector('.badge');
+            
+            console.log('UI Updates:', { 
+                foundBar: !!progressBar, 
+                foundBadge: !!badge,
+                newPercentage: percentage 
+            });
+
+            if (progressBar) {
+                progressBar.value = percentage;
+                // ... lógica de clases ...
+                progressBar.classList.remove('progress-success', 'progress-warning', 'progress-error');
+                if (percentage === 100) progressBar.classList.add('progress-success');
+                else if (percentage >= 50) progressBar.classList.add('progress-warning');
+                else progressBar.classList.add('progress-error');
+            }
+
+            if (badge) {
+                badge.textContent = `${percentage}%`;
+                // ... lógica de clases ...
+                badge.classList.remove('badge-warning', 'badge-success', 'badge-error');
+                if (percentage === 100) badge.classList.add('badge-success');
+                else if (percentage >= 50) badge.classList.add('badge-warning');
+                else badge.classList.add('badge-error');
+            }
+        }
+        
+        console.groupEnd();
+    }*/
 }
 
 window.TagManager = TagManager;
