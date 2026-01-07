@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_head %}
+<!-- Estilos de PDF.js ... -->
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden">
 
@@ -10,46 +14,79 @@
     <!-- Sidebar -->
     <div class="w-full lg:w-3/12 bg-white border-l border-gray-200 flex flex-col h-full shadow-2xl">
         
+        <!-- ✅ Header con botón de completar -->
         <div class="p-4 border-b border-gray-200 bg-gray-50">
-            <h2 class="font-bold text-sm">{{ paper.study.title|truncatechars:50 }}</h2>
+            <div class="flex justify-between items-start mb-2 flex-col">
+                <h2 class="font-bold text-sm">{{ paper.study.title|truncatechars:50 }}</h2>
+                
+                <!-- ✅ Badge de estado -->
+                {% if paper.status == 'COMPLETED' %}
+                    <span class="badge badge-success badge-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Completado
+                    </span>
+                {% elif paper.status == 'IN_PROGRESS' %}
+                    <span class="badge badge-warning badge-sm">En Progreso</span>
+                {% else %}
+                    <span class="badge badge-ghost badge-sm">{{ paper.get_status_display }}</span>
+                {% endif %}
+            </div>
+            
+            <!-- ✅ Botón de completar -->
+            {% if paper.status != 'COMPLETED' %}
+                <button type="button" 
+                        id="complete-paper-btn"
+                        data-action="complete-paper"
+                        class="btn btn-sm btn-success btn-block mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Finalizar Extracción
+                </button>
+            {% endif %}
         </div>
         
+        <!-- Tag List -->
         {% include 'partials/pdf_workspace/tag_list.html' %}
         
+        <!-- Quote List -->
         {% include 'partials/pdf_workspace/quote_list.html' %}
     </div>
 </div>
 
-<!-- Quote Modal -->
+<!-- Modal -->
 {% include 'partials/pdf_workspace/quote_modal.html' %}
 
-<!-- Configuración JavaScript -->
- <script id="paper-config" type="application/json">
+<!-- Config -->
+<script id="paper-config" type="application/json">
 {
     "paperId": {{ paper.id }},
     "pdfUrl": "{{ pdf_url }}",
     "quoteCreateUrl": "{{ quote_create_url }}",
     "quoteDeleteUrlTemplate": "{{ quote_delete_url_template }}",
+    "paperCompleteUrl": "{% url 'extraction:paper_complete' pk=paper.pk %}",
     "csrfToken": "{{ csrf_token }}",
     "existingQuotes": {{ quotes_json|safe }}
 }
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-    const configElement = document.getElementById('paper-config');
-    window.PAPER_CONFIG = JSON.parse(configElement.textContent);
-
-    console.log('✅ Config loaded:', window.PAPER_CONFIG);
-    console.log('📊 Existing quotes:', window.PAPER_CONFIG.existingQuotes.length);
+window.PAPER_CONFIG = JSON.parse(document.getElementById('paper-config').textContent);
 </script>
 
-<!-- Scripts -->
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- Componentes -->
+<script src="{% static 'scripts/components/pdf_viewer.js' %}"></script>
+<script src="{% static 'scripts/components/quote_manager.js' %}"></script>
+<script src="{% static 'scripts/components/tag_manager.js' %}"></script>
 <script src="{% static 'scripts/paper_workspace.js' %}"></script>
 
-<script src="{% static 'scripts/components/tag_manager.js' %}"></script>
-<script src="{% static 'scripts/components/quote_manager.js' %}"></script>
-<script src="{% static 'scripts/components/pdf_viewer.js' %}"></script>
-<script src="{% static 'scripts/components/tag_search.js' %}"></script>
-{% endblock %}
+<!-- ✅ Script para completar paper -->
+<script>
 
+</script>
+{% endblock %}

@@ -1,66 +1,73 @@
-<div class="space-y-4">
-    <div class="flex justify-between items-center">
-        <h3 class="text-lg font-bold">
-            {% if is_owner %}Todos los Papers Asignados{% else %}Mis Papers por Extraer{% endif %}
-        </h3>
-        <div class="badge badge-lg badge-primary badge-outline">{{ papers.count }} documentos</div>
-    </div>
+{% for paper in papers %}
+<div class="card bg-base-100 border {% if paper.status == 'COMPLETED' %}border-success{% else %}border-base-300{% endif %} shadow-sm hover:shadow-md transition-all cursor-pointer relative group">
+    
+    <!-- ✅ Link invisible que cubre todo el card -->
+    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+       class="absolute inset-0 z-0"
+       aria-label="Ver paper {{ paper.study.title }}"></a>
+    
+    <div class="card-body p-5 relative z-10">
+        <div class="flex justify-between items-start mb-2">
+            <span class="badge {% if paper.status == 'COMPLETED' %}badge-success text-white{% else %}badge-warning text-white{% endif %} text-xs font-bold">
+                {{ paper.get_status_display }}
+            </span>
+            {% if is_owner and paper.assigned_to %}
+                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    Asignado a: {{ paper.assigned_to.username }}
+                </span>
+            {% endif %}
+        </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% for paper in papers %}
-        <div class="card bg-base-100 border {% if paper.status == 'COMPLETED' %}border-success{% else %}border-base-300{% endif %} shadow-sm hover:shadow-md transition-all">
-            <div class="card-body p-5">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="badge {% if paper.status == 'COMPLETED' %}badge-success text-white{% else %}badge-warning text-white{% endif %} text-xs font-bold">
-                        {{ paper.get_status_display }}
-                    </span>
-                    {% if is_owner and paper.assigned_to %}
-                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Asignado a: {{ paper.assigned_to.username }}</span>
-                    {% endif %}
-                </div>
+        <h4 class="card-title text-base leading-tight text-gray-800 group-hover:text-primary transition-colors">
+            {{ paper.study.title|truncatechars:80 }}
+        </h4>
+        <p class="text-xs text-gray-500 mt-1">
+            {{ paper.study.authors }} ({{ paper.study.publication_year }})
+        </p>
 
-                <h4 class="card-title text-base leading-tight text-gray-800">
-                    {{ paper.study.title|truncatechars:80 }}
-                </h4>
-                <p class="text-xs text-gray-500 mt-1">
-                    {{ paper.study.authors }} ({{ paper.study.publication_year }})
-                </p>
+        {% if paper.status == 'IN_PROGRESS' %}
+        <progress class="progress progress-primary w-full mt-3 h-1" value="40" max="100"></progress>
+        {% endif %}
 
-                {% if paper.status == 'IN_PROGRESS' %}
-                <progress class="progress progress-primary w-full mt-3 h-1" value="40" max="100"></progress>
+        <div class="card-actions justify-end mt-4 pt-4 border-t border-gray-100">
+            {% if phase.status == 'OPEN' %}
+                {% if is_owner %}
+                    <!-- ✅ Botones con relative z-20 para que sean clickables sobre el overlay -->
+                    <button class="btn btn-sm btn-ghost text-xs relative z-20" 
+                            onclick="event.stopPropagation(); event.preventDefault(); reassignPaper({{ paper.pk }})">
+                        Reasignar
+                    </button>
+                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                       class="btn btn-sm btn-outline relative z-20">
+                        Ver Avance
+                    </a>
                 {% endif %}
-
-                <div class="card-actions justify-end mt-4 pt-4 border-t border-gray-100">
-                    {% if phase.status == 'OPEN' %}
-                        {% if is_owner %}
-                             <button class="btn btn-sm btn-ghost text-xs">Reasignar</button>
-                             <a href="#" class="btn btn-sm btn-outline">Ver Avance</a>
-                        {% else %}
-                            {% if paper.status == 'PENDING' %}
-                                <a href="#" class="btn btn-sm btn-primary w-full">
-                                    ▶ Iniciar Extracción
-                                </a>
-                            {% elif paper.status == 'COMPLETED' %}
-                                <a href="#" class="btn btn-sm btn-outline w-full">
-                                    👁 Ver mis respuestas
-                                </a>
-                            {% else %}
-                                <a href="#" class="btn btn-sm btn-warning w-full text-white">
-                                    ✎ Continuar
-                                </a>
-                            {% endif %}
-                        {% endif %}
-                    {% else %}
-                        <span class="text-xs text-gray-400 italic">Fase Cerrada</span>
-                    {% endif %}
-                </div>
-            </div>
+                
+                {% if paper.status == 'PENDING' %}
+                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                       class="btn btn-sm btn-primary w-full relative z-20">
+                        ▶ Iniciar Extracción
+                    </a>
+                {% elif paper.status == 'COMPLETED' %}
+                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                       class="btn btn-sm btn-outline w-full relative z-20">
+                        👁 Ver mis respuestas
+                    </a>
+                {% else %}
+                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                       class="btn btn-sm btn-primary w-full relative z-20">
+                        ✎ Continuar
+                    </a>
+                {% endif %}
+            {% else %}
+                <span class="text-xs text-gray-400 italic">Fase Cerrada</span>
+            {% endif %}
         </div>
-        {% empty %}
-        <div class="col-span-full text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-            <p class="text-gray-500 font-medium">No tienes papers asignados en esta fase.</p>
-            <p class="text-sm text-gray-400">Contacta al administrador del proyecto.</p>
-        </div>
-        {% endfor %}
     </div>
 </div>
+{% empty %}
+<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+    <p class="text-gray-500 font-medium">No tienes papers asignados en esta fase.</p>
+    <p class="text-sm text-gray-400">Contacta al administrador del proyecto.</p>
+</div>
+{% endfor %}

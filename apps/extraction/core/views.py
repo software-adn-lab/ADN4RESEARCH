@@ -16,8 +16,9 @@ from django.urls import reverse
 from django.views.generic import DetailView, View
 
 from .forms import QuoteForm
-from .models import PaperExtraction, Quote
-from apps.extraction.planning.models import ExtractionPhase
+from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
+from apps.extraction.core.services import PaperExtractionService
+from apps.extraction.shared.exceptions import BusinessRuleViolation
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,8 @@ class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
             f"Paper workspace loaded: paper_id={paper.id}, "
             f"user={self.request.user.username}, quotes_count={len(context['quotes'])}"
         )
+        context['paper_complete_url'] = reverse('extraction:paper_complete', args=[paper.pk])
+
         
         return context
 
@@ -208,6 +211,111 @@ class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
             .replace('\\', '-')
         )[:100]
 
+class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
+    """
+    Endpoint para marcar un paper como completado.
+    
+    Business Rules (delegadas al Service):
+    - Solo owner o researcher asignado pueden completar
+    - Debe tener al menos una quote
+    - Todas las tags obligatorias deben estar cubiertas
+    
+    Architecture:
+    - Vista: Validación de permisos y HTTP handling
+    - Service: Lógica de negocio y orquestación
+    - Model: Queries y persistencia
+    
+    Referencia Django CBV:
+    https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
+    """
+    
+    def post(self, request, pk):
+        """
+        Procesar solicitud de completar paper.
+        
+        Args:
+            request: HTTP request
+            pk: ID del paper
+            
+        Returns:
+            JsonResponse con resultado
+        """
+        paper = get_object_or_404(PaperExtraction, pk=pk)
+        
+        # Validar permisos (responsabilidad de la vista)
+        if not self._can_complete_paper(request.user, paper):
+            logger.warning(
+                f"Permission denied: user={request.user.username}, "
+                f"paper_id={paper.id}, action=complete"
+            )
+            return JsonResponse(
+                {'error': 'No tienes permiso para completar este paper'},
+                status=403
+            )
+        
+        # Delegar lógica de negocio al servicio
+        service = PaperExtractionService()
+        
+        try:
+            # Service maneja validaciones y transiciones
+            paper = service.attempt_complete_paper(paper, request.user)
+            
+            # Obtener resumen para la respuesta
+            summary = service.get_completion_summary(paper)
+            
+            return JsonResponse({
+                'success': True,
+                'message': '✅ Paper completado exitosamente',
+                'paper': {
+                    'id': paper.id,
+                    'status': paper.get_status_display(),
+                    'quotes_count': summary['quotes_count'],
+                    'coverage_percentage': summary['coverage_percentage']
+                }
+            })
+            
+        except BusinessRuleViolation as e:
+            # Service lanzó excepción de negocio
+            logger.info(
+                f"Paper completion rejected: paper_id={paper.id}, "
+                f"reason={str(e)}"
+            )
+            return JsonResponse(
+                {'error': str(e)},
+                status=400
+            )
+            
+        except Exception as e:
+            # Error inesperado
+            logger.exception(
+                f"Unexpected error completing paper: paper_id={paper.id}"
+            )
+            return JsonResponse(
+                {'error': 'Error interno del servidor'},
+                status=500
+            )
+    
+    def _can_complete_paper(self, user, paper):
+        """
+        Validar permisos para completar.
+        
+        Nota: Esta es validación de permisos (infraestructura),
+        no lógica de negocio. Por eso está en la vista.
+        
+        Args:
+            user: Usuario solicitante
+            paper: Paper a completar
+            
+        Returns:
+            bool: Si tiene permisos
+        """
+        project = paper.extraction_phase.project
+        return (
+            user == project.owner or
+            paper.assigned_to == user or
+            user.is_staff or
+            user.is_superuser
+        )
 
 class QuoteCreateView(LoginRequiredMixin, View):
     """API endpoint para crear quotes (JSON)."""
