@@ -13,6 +13,7 @@ from . import views
 # ⚠️ IMPORTANTE: NO usar app_name aquí si está definido en el padre
 # El namespace se hereda del URLconf padre
 
+# ⚠️ IMPORTANTE: NO usar app_name aquí (ya está en el padre)
 urlpatterns = [
     # ==========================================================================
     # CREACIÓN DE TAGS

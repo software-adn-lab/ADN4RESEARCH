@@ -187,20 +187,7 @@
         <!-- Content Container -->
         <main class="flex-1 h-screen lg:h-[calc(100vh-4rem)] overflow-y-auto bg-gray-50">
             {% if messages %}
-            <div class="toast toast-top toast-center z-50">
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} shadow-lg">
-                    <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{{ message }}</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            
             {% endif %}
             {% block content %}
 
@@ -208,6 +195,10 @@
         </main>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast toast-top toast-center z-50"></div>
+
+    <script src="{% static 'scripts/alerts.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function openHistoryModal(questionId) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-base-content/50"><span class="loading loading-spinner"></span> Loading history...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-base-content/50"><span class="loading loading-spinner"></span> Loading history...</td></tr>';
         modal.showModal();
 
         const url = versionsApiUrl.replace('0', questionId);
@@ -21,13 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => renderTable(data.versions, questionId))
             .catch(error => {
                 console.error('Error:', error);
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-error py-4">Error loading versions.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-error py-4">Error loading versions.</td></tr>';
             });
     }
 
     function renderTable(versions, questionId) {
         if (!versions || versions.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-base-content/50">No versions found. Build a strategy first.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-base-content/50">No versions found. Build a strategy first.</td></tr>';
             return;
         }
 
@@ -97,16 +97,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const strategyId = btn.dataset.strategyId;
         const versionId = btn.dataset.versionId;
 
+        console.log('Action clicked:', action, 'Strategy ID:', strategyId, 'Version ID:', versionId);
+
         if (action === 'approve') {
-            performAction(approveUrlBase.replace('0', strategyId), 'Approve');
+            openReviewModal(approveUrlBase.replace('0', strategyId), 'Approve');
         } else if (action === 'reject') {
-            performAction(rejectUrlBase.replace('0', strategyId), 'Reject');
+            openReviewModal(rejectUrlBase.replace('0', strategyId), 'Reject');
         } else if (action === 'delete') {
             performAction(deleteVersionApiUrl.replace('0', versionId), 'Delete');
         }
     });
 
-    // 5. Llamada AJAX para Aprobar/Rechazar
+    function openReviewModal(actionUrl, actionType) {
+        console.log('Opening review modal:', actionType, actionUrl);
+        const modal = document.getElementById('review_strategy_modal');
+        const form = document.getElementById('review-strategy-form');
+        const title = document.getElementById('review-modal-title');
+        const confirmBtn = document.getElementById('review-confirm-btn');
+
+        if (!modal) {
+            console.error('Review modal not found!');
+            return;
+        }
+
+        form.action = actionUrl;
+        title.textContent = `${actionType} Strategy`;
+
+        if (actionType === 'Approve') {
+            confirmBtn.className = 'btn btn-success text-white';
+            confirmBtn.textContent = 'Confirm Approval';
+        } else {
+            confirmBtn.className = 'btn btn-error text-white';
+            confirmBtn.textContent = 'Confirm Rejection';
+        }
+
+        modal.showModal();
+    }
+
+    // 5. Llamada AJAX para Delete (Approve/Reject van por form submit)
     function performAction(url, actionName) {
         if (!confirm(`Are you sure you want to ${actionName} this strategy?`)) return;
 
@@ -127,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => {
                 console.error('Action failed:', error);
-                alert('Action failed. See console.');
+                showToast('Action failed. See console.', ToastType.ERROR);
             });
     }
 

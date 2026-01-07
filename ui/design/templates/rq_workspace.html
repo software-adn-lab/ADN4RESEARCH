@@ -1,33 +1,22 @@
 {% extends 'base_tabs.html'%}
+{% load design_tags %}
 {% block rq_workspace_content %}
 <div class="p-6" data-project-id="{{ project.id }}">
     {% csrf_token %}
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-base-content">Research Question Workspace</h1>
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
-            <form method="GET" action="">
-                <div class="form-control">
-                    <select name="status" id="status-filter" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
-                        <option value="">All Statuses</option>
-
-                        <option value="DRAFT" 
-                                {% if current_status_filter == 'DRAFT' %}selected{% endif %}>
-                            Draft
-                        </option>
-
-                        <option value="READY_TO_SEND" 
-                                {% if current_status_filter == 'READY_TO_SEND' %}selected{% endif %}>
-                            Ready to send
-                        </option>
-
-                        <option value="SUGGESTED" 
-                                {% if current_status_filter == 'SUGGESTED' %}selected{% endif %}>
-                            Suggested
-                        </option>
-                    </select>
-                </div>
-            </form>
+            {% if current_stage_plan %}
+            <div class="flex flex-col items-end mr-2">
+                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="text-base-content/70">
+                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            {% else %}
+            <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
+            {% endif %}
+            {% render_status_filter current_filter=current_status_filter %}
         </div>
 
     </div>
@@ -41,159 +30,183 @@
                                 <th class="w-1/2">Question</th>
                                 <th class="w-1/2">Motivation</th>
                                 <th class="w-1/8 text-center">Framework</th>
-                                <th class="w-1/8 text-center">Status</th>
+                                <th class="w-1/6 text-center">Status</th>
                                 <th class="w-1/8 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="question-table-body" class="text-sm">
                             {% for question in questions %}
                             <tr data-id="{{ question.id }}" data-status="{{ question.status }}"
-                                data-question-json='{{ question.to_json|safe }}'
+                                data-question-json='{{ question.json_str }}'
                                 class="hover:bg-base-200 transition-colors cursor-pointer question-row">
                                 <td class="p-2">
                                     <div class="whitespace-normal break-words focus:outline-none w-full p-1 rounded"
                                         title="{{ question.question }}">
                                         {% if question.question %}
-                                {{ question.question }}
-                                {% else %}
-                                <span class="text-base-content/50 italic">No question provided</span>
-                                {% endif %}
+                                        {{ question.question }}
+                                        {% else %}
+                                        <span class="text-base-content/50 italic">No question provided</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="p-2">
+                                    <div class="whitespace-normal break-words focus:outline-none w-full p-1 rounded"
+                                        title="{{ question.motivation }}">
+                                        {% if question.motivation %}
+                                        {{ question.motivation }}
+                                        {% else %}
+                                        <span class="text-base-content/50 italic">No motivation provided</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="p-2">
+                                    <div class="focus:outline-none w-full p-1 rounded text-center">
+                                        {{project.research_framework.name }}</div>
+                                </td>
+                                <td class="text-center">
+                                    {% if question.status == 'APPROVED' %}
+                                    <div class="badge badge-success gap-1 text-white">Approved</div>
+                                    {% elif question.status == 'REJECTED' %}
+                                    <div class="badge badge-error gap-1 text-white">Rejected</div>
+                                    {% elif question.status == 'SUGGESTED' %}
+                                    <div class="badge badge-info gap-1 text-white">Suggested</div>
+                                    {% elif question.status == 'READY_TO_SEND' %}
+                                    <div class="badge badge-warning gap-1 text-white">Ready to send</div>
+                                    {% else %}
+                                    <div class="badge badge-neutral gap-1 text-white">{{ question.get_status_display }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <td class="p-2 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <!--- Edit Button (Triggers Modal via JS) -->
+                                        <button
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 edit-btn"
+                                            title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                        <a href="{% url 'design:questions:delete' project_id=project.id question_id=question.id %}"
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
+                                            title="Delete"
+                                            onclick="return confirm('Are you sure you want to delete this question?');">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Add inclusion -->
+                    <button id="add-question-btn"
+                        class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Research Question
+                    </button>
                 </div>
-                </td>
-                <td class="p-2">
-                    <div class="whitespace-normal break-words focus:outline-none w-full p-1 rounded"
-                        title="{{ question.motivation }}">
-                        {% if question.motivation %}
-                        {{ question.motivation }}
-                        {% else %}
-                        <span class="text-base-content/50 italic">No motivation provided</span>
-                        {% endif %}
-                    </div>
-                </td>
-                <td class="p-2">
-                    <div class="focus:outline-none w-full p-1 rounded text-center">
-                        {{project.research_framework.name }}</div>
-                </td>
-                <td class="text-center">
-                    {% if question.status == 'APPROVED' %}
-                    <div class="badge badge-success gap-1 text-white">Approved</div>
-                    {% elif question.status == 'REJECTED' %}
-                    <div class="badge badge-error gap-1 text-white">Rejected</div>
-                    {% elif question.status == 'SUGGESTED' %}
-                    <div class="badge badge-info gap-1 text-white">Suggested</div>
-                    {% else %}
-                    <div class="badge badge-ghost">{{ question.get_status_display }}</div>
-                    {% endif %}
-                </td>
-
-                <td class="p-2 text-center">
-                    <div class="flex justify-center gap-2">
-                        <!--- Edit Button (Triggers Modal via JS) -->
-                        <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 edit-btn"
-                            title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                        <a href="{% url 'design:delete_research_question' question.id %}"
-                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-btn"
-                            title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
-                            </svg>
-                        </a>
-                        <!-- Search Strategy Button (NEW) -->
-                        {% if question.question %}
-                        <button class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 view-strategy-btn"
-                            title="View Search Strategy"
-                            data-url="{% url 'design:get_search_strategy_for_question' question.id %}"
-                            data-question-id="{{ question.id }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                                stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-                            </svg>
-                        </button>
-                        {% endif %}
-                    </div>
-                </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-                </table>
-
-                <!-- Add inclusion -->
-                <button id="add-question-btn"
-                    class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Research Question
-                </button>
             </div>
         </div>
-    </div>
-    <div class="space-y-1">
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-base-content">Project Key Terms</h1>
-        </div>
-        <div class="space-y-3">
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
-                <table class="table w-full table-fixed">
-                    <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
-                        <tr>
-                            <th class="w-1/2">Key term</th>
-                            <th class="w-1/2">Synonyms</th>
-                            <th class="w-1/6 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keyword-table-body" class="text-sm">
-                        {% for keyword in keywords %}
-                        <tr data-id="{{ keyword.id }}" class="hover:bg-base-200 transition-colors">
-                            <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
-                                    data-placeholder="Enter key term">{{ keyword.term }}</div>
-                            </td>
-                            <td class="p-2">
-                                <div contenteditable="true" class="editable-cell focus:outline-none w-full p-1 rounded"
-                                    data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}
-                                </div>
-                            </td>
-                            <td class="p-2 text-center">
-                                <div class="flex justify-center gap-2">
-                                    <button
-                                        class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-keyword-btn"
-                                        title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="autosave-status text-xs h-4 mt-1"></div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="space-y-1">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-base-content">Project Key Terms</h1>
+            </div>
+            <div class="space-y-3">
+                <div class="overflow-x-auto border border-base-300 rounded-lg">
+                    <table class="table w-full table-fixed">
+                        <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
+                            <tr>
+                                <th class="w-1/2">Key term</th>
+                                <th class="w-1/2">Synonyms</th>
+                                <th class="w-1/6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keyword-table-body" class="text-sm">
+                            {% for keyword in keywords %}
+                            <tr data-id="{{ keyword.id }}" class="hover:bg-base-200 transition-colors">
+                                <td class="p-2">
+                                    <div contenteditable="true"
+                                        class="editable-cell focus:outline-none w-full p-1 rounded"
+                                        data-placeholder="Enter key term">{{ keyword.term }}</div>
+                                </td>
+                                <td class="p-2">
+                                    <div contenteditable="true"
+                                        class="editable-cell focus:outline-none w-full p-1 rounded"
+                                        data-placeholder="Enter synonyms, separated by commas">{{ keyword.synonyms }}
 
-                <!-- Add keyword -->
-                <a id="add-keyword-btn" href="#"
-                    class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    New keyword
-                </a>
+                                    </div>
+                                </td>
+                                <td class="p-2 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button
+                                            class="btn btn-ghost btn-xs text-base-content/60 hover:bg-base-300 delete-keyword-btn"
+                                            title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m9 0H6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="autosave-status text-xs h-4 mt-1"></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Add keyword -->
+                    <a id="add-keyword-btn" href="#"
+                        class="p-3 bg-base-50 hover:bg-base-200 btn btn-ghost btn-sm w-full justify-start text-base-content/60 hover:text-primary cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New keyword
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
+<div class="flex text-center justify-center p-6">
+    {% if is_owner and current_stage == 'RQ_CREATION' %}
+    <form method="POST" action="{% url 'design:questions:consolidate_creation' project_id=project.id %}"
+        onsubmit="return confirm('Are you sure? This will close the creation stage and advance to Discussion.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
+            <svg xmlns="http://w.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            Consolidate Stage
+        </button>
+    </form>
+    {% endif %}    
+    {% if is_owner %}
+    <button type="button" 
+            onclick="document.getElementById('schedule_manager_modal').showModal()"
+            class="btn btn-outline btn-primary gap-2 hover:btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+             stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" 
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        </svg>
+        Manage Timeline
+    </button>
+    {% endif %}
 </div>
 
 <!-- Question Modal -->
@@ -223,15 +236,101 @@
         </div>
     </div>
 </dialog>
-
+<!-- Schedule Manager Modal -->
+<dialog id="schedule_manager_modal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        
+        <h3 class="font-bold text-xl mb-2">Manage Project Timeline</h3>
+        <p class="text-sm text-base-content/70 mb-4">
+            Edit stage dates. Dates must be between 
+            <strong>{{ project.created_at|date:"Y-m-d" }}</strong> and 
+            <strong>{{ project.end_date|date:"Y-m-d" }}</strong>
+        </p>
+        
+        <form method="POST" action="{% url 'design:questions:manage_schedule' project_id=project.id %}">
+            {% csrf_token %}
+            
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead class="bg-base-200">
+                        <tr>
+                            <th class="w-1/4">Stage</th>
+                            <th class="w-1/4">Status</th>
+                            <th class="w-1/4">Start Date</th>
+                            <th class="w-1/4">End Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stage_plan in timeline_stages %}
+                        <tr class="{% if stage_plan.stage == current_stage %}bg-primary/10{% endif %}">
+                            <td class="font-semibold">
+                                {{ stage_plan.get_stage_display }}
+                                {% if stage_plan.stage == current_stage %}
+                                <span class="badge badge-primary badge-sm ml-2">ACTIVE</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stage_plan.actual_end_date %}
+                                <span class="badge badge-success gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Closed
+                                </span>
+                                {% else %}
+                                <span class="badge badge-ghost">Open</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="date" 
+                                       name="stage_{{ stage_plan.stage }}_start"
+                                       value="{{ stage_plan.planned_start_date|date:'Y-m-d' }}"
+                                       min="{{ project.created_at|date:'Y-m-d' }}"
+                                       max="{{ project.end_date|date:'Y-m-d' }}"
+                                       class="input input-bordered input-sm w-full">
+                            </td>
+                            <td>
+                                <input type="date" 
+                                       name="stage_{{ stage_plan.stage }}_end"
+                                       value="{{ stage_plan.planned_end_date|date:'Y-m-d' }}"
+                                       min="{{ project.created_at|date:'Y-m-d' }}"
+                                       max="{{ project.end_date|date:'Y-m-d' }}"
+                                       class="input input-bordered input-sm w-full">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-base-content/50">
+                                No schedule defined yet
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" onclick="this.closest('dialog').close()" 
+                        class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 <script>
     const KEYWORD_URLS = {
-        create: "{% url 'design:create_project_keyword' project.id %}",
-        update: "{% url 'design:update_project_keyword' 9999 %}",
-        delete: "{% url 'design:delete_project_keyword' 9999 %}",
+        create: "{% url 'design:keywords:create' project_id=project.id %}",
+        update: "{% url 'design:keywords:update' project_id=project.id keyword_id=9999 %}",
+        delete: "{% url 'design:keywords:delete' project_id=project.id keyword_id=9999 %}",
     };
-    const autosaveUrl = "{% url 'design:autosave_research_question' %}";
-    const submitUrlTemplate = "{% url 'design:send_research_question_for_review' 9999 %}";
+    const autosaveUrl = "{% url 'design:questions:autosave' project_id=project.id %}";
+    const submitUrlTemplate = "{% url 'design:questions:submit' project_id=project.id question_id=9999 %}";
 </script>
 {% load static %}
 <script src="{% static 'scripts/project_keywords.js' %}"></script>

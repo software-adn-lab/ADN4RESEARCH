@@ -32,7 +32,7 @@
                     </svg>
                 </div>
 
-                <a href="{% url 'design:design_stages' project.id %}?target_stage={{ stage.key }}"
+                <a href="{% url 'design:design_stages' project_id=project.id %}?target_stage={{ stage.key }}"
                     class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm
                           {% if stage.status == 'current' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% elif stage.status == 'completed' %}bg-primary hover:bg-gray-400 text-white{% endif %}">
                     {{ stage.label }}

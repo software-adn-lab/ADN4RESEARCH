@@ -12,7 +12,16 @@
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            <span id="stage-end-date" class="pr-3 font-medium text-base-content/80">Design Phase End Date: {{ stage_end_date|date:"M d, Y"|default:"Not set" }}</span>
+            {% if current_stage_plan %}
+            <div class="flex flex-col items-end mr-2">
+                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="text-base-content/70">
+                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            {% else %}
+            <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
+            {% endif %}
             <form method="GET" action="">
                 <select name="status" class="select select-bordered select-sm w-40" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
@@ -25,13 +34,12 @@
     </div>
 
     <div class="space-y-8">
-
         <div class="space-y-3">
-            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-base-content flex items-center gap-2 mt-8">
                 Inclusion Criteria
             </h2>
 
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
+            <div class="border border-base-300 rounded-lg">
                 <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
@@ -58,7 +66,7 @@
                                 {% elif criterion.status == 'REJECTED' %}
                                 <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
-                                <span class="badge badge-ghost text-xs">Draft</span>
+                                <span class="badge badge-neutral text-xs text-white">Draft</span>
                                 {% endif %}
                             </td>
                             <td class="p-2 text-center">
@@ -130,7 +138,7 @@
                 Exclusion Criteria
             </h2>
 
-            <div class="overflow-x-auto border border-base-300 rounded-lg">
+            <div class="border border-base-300 rounded-lg">
                 <table class="table w-full table-fixed">
                     <thead class="bg-primary text-base-100 text-sm font-semibold border-b border-base-300">
                         <tr>
@@ -157,7 +165,7 @@
                                 {% elif criterion.status == 'REJECTED' %}
                                 <span class="badge badge-error text-xs text-white">Rejected</span>
                                 {% else %}
-                                <span class="badge badge-ghost text-xs">Draft</span>
+                                <span class="badge badge-neutral text-xs text-white">Draft</span>
                                 {% endif %}
                             </td>
                             <td class="p-2 text-center">
@@ -227,7 +235,7 @@
 </div>
 <div class="flex text-center justify-center p-6">
     {% if is_owner and is_editable %}
-    <form method="POST" action="{% url 'design:consolidate_eligibility_stage' project.id %}"
+    <form method="POST" action="{% url 'design:criteria:consolidate' project_id=project.id %}"
         onsubmit="return confirm('Are you sure? This will REJECT all pending drafts and advance to the next stage.');">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary text-white hover:text-lg transition-discrete gap-2">
@@ -245,54 +253,64 @@
 <dialog id="review_modal" class="modal">
     <div class="modal-box">
         <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                </form>
 
-        <h3 class="font-bold text-lg" id="modal-title">Review Criterion</h3>
-        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+                <h3 class="font-bold text-lg" id="modal-title">Review Criterion</h3>
+                <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
 
-        <form id="review-form" class="mt-4 space-y-4">
-            <input type="hidden" name="criterion_id" id="modal-criterion-id">
-            <input type="hidden" name="action_type" id="modal-action-type"> <!-- 'approve' or 'reject' -->
+                <form id="review-form" class="mt-4 space-y-4">
+                    <input type="hidden" name="criterion_id" id="modal-criterion-id">
+                    <input type="hidden" name="action_type" id="modal-action-type"> <!-- 'approve' or 'reject' -->
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Justification</span>
-                </label>
-                <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
-                    placeholder="Type your justification..."></textarea>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Justification <span class="text-error">*</span></span>
+                        </label>
+                        <textarea name="justification" id="modal-justification" class="textarea textarea-bordered h-24"
+                            required placeholder="Type your justification..."></textarea>
+                    </div>
+
+                    <div class="modal-action">
+                        <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
+                    </div>
+                </form>
             </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+            </dialog>
 
-            <div class="modal-action">
-                <button type="submit" id="confirm-review-btn" class="btn btn-primary">Confirm Decision</button>
-            </div>
-        </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+            <script>
+                const URLS = {
+                    create: "{% url 'design:criteria:create' project_id=project.id %}",
+                    update: "{% url 'design:criteria:update' project_id=project.id criterion_id=9999 %}",
+                    approve: "{% url 'design:criteria:approve' project_id=project.id criterion_id=9999 %}",
+                    reject: "{% url 'design:criteria:reject' project_id=project.id criterion_id=9999 %}",
+                    delete: "{% url 'design:criteria:delete' project_id=project.id criterion_id=9999 %}",
+                };
+            </script>
+            <script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
 
-<script>
-    const URLS = {
-        create: "{% url 'design:create_criterion' project.id %}",
-        update: "{% url 'design:update_criterion' 9999 %}",
-        approve: "{% url 'design:approve_criterion' 9999 %}",
-        reject: "{% url 'design:reject_criterion' 9999 %}",
-        delete: "{% url 'design:delete_criterion' 9999 %}",
-    };
-</script>
-<script src="{% static 'scripts/eligibility_criteria.js' %}"></script>
+            <style>
+                .editable-cell {
+                    min-height: 2rem;
+                    border: 1px solid transparent;
+                    transition: all 0.2s ease;
+                }
 
-<style>
-    .editable-cell {
-        min-height: 2rem;
-        border: 1px solid transparent;
-        transition: all 0.2s ease;
-    }
-    .editable-cell:hover { background-color: hsl(var(--b2) / 0.3); }
-    .editable-cell:focus { background-color: hsl(var(--b1)); }
-    .editable-cell:empty:before { content: attr(data-placeholder); color: #afafaf; }
-</style>
+                .editable-cell:hover {
+                    background-color: hsl(var(--b2) / 0.3);
+                }
 
-{% endblock eligibility_criteria_content %}
+                .editable-cell:focus {
+                    background-color: hsl(var(--b1));
+                }
+
+                .editable-cell:empty:before {
+                    content: attr(data-placeholder);
+                    color: #afafaf;
+                }
+            </style>
+
+            {% endblock eligibility_criteria_content %}

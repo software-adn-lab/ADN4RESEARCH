@@ -1,5 +1,5 @@
 <form id="question-form" method="POST"
-    action="{% if question.id %}{% url 'design:send_research_question_for_review' question.id %}{% endif %}"
+    action="{% if question.id %}{% url 'design:questions:submit' question.id %}{% endif %}"
     class="card shadow-lg border border-base-200">
 
     <div class="card-body p-8 space-y-6">
@@ -15,7 +15,7 @@
 
             <div class="justify-self-start">
                 <!-- Back button logic handled by parent or hidden in modal -->
-                <a href="{% url 'design:rq_workspace' project.id %}"
+                <a href="{% url 'design:questions:workspace' project.id %}"
                     class="btn btn-circle btn-ghost btn-sm tooltip tooltip-right back-btn" data-tip="Back to Workspace">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
                         stroke="currentColor" class="w-5 h-5">

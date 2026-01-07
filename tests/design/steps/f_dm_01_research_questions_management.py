@@ -3,6 +3,8 @@ import logging
 from unittest.mock import Mock
 from behave import given, then, when, step
 from apps.design.research_question.services.question_services import ResearchQuestionService
+from apps.design.research_question.selectors import ResearchQuestionSelector
+from apps.design.access_control import DesignAccessPolicy
 
 research_question_service = ResearchQuestionService()
 notification_service = Mock()
@@ -18,7 +20,7 @@ def step_que_pregunta_esta_ready(context, status_ready):
 @when('envíe la pregunta de investigación creada')
 def step_cuando_envio_pregunta_creada(context):
     research_question_service.submit_research_question_for_review(research_question_id=context.research_question.id)
-    
+
 @then('la pregunta estará "{status_suggested}" para el proyecto')
 def step_entonces_sistema_cambia_estado(context, status_suggested):
     context.research_question.refresh_from_db()
@@ -31,15 +33,15 @@ def step_entonces_sistema_notifica_equipo(context):
     notification_service.send_notification.return_value = True
     notifications = notification_service.get_notifications_for_project.return_value = [context.notification]
     assert len(notifications) > 0
-    
+
 @given('que existen preguntas de investigación "{status_suggested}" por los investigadores para el proyecto')
 def step_dado_existen_preguntas_sugeridas(context, status_suggested):
     fields = {
-            "Population": "Population details",
-            "Intervention": "Intervention details",
-            "Comparison": "Comparison details",
-            "Outcome": "Outcome details",
-        }
+        "Population": "Population details",
+        "Intervention": "Intervention details",
+        "Comparison": "Comparison details",
+        "Outcome": "Outcome details",
+    }
     context.research_question_one = research_question_service.add_research_question(
         project_id=context.project.id,
         question="Ejemplo de pregunta sugerida uno",
@@ -56,24 +58,34 @@ def step_dado_existen_preguntas_sugeridas(context, status_suggested):
         framework_fields=fields
     )
     research_question_service.submit_research_question_for_review(research_question_id=context.research_question_two.id)
-    research_questions_project = research_question_service.get_questions_for_workspace(
+
+    research_questions_project = ResearchQuestionSelector.get_list_for_workspace(
         project_id=context.project.id,
         user=context.researcher,
         status_filter=status_suggested
     )
-    suggested_questions_project = research_question_service.get_discussion_research_questions_by_project(
-        project_id=context.project.id
+    suggested_questions_project = ResearchQuestionSelector.get_list_for_discussion(
+        project_id=context.project.id,
+        user=context.researcher
     )
     assert len(research_questions_project) > 0
 
 @step('selecciono una pregunta que no haya sido sugerida por mí')
 def step_y_selecciono_pregunta_no_sugerida_por_mi(context):
     # El researcher escoge una pregunta sugerida por otro researcher (researcher 2 xd)
-    context.selected_question = research_question_service.validate_reviewer_eligibility(
-        question_id=context.research_question_two.id, 
-        user_id=context.researcher.id
+    # Usamos el Selector para obtener el objeto (DTO)
+    question_dto = ResearchQuestionSelector.get_by_id(context.research_question_two.id, context.researcher)
+
+    # Validamos que sea elegible para revisión usando la Policy
+    can_review = DesignAccessPolicy.can_review_question(
+        user=context.researcher,
+        phase=context.research_question_two.design_phase,
+        question=context.research_question_two
     )
-    assert context.selected_question.researcher != context.researcher 
+    context.selected_question = context.research_question_two
+    assert can_review is True
+    assert context.research_question_two.researcher_id != context.researcher.id
+
 
 @when('la revise y sugiera {action} la pregunta de investigación seleccionada con la justificación de mi decisión')
 def step_cuando_sugiero_aprobar_pregunta(context, action):
@@ -83,11 +95,11 @@ def step_cuando_sugiero_aprobar_pregunta(context, action):
     }
     target_status = action_map[action.lower()]
     justification = f"Decisión tomada: {action} por criterios de prueba."
-    
+
     context.processed_question = research_question_service.review_research_question(
         question_id=context.selected_question.id,
         verdict=target_status,
         justification=justification,
         user_id=context.researcher.id
     )
-    context.research_question = context.processed_question # esto es por el paso siguiente que me pide behave que se actualice la movida
+    context.research_question = context.processed_question

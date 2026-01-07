@@ -6,7 +6,7 @@
 
     <div class="flex flex-col gap-4 mb-8">
         <div>
-            <a href="{% url 'design:open_search_strategy_panel' project.id %}"
+            <a href="{% url 'design:strategies:panel' project_id=project.id %}"
                 class="btn btn-sm btn-ghost gap-2 pl-0 hover:bg-transparent hover:text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                     stroke="currentColor" class="w-4 h-4">
@@ -23,8 +23,10 @@
 
             <div class="stats shadow-sm border border-base-200 bg-base-100">
                 <div class="stat py-2 px-4">
-                    <div class="stat-title text-xs font-bold uppercase tracking-wide">Total Studies Found</div>
-                    <div class="stat-value text-primary text-2xl">{{ results.total_found|default:"0" }}</div>
+                    <div class="stat-title text-xs font-bold uppercase tracking-wide">Total Studies Found
+                    </div>
+                    <div class="stat-value text-primary text-2xl">{{ results.total_found|default:"0" }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,34 +44,28 @@
                 </div>
 
                 <div class="flex gap-2 mt-4 md:mt-0">
-                    <form method="POST" action="{% url 'design:approve_strategy' strategy.id %}">
-                        {% csrf_token %}
-                        <button type="submit"
-                            class="btn btn-success btn-sm text-white gap-2 shadow-sm hover:shadow-md transition-all"
-                            title="Approve this strategy">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
-                                fill="currentColor">
-                                <path fill-rule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            Approve Strategy
-                        </button>
-                    </form>
+                    {% url 'design:strategies:approve' project_id=project.id strategy_id=strategy.id as approve_url %}
+                    <button type="button" onclick="openReviewModal('{{ approve_url }}', 'Approve')"
+                        class="btn btn-success btn-sm text-white gap-2 shadow-sm hover:shadow-md transition-all"
+                        title="Approve this strategy">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Approve Strategy
+                    </button>
 
-                    <form method="POST" action="{% url 'design:reject_strategy' strategy.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-error btn-outline btn-sm gap-2 hover:text-white"
-                            title="Reject this strategy">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
-                                fill="currentColor">
-                                <path fill-rule="evenodd"
-                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            Reject
-                        </button>
-                    </form>
+                    {% url 'design:strategies:reject' project_id=project.id strategy_id=strategy.id as reject_url %}
+                    <button type="button" onclick="openReviewModal('{{ reject_url }}', 'Reject')"
+                        class="btn btn-error btn-outline btn-sm gap-2 hover:text-white" title="Reject this strategy">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Reject
+                    </button>
                 </div>
             </div>
         </div>
@@ -79,20 +75,19 @@
         {% for study in studies %}
         <div class="card bg-base-100 border border-base-200 shadow-sm hover:border-primary/30 transition-colors">
             <div class="card-body p-4">
-                <div class="flex flex-col gap-1">
-
-                    <div class="flex gap-2">
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-5">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Title:</span>
                         <span class="font-semibold text-base-content">{{ study.title }}</span>
                     </div>
                     {% if study.source %}
-                    <div class="flex gap-2 items-start mt-1">
+                    <div class="flex gap-5 items-start mt-1">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Source:</span>
                         <span class="badge badge-sm badge-ghost font-mono">{{ study.source }}</span>
                     </div>
                     {% endif %}
                     {% if study.link %}
-                    <div class="flex gap-2 items-start mt-1">
+                    <div class="flex gap-5 items-start mt-1">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Link:</span>
                         <a href='{{ study.link }}' target="_blank"
                             class="link link-primary text-sm break-all hover:text-primary-focus flex items-center gap-1">
@@ -100,15 +95,21 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 0 002 2h10a2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
                         </a>
                     </div>
                     {% endif %}
-                    <div class="flex gap-2 items-center">
+                    {% if study.abstract %}
+                    <div class="flex gap-5 items-start mt-1">
+                        <span class="font-bold text-base-content/70 w-12 shrink-0">Abstract:</span>
+                        <span class="text-sm break-all">{{ study.abstract }}</span>
+                    </div>
+                    {% endif %}
+                    <!---<div class="flex gap-2 items-center">
                         <span class="font-bold text-base-content/70 w-12 shrink-0">Year:</span>
                         <span class="badge badge-sm badge-ghost font-mono">{{ study.year|default:"N/A" }}</span>
-                    </div>
+                    </div>-->
 
                 </div>
             </div>
@@ -121,4 +122,55 @@
         {% endfor %}
     </div>
 </div>
+
+<dialog id="review_strategy_modal" class="modal">
+    <div class="modal-box">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+
+        <h3 class="font-bold text-lg" id="modal-title">Review Strategy</h3>
+        <p class="py-2 text-sm text-base-content/70">Please provide a justification for this decision.</p>
+
+        <form id="review-strategy-form" method="POST" class="mt-4 space-y-4">
+            {% csrf_token %}
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Justification <span class="text-error">*</span></span>
+                </label>
+                <textarea name="justification" class="textarea textarea-bordered h-24"
+                    placeholder="Type your justification here..." required></textarea>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" id="confirm-btn" class="btn btn-primary">Confirm</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    function openReviewModal(actionUrl, actionType) {
+        const modal = document.getElementById('review_strategy_modal');
+        const form = document.getElementById('review-strategy-form');
+        const title = document.getElementById('modal-title');
+        const confirmBtn = document.getElementById('confirm-btn');
+
+        form.action = actionUrl;
+        title.textContent = `${actionType} Strategy`;
+
+        if (actionType === 'Approve') {
+            confirmBtn.className = 'btn btn-success text-white';
+            confirmBtn.textContent = 'Confirm Approval';
+        } else {
+            confirmBtn.className = 'btn btn-error text-white';
+            confirmBtn.textContent = 'Confirm Rejection';
+        }
+
+        modal.showModal();
+    }
+</script>
 {% endblock %}

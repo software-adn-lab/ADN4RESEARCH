@@ -3,7 +3,7 @@ import uuid
 from django.core.management.base import BaseCommand
 
 from apps.project.structure.models.project_models import Project
-from apps.design.shared.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 from apps.design.research_question.models.research_question import ResearchQuestion
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 from apps.acquisition.models import SearchExecutionModel, StudyModel

@@ -1,8 +1,8 @@
 # language: es
-Característica: Validar preguntas de investigación de los investigadores    
+Característica: Validar artefactos de diseño generados por los investigadores    
     Como owner de un proyecto de investigación
-    Quiero validar las preguntas de investigación creadas por los investigadores
-    Para asegurar una guía apropiada de la revisión sistemática de mi proyecto
+    Quiero controlar la consolidación de los artefactos generados por los investigadores dentro de las etapas de diseño
+    Para asegurar que estos artefactos son los apropiados para la revisión sistemática de mi proyecto 
 
     Antecedentes:
         Dado que la etapa de "discusión" esta activa en la fase de diseño

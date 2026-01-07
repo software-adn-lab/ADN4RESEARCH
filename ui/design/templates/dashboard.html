@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-base-100 p-6">
+    <div class="max-w-7xl mx-auto">
+
+        {# Header with Stage Title #}
+        <div class="mb-8">
+            <a href="{{ stage_url }}"
+                class="text-3xl font-bold hover:text-primary transition-colors inline-flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Current Stage: {{ stage_display }}
+            </a>
+            <p class="text-base-content/60 mt-2">
+                Design Phase Protocol Overview
+            </p>
+        </div>
+
+        {# Protocol Metrics Cards #}
+        <div class="bg-white dark:bg-base-200 py-16 sm:py-20 rounded-xl shadow-xl">
+            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                <dl class="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-4">
+
+                    {# Card 1: Research Questions #}
+                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                        <dt class="text-base leading-7 text-base-content/60">Research Questions Approved</dt>
+                        <dd class="order-first text-3xl font-semibold tracking-tight text-primary sm:text-5xl">
+                            {{ metrics.questions }}
+                        </dd>
+                        <a href="{% url 'design:discussion:panel' project_id=project_id %}"
+                            class="link link-primary text-sm font-medium hover:text-primary-focus">
+                            View Questions →
+                        </a>
+                    </div>
+
+                    {# Card 2: Inclusion Criteria #}
+                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                        <dt class="text-base leading-7 text-base-content/60">Inclusion Criteria</dt>
+                        <dd class="order-first text-3xl font-semibold tracking-tight text-secondary sm:text-5xl">
+                            {{ metrics.inclusion_criteria }}
+                        </dd>
+                        <a href="{% url 'design:criteria:panel' project_id=project_id %}"
+                            class="link link-secondary text-sm font-medium hover:text-secondary-focus">
+                            View Criteria →
+                        </a>
+                    </div>
+
+                    {# Card 3: Exclusion Criteria #}
+                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                        <dt class="text-base leading-7 text-base-content/60">Exclusion Criteria</dt>
+                        <dd class="order-first text-3xl font-semibold tracking-tight text-accent sm:text-5xl">
+                            {{ metrics.exclusion_criteria }}
+                        </dd>
+                        <a href="{% url 'design:criteria:panel' project_id=project_id %}"
+                            class="link link-accent text-sm font-medium hover:text-accent-focus">
+                            View Criteria →
+                        </a>
+                    </div>
+
+                    {# Card 4: Search Strategies #}
+                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                        <dt class="text-base leading-7 text-base-content/60">Search Strategies Approved</dt>
+                        <dd class="order-first text-3xl font-semibold tracking-tight text-info sm:text-5xl">
+                            {{ metrics.search_strategies }}
+                        </dd>
+                        <a href="{% url 'design:strategies:panel' project_id=project_id %}"
+                            class="link link-info text-sm font-medium hover:text-info-focus">
+                            View Strategies →
+                        </a>
+                    </div>
+
+                </dl>
+            </div>
+        </div>
+
+        {# Quick Actions #}
+        <div class="mt-8 flex justify-center gap-4">
+            <a href="{{ stage_url }}" class="btn btn-primary btn-lg gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
+                        clip-rule="evenodd" />
+                </svg>
+                Go to Current Stage
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

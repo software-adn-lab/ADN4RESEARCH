@@ -1,0 +1,12 @@
+<form method="GET" action="">
+    <div class="form-control">
+        <select name="status" id="status-filter" class="select select-bordered select-sm w-40"
+            onchange="this.form.submit()">
+            {% for status in statuses %}
+            <option value="{{ status.value }}" {% if current_filter == status.value %}selected{% endif %}>
+                {{ status.label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>

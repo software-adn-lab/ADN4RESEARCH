@@ -1,94 +1,86 @@
 import json
 from django.contrib import messages
 from django.http import Http404, JsonResponse
-from django.shortcuts import redirect, render, get_object_or_404
-from django.contrib.auth import get_user_model
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+
+from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+from apps.design.design_phase_logic.selectors import DesignPhaseSelector
+from apps.project.decorators import project_member_required, build_design_url
 from apps.design.exceptions.research_question_exceptions import QuestionNotFoundError, QuestionSubmissionError, ResearchQuestionError
 from apps.design.research_question.forms import ResearchQuestionAutosaveForm
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
-from apps.project.structure.models.project_models import Project
+from apps.design.research_question.selectors import ResearchQuestionSelector
+from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
 from apps.project.structure.services.project_services import ProjectService
-from apps.design.shared.services.design_phase_service import DesignPhaseService
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
 
 research_question_service = ResearchQuestionService()
-project_service = ProjectService()
 keyword_processor_service = KeywordProcessorService()
 design_phase_service = DesignPhaseService()
 
-# Obtén el modelo de Usuario activo en tu proyecto
-User = get_user_model()
 
-def hello(request):
-    project = get_object_or_404(Project, pk =1)  # Reemplaza '1' con el ID del proyecto
-    return render(request, 'base_tabs.html', {
-        'project': project
-    })
-
-@login_required
-def open_questions_workspace_view(request, project_id):
+@project_member_required
+def open_questions_workspace_view(request, project_id, project):
     status_filter = request.GET.get('status')
-    project = project_service.get_project_by_id(
-        project_id, 
-        user=request.user, 
-        related_fields=['owner', 'research_framework', 'design_phase'] 
-    )
-    questions = research_question_service.get_questions_for_workspace(
-        project_id=project_id, 
+
+    questions = ResearchQuestionSelector.get_list_for_workspace(
+        project_id=project_id,
         user=request.user,
         status_filter=status_filter
     )
+
+    project_service = ProjectService()
     project_keywords = project_service.get_project_keyterms(project_id)
-    stage_end_date = design_phase_service.get_current_stage_deadline(project_id)
-    timeline_stages = design_phase_service.get_design_timeline_context(project_id)
-    
+
+    # Updated to use Selector for read operations
+    current_stage_plan = DesignPhaseSelector.get_current_stage_plan(project_id)
+    timeline_stages = DesignPhaseSelector.get_design_timeline_context(project_id)
+
     context = {
         'project': project,
         'questions': questions,
         'keywords': project_keywords,
-        'stage_end_date': stage_end_date,
+        'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'active_tab': 'rq_workspace',
-        'current_status_filter': status_filter, 
+        'current_status_filter': status_filter,
+        'is_owner': project.owner == request.user,
+        'current_stage': project.design_phase.current_stage,
     }
     return render(request, 'rq_workspace.html', context)
 
-@login_required 
-def create_research_question(request, project_id):
-    project = project_service.get_project_by_id(
-        project_id, 
-        user=request.user, 
-        related_fields=['owner', 'research_framework'] 
-    )
+
+@project_member_required
+def create_research_question(request, project_id, project):
     context = {
         'project': project,
         'active_tab': 'rq_workspace',
     }
     return render(request, 'create_research_question.html', context)
 
-@login_required
-def send_research_question_for_review(request, question_id):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-    except QuestionNotFoundError:
+
+@project_member_required
+def send_research_question_for_review(request, project_id, question_id, project):
+    # We use the selector to check existence, but the service to perform the action
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found")
-    project_id = question.project.id
+
     try:
         research_question_service.submit_research_question_for_review(question_id)
     except QuestionSubmissionError as e:
         messages.warning(request, str(e))
-    
-    return redirect('design:rq_workspace', project_id=project_id)
 
-@login_required    
-def edit_research_question(request, question_id):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-    except QuestionNotFoundError: 
+    return redirect(build_design_url(project_id, 'research-questions/'))
+
+
+@project_member_required
+def edit_research_question(request, project_id, question_id, project):
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found or access denied")
-    project = question.project  # El proyecto de la pregunta
+
+    # DTO to Dict for JSON serialization
     question_data = {
         "id": question.id,
         "suggested_question": question.question,
@@ -105,35 +97,41 @@ def edit_research_question(request, question_id):
     }
     return render(request, 'create_research_question.html', context)
 
-@login_required
-def delete_research_question(request, question_id):
-    try:
-        question = research_question_service.get_research_question_by_id(question_id, request.user)
-        project_id = question.project.id
-    except QuestionNotFoundError:
+
+@project_member_required
+def delete_research_question(request, project_id, question_id, project):
+    question = ResearchQuestionSelector.get_by_id(question_id, request.user)
+    if not question:
         raise Http404("Research question not found or access denied")
+
     try:
         research_question_service.delete_research_question(question_id=question_id, user=request.user)
         messages.success(request, "Research question deleted successfully.")
     except ResearchQuestionError as e:
         messages.error(request, str(e))
-    return redirect('design:rq_workspace', project_id=project_id)
-    
-@login_required
+
+    return redirect(build_design_url(project_id, 'research-questions/'))
+
+
+@project_member_required
 @require_POST
-def autosave_research_question(request):
+def autosave_research_question(request, project_id, project):
     form = ResearchQuestionAutosaveForm(request.POST)
     if form.is_valid():
         try:
             cleaned_data = form.cleaned_data
-            project_id = cleaned_data.get('project_id')
             question_id = cleaned_data.get('question_id')
-            question = research_question_service.autosave_question(cleaned_data=cleaned_data, user=request.user, project_id=project_id, question_id=question_id)
+            question = research_question_service.autosave_question(
+                cleaned_data=cleaned_data,
+                user=request.user,
+                project_id=project_id,
+                question_id=question_id
+            )
             keyword_processor_service.suggest_and_store_key_terms(research_question_id=question.id)
             can_submit = research_question_service.can_submit_question(research_question_id=question.id)
 
             return JsonResponse({
-                'id': question.id, 
+                'id': question.id,
                 'status': question.status,
                 'can_submit': can_submit,
                 'message': 'Autosaved successfully'
@@ -145,3 +143,21 @@ def autosave_research_question(request):
             return JsonResponse({'error': f'Internal Error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'errors': form.errors}, status=400)
+
+
+@project_member_required
+@require_POST
+def consolidate_creation_stage_view(request, project_id, project):
+    try:
+        if project.owner != request.user:
+            messages.error(request, "Only the project owner can consolidate the stage.")
+            return redirect(build_design_url(project_id, 'research-questions/'))
+
+        design_phase_service.consolidate_creation_stage(project_id, request.user)
+        messages.success(request, "Stage consolidated successfully! Discussion Phase started.")
+
+        return redirect(build_design_url(project_id, 'discussion/'))
+
+    except Exception as e:
+        messages.error(request, f"Error consolidating stage: {str(e)}")
+        return redirect(build_design_url(project_id, 'research-questions/'))

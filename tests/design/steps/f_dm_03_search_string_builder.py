@@ -1,10 +1,11 @@
 from behave import given, then, when, step
 from django.contrib.auth.models import User
+from apps.design.search_strategy.services.nlp.keyword_processor_service import KeywordProcessorService
 from apps.project.structure.services.project_services import ProjectService
 from apps.design.research_question.services.question_services import ResearchQuestionService
-from apps.design.search_strategy.services.keyword_processor_service import KeywordProcessorService
+from apps.design.research_question.models.research_question import ResearchQuestion
+
 from apps.design.search_strategy.services.search_strategy_service import SearchStrategyService
-from apps.design.shared.models.design_phase import DesignPhase
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 import logging
 import json
@@ -31,12 +32,13 @@ def step_dado_creo_pregunta_investigacion(context, pregunta_investigacion, frame
 def step_cuando_sistema_procesa_campos_framework_pregunta(context):
     keyword_processor_service.suggest_and_store_key_terms(research_question_id=context.research_question.id)
 
-
 @then('la lista de términos clave del proyecto debe contener {expected_terms}')
 def step_entonces_lista_terminos_clave(context, expected_terms):
     expected_terms_list = list(set(expected_terms.split(',')))
     project_keywords = project_service.get_project_keyterms(context.project.id)
     project_keyword_list = {kw.term for kw in project_keywords}
+    logging.info(f"Expected terms: {expected_terms_list}")
+    logging.info(f"Project keywords: {project_keyword_list}")
     logging.info(f"Expected terms: {expected_terms_list}")
     logging.info(f"Project keywords: {project_keyword_list}")
     assert set(expected_terms_list) == set(project_keyword_list)
@@ -72,22 +74,22 @@ def step_entonces_estrategia_sugerida_sera(context):
     normalized_actual = " ".join(actual_string.split())
     logging.info(f"Expected search string: {normalized_expected}")
     logging.info(f"Actual search string: {normalized_actual}")
+    logging.info(f"Expected search string: {expected_string}")
+    logging.info(f"Actual search string: {actual_string}")
     assert normalized_expected == normalized_actual
 
 @given('que selecciono una pregunta de investigación del protocolo de diseño del proyecto')
 def step_selecciono_pregunta_investigacion(context):
-    context.research_question = research_question_service.add_research_question(
-        project_id=context.project.id,
+    context.research_question = ResearchQuestion.objects.create(
+        design_phase=context.project.design_phase,
         question="Protocol Question?",
-        researcher_id=context.researcher.id,
+        researcher=context.researcher,
         motivation="Default Motivation",
-        framework_fields={"Population": "Test", "Intervention": "Test", "Comparison": "Test", "Outcome": "Test"}
+        framework_fields={"Population": "Test", "Intervention": "Test", "Comparison": "Test", "Outcome": "Test"},
+        status=ResearchQuestion.Status.APPROVED
     )
-    context.research_question.status = "APPROVED"
-    context.research_question.save()
     assert context.research_question is not None
     assert context.research_question in context.project.protocol_questions
-
 
 @step('que tengo la lista de términos clave y sinónimos de dicha pregunta')
 def step_tengo_lista_terminos_sinonimos(context):
@@ -100,7 +102,9 @@ def step_tengo_lista_terminos_sinonimos(context):
         keyword_data=keyword_data,
         user=context.researcher
     )
-
+    # Assign created_by to researcher for access control validation
+    context.strategy.created_by = context.researcher
+    context.strategy.save(update_fields=['created_by'])
 
 @when('pruebo la cadena de búsqueda que he construido')
 def step_pruebo_cadena_busqueda(context):
@@ -112,8 +116,6 @@ def step_pruebo_cadena_busqueda(context):
         ],
         "exclusions": []
     }
-    mock_facade = MagicMock()
-    mock_facade.preview_search.return_value = MagicMock(total_found=150)
 
 @step('el sistema traduce la cadena de búsqueda a inglés')
 def step_sistema_traduce_cadena(context):
@@ -122,11 +124,12 @@ def step_sistema_traduce_cadena(context):
 
 @then('se recibirán resultados de dicha búsqueda desde el módulo de adquisición')
 def step_recibiran_resultados_adquisicion(context):
-    with patch('apps.design.search_strategy.services.search_strategy_service.get_acquisition_facade') as mock_get_facade:
-        mock_facade = MagicMock()
-        mock_facade.preview_search.return_value = MagicMock(total_found=150)
-        mock_get_facade.return_value = mock_facade
+    mock_facade = MagicMock()
+    mock_facade.preview_search.return_value = MagicMock(total_found=150)
+    original_facade = search_strategy_service.preview_service.acquisition_facade
+    search_strategy_service.preview_service.acquisition_facade = mock_facade
 
+    try:
         context.strategy = search_strategy_service.save_strategy_from_visual_builder(
             strategy_id=context.strategy.id,
             visual_data=context.visual_data,
@@ -134,11 +137,13 @@ def step_recibiran_resultados_adquisicion(context):
         )
         mock_facade.preview_search.assert_called_once()
         context.search_results_count = 150
+    finally:
+        search_strategy_service.preview_service.acquisition_facade = original_facade
 
 @step('se creará una versión borrador de la estratégia de busqueda')
 def step_creara_version_borrador(context):
     strategy = SearchStrategy.objects.get(id=context.strategy.id)
     assert strategy.status == SearchStrategy.Status.DRAFT
-    latest_version = strategy.versions.latest('created_at')  # esto para el memento/snapshot que cree
+    latest_version = strategy.versions.latest('created_at')
     assert latest_version.total_found == 150
     assert latest_version.version_number > 0

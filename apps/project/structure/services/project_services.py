@@ -4,7 +4,8 @@ from apps.project.structure.models.project_models import Project, ResearchFramew
 from typing import List
 from django.db import transaction
 from django.db.models import Q
-from apps.design.shared.models.design_phase import DesignPhase
+# REFACTORED: Design API factory function used INSIDE method (lazy init) to avoid circular import
+# Circular broken: DesignPhase → BasePhase → Project API ✗→ ProjectService (uses factory at runtime)
 
 
 class ProjectService:
@@ -25,11 +26,12 @@ class ProjectService:
                 owner=owner,
                 research_framework=framework
             )
-            DesignPhase.objects.create(
-                project=project,
-                is_active=True,
-                current_stage=DesignPhase.DesignStage.RQ_CREATION
-            )
+
+            # REFACTORED: Use Design API factory function (NOT direct provider import)
+            # This breaks circular import via lazy initialization
+            from apps.design.api import get_design_management
+            design_mgmt = get_design_management()  # Factory returns IDesignManagement
+            design_mgmt.initialize_design_phase(project.id)
 
             # Create Specific Objectives
             if specific_objectives_data:
@@ -38,7 +40,7 @@ class ProjectService:
                     # obj_data can be a dict or a string if simple list
                     desc = obj_data.get('description') if isinstance(obj_data, dict) else str(obj_data)
                     if desc and desc.strip():
-                         SpecificObjective.objects.create(project=project, description=desc)
+                        SpecificObjective.objects.create(project=project, description=desc)
 
             # Create Expected Results
             if expected_results_data:
@@ -50,17 +52,17 @@ class ProjectService:
 
             # Add Owner as member
             self.add_member(project, owner, role="OWNER")
-            
+
             # Add other members
             if members:
                 for member in members:
                     if member != owner:
-                         self.add_member(project, member, role="RESEARCHER")
-                         
+                        self.add_member(project, member, role="RESEARCHER")
+
             return project
         except Exception as e:
             raise ProjectCreationError(f"Failed to create project: {str(e)}") from e
-    
+
     def add_member(self, project: Project, user, role):
         project.add_member(user, role)
 
@@ -79,21 +81,15 @@ class ProjectService:
 
         except Project.DoesNotExist:
             raise ProjectNotFoundError(f"Project {project_id} not found or access denied.")
-    
+
     def get_members(self, project: Project):
         return project.get_members()
-    
-    def get_questions_for_project(self, project_id: int):
-        """
-        Obtiene las preguntas buscando explícitamente la fase asociada al proyecto.
-        """
-        try:
-            # SEMÁNTICA CLARA: "Dame la fase cuyo project_id sea X"
-            design_phase = DesignPhase.objects.get(project_id=project_id)
-            return design_phase.research_questions.all().order_by('-created_at')
-        except DesignPhase.DoesNotExist:
-            return []
-    
+
+    # REMOVED: get_questions_for_project() method
+    # This method imported DesignPhase directly causing circular import.
+    # If needed, this should be in Design module's API (IDesignProtocol.get_protocol_questions)
+    # Project module shouldn't know about Design internals.
+
     def get_project_framework(self, request):
         user = request.user
         project = Project.objects.filter(memberships__user=user).first()
