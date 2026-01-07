@@ -1,0 +1,240 @@
+{% load static %}
+
+{% comment %}
+Template: Listado de Tags Inductivos Pendientes de Aprobación
+
+Vista exclusiva para líderes de proyecto para aprobar/rechazar
+tags inductivos creados por researchers.
+
+Referencia Django Templates:
+https://docs.djangoproject.com/en/stable/topics/templates/
+{% endcomment %}
+
+{% block title %}Tags Pendientes - {{ phase.project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    
+    {# Header #}
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Tags Inductivos Pendientes
+            </h1>
+            <p class="text-base-content/70 mt-1">
+                Revisa y aprueba los tags creados por tu equipo
+            </p>
+        </div>
+        
+        {# Botón de aprobación masiva #}
+        {% if pending_tags %}
+        <form method="post" action="{% url 'extraction:tags_bulk_approve' phase_id=phase.pk %}" id="bulk-approve-form">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="btn btn-success btn-sm"
+                    id="bulk-approve-btn"
+                    disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Aprobar Seleccionados (<span id="selected-count">0</span>)
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    
+    {% if pending_tags %}
+        {# Tabla de tags pendientes #}
+        <div class="card bg-base-100 shadow-xl">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>
+                                <label>
+                                    <input type="checkbox" 
+                                           class="checkbox checkbox-sm" 
+                                           id="select-all">
+                                </label>
+                            </th>
+                            <th>Tag</th>
+                            <th>Creado por</th>
+                            <th>Fecha</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag in pending_tags %}
+                        <tr class="hover">
+                            <td>
+                                <label>
+                                    <input type="checkbox" 
+                                           class="checkbox checkbox-sm tag-checkbox"
+                                           name="tag_ids[]"
+                                           value="{{ tag.pk }}"
+                                           form="bulk-approve-form">
+                                </label>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    {# Color badge #}
+                                    <div class="w-4 h-4 rounded-full ring-1 ring-base-300" 
+                                         style="background-color: {{ tag.color|default:'#6366F1' }};">
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">{{ tag.name }}</div>
+                                        <span class="badge badge-ghost badge-sm">Inductivo</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                            <span class="text-xs">
+                                                {{ tag.created_by.get_initials|default:tag.created_by.username|slice:":2"|upper }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span>{{ tag.created_by.get_full_name|default:tag.created_by.username }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-sm text-base-content/70">
+                                    {{ tag.created_at|date:"d M Y, H:i" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex justify-end gap-2">
+                                    {# Botón Aprobar #}
+                                    <form method="post" 
+                                          action="{% url 'extraction:tag_approve' phase_id=phase.pk pk=tag.pk %}"
+                                          class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="btn btn-success btn-sm"
+                                                title="Aprobar tag">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                    
+                                    {# Botón Rechazar (abre modal) #}
+                                    <button type="button" 
+                                            class="btn btn-error btn-sm"
+                                            title="Rechazar tag"
+                                            onclick="openRejectModal({{ tag.pk }}, '{{ tag.name }}')">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    {% else %}
+        {# Estado vacío #}
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body items-center text-center py-16">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-success mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h2 class="card-title text-xl">¡Todo al día!</h2>
+                <p class="text-base-content/70 max-w-md">
+                    No hay tags inductivos pendientes de aprobación. 
+                    Cuando tu equipo cree nuevos tags, aparecerán aquí para tu revisión.
+                </p>
+                <a href="{% url 'extraction:phase_detail' phase.pk %}?tab=tags" 
+                   class="btn btn-primary mt-4">
+                    Ver todos los tags
+                </a>
+            </div>
+        </div>
+    {% endif %}
+    
+</div>
+
+{# Modal de rechazo #}
+<dialog id="reject-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Rechazar Tag</h3>
+        <form method="post" id="reject-form" action="">
+            {% csrf_token %}
+            <p class="mb-4">
+                ¿Estás seguro de rechazar el tag "<span id="reject-tag-name" class="font-medium"></span>"?
+            </p>
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Motivo del rechazo (opcional)</span>
+                </label>
+                <textarea name="rejection_reason" 
+                          class="textarea textarea-bordered" 
+                          rows="3"
+                          placeholder="Explica por qué rechazas este tag..."></textarea>
+            </div>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="closeRejectModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-error">
+                    Rechazar Tag
+                </button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Selección múltiple
+    const selectAllCheckbox = document.getElementById('select-all');
+    const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
+    const bulkApproveBtn = document.getElementById('bulk-approve-btn');
+    const selectedCountSpan = document.getElementById('selected-count');
+    
+    function updateBulkButton() {
+        const checkedCount = document.querySelectorAll('.tag-checkbox:checked').length;
+        selectedCountSpan.textContent = checkedCount;
+        bulkApproveBtn.disabled = checkedCount === 0;
+    }
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            tagCheckboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkButton();
+        });
+    }
+    
+    tagCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkButton);
+    });
+    
+    // Modal de rechazo
+    const rejectModal = document.getElementById('reject-modal');
+    const rejectForm = document.getElementById('reject-form');
+    const rejectTagName = document.getElementById('reject-tag-name');
+    
+    function openRejectModal(tagId, tagName) {
+        rejectForm.action = "{% url 'extraction:tag_reject' phase_id=phase.pk pk=0 %}".replace('/0/', '/' + tagId + '/');
+        rejectTagName.textContent = tagName;
+        rejectModal.showModal();
+    }
+    
+    function closeRejectModal() {
+        rejectModal.close();
+    }
+</script>
+{% endblock %}

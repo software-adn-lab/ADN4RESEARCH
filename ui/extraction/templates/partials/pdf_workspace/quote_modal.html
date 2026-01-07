@@ -29,14 +29,13 @@
                     </span>
                 </label>
                 
-                <!-- ✅ Input de Búsqueda -->
+                <!-- Input de Búsqueda -->
                 <div class="relative mb-2">
                     <input type="text" 
                            id="tag-search-input"
                            class="input input-sm input-bordered w-full pr-8 focus:outline-none" 
                            placeholder="🔍 Buscar etiquetas..."
                            autocomplete="off">
-                    <!-- Botón Limpiar (oculto por defecto) -->
                     <button type="button" 
                             id="clear-search-btn"
                             class="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 hidden"
@@ -58,6 +57,9 @@
                                value="{{ tag.id }}"
                                class="checkbox checkbox-sm checkbox-primary tag-checkbox">
                         <span class="text-sm flex-1">{{ tag.name }}</span>
+                        {% if tag.type == 'INDUCTIVE' %}
+                            <span class="badge badge-xs badge-success">Inductivo</span>
+                        {% endif %}
                         <span class="badge badge-xs" 
                               style="background-color: {{ tag.color }}20; color: {{ tag.color }}; border: 1px solid {{ tag.color }}40;">
                         </span>
@@ -76,6 +78,18 @@
                     </svg>
                     No se encontraron etiquetas
                 </div>
+                
+                <!-- ✅ Botón para crear tag inductivo (FUERA del form de quote) -->
+                <div class="mt-2">
+                    <button type="button" 
+                            id="show-inductive-tag-form-btn"
+                            class="btn btn-ghost btn-sm btn-block text-secondary justify-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Crear nuevo tag inductivo
+                    </button>
+                </div>
             </div>
 
             <div class="modal-action">
@@ -88,10 +102,15 @@
                 </button>
             </div>
         </form>
+        
+        <!-- ✅ FUERA del form de quote - Formulario de tag inductivo -->
+        {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
     </div>
 </dialog>
+
+<!-- Estilos -->
 <style>
-    .tag-item {
+.tag-item {
     transition: all 0.2s ease;
 }
 
@@ -99,13 +118,11 @@
     transform: translateX(2px);
 }
 
-/* Highlight del input de búsqueda */
 #tag-search-input:focus {
     border-color: hsl(var(--p));
     box-shadow: 0 0 0 3px hsl(var(--p) / 0.1);
 }
 
-/* Scrollbar personalizado para lista de tags */
 #tags-list-container::-webkit-scrollbar {
     width: 6px;
 }
@@ -123,7 +140,6 @@
     background: hsl(var(--bc) / 0.5);
 }
 
-/* Animación de fade para mensaje de "no encontrado" */
 #no-tags-message {
     animation: fadeIn 0.2s ease;
 }
@@ -133,3 +149,84 @@
     to { opacity: 1; transform: translateY(0); }
 }
 </style>
+
+<!-- ✅ Script de filtrado (inline) -->
+<script>
+(function() {
+    const modal = document.getElementById('quote_modal');
+    const searchInput = document.getElementById('tag-search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const tagsContainer = document.getElementById('tags-list-container');
+    const noTagsMessage = document.getElementById('no-tags-message');
+    const tagsCounter = document.getElementById('tags-counter');
+
+    if (!searchInput || !tagsContainer) return;
+
+    // Filtrar tags
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const tagItems = tagsContainer.querySelectorAll('.tag-item');
+        let visibleCount = 0;
+
+        tagItems.forEach(item => {
+            const tagName = item.dataset.tagName;
+            const matches = tagName.includes(searchTerm);
+            
+            if (matches) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0 && searchTerm !== '') {
+            tagsContainer.classList.add('hidden');
+            noTagsMessage.classList.remove('hidden');
+        } else {
+            tagsContainer.classList.remove('hidden');
+            noTagsMessage.classList.add('hidden');
+        }
+
+        if (searchTerm) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+    });
+
+    // Limpiar búsqueda
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    });
+
+    // Actualizar contador
+    function updateTagsCounter() {
+        const checkboxes = tagsContainer.querySelectorAll('.tag-checkbox:checked');
+        const count = checkboxes.length;
+        tagsCounter.textContent = count === 0 ? '0 seleccionadas' : 
+                                  count === 1 ? '1 seleccionada' : 
+                                  `${count} seleccionadas`;
+    }
+
+    tagsContainer.addEventListener('change', function(e) {
+        if (e.target.classList.contains('tag-checkbox')) {
+            updateTagsCounter();
+        }
+    });
+    
+    // ✅ Limpiar al abrir modal
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) return;
+        setTimeout(() => {
+            if (modal.open) {
+                searchInput.value = '';
+                clearBtn.classList.add('hidden');
+                updateTagsCounter();
+            }
+        }, 100);
+    });
+})();
+</script>

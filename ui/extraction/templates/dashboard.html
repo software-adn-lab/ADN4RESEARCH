@@ -61,6 +61,9 @@
             <a href="?tab=tags" role="tab" class="tab {% if active_tab == 'tags' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
                 Etiquetas (Protocolo)
             </a>
+            <a href="?tab=pending" role="tab" class="tab {% if active_tab == 'pending' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
+                Etiquetas Pendientes
+            </a>
 
             <a href="?tab=quotes" role="tab" class="tab {% if active_tab == 'quotes' %}tab-active bg-white shadow-sm font-bold text-primary{% endif %}">
                 Extracciones
@@ -75,13 +78,15 @@
 
         <div class="bg-white border border-base-200 rounded-xl shadow-md p-6 min-h-[500px]">
             {% if active_tab == 'studies' %}
-                {% include 'partials/_tab_studies.html' %}
+                {% include 'partials/dashboard_tabs/_tab_studies.html' %}
             {% elif active_tab == 'tags' %}
-                {% include 'partials/_tab_tags.html' %}
+                {% include 'partials/dashboard_tabs/_tab_tags.html' %}
+            {% elif active_tab == 'pending' %}
+                {% include 'partials/dashboard_tabs/pending_tags_list.html' %}
             {% elif active_tab == 'quotes' %}
-                {% include 'partials/_tab_quotes.html' %}
+                {% include 'partials/dashboard_tabs/_tab_quotes.html' %}
             {% elif active_tab == 'config' and is_owner %}
-                {% include 'partials/_tab_config.html' %}
+                {% include 'partials/dashboard_tabs/_tab_config.html' %}
             {% endif %}
         </div>
     {% endif %}

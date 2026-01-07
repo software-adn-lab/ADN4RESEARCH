@@ -21,6 +21,7 @@ urlpatterns = [
          views.PhaseOpenView.as_view(), 
          name='phase_open'),
     
+    # Tags
     path('<int:phase_id>/tags/', 
          include('apps.extraction.taxonomy.urls')),
 ]

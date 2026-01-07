@@ -1,0 +1,253 @@
+{% comment %}
+Formulario Inline de Tag Inductivo
+Uso: {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
+{% endcomment %}
+
+<!-- Container del formulario (oculto por defecto) -->
+<div id="inductive-tag-inline-container" class="hidden mt-3">
+    <div class="card bg-secondary/5 border border-secondary/20">
+        <div class="card-body p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="font-medium text-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nuevo Tag Inductivo
+                </h4>
+                <button type="button" 
+                        class="btn btn-ghost btn-xs btn-circle"
+                        onclick="toggleInductiveTagForm(false)"
+                        title="Cerrar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- ✅ Formulario separado del form de quote -->
+            <form id="inline-inductive-tag-form" class="space-y-3" onsubmit="return false;">
+                {% csrf_token %}
+                
+                {# Nombre del tag #}
+                <div class="form-control">
+                    <input type="text" 
+                           name="name" 
+                           class="input input-bordered input-sm w-full"
+                           placeholder="Nombre del tag (ej: Tema emergente)"
+                           required
+                           maxlength="100"
+                           id="inline-tag-name">
+                </div>
+                
+                {# Color #}
+                <div class="flex items-center gap-3">
+                    <label class="text-xs text-base-content/60">Color:</label>
+                    <input type="color" 
+                           name="color" 
+                           value="#6366F1"
+                           class="w-8 h-8 rounded cursor-pointer"
+                           id="inline-tag-color">
+                    <div id="inline-color-preview" 
+                         class="badge badge-sm"
+                         style="background-color: #6366F1; color: white;">
+                        Preview
+                    </div>
+                </div>
+                
+                {# Botones #}
+                <div class="flex justify-end gap-2">
+                    <button type="button" 
+                            class="btn btn-ghost btn-sm"
+                            onclick="toggleInductiveTagForm(false)">
+                        Cancelar
+                    </button>
+                    <button type="button" 
+                            class="btn btn-secondary btn-sm"
+                            id="inline-tag-submit"
+                            onclick="submitInductiveTag()">
+                        <span class="loading loading-spinner loading-xs hidden" id="inline-tag-loading"></span>
+                        Crear Tag
+                    </button>
+                </div>
+            </form>
+            
+            {# Mensaje de éxito/error #}
+            <div id="inline-tag-message" class="hidden mt-2"></div>
+            
+            {# Info #}
+            <p class="text-xs text-base-content/50 mt-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                El tag estará pendiente de aprobación pero podrás usarlo inmediatamente.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const container = document.getElementById('inductive-tag-inline-container');
+    const showBtn = document.getElementById('show-inductive-tag-form-btn');
+    const form = document.getElementById('inline-inductive-tag-form');
+    const colorInput = document.getElementById('inline-tag-color');
+    const colorPreview = document.getElementById('inline-color-preview');
+    const messageDiv = document.getElementById('inline-tag-message');
+    const submitBtn = document.getElementById('inline-tag-submit');
+    const loadingSpinner = document.getElementById('inline-tag-loading');
+    const nameInput = document.getElementById('inline-tag-name');
+    
+    // ✅ Toggle visibilidad del formulario
+    window.toggleInductiveTagForm = function(show) {
+        if (!container || !showBtn) return;
+        
+        container.classList.toggle('hidden', !show);
+        showBtn.classList.toggle('hidden', show);
+        
+        if (show) {
+            nameInput.focus();
+        } else {
+            // Limpiar formulario al cerrar
+            form.reset();
+            colorInput.value = '#6366F1';
+            colorPreview.style.backgroundColor = '#6366F1';
+            messageDiv.classList.add('hidden');
+        }
+    };
+    
+    // ✅ Botón para mostrar formulario
+    if (showBtn) {
+        showBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleInductiveTagForm(true);
+        });
+    }
+    
+    // Actualizar preview de color
+    if (colorInput) {
+        colorInput.addEventListener('input', function() {
+            colorPreview.style.backgroundColor = this.value;
+        });
+    }
+    
+    // ✅ Función para enviar tag via AJAX
+    window.submitInductiveTag = async function() {
+        const nameValue = nameInput.value.trim();
+        
+        if (!nameValue) {
+            alert('El nombre del tag es requerido');
+            return;
+        }
+        
+        // Mostrar loading
+        submitBtn.disabled = true;
+        loadingSpinner.classList.remove('hidden');
+        messageDiv.classList.add('hidden');
+        
+        const formData = new FormData();
+        formData.append('name', nameValue);
+        formData.append('color', colorInput.value);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        try {
+            // ✅ Usar phase.id del contexto
+            const phaseId = {{ phase.id }};
+            const url = `/extraction/phases/${phaseId}/tags/create-inductive/`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // ✅ Agregar tag a la lista
+                addTagToList(data.tag);
+                
+                // Mostrar mensaje de éxito
+                messageDiv.innerHTML = `
+                    <div class="alert alert-success py-2 text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>${data.message}</span>
+                    </div>
+                `;
+                messageDiv.classList.remove('hidden');
+                
+                // Cerrar formulario después de 1.5s
+                setTimeout(() => {
+                    toggleInductiveTagForm(false);
+                }, 1500);
+                
+            } else {
+                const errorMsg = data.error || data.errors?.name?.[0] || 'Error al crear el tag';
+                messageDiv.innerHTML = `
+                    <div class="alert alert-error py-2 text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>${errorMsg}</span>
+                    </div>
+                `;
+                messageDiv.classList.remove('hidden');
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `
+                <div class="alert alert-error py-2 text-xs">
+                    <span>Error de conexión. Intenta de nuevo.</span>
+                </div>
+            `;
+            messageDiv.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            loadingSpinner.classList.add('hidden');
+        }
+    };
+    
+    // ✅ Función para agregar tag a la lista
+    function addTagToList(tag) {
+        const tagsContainer = document.getElementById('tags-list-container');
+        if (!tagsContainer) return;
+        
+        // Crear elemento de tag
+        const tagItem = document.createElement('label');
+        tagItem.className = 'tag-item flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer rounded transition-colors';
+        tagItem.dataset.tagName = tag.name.toLowerCase();
+        tagItem.dataset.tagId = tag.id;
+        
+        tagItem.innerHTML = `
+            <input type="checkbox" 
+                   name="tags" 
+                   value="${tag.id}"
+                   class="checkbox checkbox-sm checkbox-primary tag-checkbox"
+                   checked>
+            <span class="text-sm flex-1">${tag.name}</span>
+            <span class="badge badge-xs badge-success">Inductivo</span>
+            <span class="badge badge-xs" 
+                  style="background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
+            </span>
+        `;
+        
+        // Agregar al inicio de la lista
+        tagsContainer.insertBefore(tagItem, tagsContainer.firstChild);
+        
+        // Actualizar contador
+        const counter = document.getElementById('tags-counter');
+        if (counter) {
+            const checkboxes = tagsContainer.querySelectorAll('.tag-checkbox:checked');
+            const count = checkboxes.length;
+            counter.textContent = count === 1 ? '1 seleccionada' : `${count} seleccionadas`;
+        }
+        
+        console.log('✅ Tag added to list:', tag);
+    }
+})();
+</script>

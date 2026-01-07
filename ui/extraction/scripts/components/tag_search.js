@@ -17,11 +17,7 @@ class TagSearch {
         this.clearBtn.addEventListener('click', () => this.clearSearch());
         this.tagsContainer.addEventListener('change', () => this.updateCounter());
         
-        // Auto-focus
-        const modal = document.getElementById('quote_modal');
-        modal.addEventListener('click', () => {
-            setTimeout(() => this.searchInput.focus(), 100);
-        });
+        
     }
 
     filterTags(searchTerm) {
