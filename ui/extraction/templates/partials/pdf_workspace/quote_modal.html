@@ -29,21 +29,14 @@
                     </span>
                 </label>
                 
-<<<<<<< HEAD
-                <!-- Input de Búsqueda -->
-=======
                 <!-- ✅ Input de Búsqueda -->
->>>>>>> develop
                 <div class="relative mb-2">
                     <input type="text" 
                            id="tag-search-input"
                            class="input input-sm input-bordered w-full pr-8 focus:outline-none" 
                            placeholder="🔍 Buscar etiquetas..."
                            autocomplete="off">
-<<<<<<< HEAD
-=======
                     <!-- Botón Limpiar (oculto por defecto) -->
->>>>>>> develop
                     <button type="button" 
                             id="clear-search-btn"
                             class="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 hidden"
@@ -65,12 +58,9 @@
                                value="{{ tag.id }}"
                                class="checkbox checkbox-sm checkbox-primary tag-checkbox">
                         <span class="text-sm flex-1">{{ tag.name }}</span>
-<<<<<<< HEAD
                         {% if tag.type == 'INDUCTIVE' %}
                             <span class="badge badge-xs badge-success">Inductivo</span>
                         {% endif %}
-=======
->>>>>>> develop
                         <span class="badge badge-xs" 
                               style="background-color: {{ tag.color }}20; color: {{ tag.color }}; border: 1px solid {{ tag.color }}40;">
                         </span>
@@ -88,7 +78,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     No se encontraron etiquetas
-<<<<<<< HEAD
                 </div>
                 
                 <!-- ✅ Botón para crear tag inductivo (FUERA del form de quote) -->
@@ -101,8 +90,6 @@
                         </svg>
                         Crear nuevo tag inductivo
                     </button>
-=======
->>>>>>> develop
                 </div>
             </div>
 
@@ -121,15 +108,10 @@
         {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
     </div>
 </dialog>
-<<<<<<< HEAD
 
 <!-- Estilos -->
 <style>
 .tag-item {
-=======
-<style>
-    .tag-item {
->>>>>>> develop
     transition: all 0.2s ease;
 }
 
@@ -137,19 +119,13 @@
     transform: translateX(2px);
 }
 
-<<<<<<< HEAD
-=======
 /* Highlight del input de búsqueda */
->>>>>>> develop
 #tag-search-input:focus {
     border-color: hsl(var(--p));
     box-shadow: 0 0 0 3px hsl(var(--p) / 0.1);
 }
 
-<<<<<<< HEAD
-=======
 /* Scrollbar personalizado para lista de tags */
->>>>>>> develop
 #tags-list-container::-webkit-scrollbar {
     width: 6px;
 }
@@ -167,10 +143,7 @@
     background: hsl(var(--bc) / 0.5);
 }
 
-<<<<<<< HEAD
-=======
 /* Animación de fade para mensaje de "no encontrado" */
->>>>>>> develop
 #no-tags-message {
     animation: fadeIn 0.2s ease;
 }
@@ -179,7 +152,6 @@
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-<<<<<<< HEAD
 </style>
 
 <!-- ✅ Script de filtrado (inline) -->
@@ -262,6 +234,3 @@
     });
 })();
 </script>
-=======
-</style>
->>>>>>> develop
