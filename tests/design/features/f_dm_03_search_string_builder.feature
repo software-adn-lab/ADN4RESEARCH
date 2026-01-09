@@ -15,7 +15,7 @@ Característica: Construir cadena de búsqueda
             {
                 "question": "¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?",
                 "motivation": "Es necesario para el proyecto",
-                "framework_fields": <framework_fields>
+                "framework_fields": {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}
             }
             """
         Y he identificado los sinónimos de los términos clave:
@@ -29,11 +29,8 @@ Característica: Construir cadena de búsqueda
         """
             ("traditional medication" OR "tradition" OR "medicine") AND ("physical therapy" OR "rehabilitation" OR "recovery") AND ("older adults" OR "elderly" OR "old") AND ("improvement in mobility")
         """
-        Ejemplos:
-        | framework_fields                                                                                                                                           | expected_terms |
-        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
 
-    Esquema del escenario: Proveer términos clave a partir de campos del framework
+    Escenario: Proveer términos clave a partir de campos del framework
         Dado que he redactado una pregunta de investigación completa para el proyecto:
             """
             {
