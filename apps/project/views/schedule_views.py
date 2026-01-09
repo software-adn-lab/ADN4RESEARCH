@@ -13,14 +13,9 @@ from apps.design.api.dtos import DesignScheduleDTO
 @require_http_methods(["GET"])
 def configure_schedule_view(request, project_id):
     project = get_object_or_404(Project, pk=project_id, owner=request.user)
-
-    # Use the provider to get stage info, avoiding direct import of DesignPhase
     provider: IDesignManagement = DesignManagementProvider()
     all_stages = provider.get_design_stages_info()
-
-    # Filter out FINISHED stage
     stages_info = [s for s in all_stages if s['key'] != 'FINISHED']
-
     context = {
         'project': project,
         'stages': stages_info,
