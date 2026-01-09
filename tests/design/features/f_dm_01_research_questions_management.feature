@@ -14,9 +14,14 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
         Y que he redactado una pregunta de investigación completa para el proyecto:
             """
             {
-                "question": "¿Los patrones de diseño de software ayudan a mejorar el desarrollo?",
-                "motivation": "En base al objetivo 2 del proyecto, se plantea esta pregunta.",
-                "framework_fields": {"Population": "Students", "Intervention": "Gamification", "Comparison": "Online courses", "Outcome": "Motivation"}
+            "question": "¿El uso de patrones de diseño de software mejora la calidad del proceso de desarrollo en proyectos académicos?",
+            "motivation": "Con base en el objetivo 2 del proyecto, se plantea esta pregunta.",
+            "framework_fields": {
+                "Population": "Software engineering students",
+                "Intervention": "Use of software design patterns",
+                "Comparison": "Development without design patterns",
+                "Outcome": "Code quality and maintainability"
+                }
             }
             """
         Y que esta pregunta está "READY_TO_SEND"
@@ -29,7 +34,7 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
         Y que existen preguntas de investigación "SUGGESTED" por los investigadores para el proyecto
         Y selecciono una pregunta que no haya sido sugerida por mí
         Cuando la revise y sugiera <action> la pregunta de investigación seleccionada con la justificación de mi decisión
-        Entonces la pregunta estará "<expected_status>" para el proyecto
+            Entonces la pregunta estará "<expected_status>" para el proyecto
         Ejemplos:
             | action   | expected_status |  
             | approve  |     APPROVED    |
