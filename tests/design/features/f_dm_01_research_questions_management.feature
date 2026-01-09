@@ -1,34 +1,28 @@
 # language: es
+# F-DM-01
 Característica: Administrar el ciclo de vida de las preguntas de investigación
     Como investigador
     Quiero mantener control en la evolucion de las preguntas de investigación del proyecto 
     Para asegurar una apropiada validación de mi diseño en una RSL
 
-    # CONSIDERACIONES: En mi modulo se prueba el comportamiento propio del modulo, por ende, no tiene sentido alguno
-    # probar la misma cosa con diferentes frameworks, debido a que es practicamente lo mismo.
-    # Es por ello que la precondicion principal es que haya proyecto y este este creado con x framework, en este caso
-    # tomo como ejemplo a PICO.
     Antecedentes:
         Dado que estoy asignado a un proyecto de investigación
         Y el proyecto tiene como framework investigativo a PICO
     
-    Esquema del escenario: Sugerir pregunta para el proyecto de investigación
+    Esquema: Sugerir pregunta para el proyecto de investigación
         Dado que la etapa de "creación" esta activa en la fase de diseño
         Y que he redactado una pregunta de investigación completa para el proyecto:
             """
             {
-                "question": <question>,
-                "motivation": <motivation>,
-                "framework_fields": <framework_fields>
+                "question": "¿Los patrones de diseño de software ayudan a mejorar el desarrollo?",
+                "motivation": "En base al objetivo 2 del proyecto, se plantea esta pregunta.",
+                "framework_fields": {"Population": "Students", "Intervention": "Gamification", "Comparison": "Online courses", "Outcome": "Motivation"}
             }
             """
         Y que esta pregunta está "READY_TO_SEND"
         Cuando envíe la pregunta de investigación creada
         Entonces la pregunta estará "SUGGESTED" para el proyecto
         Y el sistema notificará al equipo investigador
-        Ejemplos: 
-            | framework_fields                                                                                                    |         question        | motivation          |
-            | {"Population": "Students", "Intervention": "Gamification", "Comparison": "Online courses", "Outcome": "Motivation"} | "How does ...?"         | "To understand ..." |
 
     Esquema del escenario: Sugerir accion ante una pregunta de investigacion del proyecto
         Dado que la etapa de "discusión" esta activa en la fase de diseño
@@ -40,4 +34,4 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
             | action   | expected_status |  
             | approve  |     APPROVED    |
             | reject   |     REJECTED    |
-
+            

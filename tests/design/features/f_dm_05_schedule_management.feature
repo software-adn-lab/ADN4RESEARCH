@@ -1,5 +1,5 @@
 # language: es
-Característica: Gestión dinámica del cronograma 
+Característica: Gestión del cronograma de las etapas de diseño
   Como owner del proyecto de investigacion
   Quiero que el tiempo disponible para las etapas del diseño se ajuste a mi planificacion
   Para que el equipo cumpla con el cronograma programado
