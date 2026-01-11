@@ -24,8 +24,8 @@ Característica: Distribución aleatoria de estudios
       """
 
     Ejemplos:
-      | cargas_horarias             | hojas_por_paper              | total_revisiones_paper | distirbución_esperada |
-      | {"I1": 10,"I2": 2,"I3": 20} | {"P1":12, "P2": 6, "P3": 18} | 2                      |                       |
+      | cargas_horarias             | hojas_por_paper               | total_revisiones_paper | distirbución_esperada                              |
+      | {"I1": 10,"I2": 20,"I3": 5} | {"P1": 12, "P2": 6, "P3": 18} | 2                      | {"I1": [P2, P3], "I2": [P1, P3, P2], "I3": ["P1"]} |
 
 
 

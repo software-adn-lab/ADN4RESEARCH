@@ -12,7 +12,7 @@ Característica: Inicio de fase de discusión
     Y hoy es "<fecha_actual>"
     Cuando consulte la información del proyecto
     Entonces el sistema debe operar en modo "<modo>"
-    Y deben estar habilitadas las funcionalidades "<acciones_habilitadas>"
+    Y deben estar habilitadas las acciones "<acciones_habilitadas>"
 
     Ejemplos:
       | fecha_inicio | fecha_fin  | fecha_actual | modo       | acciones_habilitadas                 |
