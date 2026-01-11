@@ -1,0 +1,207 @@
+USING RUNNER: behave.runner:Runner
+@modulo:busqueda @componente:traduccion @mvp
+Caracter├¡stica: Traducci├│n autom├ítica de estrategias de b├║squeda seg├║n la base de datos acad├®mica # tests/acquisition/features/01_normalizacion_estrategia_busqueda.feature:3
+  Como investigador
+  Quiero que mi estrategia de b├║squeda se adapte autom├íticamente a la sintaxis de cada base de datos
+  Para poder buscar en m├║ltiples fuentes sin tener que reescribir manualmente cada consulta
+  Antecedentes:   # tests/acquisition/features/01_normalizacion_estrategia_busqueda.feature:8
+
+  @scopus
+  Esquema del escenario: Traducci├│n de estrategia para diferentes bases de datos acad├®micas -- @1.1 Scopus  # tests/acquisition/features/01_normalizacion_estrategia_busqueda.feature:55
+    Dada una estrategia de b├║squeda normalizada estructurada                                                # tests/acquisition/features/steps/traduccion_steps.py:35
+      """
+      {
+        "strategy_id": "slr_ml_software_2024",
+        "main_terms": [
+        {
+          "term": "machine learning",
+          "synonyms": ["deep learning", "ML", "artificial intelligence"]
+        },
+        {
+          "term": "software engineering",
+          "synonyms": ["software development", "software quality"]
+        },
+        {
+          "term": "bug prediction",
+          "synonyms": ["defect prediction", "fault prediction"]
+        }
+        ],
+        "exclusions": [
+        "hardware testing",
+        "gaming",
+        "mobile applications"
+        ],
+        "filters": {
+        "year": {
+          "from": 2020,
+          "to": 2024
+        }
+        }
+      }
+      """
+    Cuando solicito traducir mi estrategia de b├║squeda para "Scopus"                                        # tests/acquisition/features/steps/traduccion_steps.py:74
+    Entonces obtengo una consulta traducida compatible con la sintaxis de Scopus                            # tests/acquisition/features/steps/traduccion_steps.py:110
+      """
+      TITLE-ABS-KEY((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) AND NOT ("hardware testing" OR "gaming" OR "mobile applications")) AND PUBYEAR > 2019 AND PUBYEAR < 2025
+      """
+    Y la consulta traducida preserva la l├│gica de mi estrategia original                                    # tests/acquisition/features/steps/traduccion_steps.py:174
+    Y el estado de la traducci├│n es "ready"                                                                 # tests/acquisition/features/steps/traduccion_steps.py:242
+    Y se registra la trazabilidad de la traducci├│n                                                          # tests/acquisition/features/steps/traduccion_steps.py:266
+    Y no se emiten advertencias                                                                             # tests/acquisition/features/steps/traduccion_steps.py:315
+
+  @ieee
+  Esquema del escenario: Traducci├│n de estrategia para diferentes bases de datos acad├®micas -- @2.1 IEEE Xplore  # tests/acquisition/features/01_normalizacion_estrategia_busqueda.feature:60
+    Dada una estrategia de b├║squeda normalizada estructurada                                                     # tests/acquisition/features/steps/traduccion_steps.py:35
+      """
+      {
+        "strategy_id": "slr_ml_software_2024",
+        "main_terms": [
+        {
+          "term": "machine learning",
+          "synonyms": ["deep learning", "ML", "artificial intelligence"]
+        },
+        {
+          "term": "software engineering",
+          "synonyms": ["software development", "software quality"]
+        },
+        {
+          "term": "bug prediction",
+          "synonyms": ["defect prediction", "fault prediction"]
+        }
+        ],
+        "exclusions": [
+        "hardware testing",
+        "gaming",
+        "mobile applications"
+        ],
+        "filters": {
+        "year": {
+          "from": 2020,
+          "to": 2024
+        }
+        }
+      }
+      """
+    Cuando solicito traducir mi estrategia de b├║squeda para "IEEE Xplore"                                        # tests/acquisition/features/steps/traduccion_steps.py:74
+    Entonces obtengo una consulta traducida compatible con la sintaxis de IEEE Xplore                            # tests/acquisition/features/steps/traduccion_steps.py:110
+      """
+      ((("machine learning" OR "deep learning" OR "ML" OR "artificial intelligence") AND ("software engineering" OR "software development" OR "software quality") AND ("bug prediction" OR "defect prediction" OR "fault prediction")) NOT ("hardware testing" OR "gaming" OR "mobile applications"))
+      """
+    Y la consulta traducida preserva la l├│gica de mi estrategia original                                         # tests/acquisition/features/steps/traduccion_steps.py:174
+    Y el estado de la traducci├│n es "ready"                                                                      # tests/acquisition/features/steps/traduccion_steps.py:242
+    Y se registra la trazabilidad de la traducci├│n                                                               # tests/acquisition/features/steps/traduccion_steps.py:266
+    Y se emite una advertencia indicando aplicar el filtro de a├▒o 2020-2024 manualmente en la interfaz           # tests/acquisition/features/steps/traduccion_steps.py:315
+
+@modulo:busqueda @componente:descubrimiento @mvp
+Caracter├¡stica: Descubrimiento y consolidaci├│n de estudios desde m├║ltiples fuentes # tests/acquisition/features/02_busqueda_descubrimiento_estudios.feature:3
+  Como investigador
+  Quiero ejecutar el descubrimiento de estudios sobre una estrategia normalizada
+  Para obtener un listado consolidado sin duplicados y conocer qu├® fuentes fueron consultadas
+  Antecedentes:   # tests/acquisition/features/02_busqueda_descubrimiento_estudios.feature:8
+
+  @descubrimiento @mvp
+  Esquema del escenario: El descubrimiento consulta solo fuentes ready y consolida resultados -- @1.1   # tests/acquisition/features/02_busqueda_descubrimiento_estudios.feature:26
+    Dado que el sistema soporta las fuentes "Scopus" e "IEEE Xplore"                                    # tests/acquisition/features/steps/descubrimiento_steps.py:39
+    Dada una estrategia normalizada con id "norm-001"                                                   # tests/acquisition/features/steps/descubrimiento_steps.py:45
+    Y las traducciones para esa estrategia tienen los siguientes estados:                               # tests/acquisition/features/steps/descubrimiento_steps.py:51
+      | fuente      | estado |
+      | Scopus      | ready  |
+      | IEEE Xplore | ready  |
+    Cuando ejecuto el descubrimiento para la estrategia "norm-001"                                      # tests/acquisition/features/steps/descubrimiento_steps.py:87
+    Entonces obtengo un listado de estudios                                                             # tests/acquisition/features/steps/descubrimiento_steps.py:160
+    Y el listado no contiene duplicados                                                                 # tests/acquisition/features/steps/descubrimiento_steps.py:168
+    Y cada estudio tiene t├¡tulo, enlace y fuente                                                        # tests/acquisition/features/steps/descubrimiento_steps.py:197
+    Y obtengo un resumen con id_estrategia "norm-001" y resultado "complete"                            # tests/acquisition/features/steps/descubrimiento_steps.py:220
+
+  @descubrimiento @mvp
+  Esquema del escenario: El descubrimiento consulta solo fuentes ready y consolida resultados -- @1.2   # tests/acquisition/features/02_busqueda_descubrimiento_estudios.feature:27
+    Dado que el sistema soporta las fuentes "Scopus" e "IEEE Xplore"                                    # tests/acquisition/features/steps/descubrimiento_steps.py:39
+    Dada una estrategia normalizada con id "norm-002"                                                   # tests/acquisition/features/steps/descubrimiento_steps.py:45
+    Y las traducciones para esa estrategia tienen los siguientes estados:                               # tests/acquisition/features/steps/descubrimiento_steps.py:51
+      | fuente      | estado        |
+      | Scopus      | ready         |
+      | IEEE Xplore | not_supported |
+    Cuando ejecuto el descubrimiento para la estrategia "norm-002"                                      # tests/acquisition/features/steps/descubrimiento_steps.py:87
+    Entonces obtengo un listado de estudios                                                             # tests/acquisition/features/steps/descubrimiento_steps.py:160
+    Y el listado no contiene duplicados                                                                 # tests/acquisition/features/steps/descubrimiento_steps.py:168
+    Y cada estudio tiene t├¡tulo, enlace y fuente                                                        # tests/acquisition/features/steps/descubrimiento_steps.py:197
+    Y obtengo un resumen con id_estrategia "norm-002" y resultado "partial"                             # tests/acquisition/features/steps/descubrimiento_steps.py:220
+
+  @descubrimiento @mvp
+  Esquema del escenario: El descubrimiento consulta solo fuentes ready y consolida resultados -- @1.3   # tests/acquisition/features/02_busqueda_descubrimiento_estudios.feature:28
+    Dado que el sistema soporta las fuentes "Scopus" e "IEEE Xplore"                                    # tests/acquisition/features/steps/descubrimiento_steps.py:39
+    Dada una estrategia normalizada con id "norm-003"                                                   # tests/acquisition/features/steps/descubrimiento_steps.py:45
+    Y las traducciones para esa estrategia tienen los siguientes estados:                               # tests/acquisition/features/steps/descubrimiento_steps.py:51
+      | fuente      | estado        |
+      | Scopus      | not_supported |
+      | IEEE Xplore | ready         |
+    Cuando ejecuto el descubrimiento para la estrategia "norm-003"                                      # tests/acquisition/features/steps/descubrimiento_steps.py:87
+    Entonces obtengo un listado de estudios                                                             # tests/acquisition/features/steps/descubrimiento_steps.py:160
+    Y el listado no contiene duplicados                                                                 # tests/acquisition/features/steps/descubrimiento_steps.py:168
+    Y cada estudio tiene t├¡tulo, enlace y fuente                                                        # tests/acquisition/features/steps/descubrimiento_steps.py:197
+    Y obtengo un resumen con id_estrategia "norm-003" y resultado "partial"                             # tests/acquisition/features/steps/descubrimiento_steps.py:220
+
+@modulo:busqueda @componente:consolidacion @mvp
+Caracter├¡stica: Consolidaci├│n y completado de metadatos de estudios # tests/acquisition/features/03_busqueda_de_metadatos_de_estudios.feature:3
+  Como investigador
+  Quiero que los estudios descubiertos tengan metadatos completos y normalizados
+  Para poder aplicar criterios de inclusi├│n/exclusi├│n con informaci├│n confiable
+  Antecedentes:   # tests/acquisition/features/03_busqueda_de_metadatos_de_estudios.feature:8
+
+  @consolidacion @automatico
+  Escenario: Consolidaci├│n autom├ítica de estudios con metadatos faltantes                    # tests/acquisition/features/03_busqueda_de_metadatos_de_estudios.feature:12
+    Dado que existe un resultado de descubrimiento con estudios de m├║ltiples fuentes         # tests/acquisition/features/steps/consolidacion_steps.py:43
+    Cuando solicito consolidar los estudios descubiertos                                     # tests/acquisition/features/steps/consolidacion_steps.py:92
+    Entonces el sistema completa los metadatos faltantes consultando las fuentes acad├®micas  # tests/acquisition/features/steps/consolidacion_steps.py:122
+    Y normaliza los formatos de DOI, autores y fechas                                        # tests/acquisition/features/steps/consolidacion_steps.py:141
+    Y cada estudio queda marcado con su estado de consolidaci├│n: completo, parcial o fallido # tests/acquisition/features/steps/consolidacion_steps.py:163
+    Y se proporciona un resumen del proceso de consolidaci├│n                                 # tests/acquisition/features/steps/consolidacion_steps.py:179
+
+  @consolidacion @manual
+  Escenario: Completar metadatos manualmente cuando la consolidaci├│n autom├ítica falla                # tests/acquisition/features/03_busqueda_de_metadatos_de_estudios.feature:20
+    Dado que existe un resultado de descubrimiento con estudios de m├║ltiples fuentes                 # tests/acquisition/features/steps/consolidacion_steps.py:43
+    Dado que un estudio no pudo consolidarse completamente de forma autom├ítica                       # tests/acquisition/features/steps/consolidacion_steps.py:195
+    Cuando ingreso manualmente los metadatos faltantes del estudio                                   # tests/acquisition/features/steps/consolidacion_steps.py:226
+    Entonces el sistema actualiza el registro, valida el formato y marca el estudio como consolidado # tests/acquisition/features/steps/consolidacion_steps.py:259
+    Y se mantiene trazabilidad indicando qu├® campos son autom├íticos y cu├íles manuales                # tests/acquisition/features/steps/consolidacion_steps.py:276
+
+@modulo:busqueda @componente:texto-completo @mvp
+Caracter├¡stica: Acceso al texto completo de estudios para an├ílisis profundo # tests/acquisition/features/04_disponibilidad_texto_completo.feature:3
+  Como investigador
+  Quiero obtener el documento completo de los estudios relevantes
+  Para poder leerlos, extraer datos y evaluar su calidad metodol├│gica
+  Antecedentes:   # tests/acquisition/features/04_disponibilidad_texto_completo.feature:8
+
+  @texto-completo @acceso-publico
+  Escenario: Obtener texto completo cuando est├í disponible p├║blicamente             # tests/acquisition/features/04_disponibilidad_texto_completo.feature:12
+    Dado que existen estudios con metadatos consolidados de mi revisi├│n sistem├ítica # tests/acquisition/features/steps/disponibilidad_steps.py:50
+    Dado que un estudio tiene el texto completo de acceso p├║blico                   # tests/acquisition/features/steps/disponibilidad_steps.py:109
+    Cuando solicito obtener el documento                                            # tests/acquisition/features/steps/disponibilidad_steps.py:167
+    Entonces el sistema descarga autom├íticamente el archivo                         # tests/acquisition/features/steps/disponibilidad_steps.py:218
+    Y valida la integridad del documento                                            # tests/acquisition/features/steps/disponibilidad_steps.py:231
+    Y el estudio queda marcado como "texto_completo_disponible"                     # tests/acquisition/features/steps/disponibilidad_steps.py:245
+    Y se registra el origen del texto como "autom├ítico"                             # tests/acquisition/features/steps/disponibilidad_steps.py:266
+
+  @texto-completo @busqueda-alternativa
+  Escenario: Buscar en fuentes alternativas cuando no est├í p├║blico en la fuente original  # tests/acquisition/features/04_disponibilidad_texto_completo.feature:21
+    Dado que existen estudios con metadatos consolidados de mi revisi├│n sistem├ítica       # tests/acquisition/features/steps/disponibilidad_steps.py:50
+    Dado que un estudio no tiene acceso p├║blico en su fuente original                     # tests/acquisition/features/steps/disponibilidad_steps.py:128
+    Cuando el sistema intenta obtener el texto completo                                   # tests/acquisition/features/steps/disponibilidad_steps.py:187
+    Entonces si encuentra el documento en una fuente alternativa, lo descarga             # tests/acquisition/features/steps/disponibilidad_steps.py:291
+    Y el estudio queda marcado como "texto_completo_disponible"                           # tests/acquisition/features/steps/disponibilidad_steps.py:245
+    Y se registra desde qu├® fuente alternativa se obtuvo el texto                         # tests/acquisition/features/steps/disponibilidad_steps.py:303
+
+  @texto-completo @manual
+  Escenario: Cargar manualmente el texto completo cuando no est├í disponible autom├íticamente  # tests/acquisition/features/04_disponibilidad_texto_completo.feature:29
+    Dado que existen estudios con metadatos consolidados de mi revisi├│n sistem├ítica          # tests/acquisition/features/steps/disponibilidad_steps.py:50
+    Dado que un estudio no pudo obtenerse autom├íticamente en ninguna fuente                  # tests/acquisition/features/steps/disponibilidad_steps.py:147
+    Cuando cargo manualmente el archivo del texto completo                                   # tests/acquisition/features/steps/disponibilidad_steps.py:193
+    Entonces el sistema valida el formato e integridad del archivo                           # tests/acquisition/features/steps/disponibilidad_steps.py:325
+    Y vincula el documento al estudio correspondiente                                        # tests/acquisition/features/steps/disponibilidad_steps.py:338
+    Y el estudio queda marcado como "texto_completo_disponible"                              # tests/acquisition/features/steps/disponibilidad_steps.py:245
+    Y se registra el origen del texto como "manual"                                          # tests/acquisition/features/steps/disponibilidad_steps.py:266
+
+4 features passed, 0 failed, 0 skipped
+10 scenarios passed, 0 failed, 0 skipped
+69 steps passed, 0 failed, 0 skipped
+Took 0m0.224s

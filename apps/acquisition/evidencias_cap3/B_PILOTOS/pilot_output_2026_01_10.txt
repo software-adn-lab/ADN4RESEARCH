@@ -1,0 +1,147 @@
+ÔÜá´©Å  AlternativeSourceFinder: Sci-Hub HABILITADO. Usar solo para investigaci├│n acad├®mica personal.
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22machine+learning%22+OR+%22ML%22%29+AND+%28%22software+engineering%22%29%29%29+AND+PUBYEAR+%3E+2022+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22machine+learning%22+OR+%22ML%22%29+AND+%28%22software+engineering%22%29%29%29+AND+PUBYEAR+%3E+2022+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22machine+learning%22+OR+%22ML%22%29+AND+%28%22software+engineering%22%29%29%29+AND+PUBYEAR+%3E+2022+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+API strategy failed: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22machine+learning%22+OR+%22ML%22%29+AND+%28%22software+engineering%22%29%29%29+AND+PUBYEAR+%3E+2022+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, trying web strategy
+Error en API directa: Expecting value: line 1 column 1 (char 0)
+Usando scraping HTML como fallback...
+­ƒÜ¿ reCAPTCHA DETECTADO
+ÔØî reCAPTCHA en modo headless - FALLO INEVITABLE
+   Soluci├│n: Ejecutar UNA VEZ con headless=False para resolver
+   manualmente y guardar la sesi├│n en scopus_auth_state.json
+Error en b├║squeda Scopus: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Traceback (most recent call last):
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 166, in search
+    self._authenticate(page)
+    ~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 290, in _authenticate
+    if self._handle_recaptcha(page):
+       ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 414, in _handle_recaptcha
+    raise Exception(
+    ...<2 lines>...
+    )
+Exception: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Error en b├║squeda Scopus: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Ô£ù Scopus: Error al consultar conector. Continuando con otras fuentes. Error: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Traceback (most recent call last):
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\application\discovery_service.py", line 172, in _fetch_studies
+    converted = future.result()
+  File "C:\Python313\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Python313\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\application\discovery_service.py", line 197, in _fetch_single_source
+    raw_results = list(connector.search(query, max_results=max_results))
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\connector.py", line 112, in search
+    results = self._search_with_strategy(query, max_results)
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\connector.py", line 157, in _search_with_strategy
+    return self.web_strategy.execute(query, max_results)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\strategies\web_strategy.py", line 103, in execute
+    results = list(connector.search(query, max_results=max_results))
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 166, in search
+    self._authenticate(page)
+    ~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 290, in _authenticate
+    if self._handle_recaptcha(page):
+       ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 414, in _handle_recaptcha
+    raise Exception(
+    ...<2 lines>...
+    )
+Exception: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22DevOps%22%29+AND+%28%22continuous+integration%22+OR+%22CI%22%29%29%29+AND+PUBYEAR+%3E+2023+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22DevOps%22%29+AND+%28%22continuous+integration%22+OR+%22CI%22%29%29%29+AND+PUBYEAR+%3E+2023+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+Client error on GET https://api.elsevier.com/content/search/scopus: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22DevOps%22%29+AND+%28%22continuous+integration%22+OR+%22CI%22%29%29%29+AND+PUBYEAR+%3E+2023+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, not retrying
+API strategy failed: 401 Client Error: Unauthorized for url: https://api.elsevier.com/content/search/scopus?query=TITLE-ABS-KEY%28%28%28%22DevOps%22%29+AND+%28%22continuous+integration%22+OR+%22CI%22%29%29%29+AND+PUBYEAR+%3E+2023+AND+PUBYEAR+%3C+2025&start=0&count=5&view=COMPLETE, trying web strategy
+Error en API directa: Expecting value: line 1 column 1 (char 0)
+Usando scraping HTML como fallback...
+­ƒÜ¿ reCAPTCHA DETECTADO
+ÔØî reCAPTCHA en modo headless - FALLO INEVITABLE
+   Soluci├│n: Ejecutar UNA VEZ con headless=False para resolver
+   manualmente y guardar la sesi├│n en scopus_auth_state.json
+Error en b├║squeda Scopus: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Traceback (most recent call last):
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 166, in search
+    self._authenticate(page)
+    ~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 290, in _authenticate
+    if self._handle_recaptcha(page):
+       ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 414, in _handle_recaptcha
+    raise Exception(
+    ...<2 lines>...
+    )
+Exception: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Error en b├║squeda Scopus: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Ô£ù Scopus: Error al consultar conector. Continuando con otras fuentes. Error: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+Traceback (most recent call last):
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\application\discovery_service.py", line 172, in _fetch_studies
+    converted = future.result()
+  File "C:\Python313\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Python313\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\application\discovery_service.py", line 197, in _fetch_single_source
+    raw_results = list(connector.search(query, max_results=max_results))
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\connector.py", line 112, in search
+    results = self._search_with_strategy(query, max_results)
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\connector.py", line 157, in _search_with_strategy
+    return self.web_strategy.execute(query, max_results)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\strategies\web_strategy.py", line 103, in execute
+    results = list(connector.search(query, max_results=max_results))
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 166, in search
+    self._authenticate(page)
+    ~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 290, in _authenticate
+    if self._handle_recaptcha(page):
+       ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "D:\Tesis\ADN4RESEARCH\apps\acquisition\discovery\adapters\outbound\connectors\scopus\scraper.py", line 414, in _handle_recaptcha
+    raise Exception(
+    ...<2 lines>...
+    )
+Exception: Bloqueo por reCAPTCHA en modo headless. Ejecute con headless=False para resolver manualmente y guardar sesi├│n.
+DEBUG: USE_S3=True (from env: true)
+
+==================================================
+STARTING PILOT EXECUTION (ENTORNO B - REAL)
+==================================================
+
+--- Running Strategy 1: ML & SE (Recent) ---
+Created Strategy ID: 15
+Executing Preview...
+Preview Found: 5 studies across ['Scopus', 'IEEE Xplore']
+Persisting 5 studies...
+[SUCCESS] Execution Success! Execution ID: ecb9d3f4-e683-431d-b743-e2ee6cd7892d
+   New Studies: 5
+   Status: SUCCESS
+Enriching 5 studies...
+[SUCCESS] Enriched: 5, Failed: 0
+Downloading PDFs for 5 studies...
+[SUCCESS] Download Enqueued/Processed. Available: 0
+
+--- Running Strategy 2: DevOps (Very Recent) ---
+Created Strategy ID: 16
+Executing Preview...
+Preview Found: 5 studies across ['Scopus', 'IEEE Xplore']
+Persisting 5 studies...
+[SUCCESS] Execution Success! Execution ID: d08371ac-84c8-40ec-b04f-00ea85cff43f
+   New Studies: 5
+   Status: SUCCESS
+Enriching 5 studies...
+[SUCCESS] Enriched: 5, Failed: 0
+Downloading PDFs for 5 studies...
+[SUCCESS] Download Enqueued/Processed. Available: 0
+
+--- Executing Manual Control Study (Guaranteed Evidence) ---
+Registering Control Study: A Systematic Review of Manual Fallback Mechanisms in Pilot Studies
+[SUCCESS] Control Study Registered: c30cfa52-7f35-428a-9b11-03169a623ba6
+[SUCCESS] Control PDF Uploaded: texto_completo_disponible

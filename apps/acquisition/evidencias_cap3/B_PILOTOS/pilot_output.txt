@@ -1,0 +1,36 @@
+DEBUG: USE_S3=True (from env: true)
+
+==================================================
+STARTING PILOT EXECUTION (ENTORNO B - REAL)
+==================================================
+
+--- Running Strategy 1: ML & SE (Recent) ---
+Created Strategy ID: 11
+Executing Preview...
+Preview Found: 5 studies across ['Scopus', 'IEEE Xplore']
+Persisting 5 studies...
+[SUCCESS] Execution Success! Execution ID: bad12477-31c4-4cad-b740-ae79a195d50e
+   New Studies: 5
+   Status: SUCCESS
+Enriching 5 studies...
+[SUCCESS] Enriched: 5, Failed: 0
+Downloading PDFs for 5 studies...
+[SUCCESS] Download Enqueued/Processed. Available: 0
+
+--- Running Strategy 2: DevOps (Very Recent) ---
+Created Strategy ID: 12
+Executing Preview...
+Preview Found: 5 studies across ['Scopus', 'IEEE Xplore']
+Persisting 5 studies...
+[SUCCESS] Execution Success! Execution ID: b212990a-096c-4f9b-90e0-f536496aa2ec
+   New Studies: 5
+   Status: SUCCESS
+Enriching 5 studies...
+[SUCCESS] Enriched: 5, Failed: 0
+Downloading PDFs for 5 studies...
+[SUCCESS] Download Enqueued/Processed. Available: 0
+
+--- Executing Manual Control Study (Guaranteed Evidence) ---
+Registering Control Study: A Systematic Review of Manual Fallback Mechanisms in Pilot Studies
+[SUCCESS] Control Study Registered: e6ea10e3-307e-49fe-8c43-e1e0ed85e4a4
+[SUCCESS] Control PDF Uploaded: texto_completo_disponible

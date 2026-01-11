@@ -1,0 +1,37 @@
+[================================================================================
+CONFIGURACIÓN DEL ENTORNO DE EJECUCIÓN (B): PILOTOS / VALIDACIÓN OPERATIVA
+================================================================================
+FECHA DE EJECUCIÓN: 2025-12-28
+RESPONSABLE: Alexis Lapo / ADN4RESEARCH
+
+1. OBJETIVO
+   - Validar el comportamiento del sistema en condiciones reales (no deterministas).
+   - Generar evidencia de "Esfuerzo Técnico" y robustez ante fallos externos.
+
+2. FUENTES DE INFORMACIÓN (MODO REAL)
+   - [Scopus]: API Key (Institucional/Personal) + Web Scraping (Fallback).
+   - [IEEE Xplore]: Web Scraping (Estrategia Principal).
+   - [Crossref]: API Pública (Open Access).
+
+3. RED Y CONECTIVIDAD
+   - IP Origen: [IP Local de Desarrollo]
+   - VPN/Proxy: No requerida (Acceso Directo).
+
+4. ESTRATEGIA DE PRUEBA ("Methodological Trick")
+   - Se ejecuta una búsqueda automatizada.
+   - En caso de bloqueo (401/403) o 0 resultados, se aplica FALLBACK MANUAL.
+   - SE GARANTIZA al menos 1 estudio registrado manualmente ("Control Study") para 
+     poblar tablas de procedencia de PDF.
+
+5. ARTEFACTOS GENERADOS
+   - Logs de ejecución: evidencias_cap3/B_PILOTOS/pilot_output.txt
+   - Métricas cuatitativas: evidencias_cap3/DB_EXPORTS/metrics_output.txt
+   - Trazabilidad BD: evidencias_cap3/DB_EXPORTS/fig_3_*.json
+
+[CONFIGURACION RED]
+- Acceso: Doméstico / VPN Institucional (marcar cual aplica)
+- Rate Limits: Standard (1 request/sec)
+
+[OBJETIVO]
+Generar evidencia de trazabilidad en base de datos y disponibilidad real de PDFs.
+Salida esperada: Registros en SearchExecution, Study, ExecutionStudy.

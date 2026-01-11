@@ -1,0 +1,14 @@
+================================================================================
+TABLA 3.1: COBERTURA Y RESULTADOS DE PRUEBAS BDD (ENTORNO A)
+================================================================================
+
+Feature / Capacidad                                          | Scenarios  | Status    
+-------------------------------------------------------------------------------------
+Traducción automática de estrategias                         | 2          | PASSED    
+Descubrimiento y consolidación                               | 3          | PASSED    
+Consolidación y completado de metadatos                      | 2          | PASSED    
+Acceso al texto completo                                     | 3          | PASSED    
+-------------------------------------------------------------------------------------
+TOTAL FEATURES:  4 (Passed: 4, Failed: 0)
+TOTAL SCENARIOS: 10 (Passed: 10, Failed: 0)
+TOTAL TIME:      0m0.356s
