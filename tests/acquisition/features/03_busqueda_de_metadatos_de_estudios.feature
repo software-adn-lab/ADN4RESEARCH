@@ -1,5 +1,5 @@
 # language: es
-@modulo:busqueda @componente:consolidacion @mvp
+@modulo:acquisition @componente:consolidacion @mvp
 Característica: Consolidación y completado de metadatos de estudios
   Como investigador
   Quiero que los estudios descubiertos tengan metadatos completos y normalizados

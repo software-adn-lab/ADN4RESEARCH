@@ -1,5 +1,5 @@
 # language: es
-@modulo:busqueda @componente:texto-completo @mvp
+@modulo:acquisition @componente:texto-completo @mvp
 Característica: Acceso al texto completo de estudios para análisis profundo
   Como investigador
   Quiero obtener el documento completo de los estudios relevantes

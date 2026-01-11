@@ -1,5 +1,5 @@
 # language: es
-@modulo:busqueda @componente:descubrimiento @mvp
+@modulo:acquisition @componente:descubrimiento @mvp
 Característica: Descubrimiento y consolidación de estudios desde múltiples fuentes
   Como investigador
   Quiero ejecutar el descubrimiento de estudios sobre una estrategia normalizada

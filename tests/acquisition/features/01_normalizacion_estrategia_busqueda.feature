@@ -1,5 +1,5 @@
 # language: es
-@modulo:busqueda @componente:traduccion @mvp
+@modulo:acquisition @componente:traduccion @mvp
 Característica: Traducción automática de estrategias de búsqueda según la base de datos académica
   Como investigador 
   Quiero que mi estrategia de búsqueda se adapte automáticamente a la sintaxis de cada base de datos
