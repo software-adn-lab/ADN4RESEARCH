@@ -1,0 +1,121 @@
+{% load static %}
+<div class="w-full flex justify-center bg-gray-50 rounded-lg py-2">
+  <ul class="timeline timeline-vertical justify-center lg:timeline-horizontal w-full lg:max-w-4xl mx-auto">
+    {# Overview #}
+    <li class="h-20">
+      {% if active == 'overview' %}
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-white border-3 border-primary rounded-3xl">
+            <circle cx="10" cy="10" r="10" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:overview' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md">Overview</a>
+        <hr class="bg-base-300" />
+      {% elif active == 'screening' or active == 'fulltext' or active == 'discussion' %}
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-primary">
+            <circle cx="10" cy="10" r="10" />
+            <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:overview' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-primary hover:bg-gray-400 text-white">Overview</a>
+        <hr class="bg-primary" />
+      {% else %}
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-300">
+            <circle cx="10" cy="10" r="8" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:overview' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm">Overview</a>
+        <hr class="bg-base-300" />
+      {% endif %}
+    </li>
+
+    {# Screening #}
+    <li class="h-20">
+      {% if active == 'screening' %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-white border-3 border-primary rounded-3xl">
+            <circle cx="10" cy="10" r="10" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:screening' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md">Screening</a>
+        <hr class="bg-base-300" />
+      {% elif active == 'fulltext' or active == 'discussion' %}
+        <hr class="bg-primary" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-primary">
+            <circle cx="10" cy="10" r="10" />
+            <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:screening' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-primary hover:bg-gray-400 text-white">Screening</a>
+        <hr class="bg-primary" />
+      {% else %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-300">
+            <circle cx="10" cy="10" r="8" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:screening' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm">Screening</a>
+        <hr class="bg-base-300" />
+      {% endif %}
+    </li>
+
+    {# Full-text #}
+    <li class="h-20">
+      {% if active == 'fulltext' %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-white border-3 border-primary rounded-3xl">
+            <circle cx="10" cy="10" r="10" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:fulltext' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md">Full-text</a>
+        <hr class="bg-base-300" />
+      {% elif active == 'discussion' %}
+        <hr class="bg-primary" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-primary">
+            <circle cx="10" cy="10" r="10" />
+            <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:fulltext' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-primary hover:bg-gray-400 text-white">Full-text</a>
+        <hr class="bg-primary" />
+      {% else %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-300">
+            <circle cx="10" cy="10" r="8" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:fulltext' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm">Full-text</a>
+        <hr class="bg-base-300" />
+      {% endif %}
+    </li>
+
+    {# Discussion #}
+    <li class="h-20">
+      {% if active == 'discussion' %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-white border-3 border-primary rounded-3xl">
+            <circle cx="10" cy="10" r="10" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:discussion' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md">Discussion</a>
+      {% else %}
+        <hr class="bg-base-300" />
+        <div class="timeline-middle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-300">
+            <circle cx="10" cy="10" r="8" />
+          </svg>
+        </div>
+        <a href="{% url 'selection:discussion' project.id %}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm">Discussion</a>
+      {% endif %}
+    </li>
+  </ul>
+</div>

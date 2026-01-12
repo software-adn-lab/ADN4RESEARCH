@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-4">
+    {% include 'selection/_timeline.html' with project=project active='overview' %}
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold">Selection - Overview</h1>
+            <p class="text-gray-600">{{ project.title }}</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="badge {% if selection_phase.status == 'ON_GOING' %}badge-success{% else %}badge-neutral{% endif %}">
+                {{ selection_phase.get_status_display }}
+            </span>
+            {% if selection_phase.end_date %}
+                <span class="text-sm text-gray-500">End date: {{ selection_phase.end_date|date:"d/m/Y" }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Overview Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Your Progress -->
+        <div class="card bg-white shadow">
+            <div class="card-body">
+                <h2 class="card-title">Your Progress</h2>
+                {% if user_progress.total > 0 %}
+                <div class="flex flex-col items-center gap-6 my-8">
+                    <!-- Pie Chart with three colors -->
+                    <div class="w-48 h-48 rounded-full overflow-hidden" style="
+                        background: conic-gradient(
+                            #9ca3af 0% {{ user_progress.pending_pct }}%,
+                            #22c55e {{ user_progress.pending_pct }}% {{ user_progress.pending_pct|add:user_progress.included_pct }}%,
+                            #ef4444 {{ user_progress.pending_pct|add:user_progress.included_pct }}% 100%
+                        );
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                    ">
+                        <!-- Inner white circle for donut effect -->
+                        <div style="
+                            width: 128px;
+                            height: 128px;
+                            background: white;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-direction: column;
+                        ">
+                            <div class="text-3xl font-bold">{{ user_progress.percentage }}%</div>
+                            <div class="text-xs text-gray-500">completed</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-gray-500 py-12">
+                    <p>No papers assigned yet</p>
+                </div>
+                {% endif %}
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-title">Left to review</div>
+                        <div class="stat-value text-gray-400">{{ user_progress.pending }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Included</div>
+                        <div class="stat-value text-success">{{ user_progress.included }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Excluded</div>
+                        <div class="stat-value text-error">{{ user_progress.excluded }}</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-block mt-4" onclick="window.location.href='{% url 'selection:screening' project.id %}'">
+                    SCREENING
+                </button>
+            </div>
+        </div>
+
+        <!-- Team Progress -->
+        <div class="card bg-white shadow">
+            <div class="card-body">
+                <h2 class="card-title">Your Team Progress</h2>
+                <div class="space-y-4 mt-4">
+                    {% for item in team_progress %}
+                    <div class="border border-gray-300 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="avatar placeholder">
+                                    <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-semibold">
+                                        <span>{{ item.researcher.first_name|slice:":1"|upper }}{{ item.researcher.last_name|slice:":1"|upper }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-semibold">{{ item.researcher.get_full_name|default:item.researcher.username }}</p>
+                                    <p class="text-xs text-gray-500">{{ item.total_assigned }} articles assigned</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="flex items-center space-x-2 mb-3">
+                            <div class="flex-1">
+                                <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="flex h-full">
+                                        <!-- Left to review (gray) -->
+                                        <div class="bg-gray-400" style="width: {{ item.pending_pct }}%"></div>
+                                        <!-- Included (success) -->
+                                        <div class="bg-success" style="width: {{ item.included_pct }}%"></div>
+                                        <!-- Excluded (error) -->
+                                        <div class="bg-error" style="width: {{ item.excluded_pct }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-sm font-semibold whitespace-nowrap">{{ item.percentage }}%</span>
+                        </div>
+                        
+                        <!-- Stats -->
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="text-center">
+                                <p class="text-gray-500">Left</p>
+                                <p class="font-semibold text-gray-400">{{ item.pending }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-500">Included</p>
+                                <p class="font-semibold text-success">{{ item.included }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-500">Excluded</p>
+                                <p class="font-semibold text-error">{{ item.excluded }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center">No researchers assigned yet</p>
+                    {% endfor %}
+                </div>
+
+                {% if is_owner %}
+                <form method="post" action="{% url 'selection:distribute' project.id %}" class="mt-6">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-block">
+                        DISTRIBUTE PAPERS
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

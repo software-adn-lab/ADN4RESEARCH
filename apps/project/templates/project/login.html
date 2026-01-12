@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADN4RESEARCH - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-xl p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">ADN4RESEARCH</h1>
+                <p class="text-gray-600 mt-2">Systematic Review Management Platform</p>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                        {% if 'error' in message.tags %}
+                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                                {{ message }}
+                            </div>
+                        {% else %}
+                            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="post" action="{% url 'project:login_action' %}" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Username Field -->
+                <div>
+                    <label for="id_username" class="block text-sm font-medium text-gray-700 mb-2">
+                        Username
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="id_password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Password
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Help Text -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p class="text-sm text-gray-600 text-center">
+                    <strong>Demo Credentials:</strong><br>
+                    Username: <code class="bg-gray-200 px-2 py-1 rounded">admin</code><br>
+                    Or use any superuser account created in Django
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

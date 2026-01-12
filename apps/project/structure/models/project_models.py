@@ -88,6 +88,10 @@ class Membership(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='memberships')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    workload_hours = models.PositiveIntegerField(
+        default=0,
+        help_text="Weekly workload hours for this researcher in this project"
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

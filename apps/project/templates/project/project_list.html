@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - ADN4RESEARCH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">ADN4RESEARCH</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-700">Welcome, <strong>{{ user.get_full_name|default:user.username }}</strong></span>
+                    <form method="post" action="{% url 'project:logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8 flex justify-between items-center">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Projects</h2>
+                <p class="mt-2 text-gray-600">Manage your systematic review projects</p>
+            </div>
+            <a href="{% url 'project:create_project_screen' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition">
+                + New Project
+            </a>
+        </div>
+
+        <!-- Projects Grid -->
+        {% if projects_with_phases %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for item in projects_with_phases %}
+                    <div class="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ item.project.title }}</h3>
+                        <p class="text-gray-600 text-sm mb-4">{{ item.project.summary|truncatewords:20 }}</p>
+                        
+                        <div class="mb-4">
+                            <span class="text-xs font-semibold text-gray-500">ACTIVE PHASE</span>
+                            <p class="text-sm text-primary font-medium">{{ item.active_phase.phase_name }}</p>
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <a href="{{ item.active_phase.phase_url }}" 
+                               class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center px-4 py-2 rounded transition">
+                                View
+                            </a>
+                            <a href="{% url 'project:configure_schedule' item.project.id %}" 
+                               class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-center px-4 py-2 rounded transition">
+                                Settings
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-lg shadow p-12 text-center">
+                <p class="text-gray-500 text-lg mb-4">No projects yet. Create your first systematic review project.</p>
+                <a href="{% url 'project:create_project_screen' %}" 
+                   class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition">
+                    Create New Project
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- Navigation Links -->
+        <div class="mt-12 bg-white rounded-lg shadow p-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <a href="{% url 'project:list_projects' %}" class="p-4 border rounded hover:bg-blue-50">
+                    <div class="font-semibold text-blue-600">Projects</div>
+                    <div class="text-sm text-gray-600">Manage your projects</div>
+                </a>
+                <a href="/design/" class="p-4 border rounded hover:bg-green-50">
+                    <div class="font-semibold text-green-600">Design</div>
+                    <div class="text-sm text-gray-600">Research question & strategy</div>
+                </a>
+                <a href="/extraction/" class="p-4 border rounded hover:bg-yellow-50">
+                    <div class="font-semibold text-yellow-600">Extraction</div>
+                    <div class="text-sm text-gray-600">Data extraction</div>
+                </a>
+                <a href="/selection/" class="p-4 border rounded hover:bg-purple-50">
+                    <div class="font-semibold text-purple-600">Selection</div>
+                    <div class="text-sm text-gray-600">Study selection</div>
+                </a>
+                <a href="/acquisition/" class="p-4 border rounded hover:bg-red-50">
+                    <div class="font-semibold text-red-600">Acquisition</div>
+                    <div class="text-sm text-gray-600">Study acquisition</div>
+                </a>
+                <a href="/interpretation/" class="p-4 border rounded hover:bg-indigo-50">
+                    <div class="font-semibold text-indigo-600">Interpretation</div>
+                    <div class="text-sm text-gray-600">Results interpretation</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

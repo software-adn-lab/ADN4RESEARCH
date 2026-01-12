@@ -83,7 +83,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",
-    "config.middleware.dev_middleware.DevUserMiddleware",
+    # "config.middleware.dev_middleware.DevUserMiddleware",  # Disabled to test login
 ]
 MIDDLEWARE += [
     "django_browser_reload.middleware.BrowserReloadMiddleware",
@@ -107,6 +107,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "theme.context_processors.sidebar_context",
             ],
         },
     },
@@ -307,3 +308,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# Authentication settings
+LOGIN_URL = 'project:login'
+LOGIN_REDIRECT_URL = 'project:list_projects'
+LOGOUT_REDIRECT_URL = 'project:login'
