@@ -91,14 +91,15 @@ class PaperDistributionService:
     
     def _get_researchers_with_workload(self) -> List[Tuple[int, str, int]]:
         """
-        Get researchers with assigned workload for this project.
+        Get all team members with assigned workload for this project.
+        Includes both OWNER and RESEARCHER roles.
         
         Returns:
             List of tuples: (user_id, username, workload_hours)
         """
         memberships = Membership.objects.filter(
             project_id=self.project_id,
-            role='RESEARCHER',
+            role__in=['OWNER', 'RESEARCHER'],
             workload_hours__gt=0
         ).select_related('user')
         
@@ -110,7 +111,7 @@ class PaperDistributionService:
         # Sort by workload descending
         researchers.sort(key=lambda x: x[2], reverse=True)
         
-        logger.info(f"[DISTRIBUTION] Found {len(researchers)} researchers with workload")
+        logger.info(f"[DISTRIBUTION] Found {len(researchers)} team members with workload")
         return researchers
     
     def _get_papers_with_pages(self) -> List[PaperInfo]:
