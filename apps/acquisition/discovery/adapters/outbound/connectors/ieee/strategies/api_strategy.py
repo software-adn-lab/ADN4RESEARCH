@@ -105,7 +105,7 @@ class IeeeApiStrategy(SearchStrategy):
             # Build request payload
             payload = {
                 "queryText": query,
-                "highlight": True,
+                "highlight": False,
                 "returnFacets": ["ALL"],
                 "returnType": "SEARCH",
                 "matchPubs": True,
