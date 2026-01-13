@@ -98,6 +98,7 @@ TEMPLATES = [
             BASE_DIR / "ui" / "design" / "templates",
             BASE_DIR / "ui" / "interpretation" / "templates",
             BASE_DIR / "ui" / "extraction" / "templates",
+            BASE_DIR / "ui" / "selection" / "templates",
             BASE_DIR / "ui" / "shared" / "templates",
             BASE_DIR / "ui" / "project" / "templates",
         ],
@@ -226,6 +227,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "ui" / "interpretation",
     BASE_DIR / "ui" / "project",
     BASE_DIR / "ui" / "extraction",
+    BASE_DIR / "ui" / "selection" / "scripts",
 ]
 
 STATIC_URL = "/static/"

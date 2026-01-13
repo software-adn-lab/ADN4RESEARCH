@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-4">
+    {% include '_timeline.html' with project=project active='discussion' %}
+    
+    <h1 class="text-3xl font-bold">Selection - Discussion & Resolution</h1>
+
+    {% if conflicts %}
+        <div class="alert alert-warning">
+            <p>{{ conflicts|length }} paper(s) with conflicting decisions</p>
+        </div>
+
+        <div class="space-y-4">
+            {% for conflict in conflicts %}
+                <div class="card bg-base-100 shadow-md border-2 border-warning">
+                    <div class="card-body">
+                        <h2 class="card-title">Paper ID: {{ conflict.paper_id }}</h2>
+                        
+                        <div class="divider">Conflicting Reviews</div>
+                        
+                        {% for review in conflict.reviews %}
+                            <div class="p-3 border rounded bg-gray-50">
+                                <p class="font-semibold">{{ review.assignment.researcher.get_full_name }}</p>
+                                <p class="badge {% if review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                                    {{ review.decision }}
+                                </p>
+                                {% if review.notes %}
+                                    <p class="text-sm mt-2">{{ review.notes }}</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-success">
+            <p>No conflicting papers - all reviews are consistent!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

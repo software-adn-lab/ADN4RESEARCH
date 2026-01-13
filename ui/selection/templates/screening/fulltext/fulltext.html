@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-6 h-screen flex flex-col">
+    {% include '_timeline.html' with project=project active='fulltext' %}
+
+    <!-- Header -->
+    <div class="flex-none flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">Selection - Full-text Screening</h1>
+            <p class="text-gray-600">{{ project.title }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="download-all-btn" class="btn btn-primary" onclick="downloadAllPdfs()">Descargar PDFs</button>
+        </div>
+    </div>
+    <div id="global-download-status" class="text-sm text-gray-600 mt-2 hidden"></div>
+
+    <!-- Full-text Interface -->
+    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 mt-4">
+        <!-- Papers List -->
+        <div class="col-span-4 bg-white rounded-lg shadow overflow-y-auto h-full">
+            <div class="p-4">
+                <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                    <span>Total: {{ papers|length }}</span>
+                    <span>Included from screening</span>
+                </div>
+                <div class="space-y-3">
+                {% for paper in papers %}
+                 <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-primary cursor-pointer paper-item shadow-sm transition"
+                     data-paper-id="{{ paper.study.id }}"
+                     data-pdf-url="{{ paper.pdf_url }}"
+                     onclick="showPaperDetail('{{ paper.study.id }}')"
+                     id="paper-item-{{ paper.study.id }}">
+                    <h3 class="font-semibold text-sm line-clamp-2">{{ paper.study.title }}</h3>
+                    
+                        {% if paper.pdf_url %}
+                        <span class="badge badge-sm badge-success mt-2">PDF Available</span>
+                    {% else %}
+                        <span class="badge badge-sm badge-warning mt-2">No PDF</span>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="p-8 text-center text-gray-500">
+                    <p>No papers included in screening yet</p>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Viewer -->
+        <div class="col-span-8 bg-white rounded-lg shadow flex flex-col overflow-hidden h-full" id="pdf-viewer-container">
+            {% if papers %}
+                {% for paper in papers %}
+                <div class="pdf-viewer-content h-full flex flex-col {% if not forloop.first %}hidden{% endif %}" 
+                     id="paper-{{ paper.study.id }}"
+                     data-assignment-id="{{ paper.assignment.id }}">
+                    
+                    <!-- PDF Toolbar -->
+                    <div class="flex-none p-3 border-b border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <button onclick="zoomOut('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <span class="text-sm" id="zoom-level-{{ paper.study.id }}">100%</span>
+                                <button onclick="zoomIn('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <span id="page-info-{{ paper.study.id }}">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PDF Canvas Container (scrollable) -->
+                    <div class="flex-1 overflow-auto bg-gray-100" id="pdf-scroll-container-{{ paper.study.id }}">
+                        {% if paper.pdf_url %}
+                            <div class="flex justify-center p-4">
+                                <canvas id="pdf-canvas-{{ paper.study.id }}" class="shadow-lg"></canvas>
+                            </div>
+                        {% else %}
+                            <div class="flex items-center justify-center h-full text-gray-500">
+                                <div class="text-center space-y-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p class="text-lg font-semibold">PDF not available</p>
+                                    <p class="text-sm mt-2">This paper's PDF could not be downloaded</p>
+                                    <div class="flex justify-center gap-2 mt-2">
+                                        <button class="btn btn-sm" onclick="retryDownload(['{{ paper.study.id }}'])">Retry download</button>
+                                        <button class="btn btn-sm btn-outline" onclick="openUploadModal('{{ paper.study.id }}')">Upload PDF</button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Decision Buttons -->
+                    <div class="flex-none p-4 border-t border-gray-200 bg-white">
+                        <form method="post" action="{% url 'selection:submit_review' project.id paper.assignment.id %}" 
+                              id="review-form-{{ paper.assignment.id }}"
+                              class="flex justify-center">
+                            {% csrf_token %}
+                            <input type="hidden" name="stage" value="FULL_TEXT">
+                            <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="{% if paper.review_fulltext %}{{ paper.review_fulltext.notes|default:'' }}{% endif %}">
+                            <input type="hidden" name="criterion_id" id="criterion-{{ paper.assignment.id }}" value="">
+                            <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="">
+                            
+                            <div class="flex gap-3">
+                                <button type="button" 
+                                        class="btn btn-md text-base rounded-lg text-white"
+                                        style="background-color: #00A30E; border-color: #00A30E;"
+                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'INCLUDED')">
+                                    ✓ INCLUDE
+                                </button>
+                                
+                                <button type="button" 
+                                        class="btn btn-md text-base rounded-lg text-white"
+                                        style="background-color: #EE0000; border-color: #EE0000;"
+                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'EXCLUDED')">
+                                    ✗ EXCLUDE
+                                </button>
+                                
+                                <button type="button" 
+                                        class="btn btn-outline btn-md text-base rounded-lg"
+                                        onclick="openDecisionModal({{ paper.assignment.id }}, null)">
+                                    ✎ NOTES
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    <p>No papers included in screening yet</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Decision & Notes Modal -->
+<dialog id="decision-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4" id="modal-title">Review Decision</h3>
+        <div class="form-control mb-4">
+            <label class="label"><span class="label-text">Observation / Rationale</span></label>
+            <textarea id="modal-notes-input" 
+                      class="textarea textarea-bordered w-full h-32" 
+                      placeholder="Enter your notes, observations, or rationale for this decision..."></textarea>
+        </div>
+        <div class="modal-action">
+            <button class="btn" onclick="closeDecisionModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDecisionAndNotes()">Save</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Upload Modal -->
+<dialog id="upload-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Upload PDF</h3>
+        <input type="hidden" id="upload-study-id" />
+        <input type="file" id="upload-file" accept="application/pdf" class="file-input file-input-bordered w-full" />
+        <div class="modal-action">
+            <button class="btn" onclick="closeUploadModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitUpload()">Upload</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+    
+</dialog>
+
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="{% static 'fulltext.js' %}"></script>
+<script>
+// Initialize viewer with Django URLs
+initFulltextViewer({
+    retry: "{% url 'selection:fulltext_retry' project.id %}",
+    upload: "{% url 'selection:fulltext_upload' project.id %}"
+});
+</script>
+{% endblock %}
