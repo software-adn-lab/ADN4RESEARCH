@@ -45,7 +45,7 @@ Característica: Construir cadena de búsqueda
             }
             """
         Cuando el sistema procesa los campos del framework de la pregunta para sugerir términos clave
-        Entonces la lista de términos clave del proyecto debe contener "software,design,development,maintainability, quality"
+        Entonces la lista de términos clave del proyecto debe contener software,design,development,maintainability,quality
 
     Escenario: Probar cadena de búsqueda generada
         Dado que la etapa de "estrategia" esta activa en la fase de diseño

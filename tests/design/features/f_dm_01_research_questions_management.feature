@@ -9,7 +9,7 @@ Característica: Administrar el ciclo de vida de las preguntas de investigación
         Dado que estoy asignado a un proyecto de investigación
         Y el proyecto tiene como framework investigativo a PICO
     
-    Esquema: Sugerir pregunta para el proyecto de investigación
+    Escenario: Sugerir pregunta para el proyecto de investigación
         Dado que la etapa de "creación" esta activa en la fase de diseño
         Y que he redactado una pregunta de investigación completa para el proyecto:
             """
