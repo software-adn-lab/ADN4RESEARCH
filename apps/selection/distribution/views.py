@@ -149,9 +149,14 @@ def distribute_papers(request, project_id):
     selection_phase = get_object_or_404(SelectionPhase, project=project)
 
     try:
+        # Get reviews per paper from form (default 2)
+        reviews_per_paper = int(request.POST.get('reviews_per_paper', 2))
+        if reviews_per_paper not in [2, 3, 4]:
+            reviews_per_paper = 2
+        
         # Execute distribution
         service = PaperDistributionService(project_id)
-        distribution = service.distribute_papers(total_reviews_per_paper=2)
+        distribution = service.distribute_papers(total_reviews_per_paper=reviews_per_paper)
 
         # Clear existing assignments
         PaperAssignment.objects.filter(selection_phase=selection_phase).delete()
@@ -170,7 +175,7 @@ def distribute_papers(request, project_id):
                     researcher=researcher
                 )
 
-        messages.success(request, f'Papers distributed successfully! {len(distribution)} researchers assigned.')
+        messages.success(request, f'Papers distributed successfully! {len(distribution)} researchers assigned with {reviews_per_paper} reviews per paper.')
 
     except Exception as e:
         messages.error(request, f'Distribution failed: {str(e)}')

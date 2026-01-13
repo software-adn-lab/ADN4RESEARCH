@@ -16,6 +16,7 @@ Característica: Distribución aleatoria de estudios
         <hojas_por_paper>
       """
     Y que cada paper debe asignarse <total_revisiones_paper> veces a revisores distintos
+    Cuando se ejecuta el algoritmo de distribución
     Entonces cada paper debe tener <total_revisiones_paper> revisores distintos
     Y ningún investigador debe recibir asignaciones repetidas del mismo paper
     Y la distribución resultante debe ser:

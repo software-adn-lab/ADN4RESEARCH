@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PaperInfo:
-    """Paper information with page count"""
+    """Paper information with word count"""
     paper_id: str
     title: str
-    pages: int
+    pages: int  # Using 'pages' field to store word count for consistency
     
 
 @dataclass
@@ -33,8 +33,8 @@ class ResearcherCapacity:
     assigned_papers: List[str]
     
     def __lt__(self, other):
-        """For sorting by remaining capacity (descending)"""
-        return self.remaining_capacity > other.remaining_capacity
+        """For sorting by remaining capacity (ascending)"""
+        return self.remaining_capacity < other.remaining_capacity
 
 
 class PaperDistributionService:
@@ -115,15 +115,13 @@ class PaperDistributionService:
     
     def _get_papers_with_pages(self) -> List[PaperInfo]:
         """
-        Get papers from project facade with page count estimation.
+        Get papers from project facade with word count from abstract.
         
-        Uses abstract length as proxy for page count:
-        - ~250 words per page (typical academic paper)
-        - ~5 characters per word average
-        - So ~1250 characters per page
+        For screening phase: uses abstract word count as workload metric.
+        Each word represents a unit of reading work.
         
         Returns:
-            List of PaperInfo objects sorted by pages descending
+            List of PaperInfo objects sorted by word count descending
         """
         # Get studies from project facade
         studies = self.project_facade.get_studies_by_project(
@@ -133,28 +131,29 @@ class PaperDistributionService:
         
         papers = []
         for study in studies:
-            # Estimate pages from abstract length
+            # Count words in abstract
             abstract = study.get('abstract') or ''
-            abstract_length = len(abstract)
             
-            # Fallback: use title length if no abstract
-            if abstract_length == 0:
-                title = study.get('title') or ''
-                abstract_length = len(title) * 10  # Assume title is 10x repeated
+            # Fallback: use title if no abstract
+            if not abstract.strip():
+                abstract = study.get('title') or ''
             
-            # Convert to page estimate (1250 chars ≈ 1 page)
-            pages = max(1, abstract_length // 1250)
+            # Count words (split by whitespace)
+            word_count = len(abstract.split())
+            
+            # Minimum 1 word to avoid division issues
+            word_count = max(1, word_count)
             
             papers.append(PaperInfo(
                 paper_id=study['id'],
                 title=study['title'],
-                pages=pages
+                pages=word_count  # Using 'pages' field to store word count
             ))
         
-        # Sort by pages descending
+        # Sort by word count descending
         papers.sort(key=lambda p: p.pages, reverse=True)
         
-        logger.info(f"[DISTRIBUTION] Found {len(papers)} papers")
+        logger.info(f"[DISTRIBUTION] Found {len(papers)} papers (using abstract word count)")
         return papers
     
     def _calculate_capacities(
@@ -164,25 +163,25 @@ class PaperDistributionService:
         total_reviews: int
     ) -> List[ResearcherCapacity]:
         """
-        Calculate page capacity for each researcher based on workload proportion.
+        Calculate word capacity for each researcher based on workload proportion.
         
         Args:
             researchers: List of (user_id, username, workload_hours)
-            papers: List of PaperInfo
+            papers: List of PaperInfo (pages field contains word count)
             total_reviews: Reviews per paper (multiplier)
             
         Returns:
             List of ResearcherCapacity objects
         """
         # Calculate totals
-        total_pages = sum(p.pages for p in papers) * total_reviews
+        total_words = sum(p.pages for p in papers) * total_reviews
         total_workload = sum(r[2] for r in researchers)
         
         capacities = []
         for user_id, username, workload in researchers:
             # Proportional capacity
             proportion = workload / total_workload
-            capacity = proportion * total_pages
+            capacity = proportion * total_words
             
             capacities.append(ResearcherCapacity(
                 user_id=user_id,
@@ -193,7 +192,7 @@ class PaperDistributionService:
             ))
         
         logger.info(
-            f"[DISTRIBUTION] Total pages: {total_pages}, "
+            f"[DISTRIBUTION] Total words: {total_words}, "
             f"Total workload: {total_workload} hours"
         )
         return capacities
@@ -235,7 +234,7 @@ class PaperDistributionService:
                         assigned = True
                         
                         logger.debug(
-                            f"[DISTRIBUTION] Assigned {paper.title[:30]} ({paper.pages}p) "
+                            f"[DISTRIBUTION] Assigned {paper.title[:30]} ({paper.pages} words) "
                             f"to {researcher.username} (capacity left: {researcher.remaining_capacity:.1f})"
                         )
                         break

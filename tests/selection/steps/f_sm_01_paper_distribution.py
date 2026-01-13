@@ -11,7 +11,7 @@ from apps.project.structure.models.project_models import Project, Membership
 from apps.selection.services import PaperDistributionService
 
 
-@given('investigadores con cargas horarias definidas')
+@given('investigadores con cargas horarias definidas:')
 def step_given_researchers_with_workload(context):
     """
     Create researchers with workload hours.
@@ -53,10 +53,10 @@ def step_given_researchers_with_workload(context):
         context.researchers[researcher_id] = user
 
 
-@given('papers con un número específico de hojas')
+@given('papers con un número específico de hojas:')
 def step_given_papers_with_pages(context):
     """
-    Mock papers with page counts.
+    Mock papers with word counts (using 'hojas' as word count for screening).
     
     Expected format in context.text:
     {"P1": 12, "P2": 6, "P3": 18}
@@ -64,17 +64,17 @@ def step_given_papers_with_pages(context):
     papers_pages = json.loads(context.text.strip())
     context.papers_pages = papers_pages
     
-    # Create mock papers data (simulating acquisition facade response)
+    # Create mock papers data (simulating project facade response)
     context.mock_papers = []
-    for paper_id, pages in papers_pages.items():
-        # Create abstract length that corresponds to pages
-        # 1250 chars per page
-        abstract_length = pages * 1250
+    for paper_id, word_count in papers_pages.items():
+        # Create abstract with exact word count
+        # Each "word" is just a placeholder like "word1 word2 word3..."
+        abstract_words = ' '.join([f'word{i}' for i in range(word_count)])
         
         context.mock_papers.append({
             'id': paper_id,
             'title': f'Paper {paper_id}',
-            'abstract': 'x' * abstract_length,
+            'abstract': abstract_words,
             'source': 'IEEE',
             'status': 'enriched'
         })
@@ -90,8 +90,8 @@ def step_given_total_reviews(context, total_reviews):
 def step_when_distribution_executed(context):
     """Execute the distribution algorithm"""
     
-    # Mock the acquisition facade
-    with patch('apps.selection.services.get_acquisition_facade') as mock_facade:
+    # Mock the project facade
+    with patch('apps.selection.services.get_project_facade') as mock_facade:
         mock_instance = MagicMock()
         mock_instance.get_studies_by_project.return_value = context.mock_papers
         mock_facade.return_value = mock_instance
@@ -144,16 +144,16 @@ def step_then_distribution_balanced(context):
     """
     Verify distribution is balanced according to workload.
     
-    Total pages assigned should be proportional to workload hours.
+    Total words assigned should be proportional to workload hours.
     """
-    # Calculate total pages per researcher
-    researcher_pages = {}
+    # Calculate total words per researcher
+    researcher_words = {}
     for username, papers in context.distribution.items():
-        total_pages = sum(
+        total_words = sum(
             context.papers_pages.get(paper_id, 0)
             for paper_id in papers
         )
-        researcher_pages[username] = total_pages
+        researcher_words[username] = total_words
     
     # Get workload for each researcher (map username to workload)
     workload_by_username = {}
@@ -163,26 +163,26 @@ def step_then_distribution_balanced(context):
     
     # Calculate expected proportions
     total_workload = sum(context.workloads.values())
-    total_pages = sum(context.papers_pages.values()) * context.total_reviews
+    total_words = sum(context.papers_pages.values()) * context.total_reviews
     
     # Verify each researcher's assignment is proportional
-    for username, assigned_pages in researcher_pages.items():
+    for username, assigned_words in researcher_words.items():
         workload = workload_by_username[username]
         expected_proportion = workload / total_workload
-        expected_pages = expected_proportion * total_pages
+        expected_words = expected_proportion * total_words
         
         # Allow 20% tolerance for greedy algorithm variance
         tolerance = 0.2
-        min_pages = expected_pages * (1 - tolerance)
-        max_pages = expected_pages * (1 + tolerance)
+        min_words = expected_words * (1 - tolerance)
+        max_words = expected_words * (1 + tolerance)
         
-        assert min_pages <= assigned_pages <= max_pages, \
-            f"Researcher {username}: assigned {assigned_pages} pages, " \
-            f"expected {expected_pages:.1f} (±20%), " \
+        assert min_words <= assigned_words <= max_words, \
+            f"Researcher {username}: assigned {assigned_words} words, " \
+            f"expected {expected_words:.1f} (±20%), " \
             f"workload={workload}/{total_workload}"
 
 
-@then('la distribución resultante debe ser')
+@then('la distribución resultante debe ser:')
 def step_then_expected_distribution(context):
     """
     Verify the distribution matches or is similar to expected distribution.
@@ -198,7 +198,9 @@ def step_then_expected_distribution(context):
     
     print("\n=== DISTRIBUCIÓN REAL ===")
     for researcher, papers in context.distribution.items():
-        print(f"{researcher}: {papers}")
+        # Map back to researcher IDs (i1 -> I1)
+        researcher_id = researcher.upper()
+        print(f"{researcher_id}: {papers}")
     
     # Note: We don't assert exact match because greedy algorithm
     # can produce different valid solutions
