@@ -171,8 +171,14 @@ def register_action(request):
 @login_required
 @require_GET
 def list_projects(request):
-    """List all projects for the logged-in user with active phase info"""
-    projects = Project.objects.all()
+    """List projects for the logged-in user (owned or member)"""
+    from django.db.models import Q
+    from apps.project.structure.models.project_models import Membership
+    
+    # Get projects where user is owner or member
+    projects = Project.objects.filter(
+        Q(owner=request.user) | Q(memberships__user=request.user)
+    ).distinct()
     
     # Enrich projects with active phase info
     projects_with_phases = []

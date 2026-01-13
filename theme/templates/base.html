@@ -22,27 +22,24 @@
                 <div class="flex items-center justify-between px-5 py-6 border-b border-base-300">
                     <div class="flex items-center gap-3">
                         <div class="avatar placeholder">
-                            <div class="w-10 rounded-full bg-primary/20 text-primary font-semibold">
+                            <div class="w-10 h-10 rounded-full bg-primary/20 text-primary font-semibold flex items-center justify-center">
                                 {{ user_initials|default:"?" }}
                             </div>
                         </div>
                         <div>
                             <p class="font-semibold text-sm text-base-content">{{ user_name|default:"ADN4Research" }}</p>
-                            <p class="text-xs text-base-content/60">{{ user_email|default:"user@example.com" }}</p>
+                            <p class="text-xs text-base-content/60">{{ user_username|default:"username" }}</p>
                         </div>
                     </div>
-                    <svg class="w-4 h-4 text-base-content/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
                 </div>
 
                 <!-- Navegación -->
-                <nav class="flex-1 px-2 py-4">
+                <nav class="flex-1 px-2 py-2">
                     <ul class="menu menu-sm gap-1 w-full text-sm text-base-content/80">
                         <li>
                             <a href="{% url 'project:list_projects' %}"
-                                class="py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary hover:text-white hover:font-bold">
-                                <svg class="w-4 h-4 hover:font-medium" fill="none" stroke="currentColor"
+                                class="text-sm py-2 px-3 rounded-lg flex items-center gap-3 text-base-content hover:text-primary hover:bg-primary/10">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                         d="M3 9.75L12 4l9 5.75V19a1.25 1.25 0 01-1.25 1.25H4.25A1.25 1.25 0 013 19V9.75z" />
@@ -50,25 +47,35 @@
                                 Home
                             </a>
                         </li>
+                        <li>
+                            <a href="{% url 'project:create_project_screen' %}"
+                                class="text-sm py-2 px-3 rounded-lg flex items-center gap-3 text-base-content/70 hover:text-primary hover:bg-primary/10">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                                Create a New Project
+                            </a>
+                        </li>
                     </ul>
                     <!-- Research Projects -->
-                    <div class="mt-6">
-                        <p class="px-3 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">Research
-                            Projects</p>
-                        <div class="menu menu-sm gap-1 text-sm text-base-content/80">
+                    <div class="mt-3">
+                        <p class="px-3 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">Research Projects</p>
+                        <div class="menu w-full menu-sm gap-3 text-sm text-base-content/80">
                             {% for project in sidebar_projects %}
-                            <div class="collapse collapse-arrow bg-base-200 rounded-xl">
-                                <input type="checkbox" {% if forloop.first %}checked{% endif %} />
+                            <div class="collapse collapse-arrow bg-base-200/80 rounded-lg border border-base-300/70 hover:border-primary/40 hover:bg-primary/5 shadow-xs transition">
+                                <input type="checkbox" {% if project.id == current_project_id %}checked{% endif %} />
                                 <div class="collapse-title py-0">
-                                    <div class="w-full py-2 px-3 rounded-lg flex items-center justify-between">
-                                        <span class="flex items-center gap-3 font-medium">
+                                    <div class="w-full py-2 rounded-lg flex items-center justify-between gap-2">
+                                        <span class="flex items-center gap-3 font-semibold text-base-content">
                                             {{ project.title }}
                                         </span>
+                                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-base-300/60 text-base-content/70">Project</span>
                                     </div>
                                 </div>
-                                <div class="collapse-content pl-9 pr-3 pb-3 space-y-2">
+                                <div class="collapse-content pl-4 pr-3">
                                     {% for phase in project.phases %}
-                                    <a href="{{ phase.url }}" class="flex items-center gap-3 text-sm {% if phase.active %}text-primary font-medium{% else %}text-base-content/70{% endif %} hover:text-primary">
+                                    <a href="{{ phase.url }}" class="flex items-center mb-1 text-xs gap-2 {% if phase.active %}text-primary font-semibold bg-primary/5 border border-primary/30{% else %}text-base-content/70 border border-transparent{% endif %} hover:text-primary hover:border-primary/40 rounded-lg px-2 py-1 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             {% if phase.icon == 'design' %}
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -97,14 +104,6 @@
                             {% empty %}
                             <p class="px-3 py-2 text-sm text-base-content/50 italic">No projects yet</p>
                             {% endfor %}
-                            <a href="{% url 'project:create_project_screen' %}"
-                                class="py-2 px-3 rounded-lg flex items-center gap-3 text-primary hover:bg-primary/10">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create a New Project
-                            </a>
                         </div>
                     </div>
                 </nav>

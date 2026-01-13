@@ -15,7 +15,17 @@ def sidebar_context(request):
             'sidebar_projects': [],
             'user_name': '',
             'user_email': '',
+            'current_project_id': None,
         }
+    
+    # Detect current project from URL
+    current_project_id = None
+    path = request.path
+    import re
+    # Match patterns like /project/1/design/ or /extraction/1/ or /acquisition/1/
+    project_match = re.search(r'/(?:project|extraction|acquisition|interpretation|selection)/(\d+)/', path)
+    if project_match:
+        current_project_id = int(project_match.group(1))
     
     # Get projects where user is member
     memberships = Membership.objects.filter(user=request.user).select_related('project')
@@ -107,6 +117,7 @@ def sidebar_context(request):
     return {
         'sidebar_projects': projects_data,
         'user_name': request.user.get_full_name() or request.user.username,
-        'user_email': request.user.email or f'{request.user.username}@example.com',
+        'user_username': request.user.username,
         'user_initials': ''.join([word[0].upper() for word in (request.user.get_full_name() or request.user.username).split()[:2]]),
+        'current_project_id': current_project_id,
     }
