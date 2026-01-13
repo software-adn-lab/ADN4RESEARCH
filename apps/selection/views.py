@@ -332,18 +332,118 @@ def submit_review(request, project_id, assignment_id):
 @login_required
 def fulltext_view(request, project_id):
     """
-    Full-text screening page.
+    Full-text screening page - PDF review of papers that passed metadata screening.
     
-    Corresponds to the fourth image: "Selection - Full-text"
+    Shows papers that were INCLUDED in the metadata screening with their PDFs.
     """
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
-    # Similar to screening but for full-text stage
+    # Get papers assigned to this user that were INCLUDED in metadata screening
+    assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        researcher=request.user
+    )
+    
+    # Filter only papers INCLUDED in screening stage
+    included_assignments = []
+    for assignment in assignments:
+        screening_review = PaperReview.objects.filter(
+            assignment=assignment,
+            stage=SelectionStageChoices.SCREENING,
+            decision=SelectionDecisionChoices.INCLUDED
+        ).first()
+        
+        if screening_review:
+            included_assignments.append(assignment)
+    
+    # Get paper details from project facade
+    project_facade = get_project_facade()
+    paper_ids = [a.paper_id for a in included_assignments]
+    
+    papers = []
+    protocol = get_design_protocol()
+    
+    def _normalize_criteria(criteria_list):
+        normalized = []
+        for c in criteria_list or []:
+            cid = c.get('id') or c.get('uuid') or c.get('pk') or c.get('code') or c.get('slug')
+            label = c.get('description') or c.get('text') or c.get('name') or c.get('title') or str(c)
+            if cid and label:
+                normalized.append({'id': str(cid), 'label': str(label)})
+        return normalized
+    
+    try:
+        inclusion_criteria = _normalize_criteria(protocol.get_inclusion_criteria(project_id))
+    except Exception:
+        inclusion_criteria = []
+    try:
+        exclusion_criteria = _normalize_criteria(protocol.get_exclusion_criteria(project_id))
+    except Exception:
+        exclusion_criteria = []
+
+    # Extra exclusion criteria (custom)
+    exclusion_extras = [
+        {'id': 'NO_MATCH_INCLUSION', 'label': 'Estudio no aplicable para ningún criterio de inclusión'},
+        {'id': 'OUT_OF_SCOPE', 'label': 'Estudio fuera de foco'},
+    ]
+    exclusion_criteria = exclusion_criteria + exclusion_extras
+
+    # Lookup for criterion labels
+    criterion_lookup = {c['id']: c['label'] for c in (inclusion_criteria + exclusion_criteria)}
+    
+    pending_count = 0
+    if paper_ids:
+        # Get all studies and filter to assigned ones
+        all_studies = project_facade.get_studies_by_project(
+            project_id=project_id,
+            include_metadata=True
+        )
+        
+        # Download full texts for papers that don't have PDFs yet
+        from apps.acquisition.facade import get_acquisition_facade
+        try:
+            acquisition_facade = get_acquisition_facade()
+            download_result = acquisition_facade.download_fulltexts(paper_ids)
+        except Exception as e:
+            import logging
+            logging.error(f"[SELECTION] PDF download failed: {e}")
+        
+        # Filter and build papers list
+        for study in all_studies:
+            if study['id'] in paper_ids:
+                assignment = [a for a in included_assignments if a.paper_id == study['id']][0]
+                
+                # Get existing full-text review if any
+                review = PaperReview.objects.filter(
+                    assignment=assignment,
+                    stage=SelectionStageChoices.FULL_TEXT
+                ).first()
+                
+                if not review or review.decision == SelectionDecisionChoices.PENDING:
+                    pending_count += 1
+                
+                papers.append({
+                    'assignment': assignment,
+                    'study': study,
+                    'review': review,
+                })
+    
+    # Show pending first, then reviewed
+    papers = sorted(
+        papers,
+        key=lambda p: 0 if (not p['review'] or p['review'].decision == SelectionDecisionChoices.PENDING) else 1
+    )
+    
     context = {
         'project': project,
         'selection_phase': selection_phase,
-        'current_stage': 'fulltext'
+        'papers': papers,
+        'pending_count': pending_count,
+        'current_stage': 'fulltext',
+        'inclusion_criteria': inclusion_criteria,
+        'exclusion_criteria': exclusion_criteria,
+        'criterion_lookup': criterion_lookup,
     }
     
     return render(request, 'selection/fulltext.html', context)
