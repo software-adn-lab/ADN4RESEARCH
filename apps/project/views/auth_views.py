@@ -25,6 +25,71 @@ class LoginForm(forms.Form):
     )
 
 
+class RegisterForm(forms.Form):
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Username',
+            'autofocus': True
+        })
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Email'
+        })
+    )
+    first_name = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'First Name'
+        })
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Last Name'
+        })
+    )
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Password'
+        })
+    )
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Confirm Password'
+        })
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError('Username already exists')
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Email already exists')
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError('Passwords do not match')
+
+        return cleaned_data
+
+
 @require_GET
 def login_view(request):
     """Login page view"""
@@ -62,6 +127,45 @@ def logout_action(request):
     auth_logout(request)
     messages.success(request, 'You have been logged out successfully.')
     return redirect('project:login')
+
+
+@require_GET
+def register_view(request):
+    """Register page view"""
+    if request.user.is_authenticated:
+        return redirect('project:list_projects')
+    
+    form = RegisterForm()
+    return render(request, 'project/register.html', {'form': form})
+
+
+@require_POST
+def register_action(request):
+    """Handle registration submission"""
+    form = RegisterForm(request.POST)
+    
+    if form.is_valid():
+        username = form.cleaned_data['username']
+        email = form.cleaned_data['email']
+        first_name = form.cleaned_data['first_name']
+        last_name = form.cleaned_data['last_name']
+        password = form.cleaned_data['password1']
+        
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password=password
+        )
+        
+        # Log the user in
+        login(request, user)
+        messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.')
+        return redirect('project:list_projects')
+    
+    return render(request, 'project/register.html', {'form': form})
 
 
 @login_required
