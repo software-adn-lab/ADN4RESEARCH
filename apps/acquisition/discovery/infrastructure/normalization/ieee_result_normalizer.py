@@ -107,19 +107,31 @@ class IeeeResultNormalizer(ResultNormalizer):
     def _extract_abstract(self, record: Dict[str, Any]) -> Optional[str]:
         """Extract and clean abstract from record.
         
+        IEEE's API returns abstracts with highlight markers when highlight=True
+        in the request payload. These markers look like [::term::] and need to
+        be removed for clean display.
+        
         Args:
             record: IEEE record dictionary
             
         Returns:
             Cleaned abstract string or None if not available
         """
+        import re
+        
         abstract = record.get('abstract', '')
         
         if not abstract:
             return None
         
-        # Clean and return
-        cleaned = abstract.strip()
+        # Remove IEEE highlight markers [::text::]
+        cleaned = re.sub(r'\[::', '', abstract)
+        cleaned = re.sub(r'::\]', '', cleaned)
+        
+        # Normalize whitespace (multiple spaces to single)
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        
+        cleaned = cleaned.strip()
         return cleaned if cleaned else None
     
     def _extract_access_info(
