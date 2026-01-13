@@ -12,10 +12,12 @@ from apps.project.structure.services.project_services import ProjectService
 @login_required
 @require_GET
 def open_project_creation_screen(request):
+    from django.contrib.auth.models import User
     context = {
         'project_form': ProjectForm(),
         'specific_objective_formset': SpecificObjectiveFormSet(prefix='specific_objectives'),
         'expected_result_formset': ExpectedResultFormSet(prefix='expected_results'),
+        'all_users': User.objects.all().order_by('username'),
         'action': 'Create'
     }
     return render(request, 'project/create_project.html', context)
@@ -61,6 +63,10 @@ def _create_project_from_forms(user, project_form, specific_stats_formset, expec
         for form in expected_res_formset
         if form.cleaned_data.get('description')
     ]
+    
+    # Parse members with workload
+    members_workload = project_data.get('members_workload', [])
+    
     service = ProjectService()
     try:
         project = service.create_project_with_framework(
@@ -74,7 +80,7 @@ def _create_project_from_forms(user, project_form, specific_stats_formset, expec
             framework_fields=framework_fields,
             specific_objectives_data=objectives_data,
             expected_results_data=results_data,
-            members=project_data['members']
+            members_workload=members_workload  # Changed from 'members' to 'members_workload'
         )
         return project
     except ProjectCreationError as e:

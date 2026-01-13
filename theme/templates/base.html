@@ -9,20 +9,6 @@
 </head>
 
 <body>
-    <header class="bg-gray-50 p-4">
-        <div class="flex justify-center">
-            <label class="input w-150 h-8">
-                <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none"
-                        stroke="currentColor">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                    </g>
-                </svg>
-                <input type="search" required placeholder="Search a task, project or module" />
-            </label>
-        </div>
-    </header>
     <div class="flex relative">
         <!-- Overlay for mobile (cuando el sidebar está abierto) -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
@@ -30,7 +16,7 @@
 
         <!-- Sidebar (Menu Vertical) -->
         <aside id="sidebar"
-            class="fixed lg:sticky top-0 lg:top-16 left-0 w-64 bg-base-200 border-gray-200 h-screen lg:h-[calc(100vh-4rem)] overflow-y-auto z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out border">
+            class="fixed lg:sticky top-0 lg:top-16 left-0 w-64 bg-base-200 border-gray-200 h-screen overflow-y-auto z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out border">
             <div class="flex flex-col h-full">
                 <!-- Perfil -->
                 <div class="flex items-center justify-between px-5 py-6 border-b border-base-300">
@@ -153,7 +139,7 @@
         </aside>
 
         <!-- Content Container -->
-        <main class="flex-1 h-screen lg:h-[calc(100vh-4rem)] overflow-y-auto bg-gray-50">
+        <main class="flex-1 h-screen overflow-y-auto bg-gray-50">
             {% if messages %}
             
             {% endif %}

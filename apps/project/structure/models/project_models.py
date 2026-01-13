@@ -55,10 +55,10 @@ class Project(models.Model):
     def __str__(self):
         return self.title
     
-    def add_member(self, user, role):
+    def add_member(self, user, role, workload=0):
         try:
             if not Membership.objects.filter(project=self, user=user).exists():
-                Membership.objects.create(project=self, user=user, role=role)
+                Membership.objects.create(project=self, user=user, role=role, workload_hours=workload)
         except Exception as e:
             print(f"Error adding member: {e}")
     

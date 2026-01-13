@@ -21,11 +21,10 @@ class ProjectForm(forms.ModelForm):
         widget=forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 2, 'placeholder': 'Population, Intervention, Comparison, Outcome'})
     )
     
-    # Members field (multi-select)
-    members = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all(),
+    # Hidden field to store members with workload as JSON
+    members_workload = forms.CharField(
         required=False,
-        widget=forms.SelectMultiple(attrs={'class': 'select select-bordered w-full h-32'})
+        widget=forms.HiddenInput(attrs={'id': 'id_members_workload'})
     )
 
     class Meta:
@@ -46,6 +45,25 @@ class ProjectForm(forms.ModelForm):
         if not keys:
             raise forms.ValidationError("You must provide at least one field for the framework.")
         return keys
+    
+    def clean_members_workload(self):
+        """Parse and validate members with workload data"""
+        data = self.cleaned_data.get('members_workload', '')
+        if not data or data.strip() == '':
+            return []
+        
+        try:
+            members_data = json.loads(data)
+            validated = []
+            for item in members_data:
+                user_id = int(item.get('user_id'))
+                workload = int(item.get('workload', 0))
+                if workload < 0:
+                    raise forms.ValidationError("Workload cannot be negative")
+                validated.append({'user_id': user_id, 'workload': workload})
+            return validated
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            raise forms.ValidationError(f"Invalid members workload data: {str(e)}")
 
 class SpecificObjectiveForm(forms.ModelForm):
     class Meta:
