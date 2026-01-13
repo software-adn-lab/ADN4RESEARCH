@@ -321,12 +321,36 @@ function submitUpload() {
 function downloadAllPdfs() {
     const btn = document.getElementById('download-all-btn');
     const statusEl = document.getElementById('global-download-status');
+    const downloadModal = document.getElementById('download-modal');
+    const downloadModalStatus = document.getElementById('download-modal-status');
+
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'Descargando…';
     }
     statusEl.classList.remove('hidden');
     statusEl.textContent = 'Descargando PDFs, esto puede tardar…';
+
+    if (downloadModal) {
+        if (!downloadModal.dataset.lockHandlerBound) {
+            downloadModal.addEventListener('cancel', e => {
+                if (downloadModal.dataset.locked === '1') {
+                    e.preventDefault();
+                }
+            });
+            downloadModal.addEventListener('close', () => {
+                if (downloadModal.dataset.locked === '1') {
+                    downloadModal.showModal();
+                }
+            });
+            downloadModal.dataset.lockHandlerBound = '1';
+        }
+        downloadModal.dataset.locked = '1';
+        if (downloadModalStatus) {
+            downloadModalStatus.textContent = 'Preparando descargas, esto puede tardar unos minutos…';
+        }
+        downloadModal.showModal();
+    }
 
     retryDownload([])
         .then(data => {
@@ -336,14 +360,24 @@ function downloadAllPdfs() {
             const available = res.available_count || 0;
             const failed = res.failed_count || 0;
             statusEl.textContent = `Procesados: ${total}. Descargados: ${downloaded}. Ya disponibles: ${available}. Fallidos: ${failed}.`;
+            if (downloadModalStatus) {
+                downloadModalStatus.textContent = 'Descargas completadas. Puedes continuar.';
+            }
         })
         .catch(err => {
             statusEl.textContent = `Error: ${err.message}`;
+            if (downloadModalStatus) {
+                downloadModalStatus.textContent = `Error: ${err.message}`;
+            }
         })
         .finally(() => {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Descargar PDFs';
+            }
+            if (downloadModal) {
+                downloadModal.dataset.locked = '0';
+                downloadModal.close();
             }
         });
 }

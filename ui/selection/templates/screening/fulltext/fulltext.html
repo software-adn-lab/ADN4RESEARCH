@@ -168,6 +168,20 @@
     </form>
 </dialog>
 
+<!-- Download Progress Modal -->
+<dialog id="download-modal" class="modal">
+    <div class="modal-box flex flex-col items-center gap-4 text-center">
+        <div class="loading loading-spinner loading-lg text-primary"></div>
+        <div>
+            <h3 class="font-bold text-lg mb-2">Descargando PDFs</h3>
+            <p id="download-modal-status" class="text-sm text-gray-600">Preparando descargas, esto puede tardar unos minutos…</p>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button aria-label="Cerrar"></button>
+    </form>
+</dialog>
+
 <!-- Upload Modal -->
 <dialog id="upload-modal" class="modal">
     <div class="modal-box">
