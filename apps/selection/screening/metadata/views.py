@@ -3,17 +3,18 @@ Vistas para screening de metadatos.
 Responsable de la revisión abstract-based de papers.
 """
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.contrib import messages
 
 from apps.project.structure.models.project_models import Project
 from apps.project.facade import get_project_facade
 from apps.design.api import get_design_protocol
 from apps.selection.models import (
     SelectionPhase, PaperAssignment, PaperReview,
-    SelectionStageChoices, SelectionDecisionChoices
+    SelectionDecisionChoices, AssignmentStageChoices
 )
 
 
@@ -25,11 +26,22 @@ def screening_view(request, project_id):
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
 
-    # Get papers assigned to this user
+    # Check if papers are distributed
+    if not selection_phase.screening_distributed:
+        messages.info(request, 'Papers have not been distributed yet. Please distribute papers first.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    # Get papers assigned to this user for SCREENING stage
     assignments = PaperAssignment.objects.filter(
         selection_phase=selection_phase,
-        researcher=request.user
+        researcher=request.user,
+        stage=AssignmentStageChoices.SCREENING,
+        is_third_reviewer=False
     )
+
+    if not assignments.exists():
+        messages.info(request, 'You have no papers assigned for screening.')
+        return redirect('selection:screening_overview', project_id=project_id)
 
     # Get paper details from project facade
     project_facade = get_project_facade()
@@ -78,10 +90,10 @@ def screening_view(request, project_id):
             if study['id'] in paper_ids:
                 assignment = assignments.get(paper_id=study['id'])
 
-                # Get existing review if any
+                # Get existing review if any (stage = SCREENING)
                 review = PaperReview.objects.filter(
                     assignment=assignment,
-                    stage=SelectionStageChoices.SCREENING
+                    stage='SCREENING'
                 ).first()
 
                 if not review or review.decision == SelectionDecisionChoices.PENDING:
@@ -117,7 +129,7 @@ def screening_view(request, project_id):
 @require_http_methods(['POST'])
 def submit_review(request, project_id, assignment_id):
     """
-    Enviar decisión de revisión para un paper.
+    Enviar decisión de revisión para un paper en screening.
     """
     assignment = get_object_or_404(PaperAssignment, id=assignment_id)
 
@@ -125,19 +137,17 @@ def submit_review(request, project_id, assignment_id):
     if assignment.researcher != request.user:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
-    stage = request.POST.get('stage', SelectionStageChoices.SCREENING)
+    # Verify it's a screening assignment
+    if assignment.stage != AssignmentStageChoices.SCREENING:
+        return JsonResponse({'error': 'Invalid assignment stage'}, status=400)
+
     notes = request.POST.get('notes', '')
     criterion_id = request.POST.get('criterion_id') or None
     criterion_label = request.POST.get('criterion_label') or None
-    decision_from_request = request.POST.get('decision')
+    decision = request.POST.get('decision')
 
-    existing_review = PaperReview.objects.filter(
-        assignment=assignment,
-        stage=stage
-    ).first()
-    previous_decision = existing_review.decision if existing_review else SelectionDecisionChoices.PENDING
-
-    decision = decision_from_request or previous_decision or SelectionDecisionChoices.PENDING
+    if decision not in ['INCLUDED', 'EXCLUDED', 'PENDING']:
+        return JsonResponse({'error': 'Invalid decision'}, status=400)
 
     # If decision is include/exclude, criterion is required
     if decision in [SelectionDecisionChoices.INCLUDED, SelectionDecisionChoices.EXCLUDED] and not criterion_id:
@@ -145,7 +155,7 @@ def submit_review(request, project_id, assignment_id):
 
     review, created = PaperReview.objects.update_or_create(
         assignment=assignment,
-        stage=stage,
+        stage='SCREENING',
         defaults={
             'decision': decision,
             'notes': notes,

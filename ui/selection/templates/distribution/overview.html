@@ -3,17 +3,17 @@
 
 {% block content %}
 <div class="container mx-auto p-6 space-y-4">
-    {% include '_timeline.html' with project=project active='overview' %}
+    {% include '_timeline.html' with project=project active='screening_overview' %}
 
     <!-- Header -->
     <div class="flex justify-between items-center">
         <div>
-            <h1 class="text-3xl font-bold">Selection - Overview</h1>
+            <h1 class="text-3xl font-bold">Screening - Overview</h1>
             <p class="text-gray-600">{{ project.title }}</p>
         </div>
         <div class="flex items-center space-x-2">
-            <span class="badge {% if selection_phase.status == 'ON_GOING' %}badge-success{% else %}badge-neutral{% endif %}">
-                {{ selection_phase.get_status_display }}
+            <span class="badge {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-success{% elif selection_phase.screening_status == 'COMPLETED' %}badge-info{% else %}badge-neutral{% endif %}">
+                {{ selection_phase.get_screening_status_display }}
             </span>
             {% if selection_phase.end_date %}
                 <span class="text-sm text-gray-500">End date: {{ selection_phase.end_date|date:"d/m/Y" }}</span>
@@ -102,7 +102,7 @@
                                 </div>
                             </div>
                             {% if is_owner and phase_mode == 'en_curso' and item.pending > 0 %}
-                            <form method="post" action="{% url 'selection:send_reminder' project.id %}">
+                            <form method="post" action="{% url 'selection:send_screening_reminder' project.id %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="researcher_id" value="{{ item.researcher.id }}">
                                 <button type="submit" class="btn btn-xs btn-outline btn-warning" title="Send reminder">
@@ -172,7 +172,7 @@
                 <p class="text-sm text-gray-600 mt-2">Pending Studies</p>
             </div>
             <div class="divider my-2">Take Action</div>
-            <form method="post" action="{% url 'selection:bulk_decision' project.id %}" class="space-y-2">
+            <form method="post" action="{% url 'selection:screening_bulk_decision' project.id %}" class="space-y-2">
                 {% csrf_token %}
                 <button type="submit" name="action" value="include_all" class="btn btn-success btn-block">
                     INCLUDE ALL PENDING
@@ -196,7 +196,7 @@
         <h3 class="font-bold text-lg mb-4">Distribute Papers</h3>
         <p class="text-sm text-gray-600 mb-4">Select how many reviewers should evaluate each paper. This will distribute all papers proportionally based on each researcher's workload hours.</p>
         
-        <form method="post" action="{% url 'selection:distribute' project.id %}" id="distribute-form">
+        <form method="post" action="{% url 'selection:distribute_screening' project.id %}" id="distribute-form">
             {% csrf_token %}
             <div class="form-control mb-4">
                 <label class="label">

@@ -116,7 +116,7 @@
                     {% endif %}
                     
                     <!-- Decision Buttons -->
-                    <form method="post" action="{% url 'selection:submit_review' project.id item.assignment.id %}" 
+                    <form method="post" action="{% url 'selection:submit_screening_review' project.id item.assignment.id %}" 
                           id="review-form-{{ item.assignment.id }}"
                           class="sticky bottom-4 z-10 flex justify-center">
                         {% csrf_token %}

@@ -105,7 +105,7 @@
 
                     <!-- Decision Buttons -->
                     <div class="flex-none p-4 border-t border-gray-200 bg-white">
-                        <form method="post" action="{% url 'selection:submit_review' project.id paper.assignment.id %}" 
+                        <form method="post" action="{% url 'selection:submit_fulltext_review' project.id paper.assignment.id %}" 
                               id="review-form-{{ paper.assignment.id }}"
                               class="flex justify-center">
                             {% csrf_token %}

@@ -1,66 +1,183 @@
-from django.shortcuts import render, get_object_or_404
+"""
+Vistas para Fulltext Overview.
+Gestión de PDFs y distribución para fulltext review.
+"""
+
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import JsonResponse
+from django.contrib import messages
 from django.core.files.storage import default_storage
 
-from apps.project.structure.models.project_models import Project
+from apps.project.structure.models.project_models import Project, Membership
 from apps.project.facade import get_project_facade
 from apps.selection.models import (
-    SelectionPhase, 
-    PaperReview,
-    SelectionStageChoices, 
-    SelectionDecisionChoices
+    SelectionPhase, PaperAssignment, PaperReview,
+    SelectionDecisionChoices, AssignmentStageChoices,
+    SubPhaseStatusChoices, SelectionStageChoices
 )
+from apps.selection.services import FulltextDistributionService, DiscrepancyResolutionService
+
+
+def _calculate_fulltext_progress(selection_phase, user):
+    """Calculate fulltext review progress for a user"""
+    assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        researcher=user,
+        stage=AssignmentStageChoices.FULLTEXT,
+        is_third_reviewer=False
+    )
+    
+    total = assignments.count()
+    
+    if total == 0:
+        return {
+            'total': 0,
+            'pending': 0,
+            'included': 0,
+            'excluded': 0,
+            'percentage': 0,
+            'pending_pct': 0,
+            'included_pct': 0,
+            'excluded_pct': 0
+        }
+    
+    reviews = PaperReview.objects.filter(
+        assignment__in=assignments,
+        stage='FULL_TEXT'
+    )
+    
+    included = reviews.filter(decision=SelectionDecisionChoices.INCLUDED).count()
+    excluded = reviews.filter(decision=SelectionDecisionChoices.EXCLUDED).count()
+    reviewed = included + excluded
+    pending = total - reviewed
+    
+    percentage = int((reviewed / total) * 100)
+    pending_pct = int((pending / total) * 100)
+    included_pct = int((included / total) * 100)
+    excluded_pct = 100 - pending_pct - included_pct
+    
+    return {
+        'total': total,
+        'pending': pending,
+        'included': included,
+        'excluded': excluded,
+        'percentage': percentage,
+        'pending_pct': pending_pct,
+        'included_pct': included_pct,
+        'excluded_pct': excluded_pct
+    }
+
+
+def _get_fulltext_team_progress(selection_phase, exclude_user):
+    """Get fulltext progress for all team members"""
+    researchers = Membership.objects.filter(
+        project=selection_phase.project,
+        role__in=['OWNER', 'RESEARCHER']
+    ).select_related('user').exclude(user=exclude_user)
+    
+    team_progress = []
+    for membership in researchers:
+        progress = _calculate_fulltext_progress(selection_phase, membership.user)
+        progress['researcher'] = membership.user
+        team_progress.append(progress)
+    
+    return team_progress
+
+
+def _get_included_papers_from_screening(selection_phase):
+    """
+    Get papers that were included in screening phase.
+    """
+    from apps.selection.models import ConflictResolution
+    
+    included_papers = set()
+    
+    # 1. Get papers from resolved conflicts with INCLUDED
+    resolved_included = ConflictResolution.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.SCREENING,
+        is_resolved=True,
+        final_decision=SelectionDecisionChoices.INCLUDED
+    ).values_list('paper_id', flat=True)
+    
+    included_papers.update(resolved_included)
+    
+    # 2. Get papers where all reviews are INCLUDED (no conflict)
+    all_screening_assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.SCREENING,
+        is_third_reviewer=False
+    )
+    
+    paper_ids = all_screening_assignments.values_list('paper_id', flat=True).distinct()
+    
+    for paper_id in paper_ids:
+        if paper_id in included_papers:
+            continue
+        
+        # Check if in unresolved conflict
+        has_unresolved = ConflictResolution.objects.filter(
+            selection_phase=selection_phase,
+            stage=AssignmentStageChoices.SCREENING,
+            paper_id=paper_id,
+            is_resolved=False
+        ).exists()
+        
+        if has_unresolved:
+            continue
+        
+        # Get all reviews for this paper
+        reviews = PaperReview.objects.filter(
+            assignment__selection_phase=selection_phase,
+            assignment__paper_id=paper_id,
+            assignment__stage=AssignmentStageChoices.SCREENING,
+            stage='SCREENING'
+        ).exclude(decision=SelectionDecisionChoices.PENDING)
+        
+        if not reviews.exists():
+            continue
+        
+        decisions = set(reviews.values_list('decision', flat=True))
+        if decisions == {SelectionDecisionChoices.INCLUDED}:
+            included_papers.add(paper_id)
+    
+    return list(included_papers)
 
 
 @login_required
 def fulltext_overview(request, project_id):
     """
-    Vista de Full-text Overview: muestra todos los papers incluidos de todos los miembros
-    en la fase de screening, con información sobre descarga de PDFs.
-    Esta vista es para gestionar PDFs antes de la fase de full-text screening.
+    Fulltext Overview - PDF management and distribution by page count.
+    Shows your progress, team progress, and list of included papers with PDF status.
     """
     project = get_object_or_404(Project, id=project_id)
-    
-    # Verificar que el usuario es miembro del proyecto
-    if not project.memberships.filter(user=request.user).exists():
-        return HttpResponseForbidden("No tienes acceso a este proyecto")
-    
-    # Obtener la fase de selección
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
-    # Obtener todos los papers que fueron incluidos en la fase de screening
-    # de TODOS los miembros (no solo del usuario actual)
-    # Un paper puede ser incluido por múltiples researchers, pero solo contamos una vez
-    included_reviews = PaperReview.objects.filter(
-        assignment__selection_phase=selection_phase,
-        stage=SelectionStageChoices.SCREENING,
-        decision=SelectionDecisionChoices.INCLUDED
-    ).select_related('assignment')
+    # Check if fulltext phase is accessible
+    if not selection_phase.can_access_fulltext():
+        messages.warning(request, 'Complete screening phase first (including all discussions) to access full-text review.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
-    # Obtener IDs únicos de papers desde los assignments (paper_id es el UUID del study)
-    paper_ids_set = set()
-    for review in included_reviews:
-        paper_ids_set.add(str(review.assignment.paper_id))
+    is_owner = request.user == project.owner
     
-    paper_ids = list(paper_ids_set)
+    # Determine phase mode
+    if selection_phase.fulltext_status == SubPhaseStatusChoices.COMPLETED:
+        phase_mode = 'finalizado'
+    else:
+        phase_mode = 'en_curso'
     
-    # Obtener estado de PDFs desde acquisition facade
-    status_by_id = {}
-    if paper_ids:
-        from apps.acquisition.facade import get_acquisition_facade
-        acquisition_facade = get_acquisition_facade()
-        try:
-            statuses = acquisition_facade.get_study_status(paper_ids)
-            status_by_id = {
-                str(s.get('id') or s.get('study_id') or s.get('uuid') or s.get('pk')): s 
-                for s in statuses
-            }
-        except Exception:
-            pass  # Si falla, status_by_id queda vacío
+    # Get user progress (only if distributed)
+    user_progress = _calculate_fulltext_progress(selection_phase, request.user)
     
-    # Obtener metadatos de estudios desde Project Facade
+    # Get team progress
+    team_progress = _get_fulltext_team_progress(selection_phase, request.user)
+    
+    # Get included papers from screening
+    included_paper_ids = _get_included_papers_from_screening(selection_phase)
+    
+    # Get paper metadata and PDF status
     project_facade = get_project_facade()
     papers_data = []
     total_papers = 0
@@ -68,19 +185,31 @@ def fulltext_overview(request, project_id):
     papers_without_pdf = 0
     total_pages = 0
     
-    if paper_ids:
+    if included_paper_ids:
         all_studies = project_facade.get_studies_by_project(
             project_id=project_id,
             include_metadata=True
         )
         studies_by_id = {str(s['id']): s for s in all_studies}
         
-        for paper_id in paper_ids:
+        # Get PDF status from acquisition
+        status_by_id = {}
+        try:
+            from apps.acquisition.facade import get_acquisition_facade
+            acquisition_facade = get_acquisition_facade()
+            statuses = acquisition_facade.get_study_status(included_paper_ids)
+            status_by_id = {
+                str(s.get('id') or s.get('study_id') or s.get('uuid') or s.get('pk')): s 
+                for s in statuses
+            }
+        except Exception:
+            pass
+        
+        for paper_id in included_paper_ids:
             study = studies_by_id.get(paper_id)
             if not study:
                 continue
             
-            # Obtener estado de PDF
             st = status_by_id.get(paper_id, {})
             pdf_path = st.get('pdf_path') or study.get('pdf_path')
             pdf_url = None
@@ -111,79 +240,167 @@ def fulltext_overview(request, project_id):
             else:
                 papers_without_pdf += 1
     
-    # Ordenar por título
+    # Sort by title
     papers_data.sort(key=lambda x: x['title'].lower())
+    
+    # Check for conflicts
+    discrepancy_service = DiscrepancyResolutionService(selection_phase)
+    conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')
+    conflicts_count = len(conflicts)
+    
+    # Check if all reviews are complete
+    all_reviews_complete = True
+    fulltext_assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.FULLTEXT,
+        is_third_reviewer=False
+    )
+    
+    if fulltext_assignments.exists():
+        for assignment in fulltext_assignments:
+            review = PaperReview.objects.filter(
+                assignment=assignment,
+                stage='FULL_TEXT'
+            ).first()
+            if not review or review.decision == SelectionDecisionChoices.PENDING:
+                all_reviews_complete = False
+                break
+    else:
+        all_reviews_complete = False
     
     context = {
         'project': project,
         'selection_phase': selection_phase,
+        'is_owner': is_owner,
         'papers': papers_data,
         'total_papers': total_papers,
         'papers_with_pdf': papers_with_pdf,
         'papers_without_pdf': papers_without_pdf,
         'total_pages': total_pages,
-        'active': 'fulltext_overview',
+        'user_progress': user_progress,
+        'team_progress': team_progress,
+        'current_stage': 'fulltext_overview',
+        'phase_mode': phase_mode,
+        'conflicts_count': conflicts_count,
+        'all_reviews_complete': all_reviews_complete,
+        'can_finalize': all_reviews_complete and conflicts_count == 0 and selection_phase.fulltext_distributed,
     }
     
     return render(request, 'fulltext_overview/overview.html', context)
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(['POST'])
+def distribute_fulltext_papers(request, project_id):
+    """
+    Execute fulltext distribution algorithm (by PDF page count).
+    """
+    project = get_object_or_404(Project, id=project_id)
+    
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can distribute papers')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    
+    if not selection_phase.can_access_fulltext():
+        messages.error(request, 'Complete screening phase first')
+        return redirect('selection:screening_overview', project_id=project_id)
+    
+    try:
+        reviews_per_paper = int(request.POST.get('reviews_per_paper', 2))
+        if reviews_per_paper not in [2, 3, 4]:
+            reviews_per_paper = 2
+        
+        # Execute distribution
+        service = FulltextDistributionService(project_id, selection_phase)
+        distribution = service.distribute_papers(total_reviews_per_paper=reviews_per_paper)
+        
+        # Clear existing fulltext assignments
+        PaperAssignment.objects.filter(
+            selection_phase=selection_phase,
+            stage=AssignmentStageChoices.FULLTEXT
+        ).delete()
+        
+        # Clear existing fulltext reviews
+        PaperReview.objects.filter(
+            assignment__selection_phase=selection_phase,
+            stage='FULL_TEXT'
+        ).delete()
+        
+        # Create new assignments
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        for username, paper_ids in distribution.items():
+            researcher = User.objects.get(username=username)
+            
+            for paper_id in paper_ids:
+                PaperAssignment.objects.create(
+                    selection_phase=selection_phase,
+                    paper_id=paper_id,
+                    researcher=researcher,
+                    stage=AssignmentStageChoices.FULLTEXT,
+                    is_third_reviewer=False
+                )
+        
+        # Update phase status
+        selection_phase.fulltext_screening_status = SubPhaseStatusChoices.IN_PROGRESS
+        selection_phase.current_stage = SelectionStageChoices.FULLTEXT_OVERVIEW
+        selection_phase.save()
+        
+        messages.success(request, f'Papers distributed for full-text review! {len(distribution)} researchers assigned with {reviews_per_paper} reviews per paper.')
+    
+    except Exception as e:
+        messages.error(request, f'Distribution failed: {str(e)}')
+    
+    return redirect('selection:fulltext_overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
 def download_overview_pdfs(request, project_id):
     """
-    Descargar PDFs para todos los papers incluidos en screening.
-    Esta función descarga PDFs para TODOS los papers incluidos (de todos los miembros).
+    Download PDFs for all included papers.
     """
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
-    # Obtener todos los papers incluidos de todos los miembros
-    included_reviews = PaperReview.objects.filter(
-        assignment__selection_phase=selection_phase,
-        stage=SelectionStageChoices.SCREENING,
-        decision=SelectionDecisionChoices.INCLUDED
-    )
+    included_paper_ids = _get_included_papers_from_screening(selection_phase)
     
-    # Obtener IDs únicos
-    paper_ids_set = set()
-    for review in included_reviews:
-        paper_ids_set.add(str(review.assignment.paper_id))
-    
-    study_ids = list(paper_ids_set)
-    
-    if not study_ids:
+    if not included_paper_ids:
         return JsonResponse({"ok": True, "message": "No studies to process", "result": {}}, status=200)
     
-    from apps.acquisition.facade import get_acquisition_facade
-    acquisition_facade = get_acquisition_facade()
-    
     try:
-        result = acquisition_facade.download_fulltexts(study_ids)
-        # Adjuntar urls cuando existan
-        statuses = acquisition_facade.get_study_status(study_ids)
+        from apps.acquisition.facade import get_acquisition_facade
+        acquisition_facade = get_acquisition_facade()
+        
+        result = acquisition_facade.download_fulltexts(included_paper_ids)
+        
+        # Get updated status
+        statuses = acquisition_facade.get_study_status(included_paper_ids)
         for st in statuses:
             path = st.get('pdf_path')
             st['pdf_url'] = default_storage.url(path) if path else None
         
-        # Serializar DTO DownloadStatusResult a dict JSON-serializable
         result_dict = {
             "total_count": getattr(result, 'total_count', 0),
             "downloaded_count": getattr(result, 'downloaded_count', 0),
             "available_count": getattr(result, 'available_count', 0),
             "failed_count": getattr(result, 'failed_count', 0),
         }
+        
         return JsonResponse({"ok": True, "result": result_dict, "statuses": statuses})
+    
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(['POST'])
 def upload_overview_pdf(request, project_id):
     """
-    Subir manualmente un PDF para un estudio.
-    Campos esperados: study_id (UUID), file (UploadedFile)
+    Upload PDF manually for a study.
     """
     study_id = request.POST.get('study_id')
     file_obj = request.FILES.get('file')
@@ -191,17 +408,115 @@ def upload_overview_pdf(request, project_id):
     if not study_id or not file_obj:
         return JsonResponse({"ok": False, "error": "study_id and file are required"}, status=400)
     
-    from apps.acquisition.facade import get_acquisition_facade
-    acquisition_facade = get_acquisition_facade()
-    
     try:
+        from apps.acquisition.facade import get_acquisition_facade
+        acquisition_facade = get_acquisition_facade()
+        
         upload_res = acquisition_facade.upload_study_pdf(
             study_id=study_id, 
             file_obj=file_obj, 
             filename=file_obj.name, 
             user=request.user
         )
+        
         pdf_url = default_storage.url(upload_res.get('pdf_path')) if upload_res.get('pdf_path') else None
         return JsonResponse({"ok": True, "result": upload_res, "pdf_url": pdf_url})
+    
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(['POST'])
+def send_fulltext_reminder(request, project_id):
+    """
+    Send reminder notification for fulltext review.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can send reminders')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    researcher_id = request.POST.get('researcher_id')
+    if not researcher_id:
+        messages.error(request, 'No researcher specified')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    try:
+        researcher = User.objects.get(id=researcher_id)
+        
+        from apps.notification.models import Notification
+        Notification.objects.create(
+            recipient=researcher,
+            sender=request.user,
+            type='REMINDER',
+            title='Full-text Review Reminder',
+            custom_message=f'You have pending papers to review in the full-text phase of project "{project.title}". Please complete your reviews.',
+            project=project
+        )
+        messages.success(request, f'Reminder sent to {researcher.get_full_name() or researcher.username}')
+            
+    except User.DoesNotExist:
+        messages.error(request, 'Researcher not found')
+    except Exception as e:
+        messages.error(request, f'Failed to send notification: {str(e)}')
+    
+    return redirect('selection:fulltext_overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def finalize_fulltext(request, project_id):
+    """
+    Finalize fulltext phase.
+    Only possible when all reviews are complete and all conflicts are resolved.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can finalize full-text phase')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    
+    # Check for unresolved conflicts
+    discrepancy_service = DiscrepancyResolutionService(selection_phase)
+    conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')
+    
+    if conflicts:
+        messages.error(request, f'Cannot finalize: {len(conflicts)} unresolved conflicts remain.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    # Check for pending reviews
+    all_assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.FULLTEXT,
+        is_third_reviewer=False
+    )
+    
+    for assignment in all_assignments:
+        review = PaperReview.objects.filter(
+            assignment=assignment,
+            stage='FULL_TEXT'
+        ).first()
+        if not review or review.decision == SelectionDecisionChoices.PENDING:
+            messages.error(request, 'Cannot finalize: Some reviews are still pending.')
+            return redirect('selection:fulltext_overview', project_id=project_id)
+    
+    # Finalize fulltext
+    selection_phase.fulltext_screening_status = SubPhaseStatusChoices.COMPLETED
+    selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
+    selection_phase.status = 'FINALIZED'
+    selection_phase.save()
+    
+    # Count approved papers
+    from apps.selection.services import get_selection_facade
+    facade = get_selection_facade()
+    approved_count = len(facade.get_approved_fulltext_papers(project_id))
+    
+    messages.success(request, f'Selection phase completed! {approved_count} papers approved for extraction.')
+    return redirect('selection:fulltext_overview', project_id=project_id)

@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-6 h-screen flex flex-col">
+    {% include '_timeline.html' with project=project active='fulltext_discussion' %}
+
+    <!-- Header -->
+    <div class="flex-none flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold">Full-text - Discussion & Resolution</h1>
+            <p class="text-gray-600">{{ project.title }}</p>
+        </div>
+        {% if is_owner %}
+        <span class="badge badge-primary badge-lg">Owner View</span>
+        {% else %}
+        <span class="badge badge-secondary badge-lg">Reviewer View</span>
+        {% endif %}
+    </div>
+
+    {% if is_owner %}
+        {# ============================================ #}
+        {# OWNER VIEW - See all conflicts #}
+        {# ============================================ #}
+        {% if conflicts %}
+        <!-- Stats Bar -->
+        <div class="flex-none mt-4">
+            <div class="alert alert-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <p>{{ conflicts|length }} paper(s) with conflicting full-text decisions require resolution</p>
+            </div>
+        </div>
+
+        <!-- Two Panel Interface -->
+        <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 mt-4">
+            <!-- Left Panel: Conflicts List -->
+            <div class="col-span-4 bg-white rounded-lg shadow overflow-y-auto h-full">
+                <div class="p-4">
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                        <span>Total Conflicts: {{ conflicts|length }}</span>
+                        <span>Pending: {{ conflicts|length }}</span>
+                    </div>
+                    <div class="space-y-3">
+                    {% for conflict in conflicts %}
+                    <div class="p-4 rounded-lg border cursor-pointer conflict-item shadow-sm transition
+                                {% if conflict.is_resolved %}border-success bg-green-50 hover:bg-green-100{% else %}border-warning bg-yellow-50 hover:bg-yellow-100{% endif %}"
+                         data-conflict-id="{{ conflict.paper_id }}"
+                         onclick="showConflictDetail('{{ conflict.paper_id }}')"
+                         id="conflict-item-{{ conflict.paper_id }}">
+                        <h3 class="font-semibold text-sm line-clamp-2">{{ conflict.study.title|default:conflict.paper_id }}</h3>
+                        <div class="flex items-center gap-2 mt-2">
+                            {% if conflict.is_resolved %}
+                                <span class="badge badge-sm badge-success">Resolved</span>
+                            {% else %}
+                                <span class="badge badge-sm badge-warning">Pending</span>
+                            {% endif %}
+                            <span class="text-xs text-gray-500">{{ conflict.reviews|length }} reviews</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Conflict Detail -->
+            <div class="col-span-8 bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden h-full" id="conflict-detail">
+                <div class="overflow-y-auto flex-1 pr-2">
+                {% for conflict in conflicts %}
+                <div class="conflict-detail-content space-y-4 pb-10 {% if not forloop.first %}hidden{% endif %}" 
+                     id="conflict-{{ conflict.paper_id }}"
+                     data-paper-id="{{ conflict.paper_id }}"
+                     data-is-resolved="{{ conflict.is_resolved|yesno:'true,false' }}">
+                    
+                    <!-- Title Block -->
+                    <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-bold">{{ conflict.study.title|default:conflict.paper_id }}</h2>
+                                <p class="text-sm text-gray-500 mt-1">Study ID: {{ conflict.paper_id }}</p>
+                            </div>
+                            {% if conflict.study.pdf_path %}
+                            <a href="{{ conflict.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                View PDF
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Abstract Block -->
+                    {% if conflict.study.abstract %}
+                    <div class="collapse collapse-arrow rounded-lg border border-gray-200 bg-gray-50">
+                        <input type="checkbox" />
+                        <div class="collapse-title font-bold text-lg p-4">ABSTRACT</div>
+                        <div class="collapse-content">
+                            <p class="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{{ conflict.study.abstract }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Conflicting Reviews Block -->
+                    <div class="p-4 rounded-lg border border-orange-200 bg-orange-50">
+                        <h3 class="font-bold text-lg mb-3">CONFLICTING REVIEWS</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for review in conflict.reviews %}
+                            <div class="p-3 border rounded bg-white">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                            <span class="text-xs">{{ review.assignment.researcher.first_name|slice:":1"|upper }}{{ review.assignment.researcher.last_name|slice:":1"|upper }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-semibold text-sm">{{ review.assignment.researcher.get_full_name }}</span>
+                                </div>
+                                <span class="badge text-white {% if review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                                    {{ review.decision }}
+                                </span>
+                                {% if review.exclusion_criterion_label %}
+                                    <p class="text-sm mt-2"><span class="font-medium">Criterion:</span> {{ review.exclusion_criterion_label }}</p>
+                                {% endif %}
+                                {% if review.notes %}
+                                    <p class="text-sm mt-2 text-gray-600 italic">"{{ review.notes }}"</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if not conflict.is_resolved %}
+                    <!-- Resolution Actions -->
+                    <div class="p-4 rounded-lg border border-blue-200 bg-blue-50">
+                        <h3 class="font-bold text-lg mb-3">RESOLUTION OPTIONS</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Option 1: Assign Third Reviewer -->
+                            <div class="border rounded-lg p-4 bg-white">
+                                <h4 class="font-semibold mb-2">Assign Third Reviewer</h4>
+                                <form method="post" action="{% url 'selection:assign_fulltext_third_reviewer' project.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="paper_id" value="{{ conflict.paper_id }}">
+                                    <select name="reviewer_id" class="select select-bordered w-full mb-2" required>
+                                        <option value="">Select reviewer...</option>
+                                        {% for reviewer in conflict.eligible_reviewers %}
+                                            <option value="{{ reviewer.id }}">{{ reviewer.get_full_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline btn-primary w-full">
+                                        Assign Reviewer
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Option 2: Owner Final Decision -->
+                            <div class="border rounded-lg p-4 bg-white">
+                                <h4 class="font-semibold mb-2">Cast Final Decision</h4>
+                                <form method="post" action="{% url 'selection:fulltext_owner_vote' project.id %}" id="owner-vote-form-{{ conflict.paper_id }}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="paper_id" value="{{ conflict.paper_id }}">
+                                    <div class="flex gap-2">
+                                        <button type="submit" name="decision" value="INCLUDED" 
+                                                class="btn btn-md flex-1 text-white"
+                                                style="background-color: #00A30E; border-color: #00A30E;">
+                                            INCLUDE
+                                        </button>
+                                        <button type="submit" name="decision" value="EXCLUDED" 
+                                                class="btn btn-md flex-1 text-white"
+                                                style="background-color: #EE0000; border-color: #EE0000;">
+                                            EXCLUDE
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Resolved Status -->
+                    <div class="alert alert-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span>Resolved via {{ conflict.resolution_method|default:"decision" }} 
+                            {% if conflict.third_reviewer %} by {{ conflict.third_reviewer.get_full_name }}{% endif %}
+                            - Final Decision: <strong>{{ conflict.final_decision }}</strong>
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- No Conflicts - All Good -->
+        <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+                <div class="alert alert-success max-w-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>No conflicting papers - all full-text reviews are consistent!</span>
+                </div>
+                <div class="card bg-white shadow mt-6 max-w-lg">
+                    <div class="card-body">
+                        <h2 class="card-title text-success">Selection Complete</h2>
+                        <p class="text-gray-600">{{ approved_count|default:0 }} papers approved for extraction.</p>
+                        <div class="card-actions justify-end mt-4">
+                            <a href="{% url 'selection:approved_papers_api' project.id %}" class="btn btn-outline btn-sm" target="_blank">
+                                View API Response
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        {# ============================================ #}
+        {# RESEARCHER VIEW - Third reviewer assignments #}
+        {# ============================================ #}
+        {% if third_reviewer_papers %}
+        <!-- Stats Bar -->
+        <div class="flex-none mt-4">
+            <div class="alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p>You have been assigned as a third reviewer for {{ third_reviewer_papers|length }} paper(s)</p>
+            </div>
+        </div>
+
+        <!-- Two Panel Interface -->
+        <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 mt-4">
+            <!-- Left Panel: Papers List -->
+            <div class="col-span-4 bg-white rounded-lg shadow overflow-y-auto h-full">
+                <div class="p-4">
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                        <span>Total: {{ third_reviewer_papers|length }}</span>
+                        <span>Pending review</span>
+                    </div>
+                    <div class="space-y-3">
+                    {% for paper in third_reviewer_papers %}
+                    <div class="p-4 rounded-lg border cursor-pointer paper-item shadow-sm transition
+                                {% if paper.own_review %}border-success bg-green-50 hover:bg-green-100{% else %}border-info bg-blue-50 hover:bg-blue-100{% endif %}"
+                         data-paper-id="{{ paper.assignment.paper_id }}"
+                         onclick="showPaperDetail('{{ paper.assignment.paper_id }}')"
+                         id="paper-item-{{ paper.assignment.paper_id }}">
+                        <h3 class="font-semibold text-sm line-clamp-2">{{ paper.study.title|default:paper.assignment.paper_id }}</h3>
+                        <div class="flex items-center gap-2 mt-2">
+                            {% if paper.own_review %}
+                                <span class="badge badge-sm text-white uppercase font-bold"
+                                    {% if paper.own_review.decision == 'INCLUDED' %}
+                                    style="background-color: #00A30E; border-color: #00A30E;"
+                                    {% else %}
+                                    style="background-color: #EE0000; border-color: #EE0000;"
+                                    {% endif %}>
+                                    {{ paper.own_review.decision }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-sm badge-ghost">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Paper Detail -->
+            <div class="col-span-8 bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden h-full" id="paper-detail">
+                <div class="overflow-y-auto flex-1 pr-2">
+                {% for paper in third_reviewer_papers %}
+                <div class="paper-detail-content space-y-4 pb-10 {% if not forloop.first %}hidden{% endif %}" 
+                     id="paper-{{ paper.assignment.paper_id }}"
+                     data-assignment-id="{{ paper.assignment.id }}"
+                     data-decision="{% if paper.own_review %}{{ paper.own_review.decision }}{% else %}PENDING{% endif %}">
+                    
+                    <!-- Title Block -->
+                    <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-bold">{{ paper.study.title|default:paper.assignment.paper_id }}</h2>
+                                <p class="text-sm text-gray-500 mt-1">Study ID: {{ paper.assignment.paper_id }}</p>
+                            </div>
+                            {% if paper.study.pdf_path %}
+                            <a href="{{ paper.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                View PDF
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Abstract Block -->
+                    {% if paper.study.abstract %}
+                    <div class="collapse collapse-arrow rounded-lg border border-gray-200 bg-gray-50">
+                        <input type="checkbox" />
+                        <div class="collapse-title font-bold text-lg p-4">ABSTRACT</div>
+                        <div class="collapse-content">
+                            <p class="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{{ paper.study.abstract }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Previous Reviews Block -->
+                    <div class="p-4 rounded-lg border border-orange-200 bg-orange-50">
+                        <h3 class="font-bold text-lg mb-3">PREVIOUS REVIEWS (Conflicting)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for review in paper.original_reviews %}
+                            <div class="p-3 border rounded bg-white">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                            <span class="text-xs">{{ review.assignment.researcher.first_name|slice:":1"|upper }}{{ review.assignment.researcher.last_name|slice:":1"|upper }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-semibold text-sm">{{ review.assignment.researcher.get_full_name }}</span>
+                                </div>
+                                <span class="badge text-white {% if review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                                    {{ review.decision }}
+                                </span>
+                                {% if review.exclusion_criterion_label %}
+                                    <p class="text-sm mt-2"><span class="font-medium">Criterion:</span> {{ review.exclusion_criterion_label }}</p>
+                                {% endif %}
+                                {% if review.notes %}
+                                    <p class="text-sm mt-2 text-gray-600 italic">"{{ review.notes }}"</p>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <p class="text-gray-500 italic">No previous reviews available</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Your Review Section -->
+                    {% if paper.own_review %}
+                    <div class="p-4 rounded-lg border border-green-200 bg-green-50">
+                        <h3 class="font-bold text-lg mb-2">YOUR DECISION</h3>
+                        <span class="badge badge-lg text-white {% if paper.own_review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                            {{ paper.own_review.decision }}
+                        </span>
+                        {% if paper.own_review.exclusion_criterion_label %}
+                            <p class="text-sm mt-2"><span class="font-medium">Criterion:</span> {{ paper.own_review.exclusion_criterion_label }}</p>
+                        {% endif %}
+                        {% if paper.own_review.notes %}
+                            <p class="text-sm mt-2 text-gray-600 italic">"{{ paper.own_review.notes }}"</p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- Decision Form -->
+                    <div class="sticky bottom-4 z-10">
+                        <form method="post" action="{% url 'selection:fulltext_third_reviewer_submit' project.id %}" 
+                              id="review-form-{{ paper.assignment.id }}"
+                              class="flex flex-col items-center">
+                            {% csrf_token %}
+                            <input type="hidden" name="assignment_id" value="{{ paper.assignment.id }}">
+                            <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="">
+                            <input type="hidden" name="exclusion_reason" id="criterion-{{ paper.assignment.id }}" value="">
+                            <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="">
+                            
+                            <div class="flex gap-3 bg-white rounded-xl drop-shadow-xl border border-gray-200 px-4 py-3">
+                                <button type="button" 
+                                        class="btn btn-md text-base rounded-lg text-white"
+                                        style="background-color: #00A30E; border-color: #00A30E;"
+                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'INCLUDED')">
+                                    INCLUDE
+                                </button>
+                                
+                                <button type="button" 
+                                        class="btn btn-md text-base rounded-lg text-white"
+                                        style="background-color: #EE0000; border-color: #EE0000;"
+                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'EXCLUDED')">
+                                    EXCLUDE
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- No Assignments -->
+        <div class="flex-1 flex items-center justify-center">
+            <div class="alert alert-info max-w-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>You have no pending third reviewer assignments for full-text review.</span>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Decision & Notes Modal -->
+<dialog id="decision-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4" id="modal-title">Review Decision</h3>
+        <div class="form-control mb-3">
+            <label class="label"><span class="label-text" id="criterion-label-text">Select criterion</span></label>
+            <select id="modal-criterion-select" class="select select-bordered w-full">
+                <option value="">Select criterion...</option>
+            </select>
+        </div>
+        <div class="form-control mb-4">
+            <label class="label"><span class="label-text">Observation / Rationale</span></label>
+            <textarea id="modal-notes-input" 
+                      class="textarea textarea-bordered w-full h-32" 
+                      placeholder="Enter your notes, observations, or rationale for this decision..."></textarea>
+        </div>
+        <div class="modal-action">
+            <button class="btn" onclick="closeDecisionModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDecisionAndNotes()">Save & Submit</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{{ inclusion_criteria|json_script:"inclusion-data" }}
+{{ exclusion_criteria|json_script:"exclusion-data" }}
+
+<script>
+// State
+let currentAssignmentId = null;
+let currentDecision = null;
+const inclusionCriteria = JSON.parse(document.getElementById('inclusion-data').textContent || '[]');
+const exclusionCriteria = JSON.parse(document.getElementById('exclusion-data').textContent || '[]');
+
+// Show conflict detail (for owner view)
+function showConflictDetail(paperId) {
+    // Hide all details
+    document.querySelectorAll('.conflict-detail-content').forEach(el => el.classList.add('hidden'));
+    // Show selected
+    const detail = document.getElementById('conflict-' + paperId);
+    if (detail) detail.classList.remove('hidden');
+    // Update active state
+    document.querySelectorAll('.conflict-item').forEach(el => el.classList.remove('ring-2', 'ring-primary'));
+    const item = document.getElementById('conflict-item-' + paperId);
+    if (item) item.classList.add('ring-2', 'ring-primary');
+}
+
+// Show paper detail (for researcher view)
+function showPaperDetail(paperId) {
+    // Hide all details
+    document.querySelectorAll('.paper-detail-content').forEach(el => el.classList.add('hidden'));
+    // Show selected
+    const detail = document.getElementById('paper-' + paperId);
+    if (detail) detail.classList.remove('hidden');
+    // Update active state
+    document.querySelectorAll('.paper-item').forEach(el => el.classList.remove('ring-2', 'ring-primary'));
+    const item = document.getElementById('paper-item-' + paperId);
+    if (item) item.classList.add('ring-2', 'ring-primary');
+}
+
+// Open decision modal
+function openDecisionModal(assignmentId, decision) {
+    currentAssignmentId = assignmentId;
+    currentDecision = decision;
+    
+    const modal = document.getElementById('decision-modal');
+    const select = document.getElementById('modal-criterion-select');
+    const titleEl = document.getElementById('modal-title');
+    const criterionLabel = document.getElementById('criterion-label-text');
+    
+    // Set title and criteria based on decision
+    if (decision === 'INCLUDED') {
+        titleEl.textContent = 'Include Paper';
+        criterionLabel.textContent = 'Inclusion criterion (optional)';
+        select.innerHTML = '<option value="">No specific criterion</option>';
+        inclusionCriteria.forEach(c => {
+            select.innerHTML += `<option value="${c.id}" data-label="${c.label}">${c.label}</option>`;
+        });
+    } else {
+        titleEl.textContent = 'Exclude Paper';
+        criterionLabel.textContent = 'Exclusion criterion';
+        select.innerHTML = '<option value="">Select criterion...</option>';
+        exclusionCriteria.forEach(c => {
+            select.innerHTML += `<option value="${c.id}" data-label="${c.label}">${c.label}</option>`;
+        });
+    }
+    
+    // Load existing values
+    const existingNotes = document.getElementById('notes-' + assignmentId)?.value || '';
+    const existingCriterion = document.getElementById('criterion-' + assignmentId)?.value || '';
+    document.getElementById('modal-notes-input').value = existingNotes;
+    select.value = existingCriterion;
+    
+    modal.showModal();
+}
+
+function closeDecisionModal() {
+    document.getElementById('decision-modal').close();
+    currentAssignmentId = null;
+    currentDecision = null;
+}
+
+function saveDecisionAndNotes() {
+    if (!currentAssignmentId || !currentDecision) return;
+    
+    const notes = document.getElementById('modal-notes-input').value;
+    const select = document.getElementById('modal-criterion-select');
+    const criterionId = select.value;
+    const criterionLabel = select.options[select.selectedIndex]?.dataset?.label || '';
+    
+    // Update hidden fields
+    document.getElementById('notes-' + currentAssignmentId).value = notes;
+    document.getElementById('criterion-' + currentAssignmentId).value = criterionId;
+    if (document.getElementById('criterion-label-' + currentAssignmentId)) {
+        document.getElementById('criterion-label-' + currentAssignmentId).value = criterionLabel;
+    }
+    
+    // Add decision to form and submit
+    const form = document.getElementById('review-form-' + currentAssignmentId);
+    let decisionInput = form.querySelector('input[name="decision"]');
+    if (!decisionInput) {
+        decisionInput = document.createElement('input');
+        decisionInput.type = 'hidden';
+        decisionInput.name = 'decision';
+        form.appendChild(decisionInput);
+    }
+    decisionInput.value = currentDecision;
+    
+    closeDecisionModal();
+    form.submit();
+}
+
+// Initialize: show first item as selected
+document.addEventListener('DOMContentLoaded', function() {
+    const firstConflict = document.querySelector('.conflict-item');
+    if (firstConflict) {
+        firstConflict.classList.add('ring-2', 'ring-primary');
+    }
+    const firstPaper = document.querySelector('.paper-item');
+    if (firstPaper) {
+        firstPaper.classList.add('ring-2', 'ring-primary');
+    }
+});
+</script>
+{% endblock %}
