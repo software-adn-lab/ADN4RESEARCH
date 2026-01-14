@@ -62,7 +62,7 @@
                             <span class="badge badge-xs badge-success">Inductivo</span>
                         {% endif %}
                         <span class="badge badge-xs" 
-                              style="background-color: {{ tag.color }}20; color: {{ tag.color }}; border: 1px solid {{ tag.color }}40;">
+                              style="background-color: {{ tag.color }}70; border: 1px solid {{ tag.color }};">
                         </span>
                     </label>
                     {% empty %}
@@ -105,7 +105,7 @@
         </form>
         
         <!-- ✅ FUERA del form de quote - Formulario de tag inductivo -->
-        {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
+        {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=paper.extraction_phase %}
     </div>
 </dialog>
 

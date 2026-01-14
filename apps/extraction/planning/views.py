@@ -11,20 +11,35 @@ from .forms import ExtractionPhaseConfigForm
 from .models import ExtractionPhase, ExtractionStatusChoices
 from .services import PhaseLifecycleService
 from apps.extraction.shared.exceptions import BusinessRuleViolation
-from apps.extraction.shared.mixins import OwnerRequiredMixin
+from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
+from apps.extraction.taxonomy.services import TagApprovalService
 from apps.extraction.core.models import PaperExtraction, Quote
+from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 
 
-class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
+class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
     """
     Dashboard principal de una fase de extracción.
     Maneja tabs via query parameter (?tab=...)
+    
+    La phase se obtiene automáticamente basándose en project_id.
     """
     
     model = ExtractionPhase
-    template_name = 'dashboard.html'
+    template_name = 'extraction/templates/dashboard.html'
     context_object_name = 'phase'
+    
+    def get_object(self, queryset=None):
+        """
+        Obtener la phase basándose en project_id.
+        Esto asegura que solo haya una phase por proyecto.
+        """
+        project_id = self.kwargs.get('project_id')
+        return get_object_or_404(
+            ExtractionPhase,
+            project_id=project_id
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -75,6 +90,8 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
             # Tags con optimización
             all_tags = phase.tags.all().select_related('rq_related').order_by('-created_at')
             context['tags'] = all_tags
+            adapter = DesignProtocolAdapter()
+            context['protocol_questions'] = adapter.get_approved_questions(phase.project_id)
             
             # ✅ Calcular counts por tipo
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()
@@ -93,6 +110,18 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
                 papers_qs = papers_qs.filter(assigned_to=self.request.user)
             
             context['papers'] = papers_qs.select_related('study', 'assigned_to')
+            
+            # Agregar miembros del proyecto para el modal de reasignación
+            if is_owner:
+                from apps.project.structure.models.project_models import Membership
+                members = [
+                    {'id': phase.project.owner.id, 'username': phase.project.owner.username}
+                ]
+                members.extend([
+                    {'id': m.user.id, 'username': m.user.username}
+                    for m in Membership.objects.filter(project=phase.project).select_related('user')
+                ])
+                context['team_members'] = members
         
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
@@ -107,17 +136,34 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
                 'created_by'
             ).prefetch_related('tags')
 
+        elif tab == 'pending':
+            if is_owner:
+                service = TagApprovalService()
+                context['pending_tags'] = service.get_pending_tags_for_phase(phase.id)
+            else:
+                context['pending_tags'] = phase.tags.none()
 
-class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
+
+class PhaseConfigUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):
     """
     Actualizar configuración de una fase.
     Usa UpdateView genérico de Django.
+    
+    La phase se obtiene automáticamente basándose en project_id.
     
     Referencia: https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-editing/#updateview
     """
     
     model = ExtractionPhase
     form_class = ExtractionPhaseConfigForm
+    
+    def get_object(self, queryset=None):
+        """Obtener la phase basándose en project_id."""
+        project_id = self.kwargs.get('project_id')
+        return get_object_or_404(
+            ExtractionPhase,
+            project_id=project_id
+        )
     
     def form_valid(self, form):
         """
@@ -135,10 +181,12 @@ class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
     
     def get_success_url(self):
         """Redirigir al dashboard de la fase después de guardar."""
-        return reverse('extraction:phase_detail', args=[self.object.pk])
+        return reverse('extraction:planning:phase_detail', kwargs={
+            'project_id': self.object.project_id
+        })
 
 
-class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
+class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
     Transición de estado: CONFIG -> OPEN
     
@@ -147,21 +195,23 @@ class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
     - La fase debe estar en estado CONFIG
     - Todas las RQs del protocolo deben estar cubiertas por tags deductivos aprobados
     
+    La phase se obtiene automáticamente basándose en project_id.
+    
     Referencia: https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
-    def post(self, request, pk):
+    def post(self, request, project_id):
         """
         Procesar solicitud de apertura de fase.
         
         Args:
             request: HTTP request
-            pk: ID de la fase a abrir
+            project_id: ID del proyecto (la phase se obtiene automáticamente)
             
         Returns:
             Redirect al dashboard de la fase
         """
-        phase = get_object_or_404(ExtractionPhase, pk=pk)
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         service = PhaseLifecycleService()
         
         try:
@@ -178,4 +228,4 @@ class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
             messages.error(request, str(e))
         
         # ✅ Redirigir al tab de tags para ver el estado
-        return redirect(f"{reverse('extraction:phase_detail', args=[pk])}?tab=tags")
+        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")

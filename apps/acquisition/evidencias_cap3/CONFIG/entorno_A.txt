@@ -1,0 +1,26 @@
+[AMBIENTE DE EJECUCION - ENTORNO A]
+Tipo: Verificación BDD (Contrato)
+Fecha: 2025-12-28
+OS: Windows
+Python: 3.12 (via Poetry)
+Django: 4.2+
+Base de Datos: SQLite (Memoria/TestDB)
+Modo: Mocks (Determinista)
+================================================================================
+CONFIGURACIÓN DEL ENTORNO DE EJECUCIÓN (A): BDD / VERIFICACIÓN DE CONTRATO
+================================================================================
+FECHA DE EJECUCIÓN: 2025-12-28
+RESPONSABLE: Alexis Lapo / ADN4RESEARCH
+
+1. OBJETIVO
+   - Verificar el cumplimiento estricto de los requisitos funcionales (Gherkin).
+   - Garantizar la corrección lógica del flujo (Discovery -> Consolidation -> Download).
+
+2. FUENTES DE INFORMACIÓN (MOCKS)
+   - Todas las respuestas externas son SIMULADAS (deterministas).
+   - No se realiza tráfico de red real a Scopus/IEEE.
+
+3. ARTEFACTOS GENERADOS
+   - Salida del runner: evidencias_cap3/A_BDD/behave_output.txt (UTF-8)
+   - Cobertura: 4 Features, 10 Scenarios.
+

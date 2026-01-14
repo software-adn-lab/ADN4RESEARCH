@@ -78,15 +78,15 @@
 
         <div class="bg-white border border-base-200 rounded-xl shadow-md p-6 min-h-[500px]">
             {% if active_tab == 'studies' %}
-                {% include 'partials/dashboard_tabs/_tab_studies.html' %}
+                {% include 'extraction/templates/partials/dashboard_tabs/_tab_studies.html' %}
             {% elif active_tab == 'tags' %}
-                {% include 'partials/dashboard_tabs/_tab_tags.html' %}
+                {% include 'extraction/templates/partials/dashboard_tabs/_tab_tags.html' %}
             {% elif active_tab == 'pending' %}
-                {% include 'partials/dashboard_tabs/pending_tags_list.html' %}
+                {% include 'extraction/templates/partials/dashboard_tabs/pending_tags_list.html' %}
             {% elif active_tab == 'quotes' %}
-                {% include 'partials/dashboard_tabs/_tab_quotes.html' %}
+                {% include 'extraction/templates/partials/dashboard_tabs/_tab_quotes.html' %}
             {% elif active_tab == 'config' and is_owner %}
-                {% include 'partials/dashboard_tabs/_tab_config.html' %}
+                {% include 'extraction/templates/partials/dashboard_tabs/_tab_config.html' %}
             {% endif %}
         </div>
     {% endif %}

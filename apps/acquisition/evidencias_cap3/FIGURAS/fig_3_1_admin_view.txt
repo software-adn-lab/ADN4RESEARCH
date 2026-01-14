@@ -1,0 +1,18 @@
+
+================================================================================
+                            ADN4RESEARCH - ADMIN PANEL
+================================================================================
+[SEARCH EXECUTION DETAIL]                                     Status: SUCCESS
+--------------------------------------------------------------------------------
+Execution ID    : b212990a-096c-4f9b-90e0-f536496aa2ec
+Executed At     : 2025-12-28T21:16:45.309Z
+Total Results   : 5
+
+[TRANSLATED QUERIES]
+--------------------------------------------------------------------------------
+    > Source: Scopus
+  Query : TITLE-ABS-KEY((("DevOps") AND ("continuous integration" OR "CI"))) AND PUBYEAR > 2023 AND PUBYEAR < 2025
+
+> Source: IEEE Xplore
+  Query : (("DevOps") AND ("continuous integration" OR "CI"))
+

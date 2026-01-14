@@ -1,4 +1,6 @@
 from ..shared.exceptions import BusinessRuleViolation
+from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 from ..planning.models import ExtractionPhase, ExtractionStatusChoices
 from .dtos import ProtocolCoverageReport
 
@@ -22,7 +24,11 @@ class PhaseLifecycleService:
             ProtocolCoverageReport con el estado de cobertura
         """
         # 1. Obtener RQs del proyecto
-        protocol_rqs = phase.project.design_phase.research_questions.only("id")
+        adapter = DesignProtocolAdapter()
+        approved_ids = adapter.get_approved_question_ids(phase.project_id)
+        protocol_rqs = ResearchQuestion.objects.filter(
+            id__in=approved_ids
+        ).only("id")
         protocol_rq_ids = protocol_rqs.values_list("id", flat=True)
         total_rqs = protocol_rqs.count()
 

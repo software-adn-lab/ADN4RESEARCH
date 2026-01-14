@@ -10,6 +10,8 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .models import Tag, TagTypeChoices, VisibilityChoices, ApprovalStatusChoices
+from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 
 
 class DeductiveTagForm(forms.ModelForm):
@@ -24,11 +26,16 @@ class DeductiveTagForm(forms.ModelForm):
     
     class Meta:
         model = Tag
-        fields = ['name', 'rq_related']
+        fields = ['name', 'color', 'rq_related']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'input input-bordered w-full',
                 'placeholder': 'Ej. Costo Financiero'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'type': 'color',
+                'value': '#6366F1',
             }),
             'rq_related': forms.Select(attrs={
                 'class': 'select select-bordered w-full'
@@ -48,9 +55,15 @@ class DeductiveTagForm(forms.ModelForm):
         
         if project:
             self.fields['name'].required = True
-            # Configurar queryset de preguntas de investigación del proyecto
-            self.fields['rq_related'].queryset = (
-                project.design_phase.research_questions.all()
+            adapter = DesignProtocolAdapter()
+            approved_questions = adapter.get_approved_questions(project.id)
+            # Configurar queryset solo con RQs aprobadas del protocolo
+            
+            self.fields['rq_related'] = forms.ChoiceField(
+                required=False,
+                choices=[("", "-- Sin vincular a RQ --")] + [
+                    (q["id"], q["question"]) for q in approved_questions
+                ],
             )
             self.fields['rq_related'].required = False
             self.fields['rq_related'].empty_label = "-- Sin vincular a RQ --"

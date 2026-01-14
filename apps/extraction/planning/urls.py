@@ -1,27 +1,34 @@
 """
 URLs - Planning Bounded Context
-Incluye tags como recursos anidados de phases.
+
+Estructura simplificada:
+- / -> dashboard de la fase (obtenida automáticamente del proyecto)
+- /config/ -> configuración de la fase
+- /open/ -> abrir la fase
+- /tags/ -> tags de extracción (anidados)
+
+La phase se obtiene automáticamente usando el project_id de la URL principal.
 """
 from django.urls import path, include
 from . import views
 
 urlpatterns = [
-    # Phase detail (dashboard)
-    path('<int:pk>/', 
+    # Phase detail (dashboard) - obtenida del proyecto
+    path('', 
          views.ExtractionPhaseDetailView.as_view(), 
          name='phase_detail'),
     
     # Phase config update
-    path('<int:pk>/config/', 
+    path('config/', 
          views.PhaseConfigUpdateView.as_view(), 
          name='phase_config_update'),
     
     # Phase open
-    path('<int:pk>/open/', 
+    path('open/', 
          views.PhaseOpenView.as_view(), 
          name='phase_open'),
     
-    # Tags
-    path('<int:phase_id>/tags/', 
-         include('apps.extraction.taxonomy.urls')),
+    # Tags - anidados bajo la phase del proyecto
+    path('tags/', 
+         include(('apps.extraction.taxonomy.urls', 'taxonomy'))),
 ]

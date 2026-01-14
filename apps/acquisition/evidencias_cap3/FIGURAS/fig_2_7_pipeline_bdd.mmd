@@ -1,0 +1,31 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#1565c0', 'primaryBorderColor': '#1976d2', 'lineColor': '#42a5f5', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#f3e5f5'}}}%%
+
+flowchart LR
+    subgraph ENTRADA["📁 Entrada"]
+        A["**.feature**<br/>Escenarios Gherkin"]
+    end
+    
+    subgraph EJECUCION["⚙️ Ejecución Determinista"]
+        B["**Step Definitions**<br/>traduccion_steps.py<br/>descubrimiento_steps.py<br/>consolidacion_steps.py<br/>disponibilidad_steps.py"]
+        C["**Mocks/Fixtures**<br/>MockScopusConnector<br/>MockIeeeConnector<br/>MockStudyRepository"]
+        D["**Servicios de Dominio**<br/>TranslationService<br/>DiscoveryService<br/>EnrichmentService<br/>DownloadService"]
+    end
+    
+    subgraph VERIFICACION["✅ Verificación"]
+        E["**Asserts**<br/>Estados, conteos,<br/>deduplicación,<br/>advertencias"]
+    end
+    
+    subgraph SALIDA["📊 Evidencia"]
+        F["**behave_output.txt**<br/>4 features<br/>10 scenarios<br/>69 steps<br/>0.356s"]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    
+    style ENTRADA fill:#e8f5e9,stroke:#4caf50
+    style EJECUCION fill:#e3f2fd,stroke:#1976d2
+    style VERIFICACION fill:#fff3e0,stroke:#ff9800
+    style SALIDA fill:#f3e5f5,stroke:#9c27b0

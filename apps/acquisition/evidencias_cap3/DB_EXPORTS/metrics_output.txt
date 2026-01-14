@@ -1,0 +1,64 @@
+Filtering dataset for Pilot Executions: ['bad12477-31c4-4cad-b740-ae79a195d50e', 'b212990a-096c-4f9b-90e0-f536496aa2ec']
+Including Manual Control Study...
+
+[DATASET DEFINITION]
+Total Evaluated Studies: 12
+  - From Pilots: 10
+  - From Manual Control: 2
+
+==================================================
+GENERATING: Tabla 3.2: Resultados de descubrimiento (Piloto 28/12)
+==================================================
+ExecID                                 | Results    | New        | Status    
+--------------------------------------------------------------------------------
+b212990a-096c-4f9b-90e0-f536496aa2ec   | 5          | 5          | SUCCESS   
+bad12477-31c4-4cad-b740-ae79a195d50e   | 5          | 5          | SUCCESS   
+
+==================================================
+GENERATING: Tabla 3.3: Distribución de ConsolidationStatus
+==================================================
+Dataset Total: 12
+COMPLETO: 2 (16.7%)
+PARCIAL:  10 (83.3%)
+FALLIDO:  0 (0.0%)
+
+==================================================
+GENERATING: Tabla 3.4: Procedencia de campos (Field Origins)
+==================================================
+Field                | Auto       | Manual    
+---------------------------------------------
+doi                  | 0          | 2         
+link                 | 10         | 2         
+year                 | 0          | 2         
+title                | 10         | 2         
+source               | 10         | 2         
+authors              | 10         | 2         
+abstract             | 10         | 2         
+
+==================================================
+GENERATING: Tabla 3.5: Disponibilidad de texto completo
+==================================================
+Dataset Total: 12
+DISPONIBLE:    2
+NO_DISPONIBLE: 10
+PENDIENTE:     0
+Tasa PDF:      16.7%
+
+==================================================
+GENERATING: Tabla 3.6: Origen del PDF (PdfSource)
+==================================================
+Source                         | Count     
+---------------------------------------------
+manual                         | 2         
+
+==================================================
+GENERATING: Extra: Listado Detallado (Pilot DevOps)
+==================================================
+Execution: b212990a-096c-4f9b-90e0-f536496aa2ec
+Format: Title | Providers | Consolidation | Download | PDF Source
+----------------------------------------------------------------------------------------------------
+Automating DevOps with GitLab CI/CD Pipe..  | Scopus,IEEE Xplore | parcial    | no_disponible   | None
+Systematic Mapping Study on AI Integrati..  | Scopus,IEEE Xplore | parcial    | no_disponible   | None
+A Survey of DevOps tools for Networking     | Scopus,IEEE Xplore | parcial    | no_disponible   | None
+DevOps Automation Pipeline Deployment wi..  | Scopus,IEEE Xplore | parcial    | no_disponible   | None
+Continuous Integration, Testing Deployme..  | Scopus,IEEE Xplore | parcial    | no_disponible   | None

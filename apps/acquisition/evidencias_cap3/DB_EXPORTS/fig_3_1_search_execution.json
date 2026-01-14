@@ -1,0 +1,12 @@
+{
+  "id": "b212990a-096c-4f9b-90e0-f536496aa2ec",
+  "executed_at": "2025-12-28T21:16:45.309Z",
+  "results_count": 5,
+  "status": "SUCCESS",
+  "translated_queries": {
+    "queries_by_source": {
+      "Scopus": "TITLE-ABS-KEY(((\"DevOps\") AND (\"continuous integration\" OR \"CI\"))) AND PUBYEAR > 2023 AND PUBYEAR < 2025",
+      "IEEE Xplore": "((\"DevOps\") AND (\"continuous integration\" OR \"CI\"))"
+    }
+  }
+}

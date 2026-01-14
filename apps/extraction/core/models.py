@@ -63,31 +63,6 @@ class PaperExtraction(AuditModel):
 
     objects = PaperExtractionQuerySet.as_manager()
 
-    def can_be_completed(self) -> tuple[bool, str]:
-        """
-        Verifica si el paper puede ser marcado como completado.
-        
-        Business Rules:
-        - Debe tener al menos una quote
-        - Todas las tags obligatorias deben estar cubiertas
-        
-        Returns:
-            tuple[bool, str]: (puede_completarse, mensaje_error)
-        """
-        # 1. Verificar que tenga quotes
-        if not self.quotes.exists():
-            return False, "El paper debe tener al menos una extracción (quote)."
-        
-        # 2. Verificar cobertura de tags obligatorios
-        missing_tags = self.get_missing_mandatory_tags()
-        if missing_tags.exists():
-            tag_names = ", ".join([tag.name for tag in missing_tags[:3]])
-            if missing_tags.count() > 3:
-                tag_names += f" (+{missing_tags.count() - 3} más)"
-            return False, f"Faltan tags obligatorios: {tag_names}"
-        
-        return True, ""
-
     def get_missing_mandatory_tags(self):
         """
         Tags obligatorios que NO se han usado en este paper.
@@ -103,15 +78,6 @@ class PaperExtraction(AuditModel):
         mandatory_tags = self.extraction_phase.tags.mandatory()
         used_tag_ids = self.quotes.values_list('tags__id', flat=True).distinct()
         return mandatory_tags.filter(id__in=used_tag_ids)
-    
-    def get_all_used_tags(self):
-        """
-        Todos los tags (obligatorios y opcionales) usados en este paper.
-        """
-        from apps.extraction.taxonomy.models import Tag
-        return Tag.objects.filter(
-            quotes__paper_extraction=self
-        ).distinct()
     
     def get_coverage_percentage(self):
         """
@@ -132,23 +98,6 @@ class PaperExtraction(AuditModel):
         Retorna True si todos los tags obligatorios han sido cubiertos.
         """
         return not self.get_missing_mandatory_tags().exists()
-    
-    def mark_as_completed(self):
-        """
-        Marca el paper como completado.
-        
-        Raises:
-            BusinessRuleViolation: Si no cumple las reglas
-        """
-        from apps.extraction.shared.exceptions import BusinessRuleViolation
-        
-        can_complete, error_message = self.can_be_completed()
-        
-        if not can_complete:
-            raise BusinessRuleViolation(error_message)
-        
-        self.status = PaperExtractionStatusChoices.COMPLETED
-        self.save(update_fields=['status', 'updated_at'])
 
     class Meta:
         verbose_name = "Extracción de Paper"

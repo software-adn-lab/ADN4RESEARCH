@@ -1,0 +1,20 @@
+
+================================================================================
+                            ADN4RESEARCH - STUDY DETAIL
+================================================================================
+UUID          : d926bfa8-f06e-4b12-a504-88df71de2346
+Title         : Continuous Integration, Testing Deployment and Delivery in Devops
+
+[WORKFLOW STATUS]
+--------------------------------------------------------------------------------
+Global Status : discovered
+Consolidation : parcial
+Download      : no_disponible (Source: None)
+
+[DATA PROVENANCE (Field Origins)]
+--------------------------------------------------------------------------------
+    link            : DISCOVERY
+title           : DISCOVERY
+source          : DISCOVERY
+authors         : DISCOVERY
+abstract        : DISCOVERY
