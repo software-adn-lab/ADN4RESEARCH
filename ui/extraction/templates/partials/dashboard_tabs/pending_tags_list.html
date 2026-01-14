@@ -153,7 +153,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
                     No hay tags inductivos pendientes de aprobación. 
                     Cuando tu equipo cree nuevos tags, aparecerán aquí para tu revisión.
                 </p>
-                <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id pk=phase.pk %}?tab=tags" 
+                <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id %}?tab=tags" 
                    class="btn btn-primary mt-4">
                     Ver todos los tags
                 </a>
@@ -228,7 +228,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
     const rejectTagName = document.getElementById('reject-tag-name');
     
     function openRejectModal(tagId, tagName) {
-        rejectForm.action = "{% url 'extraction:planning:taxonomy:tag_reject' project_id=phase.project_id phase_id=phase.pk pk=0 %}".replace('/0/', '/' + tagId + '/');
+        rejectForm.action = "{% url 'extraction:planning:taxonomy:tag_reject' project_id=phase.project_id pk=0 %}".replace('/0/', '/' + tagId + '/');
         rejectTagName.textContent = tagName;
         rejectModal.showModal();
     }

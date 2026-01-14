@@ -18,7 +18,7 @@ from django.views.generic import DetailView, View
 from .forms import QuoteForm
 from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.core.services import PaperExtractionService
-from apps.extraction.shared.exceptions import BusinessRuleViolation
+from apps.extraction.shared.mixins import ProjectMemberRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class PaperAccessMixin(UserPassesTestMixin):
         return None
 
 
-class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
+class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, DetailView):
     """
     Vista del workspace de extracción de un paper.
     """
@@ -136,7 +136,7 @@ class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
         return context
 
 
-class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
+class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
     Sirve archivos PDF de forma segura.
     """
@@ -212,7 +212,7 @@ class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
             .replace('\\', '-')
         )[:100]
 
-class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
+class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
     Endpoint para marcar un paper como completado.
     
@@ -318,7 +318,7 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
             user.is_superuser
         )
 
-class QuoteCreateView(LoginRequiredMixin, View):
+class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para crear quotes (JSON)."""
     
     def post(self, request, project_id):
@@ -426,7 +426,7 @@ class QuoteCreateView(LoginRequiredMixin, View):
         )
 
 
-class QuoteDeleteView(LoginRequiredMixin, View):
+class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para eliminar quotes."""
     
     def delete(self, request, project_id, pk):

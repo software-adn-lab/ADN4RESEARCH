@@ -2,7 +2,8 @@
 URLs - Taxonomy Bounded Context
 Gestión de etiquetas (tags) deductivos e inductivos.
 
-Estas URLs están anidadas bajo /extraction/phases/<phase_id>/tags/
+Estas URLs están anidadas bajo /extraction/tags/
+La phase se obtiene automáticamente basándose en project_id.
 
 Referencia Django URLs:
 https://docs.djangoproject.com/en/stable/topics/http/urls/
@@ -19,7 +20,7 @@ urlpatterns = [
     # CREACIÓN DE TAGS
     # ==========================================================================
     
-    # POST /extraction/phases/<phase_id>/tags/create/
+    # POST /project/<project_id>/extraction/tags/create/
     # Crear tag deductivo (requiere ser owner del proyecto)
     path(
         'create/',
@@ -27,7 +28,7 @@ urlpatterns = [
         name='tag_create'
     ),
     
-    # GET/POST /extraction/phases/<phase_id>/tags/create-inductive/
+    # GET/POST /project/<project_id>/extraction/tags/create-inductive/
     # Crear tag inductivo durante extracción
     path(
         'create-inductive/',
@@ -39,7 +40,7 @@ urlpatterns = [
     # LISTADO Y CONSULTA
     # ==========================================================================
     
-    # GET /extraction/phases/<phase_id>/tags/
+    # GET /project/<project_id>/extraction/tags/
     # Listar todos los tags de la fase con filtros
     path(
         '',
@@ -47,7 +48,7 @@ urlpatterns = [
         name='tag_list'
     ),
     
-    # GET /extraction/phases/<phase_id>/tags/pending/
+    # GET /project/<project_id>/extraction/tags/pending/
     # Listar tags inductivos pendientes de aprobación (solo owner)
     path(
         'pending/',
@@ -55,7 +56,7 @@ urlpatterns = [
         name='pending_tags'
     ),
     
-    # GET /extraction/phases/<phase_id>/tags/api/usable/
+    # GET /project/<project_id>/extraction/tags/api/usable/
     # API JSON para obtener tags usables por el usuario actual
     path(
         'api/usable/',
@@ -67,7 +68,7 @@ urlpatterns = [
     # APROBACIÓN Y RECHAZO
     # ==========================================================================
     
-    # POST /extraction/phases/<phase_id>/tags/<pk>/approve/
+    # POST /project/<project_id>/extraction/tags/<pk>/approve/
     # Aprobar un tag inductivo (solo owner)
     path(
         '<int:pk>/approve/',
@@ -75,7 +76,7 @@ urlpatterns = [
         name='tag_approve'
     ),
     
-    # POST /extraction/phases/<phase_id>/tags/<pk>/reject/
+    # POST /project/<project_id>/extraction/tags/<pk>/reject/
     # Rechazar un tag inductivo (solo owner)
     path(
         '<int:pk>/reject/',
@@ -83,7 +84,7 @@ urlpatterns = [
         name='tag_reject'
     ),
     
-    # POST /extraction/phases/<phase_id>/tags/bulk-approve/
+    # POST /project/<project_id>/extraction/tags/bulk-approve/
     # Aprobar múltiples tags inductivos (solo owner)
     path(
         'bulk-approve/',

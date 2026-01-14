@@ -11,20 +11,33 @@ from .forms import ExtractionPhaseConfigForm
 from .models import ExtractionPhase, ExtractionStatusChoices
 from .services import PhaseLifecycleService
 from apps.extraction.shared.exceptions import BusinessRuleViolation
-from apps.extraction.shared.mixins import OwnerRequiredMixin
+from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.core.models import PaperExtraction, Quote
 
 
-class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
+class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
     """
     Dashboard principal de una fase de extracción.
     Maneja tabs via query parameter (?tab=...)
+    
+    La phase se obtiene automáticamente basándose en project_id.
     """
     
     model = ExtractionPhase
     template_name = 'extraction/templates/dashboard.html'
     context_object_name = 'phase'
+    
+    def get_object(self, queryset=None):
+        """
+        Obtener la phase basándose en project_id.
+        Esto asegura que solo haya una phase por proyecto.
+        """
+        project_id = self.kwargs.get('project_id')
+        return get_object_or_404(
+            ExtractionPhase,
+            project_id=project_id
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -108,16 +121,26 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
             ).prefetch_related('tags')
 
 
-class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
+class PhaseConfigUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):
     """
     Actualizar configuración de una fase.
     Usa UpdateView genérico de Django.
+    
+    La phase se obtiene automáticamente basándose en project_id.
     
     Referencia: https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-editing/#updateview
     """
     
     model = ExtractionPhase
     form_class = ExtractionPhaseConfigForm
+    
+    def get_object(self, queryset=None):
+        """Obtener la phase basándose en project_id."""
+        project_id = self.kwargs.get('project_id')
+        return get_object_or_404(
+            ExtractionPhase,
+            project_id=project_id
+        )
     
     def form_valid(self, form):
         """
@@ -136,12 +159,11 @@ class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
     def get_success_url(self):
         """Redirigir al dashboard de la fase después de guardar."""
         return reverse('extraction:planning:phase_detail', kwargs={
-            'project_id': self.object.project_id,
-            'pk': self.object.pk
+            'project_id': self.object.project_id
         })
 
 
-class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
+class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
     Transición de estado: CONFIG -> OPEN
     
@@ -150,21 +172,23 @@ class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
     - La fase debe estar en estado CONFIG
     - Todas las RQs del protocolo deben estar cubiertas por tags deductivos aprobados
     
+    La phase se obtiene automáticamente basándose en project_id.
+    
     Referencia: https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
-    def post(self, request, pk):
+    def post(self, request, project_id):
         """
         Procesar solicitud de apertura de fase.
         
         Args:
             request: HTTP request
-            pk: ID de la fase a abrir
+            project_id: ID del proyecto (la phase se obtiene automáticamente)
             
         Returns:
             Redirect al dashboard de la fase
         """
-        phase = get_object_or_404(ExtractionPhase, pk=pk)
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         service = PhaseLifecycleService()
         
         try:
@@ -181,4 +205,4 @@ class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
             messages.error(request, str(e))
         
         # ✅ Redirigir al tab de tags para ver el estado
-        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': phase.project_id, 'pk': pk})}?tab=tags")
+        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")

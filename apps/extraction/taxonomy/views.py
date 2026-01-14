@@ -24,18 +24,19 @@ from .models import Tag, TagTypeChoices, ApprovalStatusChoices
 
 # Importar modelos de otros bounded contexts
 from apps.extraction.planning.models import ExtractionPhase, ExtractionStatusChoices
-from apps.extraction.shared.mixins import OwnerRequiredMixin
+from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 
 
 # =============================================================================
 # VISTAS DE CREACIÓN DE TAGS
 # =============================================================================
 
-class TagCreateView(LoginRequiredMixin, OwnerRequiredMixin, CreateView):
+class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, CreateView):
     """
     Crear un nuevo tag deductivo.
     
     Usa CreateView genérico de Django.
+    La phase se obtiene automáticamente basándose en project_id.
     
     Referencia: 
     https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-editing/#createview
@@ -53,8 +54,8 @@ class TagCreateView(LoginRequiredMixin, OwnerRequiredMixin, CreateView):
         """
         kwargs = super().get_form_kwargs()
         
-        phase_id = self.kwargs.get('phase_id') or self.request.POST.get('phase_id')
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
+        project_id = self.kwargs.get('project_id')
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
         if phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
@@ -121,13 +122,12 @@ class TagCreateView(LoginRequiredMixin, OwnerRequiredMixin, CreateView):
         return reverse(
             'extraction:planning:phase_detail', 
             kwargs={
-                'project_id': self.phase.project_id,
-                'pk': self.phase.id
+                'project_id': self.phase.project_id
             }
         ) + '?tab=tags'
 
 
-class InductiveTagCreateView(LoginRequiredMixin, CreateView):
+class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, CreateView):
     """
     Crear un nuevo tag inductivo durante la extracción.
     
@@ -135,6 +135,8 @@ class InductiveTagCreateView(LoginRequiredMixin, CreateView):
     - Se crean con estado PENDING
     - Tienen visibilidad PRIVATE inicialmente
     - Solo el creador puede usarlos hasta que sean aprobados
+    
+    La phase se obtiene automáticamente basándose en project_id.
     
     Esta vista puede ser usada desde:
     1. El formulario de creación de Quote (inline)
@@ -157,10 +159,10 @@ class InductiveTagCreateView(LoginRequiredMixin, CreateView):
         """
         super().setup(request, *args, **kwargs)
         
-        phase_id = self.kwargs.get('phase_id')
+        project_id = self.kwargs.get('project_id')
         self.phase = get_object_or_404(
             ExtractionPhase.objects.select_related('project'),
-            pk=phase_id
+            project_id=project_id
         )
     
     def get_form_kwargs(self):
@@ -269,10 +271,11 @@ class InductiveTagCreateView(LoginRequiredMixin, CreateView):
 # VISTAS DE LISTADO Y FILTRADO
 # =============================================================================
 
-class TagListView(LoginRequiredMixin, ListView):
+class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
     """
     Listar todos los tags de una fase con filtros.
     
+    La phase se obtiene automáticamente basándose en project_id.
     Muestra tags agrupados por tipo y estado.
     
     Referencia:
@@ -288,10 +291,10 @@ class TagListView(LoginRequiredMixin, ListView):
         """Cargar la fase de extracción."""
         super().setup(request, *args, **kwargs)
         
-        phase_id = self.kwargs.get('phase_id')
+        project_id = self.kwargs.get('project_id')
         self.phase = get_object_or_404(
             ExtractionPhase.objects.select_related('project'),
-            pk=phase_id
+            project_id=project_id
         )
     
     def get_queryset(self):
@@ -348,7 +351,7 @@ class TagListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PendingTagsListView(LoginRequiredMixin, OwnerRequiredMixin, ListView):
+class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, ListView):
     """
     Listar tags inductivos pendientes de aprobación.
     
@@ -366,10 +369,10 @@ class PendingTagsListView(LoginRequiredMixin, OwnerRequiredMixin, ListView):
         """Cargar la fase de extracción."""
         super().setup(request, *args, **kwargs)
         
-        phase_id = self.kwargs.get('phase_id')
+        project_id = self.kwargs.get('project_id')
         self.phase = get_object_or_404(
             ExtractionPhase.objects.select_related('project'),
-            pk=phase_id
+            project_id=project_id
         )
     
     def get_queryset(self):
@@ -390,7 +393,7 @@ class PendingTagsListView(LoginRequiredMixin, OwnerRequiredMixin, ListView):
 # VISTAS DE APROBACIÓN/RECHAZO
 # =============================================================================
 
-class TagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
+class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
     Aprobar un tag inductivo.
     
@@ -403,15 +406,15 @@ class TagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
     
     http_method_names = ['post']
     
-    def post(self, request, phase_id, pk):
+    def post(self, request, project_id, pk):
         """
         Procesar aprobación del tag.
         
         Args:
-            phase_id: ID de la fase de extracción
+            project_id: ID del proyecto
             pk: ID del tag a aprobar
         """
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
         service = TagApprovalService()
         
@@ -460,13 +463,12 @@ class TagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
         
         return redirect(
             reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                'project_id': self.phase.project_id,
-                'phase_id': phase_id
+                'project_id': phase.project_id
             })
         )
 
 
-class TagRejectView(LoginRequiredMixin, OwnerRequiredMixin, View):
+class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
     Rechazar un tag inductivo.
     
@@ -478,15 +480,15 @@ class TagRejectView(LoginRequiredMixin, OwnerRequiredMixin, View):
     
     http_method_names = ['post']
     
-    def post(self, request, phase_id, pk):
+    def post(self, request, project_id, pk):
         """
         Procesar rechazo del tag.
         
         Args:
-            phase_id: ID de la fase de extracción
+            project_id: ID del proyecto
             pk: ID del tag a rechazar
         """
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
         # Obtener motivo del rechazo (opcional)
         reason = request.POST.get('rejection_reason', '')
@@ -531,13 +533,12 @@ class TagRejectView(LoginRequiredMixin, OwnerRequiredMixin, View):
         
         return redirect(
             reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                'project_id': phase.project_id,
-                'phase_id': phase_id
+                'project_id': phase.project_id
             })
         )
 
 
-class BulkTagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
+class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
     Aprobar múltiples tags inductivos de una vez.
     
@@ -566,8 +567,7 @@ class BulkTagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
             messages.warning(request, 'No se seleccionaron tags para aprobar.')
             return redirect(
                 reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                    'project_id': phase.project_id,
-                    'phase_id': phase_id
+                    'project_id': phase.project_id
                 })
             )
         
@@ -598,7 +598,7 @@ class BulkTagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
 # VISTAS AUXILIARES
 # =============================================================================
 
-class UsableTagsAPIView(LoginRequiredMixin, View):
+class UsableTagsAPIView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """
     API para obtener tags disponibles para un usuario.
     
