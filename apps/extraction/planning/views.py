@@ -14,6 +14,7 @@ from apps.extraction.shared.exceptions import BusinessRuleViolation
 from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.core.models import PaperExtraction, Quote
+from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 
 
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
@@ -88,6 +89,8 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             # Tags con optimización
             all_tags = phase.tags.all().select_related('rq_related').order_by('-created_at')
             context['tags'] = all_tags
+            adapter = DesignProtocolAdapter()
+            context['protocol_questions'] = adapter.get_approved_questions(phase.project_id)
             
             # ✅ Calcular counts por tipo
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()

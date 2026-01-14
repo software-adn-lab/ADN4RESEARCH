@@ -2,9 +2,9 @@
 <div class="space-y-6">
 
     {% if is_owner %}
-    <div class="stats shadow w-full bg-base-50 border border-base-200">
+    <div class="stats shadow w-full bg-base-50 border border-base-200 grid grid-cols-12">
         <!-- Stat 1: Cobertura -->
-        <div class="stat">
+        <div class="stat col-span-4">
             <div class="stat-figure text-secondary">
                 <div class="radial-progress text-primary" 
                      style="--value:{{ coverage_report.coverage_ratio_percent }};" 
@@ -26,21 +26,21 @@
         </div>
 
         <!-- Stat 2: Estado de Validación -->
-        <div class="stat">
+        <div class="stat col-span-6">
             <div class="stat-title">Estado de Validación</div>
             {% if coverage_report.is_fully_covered %}
-                <div class="stat-value text-success text-lg">✅ Protocolo Cubierto</div>
+                <div class="stat-value text-success text-lg">Protocolo Cubierto</div>
                 <div class="stat-desc text-success">
                     Todas las preguntas tienen tags deductivos
                 </div>
             {% else %}
-                <div class="stat-value text-warning text-lg">⚠️ Faltan Preguntas</div>
-                <div class="stat-desc text-error">
+                <div class="stat-value text-warning text-lg">Faltan relacionar preguntas</div>
+                <div class="stat-desc text-error flex flex-wrap">
                     Faltan {{ coverage_report.missing_rq_count }} RQ(s):
                     {% for rq in coverage_report.missing_rqs %}
                         <div class="tooltip" data-tip="{{ rq.question_text }}">
                             <span class="badge badge-xs badge-error mr-1">
-                                RQ #{{ rq.id }}
+                                {{ rq.question }}
                             </span>
                         </div>
                     {% endfor %}
@@ -49,7 +49,7 @@
         </div>
 
         <!-- Stat 3: Info sobre Tags -->
-        <div class="stat">
+        <div class="stat col-span-2">
             <div class="stat-title">Tags en la Fase</div>
             <div class="stat-value text-sm">
                 {{ tags.count }} total
@@ -87,8 +87,7 @@
                     <th>Nombre</th>
                     <th>Tipo</th>
                     <th>RQ Relacionada</th>
-                    <th>Obligatoria</th>
-                    <th>Visibilidad</th>
+                    <th>Extracción Obligatoria</th>
                 </tr>
             </thead>
             <tbody>
@@ -123,11 +122,6 @@
                         {% else %}
                             <span class="text-gray-400">No</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        <span class="badge badge-ghost badge-sm">
-                            {{ tag.get_visibility_display }}
-                        </span>
                     </td>
                 </tr>
                 {% empty %}
