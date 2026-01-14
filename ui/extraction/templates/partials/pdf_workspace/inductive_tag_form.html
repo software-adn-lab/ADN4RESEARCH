@@ -1,6 +1,6 @@
 {% comment %}
 Formulario Inline de Tag Inductivo
-Uso: {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
+Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
 {% endcomment %}
 
 <!-- Container del formulario (oculto por defecto) -->
@@ -153,7 +153,8 @@ Uso: {% include 'partials/pdf_workspace/inductive_tag_form.html' with phase=phas
         try {
             // ✅ Usar phase.id del contexto
             const phaseId = {{ phase.id }};
-            const url = `/extraction/phases/${phaseId}/tags/create-inductive/`;
+            const projectId = {{ phase.project_id }};
+            const url = `/project/${projectId}/extraction/phases/${phaseId}/tags/create-inductive/`;
             
             const response = await fetch(url, {
                 method: 'POST',

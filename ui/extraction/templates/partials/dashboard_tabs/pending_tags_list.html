@@ -31,7 +31,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
         
         {# Botón de aprobación masiva #}
         {% if pending_tags %}
-        <form method="post" action="{% url 'extraction:tags_bulk_approve' phase_id=phase.pk %}" id="bulk-approve-form">
+        <form method="post" action="{% url 'extraction:planning:taxonomy:tags_bulk_approve' project_id=phase.project_id phase_id=phase.pk %}" id="bulk-approve-form">
             {% csrf_token %}
             <button type="submit" 
                     class="btn btn-success btn-sm"
@@ -111,7 +111,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
                                 <div class="flex justify-end gap-2">
                                     {# Botón Aprobar #}
                                     <form method="post" 
-                                          action="{% url 'extraction:tag_approve' phase_id=phase.pk pk=tag.pk %}"
+                                          action="{% url 'extraction:planning:taxonomy:tag_approve' project_id=phase.project_id phase_id=phase.pk pk=tag.pk %}"
                                           class="inline">
                                         {% csrf_token %}
                                         <button type="submit" 
@@ -153,7 +153,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
                     No hay tags inductivos pendientes de aprobación. 
                     Cuando tu equipo cree nuevos tags, aparecerán aquí para tu revisión.
                 </p>
-                <a href="{% url 'extraction:phase_detail' phase.pk %}?tab=tags" 
+                <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id pk=phase.pk %}?tab=tags" 
                    class="btn btn-primary mt-4">
                     Ver todos los tags
                 </a>
@@ -228,7 +228,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
     const rejectTagName = document.getElementById('reject-tag-name');
     
     function openRejectModal(tagId, tagName) {
-        rejectForm.action = "{% url 'extraction:tag_reject' phase_id=phase.pk pk=0 %}".replace('/0/', '/' + tagId + '/');
+        rejectForm.action = "{% url 'extraction:planning:taxonomy:tag_reject' project_id=phase.project_id phase_id=phase.pk pk=0 %}".replace('/0/', '/' + tagId + '/');
         rejectTagName.textContent = tagName;
         rejectModal.showModal();
     }

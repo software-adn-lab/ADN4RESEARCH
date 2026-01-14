@@ -23,5 +23,5 @@ urlpatterns = [
     
     # Tags
     path('<int:phase_id>/tags/', 
-         include('apps.extraction.taxonomy.urls')),
+         include(('apps.extraction.taxonomy.urls', 'taxonomy'))),
 ]

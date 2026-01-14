@@ -147,7 +147,7 @@
     <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Crear Nueva Etiqueta Deductiva</h3>
 
-        <form action="{% url 'extraction:tag_create' phase_id=phase.id %}" method="POST">
+        <form action="{% url 'extraction:planning:taxonomy:tag_create' project_id=phase.project_id phase_id=phase.id %}" method="POST">
             {% csrf_token %}
 
             <div class="form-control w-full mb-3">

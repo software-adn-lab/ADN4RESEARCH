@@ -77,7 +77,7 @@ class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
     """
     
     model = PaperExtraction
-    template_name = 'paper_detail.html'
+    template_name = 'extraction/templates/paper_detail.html'
     context_object_name = 'paper'
     
     def get_context_data(self, **kwargs):
@@ -118,18 +118,19 @@ class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
         )
         
         # URLs para JavaScript
-        context['pdf_url'] = reverse('extraction:paper_pdf', args=[paper.pk])
-        context['quote_create_url'] = reverse('extraction:quote_create')
+        project_id = paper.extraction_phase.project_id
+        context['pdf_url'] = reverse('extraction:core:paper_pdf', kwargs={'project_id': project_id, 'pk': paper.pk})
+        context['quote_create_url'] = reverse('extraction:core:quote_create', kwargs={'project_id': project_id})
         context['quote_delete_url_template'] = reverse(
-            'extraction:quote_delete', 
-            args=[0]
+            'extraction:core:quote_delete', 
+            kwargs={'project_id': project_id, 'pk': 0}
         ).replace('/0/', '/{id}/')
         
         logger.info(
             f"Paper workspace loaded: paper_id={paper.id}, "
             f"user={self.request.user.username}, quotes_count={len(context['quotes'])}"
         )
-        context['paper_complete_url'] = reverse('extraction:paper_complete', args=[paper.pk])
+        context['paper_complete_url'] = reverse('extraction:core:paper_complete', kwargs={'project_id': project_id, 'pk': paper.pk})
 
         
         return context
@@ -140,7 +141,7 @@ class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
     Sirve archivos PDF de forma segura.
     """
     
-    def get(self, request, pk):
+    def get(self, request, project_id, pk):
         """Servir PDF."""
         paper = get_object_or_404(PaperExtraction, pk=pk)
         
@@ -229,7 +230,7 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
-    def post(self, request, pk):
+    def post(self, request, project_id, pk):
         """
         Procesar solicitud de completar paper.
         
@@ -320,7 +321,7 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
 class QuoteCreateView(LoginRequiredMixin, View):
     """API endpoint para crear quotes (JSON)."""
     
-    def post(self, request):
+    def post(self, request, project_id):
         try:
             # Parsear datos
             data = json.loads(request.body)
@@ -428,7 +429,7 @@ class QuoteCreateView(LoginRequiredMixin, View):
 class QuoteDeleteView(LoginRequiredMixin, View):
     """API endpoint para eliminar quotes."""
     
-    def delete(self, request, pk):
+    def delete(self, request, project_id, pk):
         quote = get_object_or_404(Quote, pk=pk)
         
         if not self._can_delete_quote(request.user, quote):

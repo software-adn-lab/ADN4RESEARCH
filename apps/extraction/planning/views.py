@@ -23,7 +23,7 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, DetailView):
     """
     
     model = ExtractionPhase
-    template_name = 'dashboard.html'
+    template_name = 'extraction/templates/dashboard.html'
     context_object_name = 'phase'
     
     def get_context_data(self, **kwargs):
@@ -135,7 +135,10 @@ class PhaseConfigUpdateView(LoginRequiredMixin, OwnerRequiredMixin, UpdateView):
     
     def get_success_url(self):
         """Redirigir al dashboard de la fase después de guardar."""
-        return reverse('extraction:phase_detail', args=[self.object.pk])
+        return reverse('extraction:planning:phase_detail', kwargs={
+            'project_id': self.object.project_id,
+            'pk': self.object.pk
+        })
 
 
 class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
@@ -178,4 +181,4 @@ class PhaseOpenView(LoginRequiredMixin, OwnerRequiredMixin, View):
             messages.error(request, str(e))
         
         # ✅ Redirigir al tab de tags para ver el estado
-        return redirect(f"{reverse('extraction:phase_detail', args=[pk])}?tab=tags")
+        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': phase.project_id, 'pk': pk})}?tab=tags")

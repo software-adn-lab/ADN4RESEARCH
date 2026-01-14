@@ -2,7 +2,7 @@
 <div class="card bg-base-100 border {% if paper.status == 'COMPLETED' %}border-success{% else %}border-base-300{% endif %} shadow-sm hover:shadow-md transition-all cursor-pointer relative group">
     
     <!-- ✅ Link invisible que cubre todo el card -->
-    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
        class="absolute inset-0 z-0"
        aria-label="Ver paper {{ paper.study.title }}"></a>
     
@@ -37,24 +37,24 @@
                             onclick="event.stopPropagation(); event.preventDefault(); reassignPaper({{ paper.pk }})">
                         Reasignar
                     </button>
-                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
                        class="btn btn-sm btn-outline relative z-20">
                         Ver Avance
                     </a>
                 {% endif %}
                 
                 {% if paper.status == 'PENDING' %}
-                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
                        class="btn btn-sm btn-primary w-full relative z-20">
                         ▶ Iniciar Extracción
                     </a>
                 {% elif paper.status == 'COMPLETED' %}
-                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
                        class="btn btn-sm btn-outline w-full relative z-20">
                         👁 Ver mis respuestas
                     </a>
                 {% else %}
-                    <a href="{% url 'extraction:paper_detail' pk=paper.pk %}" 
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
                        class="btn btn-sm btn-primary w-full relative z-20">
                         ✎ Continuar
                     </a>

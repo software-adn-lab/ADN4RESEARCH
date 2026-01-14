@@ -119,8 +119,11 @@ class TagCreateView(LoginRequiredMixin, OwnerRequiredMixin, CreateView):
     def get_success_url(self):
         """Redirigir al dashboard con tab de tags."""
         return reverse(
-            'extraction:phase_detail', 
-            kwargs={'pk': self.phase.id}
+            'extraction:planning:phase_detail', 
+            kwargs={
+                'project_id': self.phase.project_id,
+                'pk': self.phase.id
+            }
         ) + '?tab=tags'
 
 
@@ -254,8 +257,11 @@ class InductiveTagCreateView(LoginRequiredMixin, CreateView):
             return next_url
         
         return reverse(
-            'extraction:phase_detail',
-            kwargs={'pk': self.phase.id}
+            'extraction:planning:phase_detail',
+            kwargs={
+                'project_id': self.phase.project_id,
+                'pk': self.phase.id
+            }
         ) + '?tab=tags'
 
 
@@ -453,7 +459,10 @@ class TagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
                 }, status=400)
         
         return redirect(
-            reverse('extraction:pending_tags', kwargs={'phase_id': phase_id})
+            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
+                'project_id': self.phase.project_id,
+                'phase_id': phase_id
+            })
         )
 
 
@@ -521,7 +530,10 @@ class TagRejectView(LoginRequiredMixin, OwnerRequiredMixin, View):
                 }, status=400)
         
         return redirect(
-            reverse('extraction:pending_tags', kwargs={'phase_id': phase_id})
+            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
+                'project_id': phase.project_id,
+                'phase_id': phase_id
+            })
         )
 
 
@@ -553,7 +565,10 @@ class BulkTagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
         if not tag_ids:
             messages.warning(request, 'No se seleccionaron tags para aprobar.')
             return redirect(
-                reverse('extraction:pending_tags', kwargs={'phase_id': phase_id})
+                reverse('extraction:planning:taxonomy:pending_tags', kwargs={
+                    'project_id': phase.project_id,
+                    'phase_id': phase_id
+                })
             )
         
         service = TagApprovalService()
@@ -572,7 +587,10 @@ class BulkTagApproveView(LoginRequiredMixin, OwnerRequiredMixin, View):
             )
         
         return redirect(
-            reverse('extraction:pending_tags', kwargs={'phase_id': phase_id})
+            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
+                'project_id': phase.project_id,
+                'phase_id': phase_id
+            })
         )
 
 
