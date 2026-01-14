@@ -130,21 +130,21 @@
                                     class="btn btn-md text-base rounded-lg text-white"
                                     style="background-color: #00A30E; border-color: #00A30E;"
                                     onclick="openDecisionModal({{ item.assignment.id }}, 'INCLUDED')">
-                                ✓ INCLUDE
+                                INCLUDE
                             </button>
                             
                             <button type="button" 
                                     class="btn btn-md text-base rounded-lg text-white"
                                     style="background-color: #EE0000; border-color: #EE0000;"
                                     onclick="openDecisionModal({{ item.assignment.id }}, 'EXCLUDED')">
-                                ✗ EXCLUDE
+                                EXCLUDE
                             </button>
                             
                             <button type="button" class="btn btn-outline btn-md text-base rounded-lg text-black {% if not item.review or item.review.decision == 'PENDING' %}btn-disabled opacity-60 cursor-not-allowed{% endif %}"
                                     {% if item.review and item.review.decision != 'PENDING' %}
                                     onclick="openDecisionModal({{ item.assignment.id }}, null)"
                                     {% endif %}>
-                                ✎ NOTES
+                                NOTES
                             </button>
                         </div>
                     </form>

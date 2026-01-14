@@ -101,6 +101,15 @@
                                     <p class="text-xs text-gray-500">{{ item.total_assigned }} articles assigned</p>
                                 </div>
                             </div>
+                            {% if is_owner and phase_mode == 'en_curso' and item.pending > 0 %}
+                            <form method="post" action="{% url 'selection:send_reminder' project.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="researcher_id" value="{{ item.researcher.id }}">
+                                <button type="submit" class="btn btn-xs btn-outline btn-warning" title="Send reminder">
+                                    Remind
+                                </button>
+                            </form>
+                            {% endif %}
                         </div>
                         
                         <!-- Progress bar -->
@@ -142,13 +151,42 @@
                 </div>
 
                 {% if is_owner %}
-                <button type="button" class="btn btn-success btn-block mt-6" onclick="document.getElementById('distribute-modal').showModal()">
-                    DISTRIBUTE PAPERS
-                </button>
+                    {% if phase_mode == 'en_curso' %}
+                    <!-- Mode: en_curso - Distribution and reminders -->
+                    <button type="button" class="btn btn-success btn-block mt-6" onclick="document.getElementById('distribute-modal').showModal()">
+                        DISTRIBUTE PAPERS
+                    </button>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
     </div>
+
+    {% if is_owner and phase_mode == 'finalizado' %}
+    <!-- Screening Summary - Separate card for bulk decisions -->
+    <div class="card bg-white shadow">
+        <div class="card-body">
+            <h2 class="card-title">Screening Summary</h2>
+            <div class="text-center py-6">
+                <p class="text-5xl font-bold text-gray-400">{{ user_progress.pending }}</p>
+                <p class="text-sm text-gray-600 mt-2">Pending Studies</p>
+            </div>
+            <div class="divider my-2">Take Action</div>
+            <form method="post" action="{% url 'selection:bulk_decision' project.id %}" class="space-y-2">
+                {% csrf_token %}
+                <button type="submit" name="action" value="include_all" class="btn btn-success btn-block">
+                    INCLUDE ALL PENDING
+                </button>
+                <button type="submit" name="action" value="exclude_all" class="btn btn-error btn-block">
+                    EXCLUDE ALL PENDING
+                </button>
+                <button type="submit" name="action" value="send_to_discussion" class="btn btn-warning btn-block">
+                    SEND ALL TO DISCUSSION
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Distribution Modal -->

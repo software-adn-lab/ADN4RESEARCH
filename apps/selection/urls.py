@@ -10,6 +10,8 @@ urlpatterns = [
     # Overview & Distribution
     path('', distribution_views.overview, name='overview'),
     path('distribute/', distribution_views.distribute_papers, name='distribute'),
+    path('bulk-decision/', distribution_views.bulk_decision, name='bulk_decision'),
+    path('send-reminder/', distribution_views.send_reminder, name='send_reminder'),
     
     # Screening - Metadata
     path('screening/', metadata_views.screening_view, name='screening'),

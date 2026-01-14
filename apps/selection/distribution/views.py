@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 
 from apps.project.structure.models.project_models import Project
 from apps.selection.models import SelectionPhase, PaperAssignment
@@ -28,6 +29,17 @@ def overview(request, project_id):
 
     # Check if user is owner
     is_owner = request.user == project.owner
+    
+    # Determine phase mode based on dates and status
+    now = timezone.now()
+    if selection_phase.end_date and now > selection_phase.end_date:
+        phase_mode = 'finalizado'
+        # Auto-update status if needed
+        if selection_phase.status == 'ON_GOING':
+            selection_phase.status = 'FINALIZED'
+            selection_phase.save()
+    else:
+        phase_mode = 'en_curso'
 
     # Get current user's progress
     user_assignments = PaperAssignment.objects.filter(
@@ -127,7 +139,8 @@ def overview(request, project_id):
             'included_pct': user_included_pct,
             'excluded_pct': user_excluded_pct
         },
-        'current_stage': 'overview'
+        'current_stage': 'overview',
+        'phase_mode': phase_mode,
     }
 
     return render(request, 'distribution/overview.html', context)
@@ -180,4 +193,134 @@ def distribute_papers(request, project_id):
     except Exception as e:
         messages.error(request, f'Distribution failed: {str(e)}')
 
+    return redirect('selection:overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def bulk_decision(request, project_id):
+    """
+    Apply bulk decision to all pending papers.
+    Only available when phase is finalized.
+    Actions: include_all, exclude_all, send_to_discussion
+    """
+    from apps.selection.models import PaperReview, SelectionStageChoices, SelectionDecisionChoices
+    
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Only owner can make bulk decisions
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can make bulk decisions')
+        return redirect('selection:overview', project_id=project_id)
+    
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    action = request.POST.get('action')
+    
+    if action not in ['include_all', 'exclude_all', 'send_to_discussion']:
+        messages.error(request, 'Invalid action')
+        return redirect('selection:overview', project_id=project_id)
+    
+    # Get all assignments with pending reviews
+    all_assignments = PaperAssignment.objects.filter(selection_phase=selection_phase)
+    
+    # Find assignments without a decision or with PENDING status
+    pending_assignments = []
+    for assignment in all_assignments:
+        review = PaperReview.objects.filter(
+            assignment=assignment,
+            stage=SelectionStageChoices.SCREENING
+        ).first()
+        
+        if not review or review.decision == SelectionDecisionChoices.PENDING:
+            pending_assignments.append(assignment)
+    
+    count = 0
+    if action == 'include_all':
+        for assignment in pending_assignments:
+            PaperReview.objects.update_or_create(
+                assignment=assignment,
+                stage=SelectionStageChoices.SCREENING,
+                defaults={
+                    'decision': SelectionDecisionChoices.INCLUDED,
+                    'notes': 'Bulk included by owner (phase finalized)'
+                }
+            )
+            count += 1
+        messages.success(request, f'{count} pending papers marked as INCLUDED')
+        
+    elif action == 'exclude_all':
+        for assignment in pending_assignments:
+            PaperReview.objects.update_or_create(
+                assignment=assignment,
+                stage=SelectionStageChoices.SCREENING,
+                defaults={
+                    'decision': SelectionDecisionChoices.EXCLUDED,
+                    'notes': 'Bulk excluded by owner (phase finalized)'
+                }
+            )
+            count += 1
+        messages.success(request, f'{count} pending papers marked as EXCLUDED')
+        
+    elif action == 'send_to_discussion':
+        # Mark papers as needing discussion
+        for assignment in pending_assignments:
+            PaperReview.objects.update_or_create(
+                assignment=assignment,
+                stage=SelectionStageChoices.SCREENING,
+                defaults={
+                    'decision': SelectionDecisionChoices.PENDING,
+                    'notes': 'Sent to discussion by owner'
+                }
+            )
+            count += 1
+        # Move phase to discussion stage
+        selection_phase.current_stage = SelectionStageChoices.DISCUSSION
+        selection_phase.save()
+        messages.success(request, f'{count} pending papers sent to discussion')
+    
+    return redirect('selection:overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def send_reminder(request, project_id):
+    """
+    Send reminder notification to a specific researcher.
+    Only available when phase is ON_GOING.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Only owner can send reminders
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can send reminders')
+        return redirect('selection:overview', project_id=project_id)
+    
+    researcher_id = request.POST.get('researcher_id')
+    if not researcher_id:
+        messages.error(request, 'No researcher specified')
+        return redirect('selection:overview', project_id=project_id)
+    
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    try:
+        researcher = User.objects.get(id=researcher_id)
+        
+        # Create notification
+        from apps.notification.models import Notification
+        Notification.objects.create(
+            recipient=researcher,
+            sender=request.user,
+            type='REMINDER',
+            title='Review Reminder',
+            custom_message=f'You have pending papers to review in project "{project.title}". Please complete your reviews.',
+            project=project
+        )
+        messages.success(request, f'Reminder sent to {researcher.get_full_name() or researcher.username}')
+            
+    except User.DoesNotExist:
+        messages.error(request, 'Researcher not found')
+    except Exception as e:
+        messages.error(request, f'Failed to send notification: {str(e)}')
+    
     return redirect('selection:overview', project_id=project_id)

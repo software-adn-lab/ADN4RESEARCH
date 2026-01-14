@@ -114,10 +114,22 @@ def sidebar_context(request):
             'is_owner': membership.role == 'OWNER',
         })
     
+    # Get unread notifications count
+    unread_notifications_count = 0
+    try:
+        from apps.notification.models import Notification
+        unread_notifications_count = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+    except:
+        pass
+    
     return {
         'sidebar_projects': projects_data,
         'user_name': request.user.get_full_name() or request.user.username,
         'user_username': request.user.username,
         'user_initials': ''.join([word[0].upper() for word in (request.user.get_full_name() or request.user.username).split()[:2]]),
         'current_project_id': current_project_id,
+        'unread_notifications_count': unread_notifications_count,
     }

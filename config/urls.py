@@ -30,6 +30,7 @@ urlpatterns = [
     path('interpretation/', include('apps.interpretation.urls')),
     path('extraction/', include('apps.extraction.urls')),
     path('acquisition/', include('apps.acquisition.urls')),
+    path('notifications/', include('apps.notification.urls')),
 ]
 
 if settings.DEBUG:
