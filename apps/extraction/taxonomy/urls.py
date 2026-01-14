@@ -27,6 +27,22 @@ urlpatterns = [
         views.TagCreateView.as_view(),
         name='tag_create'
     ),
+
+    # POST /project/<project_id>/extraction/tags/<pk>/update/
+    # Actualizar tag existente (solo owner)
+    path(
+        '<int:pk>/update/',
+        views.TagUpdateView.as_view(),
+        name='tag_update'
+    ),
+
+    # POST /project/<project_id>/extraction/tags/<pk>/delete/
+    # Eliminar tag existente (solo owner)
+    path(
+        '<int:pk>/delete/',
+        views.TagDeleteView.as_view(),
+        name='tag_delete'
+    ),
     
     # GET/POST /project/<project_id>/extraction/tags/create-inductive/
     # Crear tag inductivo durante extracción

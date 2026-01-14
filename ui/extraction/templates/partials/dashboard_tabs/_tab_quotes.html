@@ -26,7 +26,6 @@
                     {% if is_owner %}
                     <th>Extraído Por</th>
                     {% endif %}
-                    <th>Ubicación</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,8 +41,13 @@
 
                     <td>
                         <div class="flex flex-col">
-                            <span class="font-bold text-xs">{{ quote.paper_extraction.study.title|truncatechars:30 }}</span>
-                            <span class="text-[10px] text-gray-500">{{ quote.paper_extraction.study.publication_year }}</span>
+                            <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=quote.paper_extraction.pk %}">
+                            <div class="flex flex-col mb-2">
+                                <span class="font-bold text-xs">{{ quote.paper_extraction.study.title|truncatechars:30 }}</span>
+                                <span class="text-[10px] text-gray-500">{{ quote.paper_extraction.study.year }}</span>
+                            </div>
+                            <span class="badge badge-sm badge-outline">{% if quote.location.page %}Pg. {{ quote.location.page }}{% else %}General{% endif %}</span>
+                            </a>
                         </div>
                     </td>
 
@@ -51,7 +55,7 @@
                         <div class="flex flex-wrap gap-1">
                             {% for tag in quote.tags.all %}
                                 <span class="badge badge-xs badge-ghost border-opacity-50"
-                                      style="border-color: {{ tag.color }}; color: {{ tag.color }}">
+                                      style="background-color: {{ tag.color }}70;">
                                     {{ tag.name }}
                                 </span>
                             {% empty %}
@@ -63,21 +67,15 @@
                     {% if is_owner %}
                     <td>
                         <div class="flex items-center gap-2">
-                            <div class="avatar placeholder">
+                            <!--<div class="avatar placeholder">
                                 <div class="bg-neutral-focus text-neutral-content rounded-full w-6">
                                     <span class="text-xs">{{ quote.created_by.username|slice:":1"|upper }}</span>
                                 </div>
-                            </div>
+                            </div>-->
                             <span class="text-xs">{{ quote.created_by.username }}</span>
                         </div>
                     </td>
                     {% endif %}
-
-                    <td>
-                        <span class="badge badge-sm badge-outline">
-                            {% if quote.location.page %}Pg. {{ quote.location.page }}{% else %}General{% endif %}
-                        </span>
-                    </td>
                 </tr>
                 {% empty %}
                 <tr>

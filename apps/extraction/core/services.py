@@ -172,10 +172,12 @@ class PaperExtractionService:
         Returns:
             dict con información de completitud
         """
-        mandatory_tags = paper.extraction_phase.tags.filter(
-            status='APPROVED',
-            is_mandatory=True
+        logger.info(
+            "Building completion summary: paper_id=%s, status=%s",
+            paper.id,
+            paper.status
         )
+        mandatory_tags = paper.extraction_phase.tags.mandatory()
         
         used_mandatory_tags = paper.get_used_mandatory_tags()
         missing_mandatory_tags = paper.get_missing_mandatory_tags()
@@ -190,6 +192,15 @@ class PaperExtractionService:
         )
         
         is_valid, validation_message = self.validate_completion_rules(paper)
+        logger.info(
+            "Completion summary computed: paper_id=%s, can_complete=%s, "
+            "coverage=%s/%s, missing=%s",
+            paper.id,
+            is_valid,
+            covered_mandatory,
+            total_mandatory,
+            missing_mandatory_tags.count()
+        )
         
         return {
             'can_complete': is_valid,

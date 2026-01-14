@@ -88,6 +88,7 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
             tag = service.define_deductive_tag(
                 phase_id=self.phase.id,
                 name=form.cleaned_data['name'],
+                color=form.cleaned_data.get('color'),
                 rq_id=(
                     form.cleaned_data.get('rq_related').id 
                     if form.cleaned_data.get('rq_related') 
@@ -108,21 +109,98 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
             )
         
         return redirect(self.get_success_url())
-    
+
+    def get_success_url(self):
+        return reverse(
+            'extraction:planning:phase_detail',
+            kwargs={
+                'project_id': self.phase.project_id
+            }
+        ) + '?tab=tags'
+
+
+class TagUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):
+    """
+    Actualizar un tag existente.
+    """
+
+    model = Tag
+    form_class = DeductiveTagForm
+    template_name = None
+
+    def get_object(self, queryset=None):
+        project_id = self.kwargs.get('project_id')
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        self.phase = phase
+        return get_object_or_404(Tag, pk=self.kwargs.get('pk'), extraction_phase=phase)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['project'] = self.phase.project
+        return kwargs
+
+    def form_valid(self, form):
+        if self.phase.status == ExtractionStatusChoices.CLOSED:
+            messages.error(
+                self.request,
+                "No se pueden editar tags en una fase cerrada."
+            )
+            return redirect(self.get_success_url())
+
+        tag = form.save(commit=False)
+        tag.is_mandatory = bool(tag.rq_related_id)
+        tag.save(update_fields=['name', 'color', 'rq_related', 'is_mandatory', 'updated_at'])
+
+        messages.success(
+            self.request,
+            f'Tag "{tag.name}" actualizado exitosamente.'
+        )
+        return redirect(self.get_success_url())
+
     def form_invalid(self, form):
-        """Manejar errores de validación."""
         messages.error(
             self.request,
             'Error en los datos del formulario. Verifica e intenta de nuevo.'
         )
         return redirect(self.get_success_url())
-    
+
     def get_success_url(self):
-        """Redirigir al dashboard con tab de tags."""
         return reverse(
-            'extraction:planning:phase_detail', 
+            'extraction:planning:phase_detail',
             kwargs={
                 'project_id': self.phase.project_id
+            }
+        ) + '?tab=tags'
+
+
+class TagDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Eliminar un tag existente.
+    """
+
+    http_method_names = ['post']
+
+    def post(self, request, project_id, pk):
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        tag = get_object_or_404(Tag, pk=pk, extraction_phase=phase)
+
+        if phase.status == ExtractionStatusChoices.CLOSED:
+            messages.error(
+                request,
+                "No se pueden eliminar tags en una fase cerrada."
+            )
+            return redirect(self.get_success_url(phase))
+
+        tag_name = tag.name
+        tag.delete()
+        messages.success(request, f'Tag "{tag_name}" eliminado.')
+        return redirect(self.get_success_url(phase))
+
+    def get_success_url(self, phase):
+        return reverse(
+            'extraction:planning:phase_detail',
+            kwargs={
+                'project_id': phase.project_id
             }
         ) + '?tab=tags'
 
