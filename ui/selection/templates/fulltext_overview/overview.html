@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Full-text Overview - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    
+    {# Project Header #}
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ project.name }}</h1>
+        <p class="text-gray-600">Full-text Overview - Included Papers</p>
+    </div>
+
+    {# Timeline #}
+    {% include '../_timeline.html' with active='fulltext_overview' %}
+
+    {# Statistics Cards #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Total Studies</h3>
+                <p class="text-3xl font-bold text-primary">{{ total_papers }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">With PDF</h3>
+                <p class="text-3xl font-bold text-success">{{ papers_with_pdf }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Without PDF</h3>
+                <p class="text-3xl font-bold text-error">{{ papers_without_pdf }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Total Pages</h3>
+                <p class="text-3xl font-bold text-info">{{ total_pages }}</p>
+            </div>
+        </div>
+    </div>
+
+    {# Actions Section #}
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-xl mb-4">PDF Management</h2>
+            <p class="text-sm text-gray-600 mb-4">Manage PDFs for all included papers before full-text screening phase</p>
+            
+            <div class="flex flex-wrap gap-4">
+                {# Download PDFs Button #}
+                <button type="button" class="btn btn-primary" onclick="downloadAllPdfs()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download All PDFs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# Papers List #}
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <h2 class="card-title text-xl mb-4">Included Papers ({{ total_papers }})</h2>
+            
+            {% if papers %}
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th class="w-12">#</th>
+                                <th>Title</th>
+                                <th class="w-32">Authors</th>
+                                <th class="w-20">Year</th>
+                                <th class="w-24">PDF Status</th>
+                                <th class="w-20">Pages</th>
+                                <th class="w-32">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paper in papers %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td class="font-medium">{{ paper.title|truncatewords:15 }}</td>
+                                <td>{{ paper.authors|truncatewords:3 }}</td>
+                                <td>{{ paper.year|default:"-" }}</td>
+                                <td>
+                                    {% if paper.has_pdf %}
+                                        <span class="badge badge-success badge-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Available
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-error badge-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Missing
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ paper.page_count|default:"-" }}</td>
+                                <td>
+                                    {% if paper.has_pdf %}
+                                        <a href="{{ paper.pdf_url }}" target="_blank" class="btn btn-xs btn-ghost" title="View PDF">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-xs btn-ghost" onclick="openUploadForPaper('{{ paper.id }}', '{{ paper.title|escapejs }}')" title="Upload PDF">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            Upload
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>No included papers found from the screening phase yet.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Continue Button #}
+    {% if papers %}
+    <div class="flex justify-end mt-6">
+        <a href="{% url 'selection:fulltext' project.id %}" class="btn btn-primary">
+            Continue to Full-text Screening
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+{# Upload PDF Modal #}
+<dialog id="upload_pdf_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Upload PDF for Paper</h3>
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            <input type="hidden" name="study_id" id="modal_study_id">
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Paper Title</span>
+                </label>
+                <input type="text" id="modal_paper_title" class="input input-bordered" readonly>
+            </div>
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Select PDF File</span>
+                </label>
+                <input type="file" name="file" accept=".pdf" class="file-input file-input-bordered w-full" required>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="upload_pdf_modal.close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{# Download Progress Modal #}
+<dialog id="download_progress_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Downloading PDFs</h3>
+        <div class="flex flex-col items-center gap-4">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p id="download-status" class="text-sm text-gray-600">Preparing downloads, this may take a few minutes...</p>
+        </div>
+    </div>
+</dialog>
+
+<script>
+const PROJECT_ID = {{ project.id }};
+const DOWNLOAD_URL = "{% url 'selection:overview_download' project.id %}";
+const UPLOAD_URL = "{% url 'selection:overview_upload' project.id %}";
+
+function openUploadForPaper(studyId, paperTitle) {
+    document.getElementById('modal_study_id').value = studyId;
+    document.getElementById('modal_paper_title').value = paperTitle;
+    upload_pdf_modal.showModal();
+}
+
+// Handle upload form submission
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(UPLOAD_URL, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            alert('PDF uploaded successfully!');
+            upload_pdf_modal.close();
+            location.reload(); // Reload to show updated status
+        } else {
+            alert('Error uploading PDF: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error uploading PDF: ' + error.message);
+    }
+});
+
+// Download all PDFs
+async function downloadAllPdfs() {
+    download_progress_modal.showModal();
+    document.getElementById('download-status').textContent = 'Downloading PDFs, this may take a few minutes...';
+    
+    try {
+        const response = await fetch(DOWNLOAD_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            const stats = result.result;
+            document.getElementById('download-status').textContent = 
+                `Downloaded: ${stats.downloaded_count}/${stats.total_count} PDFs`;
+            
+            setTimeout(() => {
+                download_progress_modal.close();
+                location.reload(); // Reload to show updated status
+            }, 2000);
+        } else {
+            alert('Error downloading PDFs: ' + (result.error || 'Unknown error'));
+            download_progress_modal.close();
+        }
+    } catch (error) {
+        alert('Error downloading PDFs: ' + error.message);
+        download_progress_modal.close();
+    }
+}
+</script>
+
+{% endblock %}
