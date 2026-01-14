@@ -349,10 +349,6 @@ class PDFViewer {
             .toLowerCase();
     }
 
-    getCurrentSelection() {
-        return { text: '', page: 1 };
-    }
-
     updateLoader(message) {
         if (this.loader) {
             const text = this.loader.querySelector('span:last-child');

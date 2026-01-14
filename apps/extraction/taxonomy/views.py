@@ -440,7 +440,7 @@ class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerR
     """
     
     model = Tag
-    template_name = 'taxonomy/pending_tags_list.html'
+    template_name = 'extraction/templates/partials/dashboard_tabs/pending_tags_list.html'
     context_object_name = 'pending_tags'
     
     def setup(self, request, *args, **kwargs):

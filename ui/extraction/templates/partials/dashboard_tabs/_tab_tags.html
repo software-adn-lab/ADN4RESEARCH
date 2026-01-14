@@ -266,13 +266,13 @@
                 </div>
 
                 <div class="modal-action">
+                    <button type="submit" form="tag-delete-form-{{ tag.id }}" class="btn btn-error">
+                        Eliminar
+                    </button>
                     <button type="button" class="btn" onclick="document.getElementById('tag_edit_modal_{{ tag.id }}').close()">
                         Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary">Actualizar</button>
-                    <button type="submit" form="tag-delete-form-{{ tag.id }}" class="btn btn-error">
-                        Eliminar
-                    </button>
                 </div>
             </form>
 

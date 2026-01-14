@@ -64,7 +64,9 @@ class TagQuerySet(models.QuerySet):
     def mandatory(self):
         """Tags marcados como obligatorios."""
         return self.filter(
-            Q(is_mandatory=True) | Q(rq_related__isnull=False)
+            Q(is_mandatory=True) | Q(rq_related__isnull=False),
+            status=ApprovalStatusChoices.APPROVED,
+            type=TagTypeChoices.DEDUCTIVE
         )
 
     def deductives(self):

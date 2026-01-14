@@ -13,6 +13,7 @@ from .services import PhaseLifecycleService
 from apps.extraction.shared.exceptions import BusinessRuleViolation
 from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
+from apps.extraction.taxonomy.services import TagApprovalService
 from apps.extraction.core.models import PaperExtraction, Quote
 from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 
@@ -134,6 +135,13 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
                 'paper_extraction__study',
                 'created_by'
             ).prefetch_related('tags')
+
+        elif tab == 'pending':
+            if is_owner:
+                service = TagApprovalService()
+                context['pending_tags'] = service.get_pending_tags_for_phase(phase.id)
+            else:
+                context['pending_tags'] = phase.tags.none()
 
 
 class PhaseConfigUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):

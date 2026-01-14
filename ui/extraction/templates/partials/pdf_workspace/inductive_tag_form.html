@@ -154,7 +154,7 @@ Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.
             // ✅ Usar phase.id del contexto
             const phaseId = {{ phase.id }};
             const projectId = {{ phase.project_id }};
-            const url = `/project/${projectId}/extraction/phases/${phaseId}/tags/create-inductive/`;
+            const url = `/project/${projectId}/extraction/tags/create-inductive/`;
             
             const response = await fetch(url, {
                 method: 'POST',

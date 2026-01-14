@@ -45,56 +45,7 @@ class TagManager {
         this.updateMissingTagsAlert();
     }
 
-/*
-    updateMissingTagsAlert() {
-        const allMandatoryBadges = document.querySelectorAll('[data-tag-id]');
-        const missingTags = [];
-
-        allMandatoryBadges.forEach(badge => {
-            if (!badge.classList.contains('badge-success')) {
-                missingTags.push({ 
-                    id: badge.dataset.tagId, 
-                    name: badge.textContent.trim() 
-                });
-            }
-        });
-
-        const alertContainer = document.querySelector('#mandatory_tags');
-        if (!alertContainer) return;
-
-        const existingAlert = alertContainer.querySelector('.alert');
-        if (existingAlert) existingAlert.remove();
-
-        if (missingTags.length === 0) {
-            const successAlert = document.createElement('div');
-            successAlert.className = 'alert alert-success mt-3 py-2 text-xs';
-            successAlert.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Todos los tags obligatorios han sido cubiertos</span>
-            `;
-            alertContainer.appendChild(successAlert);
-        } else {
-            const tagsHtml = missingTags.map(tag => 
-                `<span class="badge badge-xs badge-ghost">${tag.name}</span>`
-            ).join(' ');
-
-            const warningAlert = document.createElement('div');
-            warningAlert.className = 'alert alert-warning mt-3 py-2 text-xs';
-            warningAlert.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div class="flex-1">
-                    <span class="font-semibold">Faltan ${missingTags.length} tag(s):</span>
-                    <div class="flex flex-wrap gap-1 mt-1">${tagsHtml}</div>
-                </div>
-            `;
-            alertContainer.appendChild(warningAlert);
-        }
-    }
-        updateCoveragePercentage() {
+    updateCoveragePercentage() {
         console.group('🔍 Debug: updateCoveragePercentage');
 
         // 1. Identificar qué estamos seleccionando como "Total"

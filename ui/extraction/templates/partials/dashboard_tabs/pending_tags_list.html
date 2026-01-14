@@ -31,7 +31,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
         
         {# Botón de aprobación masiva #}
         {% if pending_tags %}
-        <form method="post" action="{% url 'extraction:planning:taxonomy:tags_bulk_approve' project_id=phase.project_id phase_id=phase.pk %}" id="bulk-approve-form">
+        <form method="post" action="{% url 'extraction:planning:taxonomy:tags_bulk_approve' project_id=phase.project_id %}" id="bulk-approve-form">
             {% csrf_token %}
             <button type="submit" 
                     class="btn btn-success btn-sm"
@@ -111,7 +111,7 @@ https://docs.djangoproject.com/en/stable/topics/templates/
                                 <div class="flex justify-end gap-2">
                                     {# Botón Aprobar #}
                                     <form method="post" 
-                                          action="{% url 'extraction:planning:taxonomy:tag_approve' project_id=phase.project_id phase_id=phase.pk pk=tag.pk %}"
+                                          action="{% url 'extraction:planning:taxonomy:tag_approve' project_id=phase.project_id pk=tag.pk %}"
                                           class="inline">
                                         {% csrf_token %}
                                         <button type="submit" 

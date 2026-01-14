@@ -20,6 +20,7 @@ from .dtos import QuoteDTO, PaperCompletionSummaryDTO
 from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.core.services import PaperExtractionService
 from apps.extraction.shared.mixins import ProjectMemberRequiredMixin
+from apps.extraction.shared.exceptions import BusinessRuleViolation
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,12 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
     model = PaperExtraction
     template_name = 'extraction/templates/paper_detail.html'
     context_object_name = 'paper'
+
+    def get_queryset(self):
+        project_id = self.kwargs.get('project_id')
+        return PaperExtraction.objects.filter(
+            extraction_phase__project_id=project_id
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,10 +99,7 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         ).order_by('name')
         
         # Tags obligatorios
-        context['mandatory_tags'] = phase.tags.filter(
-            status='APPROVED',
-            is_mandatory=True
-        )
+        context['mandatory_tags'] = phase.tags.mandatory()
         
         # Quotes ordenadas
         quotes = paper.quotes.select_related('created_by').prefetch_related('tags').all()
@@ -135,7 +139,11 @@ class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMi
     
     def get(self, request, project_id, pk):
         """Servir PDF."""
-        paper = get_object_or_404(PaperExtraction, pk=pk)
+        paper = get_object_or_404(
+            PaperExtraction,
+            pk=pk,
+            extraction_phase__project_id=project_id
+        )
         
         # Logging
         logger.info(
@@ -233,7 +241,11 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
         Returns:
             JsonResponse con resultado
         """
-        paper = get_object_or_404(PaperExtraction, pk=pk)
+        paper = get_object_or_404(
+            PaperExtraction,
+            pk=pk,
+            extraction_phase__project_id=project_id
+        )
         
         # Validar permisos (responsabilidad de la vista)
         if not self._can_complete_paper(request.user, paper):
@@ -378,6 +390,15 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             quote.location = data.get('location', {})
             quote.save()
             form.save_m2m()
+            
+            # ✅ Actualizar estado del paper a IN_PROGRESS si está en PENDING
+            if paper.status == PaperExtractionStatusChoices.PENDING:
+                paper.status = PaperExtractionStatusChoices.IN_PROGRESS
+                paper.save(update_fields=['status', 'updated_at'])
+                logger.info(
+                    f"Paper status updated: paper_id={paper.id}, "
+                    f"new_status={paper.status}, triggered_by=quote_creation"
+                )
             
             logger.info(f"Quote created successfully: {quote.id}")
             logger.info("="*60)
