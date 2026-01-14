@@ -18,6 +18,11 @@ urlpatterns = [
      path('<int:pk>/complete/', 
           views.PaperCompleteView.as_view(), 
           name='paper_complete'),
+     
+     # Reasignar paper
+     path('<int:pk>/reassign/',
+          views.PaperReassignView.as_view(),
+          name='paper_reassign'),
 
      # Quotes (API endpoints - sin DRF)
      path('quotes/create/', 

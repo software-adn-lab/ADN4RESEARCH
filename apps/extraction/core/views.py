@@ -463,3 +463,95 @@ class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             user.is_staff or
             user.is_superuser
         )
+
+
+class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
+    """
+    Vista para reasignar un paper a otro miembro del proyecto.
+    
+    Solo el owner del proyecto puede reasignar papers.
+    """
+    
+    def post(self, request, project_id, pk):
+        """
+        POST /project/<project_id>/extraction/papers/<pk>/reassign/
+        
+        JSON payload:
+        {
+            "assigned_to_id": <user_id>
+        }
+        """
+        try:
+            # Obtener paper
+            paper = get_object_or_404(PaperExtraction, pk=pk)
+            phase = paper.extraction_phase
+            project = phase.project
+            
+            # Validar que el usuario sea owner
+            if request.user != project.owner and not request.user.is_staff:
+                return JsonResponse(
+                    {'error': 'Solo el owner puede reasignar papers'},
+                    status=403
+                )
+            
+            # Obtener datos
+            data = json.loads(request.body)
+            assigned_to_id = data.get('assigned_to_id')
+            
+            if not assigned_to_id:
+                return JsonResponse(
+                    {'error': 'assigned_to_id es requerido'},
+                    status=400
+                )
+            
+            # Obtener usuario a asignar
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            assigned_user = get_object_or_404(User, pk=assigned_to_id)
+            
+            # Validar que sea miembro del proyecto
+            from apps.project.structure.models.project_models import Membership
+            is_member = (
+                assigned_user == project.owner or
+                Membership.objects.filter(
+                    project=project,
+                    user=assigned_user
+                ).exists()
+            )
+            
+            if not is_member:
+                return JsonResponse(
+                    {'error': f'{assigned_user.username} no es miembro del proyecto'},
+                    status=400
+                )
+            
+            # Reasignar
+            old_assigned_to = paper.assigned_to
+            paper.assigned_to = assigned_user
+            paper.save(update_fields=['assigned_to', 'updated_at'])
+            
+            logger.info(
+                f"Paper {pk} reasignado de {old_assigned_to.username if old_assigned_to else 'nadie'} "
+                f"a {assigned_user.username} por {request.user.username}"
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Paper reasignado a {assigned_user.username}',
+                'assigned_to': {
+                    'id': assigned_user.id,
+                    'username': assigned_user.username
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {'error': 'JSON inválido'},
+                status=400
+            )
+        except Exception as e:
+            logger.exception("Error reasignando paper")
+            return JsonResponse(
+                {'error': f'Error al reasignar: {str(e)}'},
+                status=500
+            )

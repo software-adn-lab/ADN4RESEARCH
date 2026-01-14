@@ -106,6 +106,18 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
                 papers_qs = papers_qs.filter(assigned_to=self.request.user)
             
             context['papers'] = papers_qs.select_related('study', 'assigned_to')
+            
+            # Agregar miembros del proyecto para el modal de reasignación
+            if is_owner:
+                from apps.project.structure.models.project_models import Membership
+                members = [
+                    {'id': phase.project.owner.id, 'username': phase.project.owner.username}
+                ]
+                members.extend([
+                    {'id': m.user.id, 'username': m.user.username}
+                    for m in Membership.objects.filter(project=phase.project).select_related('user')
+                ])
+                context['team_members'] = members
         
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
