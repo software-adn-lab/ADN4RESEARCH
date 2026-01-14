@@ -16,6 +16,7 @@ urlpatterns = [
     # Projects
     path('create/', project_views.open_project_creation_screen, name='create_project_screen'),
     path('create/save/', project_views.save_project_action, name='save_project_action'),
+    path('<int:project_id>/delete/', project_views.delete_project_action, name='delete_project'),
     path('<int:project_id>/configure-schedule/', schedule_views.configure_schedule_view, name='configure_schedule'),
     path('<int:project_id>/save-schedule/', schedule_views.save_schedule_action, name='save_schedule_action'),
 ]

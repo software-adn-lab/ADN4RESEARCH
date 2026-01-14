@@ -1,12 +1,14 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET, require_POST
 from django.db import transaction
 from django.contrib import messages
+from django.http import HttpResponseForbidden
 
 from apps.project.exceptions.project_exceptions import ProjectCreationError
 from apps.project.forms import ProjectForm, SpecificObjectiveFormSet, ExpectedResultFormSet
 from apps.project.structure.services.project_services import ProjectService
+from apps.project.structure.models.project_models import Project
 
 
 @login_required
@@ -86,3 +88,25 @@ def _create_project_from_forms(user, project_form, specific_stats_formset, expec
     except ProjectCreationError as e:
         project_form.add_error(None, str(e))
         raise e
+
+
+@login_required
+@require_POST
+def delete_project_action(request, project_id):
+    """Delete a project (only owner can delete)"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Check if user is the owner
+    if project.owner != request.user:
+        return HttpResponseForbidden("You do not have permission to delete this project.")
+    
+    project_title = project.title
+    
+    try:
+        with transaction.atomic():
+            project.delete()
+        messages.success(request, f'Project "{project_title}" has been deleted successfully.')
+    except Exception as e:
+        messages.error(request, f'Error deleting project: {str(e)}')
+    
+    return redirect('project:list_projects')
