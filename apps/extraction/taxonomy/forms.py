@@ -56,12 +56,14 @@ class DeductiveTagForm(forms.ModelForm):
         if project:
             self.fields['name'].required = True
             adapter = DesignProtocolAdapter()
-            approved_ids = adapter.get_approved_question_ids(project.id)
-            if self.instance and self.instance.rq_related_id:
-                approved_ids = list(set(approved_ids + [self.instance.rq_related_id]))
+            approved_questions = adapter.get_approved_questions(project.id)
             # Configurar queryset solo con RQs aprobadas del protocolo
-            self.fields['rq_related'].queryset = (
-                ResearchQuestion.objects.filter(id__in=approved_ids).order_by('created_at')
+            
+            self.fields['rq_related'] = forms.ChoiceField(
+                required=False,
+                choices=[("", "-- Sin vincular a RQ --")] + [
+                    (q["id"], q["question"]) for q in approved_questions
+                ],
             )
             self.fields['rq_related'].required = False
             self.fields['rq_related'].empty_label = "-- Sin vincular a RQ --"
