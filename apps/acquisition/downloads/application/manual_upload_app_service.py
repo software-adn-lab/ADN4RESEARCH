@@ -48,7 +48,7 @@ class ManualUploadAppService:
         self.manual_upload_service = manual_upload_service
         self.storage = storage
 
-    def upload_pdf_for_study(self, study_id: str, uploaded_file: IUploadedFile) -> Study:
+    def upload_pdf_for_study(self, study_id: str, uploaded_file: IUploadedFile, force: bool = False) -> Study:
         """
         Procesa la carga manual de un PDF para un estudio existente.
 
@@ -57,10 +57,20 @@ class ManualUploadAppService:
         2) Guardar el archivo en disco en una ruta estable
         3) Validar y adjuntar el PDF usando ManualUploadService
         4) Persistir cambios en el repositorio
+        
+        Args:
+            study_id: ID del estudio
+            uploaded_file: Archivo subido
+            force: Si True, permite reemplazar un PDF existente
         """
         study = self.repository.find_by_id(study_id)
         if study is None:
             raise ValueError(f"Estudio no encontrado: {study_id}")
+
+        # Si force=True y ya tiene PDF, borrar el anterior
+        old_pdf_path = None
+        if study.pdf_path is not None and force:
+            old_pdf_path = study.pdf_path
 
         raw_name = uploaded_file.name or "uploaded.pdf"
         safe_name = os.path.basename(raw_name) or "uploaded.pdf"
@@ -70,9 +80,17 @@ class ManualUploadAppService:
 
         try:
             # attach_file ya actualiza pdf_path, pdf_source y download_status
-            updated = self.manual_upload_service.attach_file(study=study, file_path=saved_path)
+            updated = self.manual_upload_service.attach_file(study=study, file_path=saved_path, force=force)
 
             self.repository.save(updated)
+            
+            # Borrar el PDF anterior si había uno
+            if old_pdf_path is not None:
+                try:
+                    self.storage.delete(old_pdf_path)
+                except Exception:
+                    pass  # No fallar si no se puede borrar el anterior
+            
             return updated
         except Exception:
             self.storage.delete(saved_path)
