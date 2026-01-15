@@ -89,7 +89,7 @@
         
     </div>
     <div class="flex text-center justify-center p-6">
-        {% if project.owner == request.user %}
+        {% if project.owner == request.user and current_stage == 'SEARCH_STRATEGY' %}
         <form action="{% url 'design:strategies:consolidate' project_id=project.id %}" method="POST"
             class="inline-block ml-4"
             onsubmit="return confirm('Are you sure you want to consolidate this stage? This will reject all draft strategies and finalize the design phase.');">
@@ -208,11 +208,11 @@
     </script>
 
     <script>
-        const versionsApiUrl = "{% url 'design:strategies:versions' project_id=project.id question_id=0 %}";
+        const versionsApiUrl = "{% url 'design:strategies:versions' project_id=project.id question_id=999999 %}".replace('999999', 'QUESTION_ID');
         const builderUrlBase = "{% url 'design:strategies:builder' project_id=project.id %}";
-        const approveUrlBase = "{% url 'design:strategies:approve' project_id=project.id strategy_id=0 %}";
-        const rejectUrlBase = "{% url 'design:strategies:reject' project_id=project.id strategy_id=0 %}";
-        const deleteVersionApiUrl = "{% url 'design:strategies:delete_version' project_id=project.id version_id=0 %}";
+        const approveUrlBase = "{% url 'design:strategies:approve' project_id=project.id strategy_id=999999 %}".replace('999999', 'STRATEGY_ID');
+        const rejectUrlBase = "{% url 'design:strategies:reject' project_id=project.id strategy_id=999999 %}".replace('999999', 'STRATEGY_ID');
+        const deleteVersionApiUrl = "{% url 'design:strategies:delete_version' project_id=project.id version_id=999999 %}".replace('999999', 'VERSION_ID');
     </script>
 
     <script src="{% static 'scripts/search_strategy_panel.js' %}"></script>

@@ -112,10 +112,10 @@ def login_action(request):
         
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome {user.first_name or user.username}!')
+            messages.success(request, f'Welcome {user.first_name or user.username}!', extra_tags='project')
             return redirect('project:list_projects')
         else:
-            messages.error(request, 'Invalid username or password')
+            messages.error(request, 'Invalid username or password', extra_tags='project')
     
     return render(request, 'project/login.html', {'form': form})
 
@@ -125,7 +125,7 @@ def logout_action(request):
     """Handle logout"""
     from django.contrib.auth import logout as auth_logout
     auth_logout(request)
-    messages.success(request, 'You have been logged out successfully.')
+    messages.success(request, 'You have been logged out successfully.', extra_tags='project')
     return redirect('project:login')
 
 
@@ -162,7 +162,7 @@ def register_action(request):
         
         # Log the user in
         login(request, user)
-        messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.')
+        messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.', extra_tags='project')
         return redirect('project:list_projects')
     
     return render(request, 'project/register.html', {'form': form})
@@ -215,9 +215,9 @@ def get_project_active_phase(project):
     except ImportError:
         pass
     
-    # Check Extraction Phase (most commonly used after design)
-    try:
-        from apps.extraction.planning.models import ExtractionPhase
+    # # Check Extraction Phase (most commonly used after design)
+    # try:
+    #     from apps.extraction.planning.models import ExtractionPhase
         
         try:
             extraction_phase = ExtractionPhase.objects.filter(project=project).first()
@@ -249,39 +249,23 @@ def get_project_active_phase(project):
     except (ImportError, AttributeError):
         pass
     
-    # Check Acquisition Phase if it exists
-    try:
-        from apps.acquisition.models import AcquisitionPhase
-        
-        try:
-            acquisition_phase = AcquisitionPhase.objects.get(project=project)
-            if acquisition_phase.is_active:
-                return {
-                    'phase_name': 'Acquisition',
-                    'phase_url': f'/acquisition/{project.id}/',
-                    'phase_key': 'acquisition'
-                }
-        except AcquisitionPhase.DoesNotExist:
-            pass
-    except (ImportError, AttributeError):
-        pass
     
     # Check Interpretation Phase if it exists
-    try:
-        from apps.interpretation.models import InterpretationPhase
+    # try:
+    #     from apps.interpretation.models import InterpretationPhase
         
-        try:
-            interpretation_phase = InterpretationPhase.objects.get(project=project)
-            if interpretation_phase.is_active:
-                return {
-                    'phase_name': 'Interpretation',
-                    'phase_url': f'/interpretation/{project.id}/',
-                    'phase_key': 'interpretation'
-                }
-        except InterpretationPhase.DoesNotExist:
-            pass
-    except (ImportError, AttributeError):
-        pass
+    #     try:
+    #         interpretation_phase = InterpretationPhase.objects.get(project=project)
+    #         if interpretation_phase.is_active:
+    #             return {
+    #                 'phase_name': 'Interpretation',
+    #                 'phase_url': f'/interpretation/{project.id}/',
+    #                 'phase_key': 'interpretation'
+    #             }
+    #     except InterpretationPhase.DoesNotExist:
+    #         pass
+    # except (ImportError, AttributeError):
+    #     pass
     
     # Fallback to Design if no active phase found
     return {

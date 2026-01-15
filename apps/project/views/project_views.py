@@ -38,7 +38,7 @@ def save_project_action(request):
 
         try:
             project = _create_project_from_forms(request.user, project_form, specific_objective_formset, expected_result_formset)
-            messages.success(request, "Project Created Successfully")
+            messages.success(request, "Project Created Successfully", extra_tags='project')
             return redirect('project:configure_schedule', project_id=project.id)
         except ProjectCreationError as e:
             project_form.add_error(None, str(e))
@@ -105,8 +105,8 @@ def delete_project_action(request, project_id):
     try:
         with transaction.atomic():
             project.delete()
-        messages.success(request, f'Project "{project_title}" has been deleted successfully.')
+        messages.success(request, f'Project "{project_title}" has been deleted successfully.', extra_tags='project')
     except Exception as e:
-        messages.error(request, f'Error deleting project: {str(e)}')
+        messages.error(request, f'Error deleting project: {str(e)}', extra_tags='project')
     
     return redirect('project:list_projects')

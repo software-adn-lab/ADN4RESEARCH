@@ -2,6 +2,7 @@
 Vistas para Fulltext Overview.
 Gestión de PDFs y distribución para fulltext review.
 """
+import logging
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -18,6 +19,58 @@ from apps.selection.models import (
     SubPhaseStatusChoices, SelectionStageChoices
 )
 from apps.selection.services import FulltextDistributionService, DiscrepancyResolutionService
+
+logger = logging.getLogger(__name__)
+
+
+def _count_pdf_pages(pdf_path: str) -> int:
+    """
+    Count pages in a PDF file stored in default_storage (S3 or local).
+    Returns 0 if unable to count.
+    """
+    if not pdf_path:
+        return 0
+    
+    try:
+        from pypdf import PdfReader
+        from io import BytesIO
+        from django.conf import settings
+        
+        pdf_content = None
+        
+        # Check if using S3
+        use_s3 = getattr(settings, 'USE_S3', False) or hasattr(settings, 'AWS_STORAGE_BUCKET_NAME')
+        
+        if use_s3 and hasattr(settings, 'AWS_STORAGE_BUCKET_NAME'):
+            # Use boto3 directly for S3
+            import boto3
+            from botocore.config import Config
+            
+            s3_config = Config(signature_version='s3v4')
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=getattr(settings, 'AWS_S3_ENDPOINT_URL', None),
+                aws_access_key_id=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
+                aws_secret_access_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
+                region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'),
+                config=s3_config,
+                verify=getattr(settings, 'AWS_S3_VERIFY', True),
+            )
+            
+            bucket = settings.AWS_STORAGE_BUCKET_NAME
+            response = s3_client.get_object(Bucket=bucket, Key=pdf_path)
+            pdf_content = response['Body'].read()
+        else:
+            # Use default storage for local files
+            with default_storage.open(pdf_path, 'rb') as pdf_file:
+                pdf_content = pdf_file.read()
+        
+        # Count pages
+        reader = PdfReader(BytesIO(pdf_content))
+        return len(reader.pages)
+    except Exception as e:
+        logger.warning(f"Could not count PDF pages for {pdf_path}: {e}")
+        return 0
 
 
 def _calculate_fulltext_progress(selection_phase, user):
@@ -192,16 +245,12 @@ def fulltext_overview(request, project_id):
         )
         studies_by_id = {str(s['id']): s for s in all_studies}
         
-        # Get PDF status from acquisition
-        status_by_id = {}
+        # Get page_count directly from StudyModel (since facade doesn't return it)
+        page_counts_by_id = {}
         try:
-            from apps.acquisition.facade import get_acquisition_facade
-            acquisition_facade = get_acquisition_facade()
-            statuses = acquisition_facade.get_study_status(included_paper_ids)
-            status_by_id = {
-                str(s.get('id') or s.get('study_id') or s.get('uuid') or s.get('pk')): s 
-                for s in statuses
-            }
+            from apps.acquisition.models import StudyModel
+            study_models = StudyModel.objects.filter(uuid__in=included_paper_ids).values('uuid', 'page_count', 'pdf_path')
+            page_counts_by_id = {str(sm['uuid']): {'page_count': sm['page_count'], 'pdf_path': sm['pdf_path']} for sm in study_models}
         except Exception:
             pass
         
@@ -210,10 +259,17 @@ def fulltext_overview(request, project_id):
             if not study:
                 continue
             
-            st = status_by_id.get(paper_id, {})
-            pdf_path = st.get('pdf_path') or study.get('pdf_path')
+            # Get page_count and pdf_path from direct model query
+            model_data = page_counts_by_id.get(paper_id, {})
+            pdf_path = model_data.get('pdf_path') or study.get('pdf_path')
             pdf_url = None
-            page_count = st.get('page_count', 0) or study.get('page_count', 0)
+            page_count = model_data.get('page_count')
+            
+            # If page_count not stored, calculate from PDF
+            if pdf_path and not page_count:
+                page_count = _count_pdf_pages(pdf_path)
+            
+            page_count = page_count or 0
             
             if pdf_path:
                 try:

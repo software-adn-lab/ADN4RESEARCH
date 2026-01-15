@@ -148,9 +148,6 @@
 
         <!-- Content Container -->
         <main class="flex-1 h-screen overflow-y-auto bg-gray-50">
-            {% if messages %}
-            
-            {% endif %}
             {% block content %}
 
             {% endblock %}
@@ -161,6 +158,7 @@
     <div id="toast-container" class="toast toast-top toast-center z-50"></div>
 
     <script src="{% static 'scripts/alerts.js' %}"></script>
+    <script src="{% static 'scripts/toast-manager.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

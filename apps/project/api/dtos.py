@@ -20,6 +20,8 @@ class ProjectDTO(TypedDict):
     title: str
     owner_id: int
     owner_username: str
+    general_objective: str
+    specific_objectives: Optional[list[str]]
     created_at: datetime
     end_date: Optional[date]
 

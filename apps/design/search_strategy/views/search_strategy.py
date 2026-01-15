@@ -35,6 +35,7 @@ def open_search_strategy_panel(request, project_id, project):
         'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'active_tab': 'search_string',
+        'current_stage': project.design_phase.current_stage,
     }
     return render(request, 'search_strategy_panel.html', context)
 
@@ -90,14 +91,14 @@ def search_strategy_builder_view(request, project_id, project):
                     version = SearchStrategySelector.get_version_by_id(v_id)
                     if version:
                         initial_visual_data = version.json_definition
-                        messages.info(request, f"Loaded version {version.version_number} from history.")
+                        messages.info(request, f"Loaded version {version.version_number} from history.", extra_tags='design')
                     else:
                         # Fallback if version not found
                         initial_visual_data = strategy.json_definition
-                        messages.warning(request, "Could not load requested version. Loaded current draft instead.")
+                        messages.warning(request, "Could not load requested version. Loaded current draft instead.", extra_tags='design')
                 except ValueError:
                     initial_visual_data = strategy.json_definition
-                    messages.warning(request, "Invalid version ID. Loaded current draft instead.")
+                    messages.warning(request, "Invalid version ID. Loaded current draft instead.", extra_tags='design')
             else:
                 initial_visual_data = strategy.json_definition
 
@@ -233,7 +234,7 @@ def approve_strategy(request, project_id, strategy_id, project):
     try:
         justification = request.POST.get('justification')
         if not justification or not justification.strip():
-            messages.error(request, "Justification is required for approval.")
+            messages.error(request, "Justification is required for approval.", extra_tags='design')
             return redirect(request.META.get('HTTP_REFERER', '/'))
 
         strategy = search_strategy_service.change_strategy_status(
@@ -242,10 +243,10 @@ def approve_strategy(request, project_id, strategy_id, project):
             request.user,
             justification=justification
         )
-        messages.success(request, f"Strategy approved successfully!")
+        messages.success(request, f"Strategy approved successfully!", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
     except Exception as e:
-        messages.error(request, str(e))
+        messages.error(request, str(e), extra_tags='design')
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
 
@@ -255,7 +256,7 @@ def reject_strategy(request, project_id, strategy_id, project):
     try:
         justification = request.POST.get('justification')
         if not justification or not justification.strip():
-            messages.error(request, "Justification is required for rejection.")
+            messages.error(request, "Justification is required for rejection.", extra_tags='design')
             return redirect(request.META.get('HTTP_REFERER', '/'))
 
         strategy = search_strategy_service.change_strategy_status(
@@ -264,10 +265,10 @@ def reject_strategy(request, project_id, strategy_id, project):
             request.user,
             justification=justification
         )
-        messages.warning(request, "Strategy rejected.")
+        messages.warning(request, "Strategy rejected.", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
     except Exception as e:
-        messages.error(request, str(e))
+        messages.error(request, str(e), extra_tags='design')
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
 
@@ -286,14 +287,14 @@ def delete_strategy_version(request, project_id, version_id, project):
 def consolidate_search_strategy_stage_view(request, project_id, project):
     try:
         if project.owner != request.user:
-            messages.error(request, "Only the project owner can consolidate the stage.")
+            messages.error(request, "Only the project owner can consolidate the stage.", extra_tags='design')
             return redirect(build_design_url(project_id, 'strategies/'))
 
         design_phase_service.consolidate_search_strategy_stage(project_id, request.user)
-        messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.")
+        messages.success(request, "Stage consolidated successfully! Design Phase is now Finalized.", extra_tags='design')
 
         return redirect('design:dashboard', project_id=project_id)
 
     except Exception as e:
-        messages.error(request, f"Error consolidating stage: {str(e)}")
+        messages.error(request, f"Error consolidating stage: {str(e)}", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))

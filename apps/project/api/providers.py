@@ -2,7 +2,6 @@
 Concrete implementation of IProjectManagement interface.
 
 This provider delegates to existing ProjectService while exposing a clean interface.
-Follows the Adapter pattern: adapts ProjectService to IProjectManagement contract.
 """
 
 from typing import List, Optional
@@ -17,11 +16,8 @@ from apps.project.structure.models.project_models import Project
 class ProjectManagementProvider(IProjectManagement):
     """
     Concrete implementation of IProjectManagement.
-
-    PATTERN: Adapter
     - Adapts existing ProjectService to new interface contract
     - Converts models to DTOs
-    - Hides implementation details from consumers
     """
 
     def __init__(self):
@@ -40,6 +36,8 @@ class ProjectManagementProvider(IProjectManagement):
             title=project.title,
             owner_id=project.owner.id,
             owner_username=project.owner.username,
+            general_objective=project.general_objective,
+            specific_objectives=project.specific_objectives.values_list('description', flat=True),
             created_at=project.created_at,
             end_date=project.end_date.date() if project.end_date else None
         )

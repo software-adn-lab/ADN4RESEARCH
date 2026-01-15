@@ -44,7 +44,7 @@ def sidebar_context(request):
             if design_phase:
                 phases.append({
                     'name': 'Design',
-                    'url': f'/project/{project.id}/design/',
+                    'url': f'/project/{project.id}/design/dashboard',
                     'icon': 'design',
                     'active': design_phase.is_active,
                 })
@@ -61,20 +61,6 @@ def sidebar_context(request):
                     'url': f'/project/{project.id}/selection/',
                     'icon': 'selection',
                     'active': selection_phase.is_active,
-                })
-        except:
-            pass
-        
-        # Check Acquisition phase
-        try:
-            from apps.acquisition.models import AcquisitionPhase
-            acquisition_phase = AcquisitionPhase.objects.filter(project=project).first()
-            if acquisition_phase:
-                phases.append({
-                    'name': 'Acquisition',
-                    'url': f'/acquisition/{project.id}/',
-                    'icon': 'acquisition',
-                    'active': getattr(acquisition_phase, 'is_active', False),
                 })
         except:
             pass
