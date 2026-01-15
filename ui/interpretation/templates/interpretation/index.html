@@ -64,8 +64,8 @@
                                 </thead>
                                 <tbody class="text-sm">
                                 {% for sub in theme.subthemes.all %}
-                                    <tr class="hover:bg-base-200 transition-colors">
-                                        <td class="p-2">{{ sub.name }}</td>
+                                    <tr class="hover:bg-base-200 transition-colors {% if sub.final_propositions %}border-b-0{% endif %}">
+                                        <td class="p-2 font-medium">{{ sub.name }}</td>
                                         <td class="p-2">
                                             {% if sub.central_codes %}
                                             <div class="flex flex-wrap gap-1">
@@ -89,12 +89,32 @@
                                         <td class="p-2 text-center">
                                             <form method="post" action="{% url 'interpretation:start_interpretation' sub.id %}">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn btn-primary btn-sm">
-                                                    Iniciar asistencia
+                                                <button type="submit" class="btn btn-primary btn-sm btn-outline">
+                                                    {% if sub.final_propositions %}Revisar{% else %}Iniciar asistencia{% endif %}
                                                 </button>
                                             </form>
                                         </td>
                                     </tr>
+                                    {% if sub.final_propositions %}
+                                    <tr class="bg-base-50/50">
+                                        <td colspan="4" class="p-3 pl-8 pt-0 border-t-0">
+                                            <div class="bg-success/10 border border-success/20 rounded-lg p-3">
+                                                <div class="text-xs font-bold text-success mb-2 flex items-center gap-1">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    HALLAZGOS FINALES
+                                                </div>
+                                                <ul class="space-y-2">
+                                                    {% for prop in sub.final_propositions %}
+                                                    <li class="flex items-start gap-2 text-sm text-base-content/80">
+                                                        <span class="text-success mt-1.5 text-[10px]">●</span>
+                                                        <span>{{ prop.proposition_text }}</span>
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
                                 {% endfor %}
                                 </tbody>
                             </table>

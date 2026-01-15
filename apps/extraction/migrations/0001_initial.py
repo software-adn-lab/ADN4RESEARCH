@@ -11,9 +11,9 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('acquisition', '0002_studymodel_page_count'),
-        ('design', '0004_remove_designphase_fecha_inicio_creacion_pregunta_and_more'),
-        ('project', '0003_membership_workload_hours'),
+        ('acquisition', '0001_initial'),
+        ('design', '0001_initial'),
+        ('project', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

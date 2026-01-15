@@ -14,6 +14,7 @@ urlpatterns = [
     path('context/<int:context_id>/draft/', views.create_draft, name='create_draft'),
     path('context/<int:context_id>/refine/<int:prop_id>/', views.refine_proposition, name='refine_proposition'),
     path('context/<int:context_id>/finalize/<int:prop_id>/', views.finalize_proposition, name='finalize_proposition'),
+    path('context/<int:context_id>/finish/', views.finish_interpretation, name='finish_interpretation'),
     
     # AI-Driven Theme Discovery
     path('theme-discovery/<int:project_id>/', theme_discovery_views.theme_discovery_view, name='theme_discovery'),
@@ -34,4 +35,5 @@ urlpatterns = [
     
     # Results Dashboard
     path('dashboard/<int:project_id>/', views.results_dashboard, name='results_dashboard'),
+    path('dashboard/<int:project_id>/export/', views.export_report_view, name='export_report'),
 ]

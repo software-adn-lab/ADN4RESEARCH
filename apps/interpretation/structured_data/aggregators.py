@@ -54,13 +54,10 @@ class DataAggregator:
         # We use distinct() to avoid duplicates if a study was found in multiple executions
         studies_qs = StudyModel.objects.filter(executions__in=executions).distinct()
 
-        # 4. Fetch Extractions (Best Effort)
-        # Note: There is currently a type mismatch between StudyModel.uuid (UUID)
-        # and PaperExtraction.study_id (Integer).
-        # We fetch extractions by project_id and will try to map if possible,
-        # or leave extracted_data empty for now until the ID schema is unified.
-        extractions = PaperExtraction.objects.filter(project_id=project_id).prefetch_related('quotes__tags')
-        extraction_map = {str(e.study_id): e for e in extractions}
+        # 4. Fetch Extractions for these studies
+        # PaperExtraction.study is a ForeignKey to StudyModel
+        extractions = PaperExtraction.objects.filter(study__in=studies_qs).prefetch_related('quotes__tags')
+        extraction_map = {str(e.study.uuid): e for e in extractions}
 
         unified_studies = []
         for study in studies_qs:
@@ -87,7 +84,7 @@ class DataAggregator:
                     "status": extraction.status,
                     "quotes": [
                         {
-                            "text": quote.text_portion,
+                            "text": quote.text_fragment,
                             "location": quote.location,
                             "tags": [tag.name for tag in quote.tags.all()]
                         }

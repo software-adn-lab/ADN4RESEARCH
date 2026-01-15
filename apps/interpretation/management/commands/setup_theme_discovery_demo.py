@@ -48,19 +48,21 @@ class Command(BaseCommand):
 
         # Create or get test project
         project, created = Project.objects.get_or_create(
-            name="Theme Discovery Demo Project",
+            title="Theme Discovery Demo Project",
             defaults={
-                "description": "Demo project for testing AI-Driven Theme Discovery feature",
+                "summary": "Demo project for testing AI-Driven Theme Discovery feature",
+                "motivation": "Testing automation.",
+                "general_objective": "Validate theme discovery features.",
                 "owner": user,
             },
         )
         if created:
             self.stdout.write(
-                self.style.SUCCESS(f"✓ Created demo project: {project.name}")
+                self.style.SUCCESS(f"✓ Created demo project: {project.title}")
             )
         else:
             self.stdout.write(
-                self.style.WARNING(f"→ Using existing project: {project.name}")
+                self.style.WARNING(f"→ Using existing project: {project.title}")
             )
 
         # Sample initial codes (tags) from a mental health systematic review
@@ -111,7 +113,7 @@ class Command(BaseCommand):
                 "✓ Demo setup complete!\n"
                 "=" * 70 + "\n"
                 f"Project ID: {project.id}\n"
-                f"Project Name: {project.name}\n"
+                f"Project Name: {project.title}\n"
                 f"Initial Codes: {len(loaded_codes)}\n"
                 f"\nAccess the Theme Discovery UI at:\n"
                 f"http://localhost:8000/interpretation/theme-discovery/{project.id}/\n"
