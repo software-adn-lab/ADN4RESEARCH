@@ -3,6 +3,7 @@ URLs - Planning Bounded Context
 
 Estructura simplificada:
 - / -> dashboard de la fase (obtenida automáticamente del proyecto)
+- /init/ -> inicializar fase desde selección
 - /config/ -> configuración de la fase
 - /open/ -> abrir la fase
 - /tags/ -> tags de extracción (anidados)
@@ -13,6 +14,11 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    # Initialize extraction phase from selection
+    path('init/', 
+         views.InitializeExtractionPhaseView.as_view(), 
+         name='initialize'),
+    
     # Phase detail (dashboard) - obtenida del proyecto
     path('', 
          views.ExtractionPhaseDetailView.as_view(), 
