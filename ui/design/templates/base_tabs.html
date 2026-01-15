@@ -50,6 +50,7 @@
         {% if messages %}
         <div class="mb-6 w-full">
             {% for message in messages %}
+            {% if 'design' in message.tags %}
             <div role="alert" class="alert shadow-sm mb-2 text-sm font-bold py-1 bg-transparent border-2 
                 {% if 'success' in message.tags %}border-success text-success
                 {% elif 'error' in message.tags %}border-error text-error
@@ -63,6 +64,7 @@
                 <span>{{ message }}</span>
                 <button class="btn btn-sm btn-circle btn-ghost" onclick="this.parentElement.remove()">✕</button>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% endif %}

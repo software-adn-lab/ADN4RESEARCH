@@ -111,12 +111,12 @@ def save_schedule_action(request, project_id):
 
         design_phase.save()
 
-        messages.success(request, "Schedule configured and Design Phase started!")
+        messages.success(request, "Schedule configured and Design Phase started!", extra_tags='project')
         return redirect('design:dashboard', project_id=project.id)
 
     except ValueError as e:
-        messages.error(request, str(e))
+        messages.error(request, str(e), extra_tags='project')
         return redirect('project:configure_schedule', project_id=project.id)
     except Exception as e:
-        messages.error(request, f"Error saving schedule: {str(e)}")
+        messages.error(request, f"Error saving schedule: {str(e)}", extra_tags='project')
         return redirect('project:configure_schedule', project_id=project.id)

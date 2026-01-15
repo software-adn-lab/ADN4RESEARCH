@@ -67,9 +67,9 @@ def consolidate_discussion_stage_action(request, project_id, project):
             user=request.user
         )
         msg = "Stage consolidated successfully! Questions approved and suggestions auto-rejected. Proceeding to Eligibility Criteria Definition."
-        messages.success(request, msg)
+        messages.success(request, msg, extra_tags='design')
         return redirect(build_design_url(project_id, 'eligibility-criteria/'))
 
     except Exception as e:
-        messages.error(request, f"Error consolidating stage: {str(e)}")
+        messages.error(request, f"Error consolidating stage: {str(e)}", extra_tags='design')
         return redirect(build_design_url(project_id, 'discussion/'))

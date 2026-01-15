@@ -112,10 +112,10 @@ def login_action(request):
         
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome {user.first_name or user.username}!')
+            messages.success(request, f'Welcome {user.first_name or user.username}!', extra_tags='project')
             return redirect('project:list_projects')
         else:
-            messages.error(request, 'Invalid username or password')
+            messages.error(request, 'Invalid username or password', extra_tags='project')
     
     return render(request, 'project/login.html', {'form': form})
 
@@ -125,7 +125,7 @@ def logout_action(request):
     """Handle logout"""
     from django.contrib.auth import logout as auth_logout
     auth_logout(request)
-    messages.success(request, 'You have been logged out successfully.')
+    messages.success(request, 'You have been logged out successfully.', extra_tags='project')
     return redirect('project:login')
 
 
@@ -162,7 +162,7 @@ def register_action(request):
         
         # Log the user in
         login(request, user)
-        messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.')
+        messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.', extra_tags='project')
         return redirect('project:list_projects')
     
     return render(request, 'project/register.html', {'form': form})
