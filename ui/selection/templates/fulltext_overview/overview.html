@@ -286,15 +286,29 @@
         </div>
     </div>
 
+
     {# Continue Button #}
     {% if papers and selection_phase.fulltext_distributed %}
-    <div class="flex justify-end mt-6">
+    <div class="flex justify-end mt-6 gap-4">
         <a href="{% url 'selection:fulltext_review' project.id %}" class="btn btn-primary">
             Continue to Full-text Review
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
         </a>
+
+        {# Finalize Button for Owner #}
+        {% if is_owner and can_finalize %}
+        <form method="post" action="{% url 'selection:finalize_fulltext' project.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Finalize Full-text Phase
+            </button>
+        </form>
+        {% endif %}
     </div>
     {% endif %}
 
