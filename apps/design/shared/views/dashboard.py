@@ -7,53 +7,8 @@ from apps.design.eligibility_criteria.selectors import EligibilityCriterionSelec
 from apps.design.search_strategy.selectors import SearchStrategySelector
 # REFACTORED: Import decorator from shared module
 from apps.shared.decorators import project_member_required
-
-
-# Define the visual stages for the dashboard (maps internal stages to UI)
-DASHBOARD_STAGES = [
-    {
-        'id': 1,
-        'key': 'research_questions',
-        'title': 'Research Questions Workspace',
-        'internal_stages': ['RQ_CREATION'],
-        'url_name': 'design:questions:workspace',
-        'artifacts': [
-            {'key': 'questions', 'label': 'Research Questions'},
-        ]
-    },
-    {
-        'id': 2,
-        'key': 'research_questions',
-        'title': 'Research Questions Discussion',
-        'internal_stages': ['RQ_DISCUSSION'],
-        'url_name': 'design:discussion:panel',
-        'artifacts': [
-            {'key': 'questions', 'label': 'Research Questions'},
-        ]
-    },
-    {
-        'id': 3,
-        'key': 'eligibility',
-        'title': 'Eligibility Criteria',
-        'internal_stages': ['CRITERIA_DEFINITION'],
-        'url_name': 'design:criteria:panel',
-        'artifacts': [
-            {'key': 'inclusion_criteria', 'label': 'Inclusion Criteria'},
-            {'key': 'exclusion_criteria', 'label': 'Exclusion Criteria'},
-        ]
-    },
-    {
-        'id': 4,
-        'key': 'search_strategy',
-        'title': 'Search Strategy Development',
-        'internal_stages': ['SEARCH_STRATEGY'],
-        'url_name': 'design:strategies:panel',
-        'artifacts': [
-            {'key': 'search_strategies', 'label': 'Search Strategies'},
-            {'key': 'databases', 'label': 'Database Selection', 'static': True},
-        ]
-    },
-]
+# Import dashboard configuration
+from .dashboard_config import DASHBOARD_STAGES
 
 
 def _get_stage_status(stage_config: dict, current_stage: str) -> str:
@@ -176,6 +131,10 @@ def dashboard_view(request, project_id, project_dto):
     total_stages = len(DASHBOARD_STAGES)
     progress_percentage = ((current_stage_number - 1) / total_stages) * 100 + (25 if current_stage else 0)
 
+    # URL for next phase (Selection)
+    next_phase_url = f'/project/{project_id}/selection/'
+    all_stages_completed = all(stage['status'] == 'completed' for stage in stages)
+
     context = {
         'project_dto': project_dto,
         'project_id': project_id,
@@ -187,5 +146,7 @@ def dashboard_view(request, project_id, project_dto):
         'total_stages': total_stages,
         'progress_percentage': min(progress_percentage, 100),
         'metrics': metrics,
+        'next_phase_url': next_phase_url,
+        'all_stages_completed': all_stages_completed,
     }
     return render(request, 'dashboard.html', context)
