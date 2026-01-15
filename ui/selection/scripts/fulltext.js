@@ -14,9 +14,19 @@ const zoomLevels = {};
 // URLs injected from template
 let retryUrl, uploadUrl;
 
+let inclusionCriteria = [];
+let exclusionCriteria = [];
+
 function initFulltextViewer(urls) {
     retryUrl = urls.retry;
     uploadUrl = urls.upload;
+    // Inicializar criterios desde el template si existen
+    try {
+        inclusionCriteria = JSON.parse(document.getElementById('inclusion-data').textContent || '[]');
+    } catch (e) { inclusionCriteria = []; }
+    try {
+        exclusionCriteria = JSON.parse(document.getElementById('exclusion-data').textContent || '[]');
+    } catch (e) { exclusionCriteria = []; }
 }
 
 function getCookie(name) {
@@ -118,21 +128,44 @@ function updateZoomDisplay(paperId) {
 function openDecisionModal(assignmentId, decision) {
     currentAssignmentId = assignmentId;
     currentDecision = decision;
-    
+
     const notesInput = document.getElementById('notes-' + assignmentId);
     const modalNotes = document.getElementById('modal-notes-input');
+    const select = document.getElementById('modal-criterion-select');
+    const criterionInput = document.getElementById('criterion-' + assignmentId);
     const title = document.getElementById('modal-title');
-    
+    const label = document.getElementById('criterion-label');
+
     modalNotes.value = notesInput.value || '';
-    
-    if (decision === 'INCLUDED') {
+    select.innerHTML = '<option value="">Select criterion...</option>';
+
+    let criteria = [];
+    if (currentDecision === 'INCLUDED') {
+        criteria = inclusionCriteria;
         title.textContent = 'Include paper (Full-text)';
-    } else if (decision === 'EXCLUDED') {
+        label.textContent = 'Select inclusion criterion';
+    } else if (currentDecision === 'EXCLUDED') {
+        criteria = exclusionCriteria;
         title.textContent = 'Exclude paper (Full-text)';
+        label.textContent = 'Select exclusion criterion';
     } else {
+        criteria = inclusionCriteria.concat(exclusionCriteria);
         title.textContent = 'Edit notes';
+        label.textContent = 'Criterion';
     }
-    
+
+    const currentCriterion = criterionInput.value || '';
+    criteria.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.label;
+        opt.setAttribute('data-label', c.label);
+        if (c.id === currentCriterion) {
+            opt.selected = true;
+        }
+        select.appendChild(opt);
+    });
+
     document.getElementById('decision-modal').showModal();
 }
 
@@ -144,18 +177,28 @@ function closeDecisionModal() {
 
 function saveDecisionAndNotes() {
     if (!currentAssignmentId) return;
-    
     const form = document.getElementById('review-form-' + currentAssignmentId);
     const notesInput = document.getElementById('notes-' + currentAssignmentId);
+    const criterionInput = document.getElementById('criterion-' + currentAssignmentId);
+    const criterionLabelInput = document.getElementById('criterion-label-' + currentAssignmentId);
     const modalNotes = document.getElementById('modal-notes-input');
-    
+    const select = document.getElementById('modal-criterion-select');
+
     notesInput.value = modalNotes.value;
-    
+    if (criterionInput && select) {
+        criterionInput.value = select.value;
+        // Get label from selected option (prefer data-label)
+        const selectedOption = select.options[select.selectedIndex];
+        if (criterionLabelInput) {
+            criterionLabelInput.value = selectedOption ? (selectedOption.dataset.label || selectedOption.text) : '';
+        }
+    }
+
     const formData = new FormData(form);
     if (currentDecision && currentDecision !== 'PENDING') {
         formData.set('decision', currentDecision);
     }
-    
+
     fetch(form.action, {
         method: 'POST',
         body: formData,
