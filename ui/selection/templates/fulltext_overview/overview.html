@@ -179,6 +179,13 @@
                 <button type="button" class="btn btn-success btn-block mt-6" onclick="document.getElementById('distribute-modal').showModal()">
                     DISTRIBUTE PAPERS
                 </button>
+                {% elif is_owner and selection_phase.fulltext_distributed %}
+                <button type="button" class="btn btn-warning btn-block mt-6" onclick="document.getElementById('redistribute-modal').showModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    REDISTRIBUTE PAPERS
+                </button>
                 {% endif %}
             </div>
         </div>
@@ -335,6 +342,60 @@
             <div class="modal-action">
                 <button type="button" class="btn" onclick="document.getElementById('distribute-modal').close()">Cancel</button>
                 <button type="submit" class="btn btn-success">Distribute</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{# Redistribute Modal - Warning about existing reviews #}
+<dialog id="redistribute-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 text-warning">⚠️ Redistribute Papers</h3>
+        
+        <div class="alert alert-warning mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div>
+                <p class="font-semibold">This will delete all existing full-text reviews!</p>
+                <p class="text-sm">All current assignments and reviews will be cleared and new ones created.</p>
+            </div>
+        </div>
+        
+        <p class="text-sm text-gray-600 mb-4">
+            Papers will be redistributed based on <strong>PDF page count</strong> to balance workload fairly.
+        </p>
+        
+        <form method="post" action="{% url 'selection:distribute_fulltext' project.id %}" id="redistribute-form">
+            {% csrf_token %}
+            <input type="hidden" name="redistribute" value="true">
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text font-semibold">Reviewers per paper</span>
+                </label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="2" class="radio radio-warning" checked />
+                        <div>
+                            <div class="font-semibold">2 reviewers (Peer review)</div>
+                            <div class="text-xs text-gray-500">Standard double-blind review</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="3" class="radio radio-warning" />
+                        <div>
+                            <div class="font-semibold">3 reviewers</div>
+                            <div class="text-xs text-gray-500">Triple review for higher confidence</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('redistribute-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-warning">Redistribute</button>
             </div>
         </form>
     </div>

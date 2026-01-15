@@ -11,9 +11,7 @@
             <h1 class="text-3xl font-bold">Selection - Full-text Screening</h1>
             <p class="text-gray-600">{{ project.title }}</p>
         </div>
-        <div class="flex items-center gap-2">
-            <button id="download-all-btn" class="btn btn-primary" onclick="downloadAllPdfs()">Descargar PDFs</button>
-        </div>
+        <!-- Download button removed for fulltext -->
     </div>
     <div id="global-download-status" class="text-sm text-gray-600 mt-2 hidden"></div>
 
@@ -24,18 +22,30 @@
             <div class="p-4">
                 <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
                     <span>Total: {{ papers|length }}</span>
-                    <span>Included from screening</span>
+                    <span>Assigned for Full-text Review</span>
                 </div>
                 <div class="space-y-3">
                 {% for paper in papers %}
                  <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-primary cursor-pointer paper-item shadow-sm transition"
-                     data-paper-id="{{ paper.study.id }}"
-                     data-pdf-url="{{ paper.pdf_url }}"
-                     onclick="showPaperDetail('{{ paper.study.id }}')"
-                     id="paper-item-{{ paper.study.id }}">
-                    <h3 class="font-semibold text-sm line-clamp-2">{{ paper.study.title }}</h3>
-                    
-                        {% if paper.pdf_url %}
+                    data-paper-id="{{ paper.study.id }}"
+                    data-pdf-url="{{ paper.pdf_url }}"
+                    onclick="showPaperDetail('{{ paper.study.id }}')"
+                    id="paper-item-{{ paper.study.id }}">
+                   <h3 class="font-semibold text-sm line-clamp-2">{{ paper.study.title }}</h3>
+                   {% if paper.review %}
+                       <span class="badge badge-sm mt-2 text-white uppercase font-bold"
+                           {% if paper.review.decision == 'INCLUDED' %}
+                           style="background-color: #00A30E; border-color: #00A30E;"
+                           {% elif paper.review.decision == 'EXCLUDED' %}
+                           style="background-color: #EE0000; border-color: #EE0000;"
+                           {% else %}
+                           {% endif %}>
+                           {{ paper.review.get_decision_display }}
+                       </span>
+                   {% else %}
+                       <span class="badge badge-sm badge-ghost mt-2">Pending</span>
+                   {% endif %}
+                    {% if paper.pdf_url %}
                         <span class="badge badge-sm badge-success mt-2">PDF Available</span>
                     {% else %}
                         <span class="badge badge-sm badge-warning mt-2">No PDF</span>
@@ -43,7 +53,7 @@
                 </div>
                 {% empty %}
                 <div class="p-8 text-center text-gray-500">
-                    <p>No papers included in screening yet</p>
+                    <p>No papers assigned for full-text review yet</p>
                 </div>
                 {% endfor %}
                 </div>
@@ -51,13 +61,12 @@
         </div>
 
         <!-- PDF Viewer -->
-        <div class="col-span-8 bg-white rounded-lg shadow flex flex-col overflow-hidden h-full" id="pdf-viewer-container">
+        <div class="col-span-8 bg-white rounded-lg shadow flex flex-col overflow-hidden h-full relative" id="pdf-viewer-container">
             {% if papers %}
                 {% for paper in papers %}
                 <div class="pdf-viewer-content h-full flex flex-col {% if not forloop.first %}hidden{% endif %}" 
                      id="paper-{{ paper.study.id }}"
                      data-assignment-id="{{ paper.assignment.id }}">
-                    
                     <!-- PDF Toolbar -->
                     <div class="flex-none p-3 border-b border-gray-200 bg-gray-50">
                         <div class="flex items-center justify-between">
@@ -75,13 +84,13 @@
                                 </button>
                             </div>
                             <div class="text-sm text-gray-600">
-                                <span id="page-info-{{ paper.study.id }}">Loading...</span>
+                                <span id="page-info-{{ paper.study.id }}"></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- PDF Canvas Container (scrollable) -->
-                    <div class="flex-1 overflow-auto bg-gray-100" id="pdf-scroll-container-{{ paper.study.id }}">
+                    <div class="flex-1 overflow-auto bg-gray-100 h-full" id="pdf-scroll-container-{{ paper.study.id }}" style="height:calc(100vh - 220px);">
                         {% if paper.pdf_url %}
                             <div class="flex justify-center p-4">
                                 <canvas id="pdf-canvas-{{ paper.study.id }}" class="shadow-lg"></canvas>
@@ -94,54 +103,44 @@
                                     </svg>
                                     <p class="text-lg font-semibold">PDF not available</p>
                                     <p class="text-sm mt-2">This paper's PDF could not be downloaded</p>
-                                    <div class="flex justify-center gap-2 mt-2">
-                                        <button class="btn btn-sm" onclick="retryDownload(['{{ paper.study.id }}'])">Retry download</button>
-                                        <button class="btn btn-sm btn-outline" onclick="openUploadModal('{{ paper.study.id }}')">Upload PDF</button>
-                                    </div>
                                 </div>
                             </div>
                         {% endif %}
                     </div>
 
                     <!-- Decision Buttons -->
-                    <div class="flex-none p-4 border-t border-gray-200 bg-white">
-                        <form method="post" action="{% url 'selection:submit_fulltext_review' project.id paper.assignment.id %}" 
-                              id="review-form-{{ paper.assignment.id }}"
-                              class="flex justify-center">
-                            {% csrf_token %}
-                            <input type="hidden" name="stage" value="FULL_TEXT">
-                            <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="{% if paper.review_fulltext %}{{ paper.review_fulltext.notes|default:'' }}{% endif %}">
-                            <input type="hidden" name="criterion_id" id="criterion-{{ paper.assignment.id }}" value="">
-                            <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="">
-                            
-                            <div class="flex gap-3">
-                                <button type="button" 
-                                        class="btn btn-md text-base rounded-lg text-white"
-                                        style="background-color: #00A30E; border-color: #00A30E;"
-                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'INCLUDED')">
-                                    INCLUDE
-                                </button>
-                                
-                                <button type="button" 
-                                        class="btn btn-md text-base rounded-lg text-white"
-                                        style="background-color: #EE0000; border-color: #EE0000;"
-                                        onclick="openDecisionModal({{ paper.assignment.id }}, 'EXCLUDED')">
-                                    EXCLUDE
-                                </button>
-                                
-                                <button type="button" 
-                                        class="btn btn-outline btn-md text-base rounded-lg"
-                                        onclick="openDecisionModal({{ paper.assignment.id }}, null)">
-                                    NOTES
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                    <form method="post" action="{% url 'selection:submit_fulltext_review' project.id paper.assignment.id %}" 
+                          id="review-form-{{ paper.assignment.id }}"
+                          class="sticky bottom-4 z-10 flex justify-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="stage" value="FULL_TEXT">
+                        <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.notes|default:'' }}{% endif %}">
+                        <input type="hidden" name="criterion_id" id="criterion-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_id|default:'' }}{% endif %}">
+                        <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_label|default:'' }}{% endif %}">
+                        <div class="flex gap-3 bg-white rounded-xl drop-shadow-xl border border-gray-200 px-4 py-3">
+                            <button type="button" 
+                                    class="btn btn-md text-base rounded-lg text-white"
+                                    style="background-color: #00A30E; border-color: #00A30E;"
+                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'INCLUDED')">
+                                INCLUDE
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-md text-base rounded-lg text-white"
+                                    style="background-color: #EE0000; border-color: #EE0000;"
+                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'EXCLUDED')">
+                                EXCLUDE
+                            </button>
+                            <button type="button" class="btn btn-outline btn-md text-base rounded-lg"
+                                    onclick="openDecisionModal('{{ paper.assignment.id }}', null)">
+                                NOTES
+                            </button>
+                        </div>
+                    </form>
                 </div>
                 {% endfor %}
             {% else %}
                 <div class="flex items-center justify-center h-full text-gray-500">
-                    <p>No papers included in screening yet</p>
+                    <p>No papers assigned for full-text review yet</p>
                 </div>
             {% endif %}
         </div>
@@ -152,6 +151,12 @@
 <dialog id="decision-modal" class="modal">
     <div class="modal-box">
         <h3 class="font-bold text-lg mb-4" id="modal-title">Review Decision</h3>
+        <div class="form-control mb-3">
+            <label class="label"><span class="label-text" id="criterion-label">Select criterion</span></label>
+            <select id="modal-criterion-select" class="select select-bordered w-full">
+                <option value="">Select criterion...</option>
+            </select>
+        </div>
         <div class="form-control mb-4">
             <label class="label"><span class="label-text">Observation / Rationale</span></label>
             <textarea id="modal-notes-input" 
@@ -167,37 +172,8 @@
         <button>close</button>
     </form>
 </dialog>
-
-<!-- Download Progress Modal -->
-<dialog id="download-modal" class="modal">
-    <div class="modal-box flex flex-col items-center gap-4 text-center">
-        <div class="loading loading-spinner loading-lg text-primary"></div>
-        <div>
-            <h3 class="font-bold text-lg mb-2">Descargando PDFs</h3>
-            <p id="download-modal-status" class="text-sm text-gray-600">Preparando descargas, esto puede tardar unos minutos…</p>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button aria-label="Cerrar"></button>
-    </form>
-</dialog>
-
-<!-- Upload Modal -->
-<dialog id="upload-modal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Upload PDF</h3>
-        <input type="hidden" id="upload-study-id" />
-        <input type="file" id="upload-file" accept="application/pdf" class="file-input file-input-bordered w-full" />
-        <div class="modal-action">
-            <button class="btn" onclick="closeUploadModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="submitUpload()">Upload</button>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-    
-</dialog>
+{{ inclusion_criteria|json_script:"inclusion-data" }}
+{{ exclusion_criteria|json_script:"exclusion-data" }}
 
 <!-- PDF.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

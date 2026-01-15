@@ -159,7 +159,7 @@ def fulltext_view(request, project_id):
         'criterion_lookup': criterion_lookup,
     }
     
-    return render(request, 'screening/fulltext/fulltext_review.html', context)
+    return render(request, 'screening/fulltext/fulltext.html', context)
 
 
 @login_required
