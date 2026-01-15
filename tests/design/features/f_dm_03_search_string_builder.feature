@@ -4,37 +4,18 @@ Característica: Construir cadena de búsqueda
     Quiero construir cadenas de busqueda basado en sugerencias
     Para optimizar el tiempo que gasto en construirlas
 
-    # CONSIDERACIONES: En mi modulo se prueba el comportamiento propio del modulo, por ende, no tiene sentido alguno
-    # probar la misma cosa con diferentes frameworks, debido a que es practicamente lo mismo.
-    # Es por ello que la precondicion principal es que haya proyecto y este este creado con x framework, en este caso
-    # tomo como ejemplo a PICO.
     Antecedentes:
         Dado que estoy asignado a un proyecto de investigación
         Y que la fase de diseño esta activa
         Y el proyecto tiene como framework investigativo a PICO
 
-    Esquema del escenario: Proveer términos clave a partir de campos del framework
+     Esquema del escenario: Generar sugerencia de estrategia de búsqueda de una pregunta de investigación
         Dado que he redactado una pregunta de investigación completa para el proyecto:
             """
             {
                 "question": "¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?",
                 "motivation": "Es necesario para el proyecto",
-                "framework_fields": <framework_fields>
-            }
-            """
-        Cuando el sistema procesa los campos del framework de la pregunta para sugerir términos clave
-        Entonces la lista de términos clave del proyecto debe contener <expected_terms>
-        Ejemplos:
-        | framework_fields                                                                                                                                           | expected_terms |
-        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
-            
-    Esquema del escenario: Generar sugerencia de estrategia de búsqueda de una pregunta de investigación
-        Dado que he redactado una pregunta de investigación completa para el proyecto:
-            """
-            {
-                "question": "¿Cuál es la medicación tradicional que en conjunto con la terapia física mejora la movilidad en adultos mayores de 65 años?",
-                "motivation": "Es necesario para el proyecto",
-                "framework_fields": <framework_fields>
+                "framework_fields": {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}
             }
             """
         Y he identificado los sinónimos de los términos clave:
@@ -48,9 +29,23 @@ Característica: Construir cadena de búsqueda
         """
             ("traditional medication" OR "tradition" OR "medicine") AND ("physical therapy" OR "rehabilitation" OR "recovery") AND ("older adults" OR "elderly" OR "old") AND ("improvement in mobility")
         """
-        Ejemplos:
-        | framework_fields                                                                                                                                           | expected_terms |
-        | {"Population": "adultos mayores de 65 años", "Intervention": "terapia física", "Comparison": "medicación tradicional", "Outcome": "mejora en movilidad"}   | physical therapy,improvement in mobility,older adults,traditional medication |
+
+    Escenario: Proveer términos clave a partir de campos del framework
+        Dado que he redactado una pregunta de investigación completa para el proyecto:
+            """
+            {
+                "question": "¿El uso de patrones de diseño de software mejora la calidad del proceso de desarrollo en proyectos académicos?",
+                "motivation": "Con base en el objetivo 2 del proyecto, se plantea esta pregunta.",
+                "framework_fields": {
+                    "Population": "Software ",
+                    "Intervention": "Design",
+                    "Comparison": "Development",
+                    "Outcome": "Quality Maintainability"
+                }
+            }
+            """
+        Cuando el sistema procesa los campos del framework de la pregunta para sugerir términos clave
+        Entonces la lista de términos clave del proyecto debe contener software,design,development,maintainability,quality
 
     Escenario: Probar cadena de búsqueda generada
         Dado que la etapa de "estrategia" esta activa en la fase de diseño

@@ -1,7 +1,7 @@
 <div class="max-w-2xl mx-auto">
     <h3 class="text-lg font-bold mb-6">Configuración de la Fase</h3>
 
-    <form action="{% url 'extraction:phase_config_update' pk=phase.id %}" method="POST" class="space-y-4">
+    <form action="{% url 'extraction:planning:phase_config_update' project_id=phase.project_id %}" method="POST" class="space-y-4">
         {% csrf_token %}
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

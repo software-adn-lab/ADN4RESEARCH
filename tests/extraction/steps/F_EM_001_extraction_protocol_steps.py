@@ -17,7 +17,7 @@ from apps.extraction.core.models import PaperExtraction, PaperExtractionStatusCh
 
 # Importamos Servicios y DTOs
 from apps.extraction.taxonomy.services import TagDefinitionService
-from apps.extraction.core.services import PaperLifecycleService
+from apps.extraction.core.services import PaperExtractionService
 from apps.extraction.planning.services import PhaseLifecycleService
 
 use_step_matcher("re")
@@ -242,11 +242,17 @@ def step_impl(context, extracted_tags):
 @step('el investigador intenta marcar el paper como "Completo"')
 def step_impl(context):
     # Instanciamos el Servicio de Dominio (Core)
-    service = PaperLifecycleService()
+    service = PaperExtractionService()
+    user = get_or_create_context_user(context)
 
-    # Ejecutamos la acción y guardamos el DTO de resultado en el contexto
-    # result es de tipo CompletionResult (DTO)
-    context.completion_result = service.mark_paper_as_complete(context.paper.id)
+    # Ejecutamos la acción y guardamos el resultado en el contexto
+    try:
+        context.paper = service.attempt_complete_paper(context.paper, user)
+        context.completion_success = True
+        context.completion_error = None
+    except Exception as e:
+        context.completion_success = False
+        context.completion_error = str(e)
 
 
 @step("el estado del paper debe ser (?P<paper_status>.+)")

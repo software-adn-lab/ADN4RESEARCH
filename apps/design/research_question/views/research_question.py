@@ -69,7 +69,7 @@ def send_research_question_for_review(request, project_id, question_id, project)
     try:
         research_question_service.submit_research_question_for_review(question_id)
     except QuestionSubmissionError as e:
-        messages.warning(request, str(e))
+        messages.warning(request, str(e), extra_tags='design')
 
     return redirect(build_design_url(project_id, 'research-questions/'))
 
@@ -106,9 +106,9 @@ def delete_research_question(request, project_id, question_id, project):
 
     try:
         research_question_service.delete_research_question(question_id=question_id, user=request.user)
-        messages.success(request, "Research question deleted successfully.")
+        messages.success(request, "Research question deleted successfully.", extra_tags='design')
     except ResearchQuestionError as e:
-        messages.error(request, str(e))
+        messages.error(request, str(e), extra_tags='design')
 
     return redirect(build_design_url(project_id, 'research-questions/'))
 
@@ -150,14 +150,14 @@ def autosave_research_question(request, project_id, project):
 def consolidate_creation_stage_view(request, project_id, project):
     try:
         if project.owner != request.user:
-            messages.error(request, "Only the project owner can consolidate the stage.")
+            messages.error(request, "Only the project owner can consolidate the stage.", extra_tags='design')
             return redirect(build_design_url(project_id, 'research-questions/'))
 
         design_phase_service.consolidate_creation_stage(project_id, request.user)
-        messages.success(request, "Stage consolidated successfully! Discussion Phase started.")
+        messages.success(request, "Stage consolidated successfully! Discussion Phase started.", extra_tags='design')
 
         return redirect(build_design_url(project_id, 'discussion/'))
 
     except Exception as e:
-        messages.error(request, f"Error consolidating stage: {str(e)}")
+        messages.error(request, f"Error consolidating stage: {str(e)}", extra_tags='design')
         return redirect(build_design_url(project_id, 'research-questions/'))

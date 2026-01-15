@@ -17,6 +17,7 @@ def design_stages_router(request, project_id, project_dto):
         DesignPhase.DesignStage.RQ_DISCUSSION.value: 'discussion/',
         DesignPhase.DesignStage.CRITERIA_DEFINITION.value: 'eligibility-criteria/',
         DesignPhase.DesignStage.SEARCH_STRATEGY.value: 'strategies/',
+        DesignPhase.DesignStage.FINISHED.value: 'dashboard/',
     }
 
     relative_path = stage_map.get(target_stage, 'research-questions/')

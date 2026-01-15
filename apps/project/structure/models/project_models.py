@@ -55,10 +55,10 @@ class Project(models.Model):
     def __str__(self):
         return self.title
     
-    def add_member(self, user, role):
+    def add_member(self, user, role, workload=0):
         try:
             if not Membership.objects.filter(project=self, user=user).exists():
-                Membership.objects.create(project=self, user=user, role=role)
+                Membership.objects.create(project=self, user=user, role=role, workload_hours=workload)
         except Exception as e:
             print(f"Error adding member: {e}")
     
@@ -88,6 +88,10 @@ class Membership(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='memberships')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    workload_hours = models.PositiveIntegerField(
+        default=0,
+        help_text="Weekly workload hours for this researcher in this project"
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -2,9 +2,9 @@
 <div class="space-y-6">
 
     {% if is_owner %}
-    <div class="stats shadow w-full bg-base-50 border border-base-200">
+    <div class="stats shadow w-full bg-base-50 border border-base-200 grid grid-cols-12">
         <!-- Stat 1: Cobertura -->
-        <div class="stat">
+        <div class="stat col-span-4">
             <div class="stat-figure text-secondary">
                 <div class="radial-progress text-primary" 
                      style="--value:{{ coverage_report.coverage_ratio_percent }};" 
@@ -26,21 +26,21 @@
         </div>
 
         <!-- Stat 2: Estado de Validación -->
-        <div class="stat">
+        <div class="stat col-span-6">
             <div class="stat-title">Estado de Validación</div>
             {% if coverage_report.is_fully_covered %}
-                <div class="stat-value text-success text-lg">✅ Protocolo Cubierto</div>
+                <div class="stat-value text-success text-lg">Protocolo Cubierto</div>
                 <div class="stat-desc text-success">
                     Todas las preguntas tienen tags deductivos
                 </div>
             {% else %}
-                <div class="stat-value text-warning text-lg">⚠️ Faltan Preguntas</div>
-                <div class="stat-desc text-error">
+                <div class="stat-value text-warning text-lg">Faltan relacionar preguntas</div>
+                <div class="stat-desc text-error flex flex-wrap">
                     Faltan {{ coverage_report.missing_rq_count }} RQ(s):
                     {% for rq in coverage_report.missing_rqs %}
-                        <div class="tooltip" data-tip="{{ rq.question_text }}">
+                        <div class="tooltip" data-tip="{{ rq.text }}">
                             <span class="badge badge-xs badge-error mr-1">
-                                RQ #{{ rq.id }}
+                                {{ rq.text }}
                             </span>
                         </div>
                     {% endfor %}
@@ -49,7 +49,7 @@
         </div>
 
         <!-- Stat 3: Info sobre Tags -->
-        <div class="stat">
+        <div class="stat col-span-2">
             <div class="stat-title">Tags en la Fase</div>
             <div class="stat-value text-sm">
                 {{ tags.count }} total
@@ -87,13 +87,18 @@
                     <th>Nombre</th>
                     <th>Tipo</th>
                     <th>RQ Relacionada</th>
-                    <th>Obligatoria</th>
-                    <th>Visibilidad</th>
+                    <th>Extracción Obligatoria</th>
+                    {% if is_owner and phase.status != 'CLOSED' %}
+                        <th>Acciones</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for tag in tags %}
-                <tr class="hover">
+                <tr class="hover {% if is_owner and phase.status != 'CLOSED' %}cursor-pointer{% endif %}"
+                    {% if is_owner and phase.status != 'CLOSED' %}
+                        onclick="document.getElementById('tag_edit_modal_{{ tag.id }}').showModal()"
+                    {% endif %}>
                     <td class="font-medium">
                         <span class="w-3 h-3 rounded-full inline-block mr-2" 
                               style="background-color: {{ tag.color|default:'#ccc' }}"></span>
@@ -108,7 +113,7 @@
                     </td>
                     <td>
                         {% if tag.rq_related %}
-                            <div class="tooltip" data-tip="{{ tag.rq_related.question_text }}">
+                            <div class="tooltip" data-tip="{{ tag.rq_related.text }}">
                                 <span class="badge badge-info badge-outline cursor-help">
                                     RQ #{{ tag.rq_related.id }}
                                 </span>
@@ -124,11 +129,17 @@
                             <span class="text-gray-400">No</span>
                         {% endif %}
                     </td>
+                    {% if is_owner and phase.status != 'CLOSED' %}
                     <td>
-                        <span class="badge badge-ghost badge-sm">
-                            {{ tag.get_visibility_display }}
-                        </span>
+                        <form action="{% url 'extraction:planning:taxonomy:tag_delete' project_id=phase.project_id pk=tag.id %}" method="POST">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-outline btn-error"
+                                    onclick="event.stopPropagation(); return confirm('¿Eliminar el tag \"{{ tag.name }}\"?');">
+                                Eliminar
+                            </button>
+                        </form>
                     </td>
+                    {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
@@ -142,12 +153,12 @@
     </div>
 </div>
 
-<!-- Modal sin cambios -->
+<!-- Modal creación -->
 <dialog id="tag_modal" class="modal">
     <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Crear Nueva Etiqueta Deductiva</h3>
 
-        <form action="{% url 'extraction:tag_create' phase_id=phase.id %}" method="POST">
+        <form action="{% url 'extraction:planning:taxonomy:tag_create' project_id=phase.project_id %}" method="POST">
             {% csrf_token %}
 
             <div class="form-control w-full mb-3">
@@ -162,11 +173,31 @@
                 {% endif %}
             </div>
 
+            <div class="form-control w-full mb-3">
+                <label class="label">
+                    <span class="label-text">Color</span>
+                </label>
+                {{ tag_form.color }}
+                {% if tag_form.color.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ tag_form.color.errors.0 }}</span>
+                    </label>
+                {% endif %}
+            </div>
+
             <div class="form-control w-full mb-4">
                 <label class="label">
                     <span class="label-text">Relacionar con Pregunta (RQ)</span>
                 </label>
-                {{ tag_form.rq_related }}
+                <select name="rq_related" class="select select-bordered w-full">
+                        <option value="">-- Sin vincular a RQ --</option>
+                        {% for rq in protocol_questions %}
+                            <option value="{{ rq.id }}"
+                                {% if tag.rq_related_id == rq.id %}selected{% endif %}>
+                                {{ rq.text }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 {% if tag_form.rq_related.errors %}
                     <label class="label">
                         <span class="label-text-alt text-error">{{ tag_form.rq_related.errors.0 }}</span>
@@ -186,3 +217,71 @@
         </form>
     </div>
 </dialog>
+
+{% if is_owner and phase.status != 'CLOSED' %}
+    {% for tag in tags %}
+    <dialog id="tag_edit_modal_{{ tag.id }}" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Editar Etiqueta</h3>
+
+            <form id="tag-update-form-{{ tag.id }}"
+                  action="{% url 'extraction:planning:taxonomy:tag_update' project_id=phase.project_id pk=tag.id %}"
+                  method="POST">
+                {% csrf_token %}
+
+                <div class="form-control w-full mb-3">
+                    <label class="label">
+                        <span class="label-text">Nombre de la Etiqueta</span>
+                    </label>
+                    <input type="text" name="name" class="input input-bordered w-full"
+                           value="{{ tag.name }}" required>
+                </div>
+
+                <div class="form-control w-full mb-3">
+                    <label class="label">
+                        <span class="label-text">Color</span>
+                    </label>
+                    <input type="color" name="color" class="input input-bordered w-full"
+                           value="{{ tag.color|default:'#6366F1' }}">
+                </div>
+
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text">Relacionar con Pregunta (RQ)</span>
+                    </label>
+                    <select name="rq_related" class="select select-bordered w-full">
+                        <option value="">-- Sin vincular a RQ --</option>
+                        {% for rq in protocol_questions %}
+                            <option value="{{ rq.id }}"
+                                {% if tag.rq_related_id == rq.id %}selected{% endif %}>
+                                {{ rq.text }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label class="label">
+                        <span class="label-text-alt text-warning">
+                            Si seleccionas una RQ, el tag será obligatorio automáticamente.
+                        </span>
+                    </label>
+                </div>
+
+                <div class="modal-action">
+                    <button type="submit" form="tag-delete-form-{{ tag.id }}" class="btn btn-error">
+                        Eliminar
+                    </button>
+                    <button type="button" class="btn" onclick="document.getElementById('tag_edit_modal_{{ tag.id }}').close()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+
+            <form id="tag-delete-form-{{ tag.id }}"
+                  action="{% url 'extraction:planning:taxonomy:tag_delete' project_id=phase.project_id pk=tag.id %}"
+                  method="POST">
+                {% csrf_token %}
+            </form>
+        </div>
+    </dialog>
+    {% endfor %}
+{% endif %}

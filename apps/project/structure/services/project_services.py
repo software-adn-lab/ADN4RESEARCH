@@ -10,7 +10,7 @@ from django.db.models import Q
 
 class ProjectService:
     @transaction.atomic
-    def create_project_with_framework(self, project_title, project_end_date, summary, motivation, general_objective, owner, framework_name, framework_fields, specific_objectives_data=None, expected_results_data=None, members=None):
+    def create_project_with_framework(self, project_title, project_end_date, summary, motivation, general_objective, owner, framework_name, framework_fields, specific_objectives_data=None, expected_results_data=None, members_workload=None):
         try:
             framework, _ = ResearchFramework.objects.get_or_create(
                 name=framework_name,
@@ -50,21 +50,34 @@ class ProjectService:
                     if desc and desc.strip():
                         ExpectedResult.objects.create(project=project, description=desc)
 
-            # Add Owner as member
-            self.add_member(project, owner, role="OWNER")
+            # Add Owner as member (with default workload of 0 if not specified)
+            owner_workload = 0
+            if members_workload:
+                for member_data in members_workload:
+                    if member_data['user_id'] == owner.id:
+                        owner_workload = member_data['workload']
+                        break
+            self.add_member(project, owner, role="OWNER", workload=owner_workload)
 
-            # Add other members
-            if members:
-                for member in members:
-                    if member != owner:
-                        self.add_member(project, member, role="RESEARCHER")
+            # Add other members with their workload
+            if members_workload:
+                from django.contrib.auth.models import User
+                for member_data in members_workload:
+                    user_id = member_data['user_id']
+                    workload = member_data['workload']
+                    if user_id != owner.id:
+                        try:
+                            member_user = User.objects.get(id=user_id)
+                            self.add_member(project, member_user, role="RESEARCHER", workload=workload)
+                        except User.DoesNotExist:
+                            continue
 
             return project
         except Exception as e:
             raise ProjectCreationError(f"Failed to create project: {str(e)}") from e
 
-    def add_member(self, project: Project, user, role):
-        project.add_member(user, role)
+    def add_member(self, project: Project, user, role, workload=0):
+        project.add_member(user, role, workload)
 
     def get_project_by_id(self, project_id: int, user=None, related_fields: list = None) -> Project:
         try:

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-6 h-screen flex flex-col">
+    {% include '_timeline.html' with project=project active='screening' %}
+
+    <!-- Header -->
+    <div class="flex-none">
+        <h1 class="text-3xl font-bold">Selection - Screening</h1>
+        <p class="text-gray-600">{{ project.title }}</p>
+    </div>
+
+    <!-- Screening Interface -->
+    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 mt-4">
+        <!-- Papers List -->
+        <div class="col-span-4 bg-white rounded-lg shadow overflow-y-auto h-full">
+            <div class="p-4">
+                <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                    <span>Total: {{ papers|length }}</span>
+                    <span>Left to review: {{ pending_count }}</span>
+                </div>
+                <div class="space-y-3">
+                {% for item in papers %}
+                <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-primary cursor-pointer paper-item shadow-sm transition"
+                     data-paper-id="{{ item.study.id }}"
+                     onclick="showPaperDetail('{{ item.study.id }}')"
+                     id="paper-item-{{ item.study.id }}">
+                    <h3 class="font-semibold text-sm line-clamp-2">{{ item.study.title }}</h3>
+                    {% if item.review %}
+                        <span class="badge badge-sm mt-2 text-white uppercase font-bold"
+                            {% if item.review.decision == 'INCLUDED' %}
+                            style="background-color: #00A30E; border-color: #00A30E;"
+                            {% elif item.review.decision == 'EXCLUDED' %}
+                            style="background-color: #EE0000; border-color: #EE0000;"
+                            {% else %}
+                            {% endif %}>
+                            {{ item.review.get_decision_display }}
+                        </span>
+                    {% else %}
+                        <span class="badge badge-sm badge-ghost mt-2">Pending</span>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="p-8 text-center text-gray-500">
+                    <p>No papers assigned yet</p>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Paper Detail -->
+        <div class="col-span-8 bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden h-full" id="paper-detail">
+            <div class="overflow-y-auto flex-1 pr-2">
+            {% if papers %}
+                {% for item in papers %}
+                 <div class="paper-detail-content space-y-4 pb-10 {% if not forloop.first %}hidden{% endif %}" 
+                     id="paper-{{ item.study.id }}" 
+                     data-assignment-id="{{ item.assignment.id }}"
+                     data-decision="{% if item.review %}{{ item.review.decision }}{% else %}PENDING{% endif %}">
+                    
+                    <!-- Title Block -->
+                    <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <h2 class="text-2xl font-bold">{{ item.study.title }}</h2>
+                    </div>
+                    
+                    <!-- Metadata Collapsible Block -->
+                    <div class="collapse collapse-arrow rounded-lg border border-gray-200 bg-gray-50">
+                        <input type="checkbox" />
+                        <div class="collapse-title font-bold text-lg p-4">METADATA</div>
+                        <div class="collapse-content p-0">
+                            <div class="grid grid-cols-2 gap-4 text-sm p-4">
+                                <div>
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">DOI</span>
+                                    <p class="text-gray-600 mt-1 text-xs">{{ item.study.doi|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Year</span>
+                                    <p class="text-gray-600 mt-1 text-xs">{{ item.study.year|default:"N/A" }}</p>
+                                </div>
+                                <div class="col-span-2">
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Authors</span>
+                                    <p class="text-gray-600 mt-1 text-xs">{{ item.study.authors|default:"N/A" }}</p>
+                                </div>
+                                <div class="col-span-2">
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Source</span>
+                                    <p class="text-gray-600 mt-1 text-xs">{{ item.study.source }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Abstract Block -->
+                    <div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <h3 class="font-bold text-lg mb-3">ABSTRACT</h3>
+                        <p class="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{{ item.study.abstract|default:"No abstract available" }}</p>
+                    </div>
+
+                    <!-- Current Review Notes & Criterion -->
+                    {% if item.review and item.review.notes or item.review and item.review.criterion_label %}
+                    <div class="p-4 rounded-lg border border-blue-200 bg-blue-50 space-y-3">
+                        {% if item.review.criterion_label %}
+                        <div>
+                            <span class="font-semibold text-sm">Criterion:</span>
+                            <p class="text-sm text-gray-700 mt-1">{{ item.review.criterion_label }}</p>
+                        </div>
+                        {% endif %}
+                        {% if item.review.notes %}
+                        <div>
+                            <span class="font-semibold text-sm">Notes:</span>
+                            <p class="text-sm text-gray-700 mt-1">{{ item.review.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Decision Buttons -->
+                    <form method="post" action="{% url 'selection:submit_screening_review' project.id item.assignment.id %}" 
+                          id="review-form-{{ item.assignment.id }}"
+                          class="sticky bottom-4 z-10 flex justify-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="stage" value="SCREENING">
+                        <input type="hidden" name="notes" id="notes-{{ item.assignment.id }}" value="{{ item.review.notes|default:'' }}">
+                        <input type="hidden" name="criterion_id" id="criterion-{{ item.assignment.id }}" value="{{ item.review.criterion_id|default:'' }}">
+                        <input type="hidden" name="criterion_label" id="criterion-label-{{ item.assignment.id }}" value="{{ item.review.criterion_label|default:'' }}">
+                        
+                        <div class="flex gap-3 bg-white rounded-xl drop-shadow-xl border border-gray-200 px-4 py-3">
+                            <button type="button" 
+                                    class="btn btn-md text-base rounded-lg text-white"
+                                    style="background-color: #00A30E; border-color: #00A30E;"
+                                    onclick="openDecisionModal({{ item.assignment.id }}, 'INCLUDED')">
+                                INCLUDE
+                            </button>
+                            
+                            <button type="button" 
+                                    class="btn btn-md text-base rounded-lg text-white"
+                                    style="background-color: #EE0000; border-color: #EE0000;"
+                                    onclick="openDecisionModal({{ item.assignment.id }}, 'EXCLUDED')">
+                                EXCLUDE
+                            </button>
+                            
+                            <button type="button" class="btn btn-outline btn-md text-base rounded-lg text-black {% if not item.review or item.review.decision == 'PENDING' %}btn-disabled opacity-60 cursor-not-allowed{% endif %}"
+                                    {% if item.review and item.review.decision != 'PENDING' %}
+                                    onclick="openDecisionModal({{ item.assignment.id }}, null)"
+                                    {% endif %}>
+                                NOTES
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    <p>No papers assigned yet</p>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Decision & Notes Modal -->
+<dialog id="decision-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4" id="modal-title">Review Decision</h3>
+        <div class="form-control mb-3">
+            <label class="label"><span class="label-text" id="criterion-label">Select criterion</span></label>
+            <select id="modal-criterion-select" class="select select-bordered w-full">
+                <option value="">Select criterion...</option>
+            </select>
+        </div>
+        <div class="form-control mb-4">
+            <label class="label"><span class="label-text">Observation / Rationale</span></label>
+            <textarea id="modal-notes-input" 
+                      class="textarea textarea-bordered w-full h-32" 
+                      placeholder="Enter your notes, observations, or rationale for this decision..."></textarea>
+        </div>
+        <div class="modal-action">
+            <button class="btn" onclick="closeDecisionModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDecisionAndNotes()">Save</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{{ inclusion_criteria|json_script:"inclusion-data" }}
+{{ exclusion_criteria|json_script:"exclusion-data" }}
+
+<script src="{% static 'screening.js' %}"></script>
+<script>
+// Initialize screening viewer with criteria data
+initScreeningViewer({
+    inclusion: JSON.parse(document.getElementById('inclusion-data').textContent || '[]'),
+    exclusion: JSON.parse(document.getElementById('exclusion-data').textContent || '[]')
+});
+</script>
+{% endblock %}

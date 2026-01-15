@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Full-text Overview - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    
+    {# Timeline #}
+    {% include '../_timeline.html' with active='fulltext_overview' %}
+
+    {# Header #}
+    <div class="flex justify-between items-center my-6">
+        <div>
+            <h1 class="text-3xl font-bold">Full-text - Overview</h1>
+            <p class="text-gray-600">{{ project.title }}</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="badge {% if selection_phase.fulltext_status == 'IN_PROGRESS' %}badge-success{% elif selection_phase.fulltext_status == 'COMPLETED' %}badge-info{% else %}badge-neutral{% endif %}">
+                {{ selection_phase.get_fulltext_status_display }}
+            </span>
+        </div>
+    </div>
+
+    {# Statistics Cards #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Total Studies</h3>
+                <p class="text-3xl font-bold text-primary">{{ total_papers }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">With PDF</h3>
+                <p class="text-3xl font-bold text-success">{{ papers_with_pdf }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Without PDF</h3>
+                <p class="text-3xl font-bold text-error">{{ papers_without_pdf }}</p>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body p-4">
+                <h3 class="text-sm text-gray-600">Total Pages</h3>
+                <p class="text-3xl font-bold text-info">{{ total_pages }}</p>
+            </div>
+        </div>
+    </div>
+
+    {# Progress Section - Same as Screening Overview #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {# Your Progress #}
+        <div class="card bg-white shadow">
+            <div class="card-body">
+                <h2 class="card-title">Your Progress</h2>
+                {% if user_progress.total > 0 %}
+                <div class="flex flex-col items-center gap-6 my-8">
+                    <div class="w-48 h-48 rounded-full overflow-hidden" style="
+                        background: conic-gradient(
+                            #9ca3af 0% {{ user_progress.pending_pct }}%,
+                            #22c55e {{ user_progress.pending_pct }}% {{ user_progress.pending_pct|add:user_progress.included_pct }}%,
+                            #ef4444 {{ user_progress.pending_pct|add:user_progress.included_pct }}% 100%
+                        );
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                    ">
+                        <div style="
+                            width: 128px;
+                            height: 128px;
+                            background: white;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-direction: column;
+                        ">
+                            <div class="text-3xl font-bold">{{ user_progress.percentage }}%</div>
+                            <div class="text-xs text-gray-500">completed</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-gray-500 py-12">
+                    <p>No papers assigned yet</p>
+                </div>
+                {% endif %}
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-title">Left to review</div>
+                        <div class="stat-value text-gray-400">{{ user_progress.pending }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Included</div>
+                        <div class="stat-value text-success">{{ user_progress.included }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Excluded</div>
+                        <div class="stat-value text-error">{{ user_progress.excluded }}</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-block mt-4" onclick="window.location.href='{% url 'selection:fulltext_review' project.id %}'">
+                    FULL-TEXT REVIEW
+                </button>
+            </div>
+        </div>
+
+        {# Team Progress #}
+        <div class="card bg-white shadow">
+            <div class="card-body">
+                <h2 class="card-title">Your Team Progress</h2>
+                <div class="space-y-4 mt-4">
+                    {% for item in team_progress %}
+                    <div class="border border-gray-300 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="avatar placeholder">
+                                    <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-semibold">
+                                        <span>{{ item.researcher.first_name|slice:":1"|upper }}{{ item.researcher.last_name|slice:":1"|upper }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-semibold">{{ item.researcher.get_full_name|default:item.researcher.username }}</p>
+                                    <p class="text-xs text-gray-500">{{ item.total_assigned }} articles | {{ item.total_pages }} pages</p>
+                                </div>
+                            </div>
+                            {% if is_owner and selection_phase.fulltext_distributed and item.pending > 0 %}
+                            <form method="post" action="{% url 'selection:send_fulltext_reminder' project.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="researcher_id" value="{{ item.researcher.id }}">
+                                <button type="submit" class="btn btn-xs btn-outline btn-warning" title="Send reminder">
+                                    Remind
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex items-center space-x-2 mb-3">
+                            <div class="flex-1">
+                                <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="flex h-full">
+                                        <div class="bg-gray-400" style="width: {{ item.pending_pct }}%"></div>
+                                        <div class="bg-success" style="width: {{ item.included_pct }}%"></div>
+                                        <div class="bg-error" style="width: {{ item.excluded_pct }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-sm font-semibold whitespace-nowrap">{{ item.percentage }}%</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="text-center">
+                                <p class="text-gray-500">Left</p>
+                                <p class="font-semibold text-gray-400">{{ item.pending }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-500">Included</p>
+                                <p class="font-semibold text-success">{{ item.included }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-500">Excluded</p>
+                                <p class="font-semibold text-error">{{ item.excluded }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center">No researchers assigned yet</p>
+                    {% endfor %}
+                </div>
+
+                {% if is_owner and not selection_phase.fulltext_distributed %}
+                <button type="button" class="btn btn-success btn-block mt-6" onclick="document.getElementById('distribute-modal').showModal()">
+                    DISTRIBUTE PAPERS
+                </button>
+                {% elif is_owner and selection_phase.fulltext_distributed %}
+                <button type="button" class="btn btn-warning btn-block mt-6" onclick="document.getElementById('redistribute-modal').showModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    REDISTRIBUTE PAPERS
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# PDF Management Section #}
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-xl mb-4">PDF Management</h2>
+            <p class="text-sm text-gray-600 mb-4">Manage PDFs for all included papers before full-text review phase</p>
+            
+            <div class="flex flex-wrap gap-4">
+                <button type="button" class="btn btn-primary" onclick="downloadAllPdfs()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download All PDFs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# Papers List #}
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <h2 class="card-title text-xl mb-4">Included Papers ({{ total_papers }})</h2>
+            
+            {% if papers %}
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th class="w-12">#</th>
+                                <th>Title</th>
+                                <th class="w-32">Authors</th>
+                                <th class="w-20">Year</th>
+                                <th class="w-24">PDF Status</th>
+                                <th class="w-20">Pages</th>
+                                <th class="w-32">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paper in papers %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td class="font-medium">{{ paper.title|truncatewords:15 }}</td>
+                                <td>{{ paper.authors|truncatewords:3 }}</td>
+                                <td>{{ paper.year|default:"-" }}</td>
+                                <td>
+                                    {% if paper.has_pdf %}
+                                        <span class="badge badge-success badge-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Available
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-error badge-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Missing
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ paper.page_count|default:"-" }}</td>
+                                <td>
+                                    {% if paper.has_pdf %}
+                                        <a href="{{ paper.pdf_url }}" target="_blank" class="btn btn-xs btn-ghost" title="View PDF">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-xs btn-ghost" onclick="openUploadForPaper('{{ paper.id }}', '{{ paper.title|escapejs }}')" title="Upload PDF">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            Upload
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>No included papers found from the screening phase yet.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+    {# Continue Button #}
+    {% if papers and selection_phase.fulltext_distributed %}
+    <div class="flex justify-end mt-6 gap-4">
+        <a href="{% url 'selection:fulltext_review' project.id %}" class="btn btn-primary">
+            Continue to Full-text Review
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+        </a>
+
+        {# Finalize Button for Owner #}
+        {% if is_owner and can_finalize %}
+        <form method="post" action="{% url 'selection:finalize_fulltext' project.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Finalize Full-text Phase
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{# Distribution Modal - By PDF Page Count #}
+{% if is_owner %}
+<dialog id="distribute-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Distribute Papers for Full-text Review</h3>
+        <p class="text-sm text-gray-600 mb-4">
+            Papers will be distributed based on <strong>PDF page count</strong> to balance workload fairly.
+            Each researcher will receive approximately equal total pages to review.
+        </p>
+        
+        <form method="post" action="{% url 'selection:distribute_fulltext' project.id %}" id="distribute-form">
+            {% csrf_token %}
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text font-semibold">Reviewers per paper</span>
+                </label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="2" class="radio radio-primary" checked />
+                        <div>
+                            <div class="font-semibold">2 reviewers (Peer review)</div>
+                            <div class="text-xs text-gray-500">Standard double-blind review</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="3" class="radio radio-primary" />
+                        <div>
+                            <div class="font-semibold">3 reviewers</div>
+                            <div class="text-xs text-gray-500">Triple review for higher confidence</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="alert alert-info text-sm mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Distribution is based on PDF pages, not abstract word count like screening.</span>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('distribute-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-success">Distribute</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{# Redistribute Modal - Warning about existing reviews #}
+<dialog id="redistribute-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4 text-warning">⚠️ Redistribute Papers</h3>
+        
+        <div class="alert alert-warning mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div>
+                <p class="font-semibold">This will delete all existing full-text reviews!</p>
+                <p class="text-sm">All current assignments and reviews will be cleared and new ones created.</p>
+            </div>
+        </div>
+        
+        <p class="text-sm text-gray-600 mb-4">
+            Papers will be redistributed based on <strong>PDF page count</strong> to balance workload fairly.
+        </p>
+        
+        <form method="post" action="{% url 'selection:distribute_fulltext' project.id %}" id="redistribute-form">
+            {% csrf_token %}
+            <input type="hidden" name="redistribute" value="true">
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text font-semibold">Reviewers per paper</span>
+                </label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="2" class="radio radio-warning" checked />
+                        <div>
+                            <div class="font-semibold">2 reviewers (Peer review)</div>
+                            <div class="text-xs text-gray-500">Standard double-blind review</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-base-200">
+                        <input type="radio" name="reviews_per_paper" value="3" class="radio radio-warning" />
+                        <div>
+                            <div class="font-semibold">3 reviewers</div>
+                            <div class="text-xs text-gray-500">Triple review for higher confidence</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('redistribute-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-warning">Redistribute</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+{% endif %}
+
+{# Upload PDF Modal #}
+<dialog id="upload_pdf_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Upload PDF for Paper</h3>
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            <input type="hidden" name="study_id" id="modal_study_id">
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Paper Title</span>
+                </label>
+                <input type="text" id="modal_paper_title" class="input input-bordered" readonly>
+            </div>
+            
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Select PDF File</span>
+                </label>
+                <input type="file" name="file" accept=".pdf" class="file-input file-input-bordered w-full" required>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="upload_pdf_modal.close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+{# Download Progress Modal #}
+<dialog id="download_progress_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Downloading PDFs</h3>
+        <div class="flex flex-col items-center gap-4">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p id="download-status" class="text-sm text-gray-600">Preparing downloads, this may take a few minutes...</p>
+        </div>
+    </div>
+</dialog>
+
+<script>
+const PROJECT_ID = {{ project.id }};
+const DOWNLOAD_URL = "{% url 'selection:download_pdfs' project.id %}";
+const UPLOAD_URL = "{% url 'selection:upload_pdf' project.id %}";
+
+function openUploadForPaper(studyId, paperTitle) {
+    document.getElementById('modal_study_id').value = studyId;
+    document.getElementById('modal_paper_title').value = paperTitle;
+    upload_pdf_modal.showModal();
+}
+
+// Handle upload form submission
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(UPLOAD_URL, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            alert('PDF uploaded successfully!');
+            upload_pdf_modal.close();
+            location.reload(); // Reload to show updated status
+        } else {
+            alert('Error uploading PDF: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error uploading PDF: ' + error.message);
+    }
+});
+
+// Download all PDFs
+async function downloadAllPdfs() {
+    download_progress_modal.showModal();
+    document.getElementById('download-status').textContent = 'Downloading PDFs, this may take a few minutes...';
+    
+    try {
+        const response = await fetch(DOWNLOAD_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            const stats = result.result;
+            document.getElementById('download-status').textContent = 
+                `Downloaded: ${stats.downloaded_count}/${stats.total_count} PDFs`;
+            
+            setTimeout(() => {
+                download_progress_modal.close();
+                location.reload(); // Reload to show updated status
+            }, 2000);
+        } else {
+            alert('Error downloading PDFs: ' + (result.error || 'Unknown error'));
+            download_progress_modal.close();
+        }
+    } catch (error) {
+        alert('Error downloading PDFs: ' + error.message);
+        download_progress_modal.close();
+    }
+}
+</script>
+
+{% endblock %}

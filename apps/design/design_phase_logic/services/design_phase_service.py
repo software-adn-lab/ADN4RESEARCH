@@ -19,19 +19,15 @@ class DesignPhaseService:
         next_stage: DesignPhase.DesignStage,
         finalize_callback: callable = None
     ) -> tuple:
-
         phase = DesignPhase.objects.get(pk=project_id)
-        # 1. Validar etapa actual
         if phase.current_stage != current_stage:
             raise ValidationError(
                 f"Cannot consolidate {current_stage.label}. "
                 f"Current stage is {phase.current_stage}"
             )
-        # 2. Ejecutar lógica de dominio específica (si existe)
         callback_result = None
         if finalize_callback:
             callback_result = finalize_callback(project_id, user)
-        # 3. Transición de estado (incluye actualización de cronograma automáticamente)
         self._transition_stage(phase, next_stage)
         return phase, callback_result
 

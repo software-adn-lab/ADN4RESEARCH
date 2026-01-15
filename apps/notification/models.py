@@ -6,6 +6,7 @@ class Notification(models.Model):
     TYPE_CHOICES = [
         ('RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW', 'Research Question Submitted for Review'),
         ('SUGGESTION_QUESTION_REJECT', 'Suggestion Question Reject'),
+        ('REMINDER', 'Review Reminder'),
     ]
     
     type = models.CharField(
@@ -20,6 +21,13 @@ class Notification(models.Model):
         null=True,
         blank=True
     )
+    recipient = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='received_notifications',
+        null=True,
+        blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     sender = models.ForeignKey(
         'auth.User',
@@ -27,15 +35,25 @@ class Notification(models.Model):
         related_name='sent_notifications',
         null=True
     )
+    title = models.CharField(max_length=200, blank=True, default='')
+    custom_message = models.TextField(blank=True, default='')
+    is_read = models.BooleanField(default=False)
+    
     @property
     def message(self):
-        if self.type == 'RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW':
+        if self.custom_message:
+            return self.custom_message
+        elif self.type == 'RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW':
             return "A new research question has been submitted for review."
         elif self.type == 'SUGGESTION_QUESTION_REJECT':
             return "A suggestion question has been rejected."
+        elif self.type == 'REMINDER':
+            return "You have pending papers to review."
         else:
             return ""
 
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"Notification-{self.id} ({self.type}) for Project-{self.project.id}"
+        return f"Notification-{self.id} ({self.type}) for Project-{self.project.id if self.project else 'N/A'}"

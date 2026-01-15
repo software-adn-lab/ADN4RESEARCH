@@ -9,38 +9,10 @@ from typing import Dict
 import logging
 from typing import Tuple
 
-from .dtos import CompletionResult
 from .models import PaperExtraction, PaperExtractionStatusChoices
 from apps.extraction.shared.exceptions import BusinessRuleViolation
 
 logger = logging.getLogger(__name__)
-
-class PaperLifecycleService:
-    """
-    Servicio para manejar el ciclo de vida de un paper individual.
-    """
-
-    def mark_paper_as_complete(self, extraction_id: int) -> CompletionResult:
-        """
-        Intenta completar el paper. Retorna un objeto CompletionResult tipado.
-        """
-        paper = PaperExtraction.objects.get(id=extraction_id)
-
-        missing_tags = paper.get_missing_mandatory_tags()
-
-        if missing_tags.exists():
-            return CompletionResult(
-                success=False,
-                paper=paper,
-                errors=[tag.name for tag in missing_tags]
-            )
-        paper.status = PaperExtractionStatusChoices.COMPLETED
-        paper.save()
-
-        return CompletionResult(
-            success=True,
-            paper=paper
-        )
 
 class PaperExtractionService:
     """
@@ -55,56 +27,111 @@ class PaperExtractionService:
     def validate_completion_rules(self, paper: PaperExtraction) -> Tuple[bool, str]:
         """
         Valida las reglas de negocio para completar un paper.
-        
-        Business Rules:
-        1. Debe tener al menos una quote extraída
-        2. Todas las tags obligatorias deben estar cubiertas
-        3. El paper debe estar en estado IN_PROGRESS o PENDING
-        
-        Args:
-            paper: PaperExtraction a validar
-            
-        Returns:
-            Tuple[bool, str]: (es_valido, mensaje_error)
-            
-        Referencia DDD:
-        - Esta es lógica de dominio pura (invariants)
-        - No tiene side effects
-        - Retorna información, no modifica estado
         """
+        logger.debug(
+            "Iniciando validación de reglas de completitud",
+            extra={
+                "paper_id": paper.id,
+                "paper_status": paper.status,
+            }
+        )
+
         # Regla 1: Al menos una quote
         if not paper.quotes.exists():
+            logger.info(
+                "Validación fallida: paper sin quotes",
+                extra={
+                    "paper_id": paper.id,
+                    "rule": "at_least_one_quote",
+                }
+            )
             return False, (
                 "El paper debe tener al menos una extracción (quote). "
                 "Selecciona texto del PDF y crea quotes antes de finalizar."
             )
-        
+
+        logger.debug(
+            "Regla 1 OK: paper tiene al menos una quote",
+            extra={"paper_id": paper.id}
+        )
+
         # Regla 2: Cobertura de tags obligatorios
         missing_tags = paper.get_missing_mandatory_tags()
-        
+        mandatory_tags = paper.extraction_phase.tags.mandatory()
+        logger.info(
+            "Estado de tags obligatorios",
+            extra={
+                "paper_id": paper.id,
+                "mandatory_total": mandatory_tags.count(),
+                "used_tag_ids": list(
+                    paper.quotes.values_list("tags__id", flat=True).distinct()
+                ),
+            }
+        )
+
         if missing_tags.exists():
-            tag_names = ", ".join([tag.name for tag in missing_tags[:3]])
-            
-            if missing_tags.count() > 3:
-                tag_names += f" (+{missing_tags.count() - 3} más)"
-            
+            missing_count = missing_tags.count()
+            tag_names = ", ".join(tag.name for tag in missing_tags[:3])
+            logger.info(
+                "Detalle tags obligatorios faltantes",
+                extra={
+                    "paper_id": paper.id,
+                    "missing_tag_ids": list(missing_tags.values_list("id", flat=True)),
+                }
+            )
+
+            if missing_count > 3:
+                tag_names += f" (+{missing_count - 3} más)"
+
+            logger.info(
+                "Validación fallida: faltan tags obligatorios",
+                extra={
+                    "paper_id": paper.id,
+                    "rule": "mandatory_tags",
+                    "missing_tags_count": missing_count,
+                    "missing_tags_preview": tag_names,
+                }
+            )
+
             return False, (
                 f"Faltan tags obligatorios: {tag_names}. "
                 f"Agrega quotes con estos tags antes de finalizar."
             )
-        
+
+        logger.debug(
+            "Regla 2 OK: todos los tags obligatorios están cubiertos",
+            extra={"paper_id": paper.id}
+        )
+
         # Regla 3: Estado válido
         valid_statuses = [
             PaperExtractionStatusChoices.PENDING,
-            PaperExtractionStatusChoices.IN_PROGRESS
+            PaperExtractionStatusChoices.IN_PROGRESS,
         ]
-        
+
         if paper.status not in valid_statuses:
+            logger.warning(
+                "Validación fallida: estado inválido para completar paper",
+                extra={
+                    "paper_id": paper.id,
+                    "rule": "valid_status",
+                    "current_status": paper.status,
+                }
+            )
+
             return False, (
                 f"No se puede completar un paper en estado '{paper.get_status_display()}'. "
                 f"Solo papers en progreso pueden ser completados."
             )
-        
+
+        logger.info(
+            "Validación de completitud exitosa",
+            extra={
+                "paper_id": paper.id,
+                "final_status": paper.status,
+            }
+        )
+
         return True, ""
     
     def attempt_complete_paper(self, paper: PaperExtraction, user) -> PaperExtraction:
@@ -135,6 +162,11 @@ class PaperExtractionService:
         
         # 1. Validar reglas de negocio
         is_valid, error_message = self.validate_completion_rules(paper)
+        logger.debug(
+            f"Completion validation result: "
+            f"paper_id={paper.id}, is_valid={is_valid}, "
+            f"error_message={error_message}"
+        )
         
         if not is_valid:
             logger.warning(
@@ -172,10 +204,12 @@ class PaperExtractionService:
         Returns:
             dict con información de completitud
         """
-        mandatory_tags = paper.extraction_phase.tags.filter(
-            status='APPROVED',
-            is_mandatory=True
+        logger.info(
+            "Building completion summary: paper_id=%s, status=%s",
+            paper.id,
+            paper.status
         )
+        mandatory_tags = paper.extraction_phase.tags.mandatory()
         
         used_mandatory_tags = paper.get_used_mandatory_tags()
         missing_mandatory_tags = paper.get_missing_mandatory_tags()
@@ -190,6 +224,15 @@ class PaperExtractionService:
         )
         
         is_valid, validation_message = self.validate_completion_rules(paper)
+        logger.info(
+            "Completion summary computed: paper_id=%s, can_complete=%s, "
+            "coverage=%s/%s, missing=%s",
+            paper.id,
+            is_valid,
+            covered_mandatory,
+            total_mandatory,
+            missing_mandatory_tags.count()
+        )
         
         return {
             'can_complete': is_valid,

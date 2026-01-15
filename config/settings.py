@@ -83,7 +83,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",
-    "config.middleware.dev_middleware.DevUserMiddleware",
+    # "config.middleware.dev_middleware.DevUserMiddleware",  # Disabled to test login
 ]
 MIDDLEWARE += [
     "django_browser_reload.middleware.BrowserReloadMiddleware",
@@ -97,7 +97,8 @@ TEMPLATES = [
         "DIRS": [
             BASE_DIR / "ui" / "design" / "templates",
             BASE_DIR / "ui" / "interpretation" / "templates",
-            BASE_DIR / "ui" / "extraction" / "templates",
+            BASE_DIR / "ui",
+            BASE_DIR / "ui" / "selection" / "templates",
             BASE_DIR / "ui" / "shared" / "templates",
             BASE_DIR / "ui" / "project" / "templates",
         ],
@@ -107,6 +108,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "theme.context_processors.sidebar_context",
             ],
         },
     },
@@ -225,6 +227,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "ui" / "interpretation",
     BASE_DIR / "ui" / "project",
     BASE_DIR / "ui" / "extraction",
+    BASE_DIR / "ui" / "selection" / "scripts",
 ]
 
 STATIC_URL = "/static/"
@@ -307,3 +310,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# Authentication settings
+LOGIN_URL = 'project:login'
+LOGIN_REDIRECT_URL = 'project:list_projects'
+LOGOUT_REDIRECT_URL = 'project:login'

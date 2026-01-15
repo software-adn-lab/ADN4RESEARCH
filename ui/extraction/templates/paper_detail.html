@@ -9,7 +9,7 @@
 <div class="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden">
 
     <!-- PDF Viewer -->
-    {% include 'partials/pdf_workspace/pdf_viewer.html' %}
+    {% include 'extraction/templates/partials/pdf_workspace/pdf_viewer.html' %}
 
     <!-- Sidebar -->
     <div class="w-full lg:w-3/12 bg-white border-l border-gray-200 flex flex-col h-full shadow-2xl">
@@ -49,15 +49,15 @@
         </div>
         
         <!-- Tag List -->
-        {% include 'partials/pdf_workspace/tag_list.html' %}
+        {% include 'extraction/templates/partials/pdf_workspace/tag_list.html' %}
         
         <!-- Quote List -->
-        {% include 'partials/pdf_workspace/quote_list.html' %}
+        {% include 'extraction/templates/partials/pdf_workspace/quote_list.html' %}
     </div>
 </div>
 
 <!-- Modal -->
-{% include 'partials/pdf_workspace/quote_modal.html' %}
+{% include 'extraction/templates/partials/pdf_workspace/quote_modal.html' %}
 
 <!-- Config -->
 <script id="paper-config" type="application/json">
@@ -66,7 +66,7 @@
     "pdfUrl": "{{ pdf_url }}",
     "quoteCreateUrl": "{{ quote_create_url }}",
     "quoteDeleteUrlTemplate": "{{ quote_delete_url_template }}",
-    "paperCompleteUrl": "{% url 'extraction:paper_complete' pk=paper.pk %}",
+    "paperCompleteUrl": "{{ paper_complete_url }}",
     "csrfToken": "{{ csrf_token }}",
     "existingQuotes": {{ quotes_json|safe }}
 }

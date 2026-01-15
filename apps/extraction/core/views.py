@@ -16,8 +16,10 @@ from django.urls import reverse
 from django.views.generic import DetailView, View
 
 from .forms import QuoteForm
+from .dtos import QuoteDTO, PaperCompletionSummaryDTO
 from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.core.services import PaperExtractionService
+from apps.extraction.shared.mixins import ProjectMemberRequiredMixin
 from apps.extraction.shared.exceptions import BusinessRuleViolation
 
 logger = logging.getLogger(__name__)
@@ -71,14 +73,20 @@ class PaperAccessMixin(UserPassesTestMixin):
         return None
 
 
-class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
+class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, DetailView):
     """
     Vista del workspace de extracción de un paper.
     """
     
     model = PaperExtraction
-    template_name = 'paper_detail.html'
+    template_name = 'extraction/templates/paper_detail.html'
     context_object_name = 'paper'
+
+    def get_queryset(self):
+        project_id = self.kwargs.get('project_id')
+        return PaperExtraction.objects.filter(
+            extraction_phase__project_id=project_id
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -86,63 +94,56 @@ class PaperDetailView(LoginRequiredMixin, PaperAccessMixin, DetailView):
         phase = paper.extraction_phase
         
         # Tags disponibles
-        context['available_tags'] = phase.tags.filter(
-            status='APPROVED'
+        context['available_tags'] = phase.tags.usable_by(
+            self.request.user
         ).order_by('name')
         
         # Tags obligatorios
-        context['mandatory_tags'] = phase.tags.filter(
-            status='APPROVED',
-            is_mandatory=True
-        )
+        context['mandatory_tags'] = phase.tags.mandatory()
         
         # Quotes ordenadas
         quotes = paper.quotes.select_related('created_by').prefetch_related('tags').all()
-        context['quotes'] = sorted(quotes, key=lambda q: q.location.get('page', 0))
-        
+        sorted_quotes = sorted(quotes, key=lambda q: q.location.get('page', 0))
+        context['quotes'] = sorted_quotes
+
         # Serializar para JavaScript
+        quote_dtos = [QuoteDTO.from_model(q) for q in sorted_quotes]
         context['quotes_json'] = json.dumps(
-            [
-                {
-                    'id': q.id,
-                    'text_fragment': q.text_fragment,
-                    'location': q.location,
-                    'tags': [
-                        {'id': t.id, 'name': t.name, 'color': t.color} 
-                        for t in q.tags.all()
-                    ]
-                }
-                for q in context['quotes']
-            ],
+            [dto.to_dict() for dto in quote_dtos],
             cls=DjangoJSONEncoder
         )
         
         # URLs para JavaScript
-        context['pdf_url'] = reverse('extraction:paper_pdf', args=[paper.pk])
-        context['quote_create_url'] = reverse('extraction:quote_create')
+        project_id = paper.extraction_phase.project_id
+        context['pdf_url'] = reverse('extraction:core:paper_pdf', kwargs={'project_id': project_id, 'pk': paper.pk})
+        context['quote_create_url'] = reverse('extraction:core:quote_create', kwargs={'project_id': project_id})
         context['quote_delete_url_template'] = reverse(
-            'extraction:quote_delete', 
-            args=[0]
+            'extraction:core:quote_delete', 
+            kwargs={'project_id': project_id, 'pk': 0}
         ).replace('/0/', '/{id}/')
         
         logger.info(
             f"Paper workspace loaded: paper_id={paper.id}, "
             f"user={self.request.user.username}, quotes_count={len(context['quotes'])}"
         )
-        context['paper_complete_url'] = reverse('extraction:paper_complete', args=[paper.pk])
+        context['paper_complete_url'] = reverse('extraction:core:paper_complete', kwargs={'project_id': project_id, 'pk': paper.pk})
 
         
         return context
 
 
-class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
+class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
     Sirve archivos PDF de forma segura.
     """
     
-    def get(self, request, pk):
+    def get(self, request, project_id, pk):
         """Servir PDF."""
-        paper = get_object_or_404(PaperExtraction, pk=pk)
+        paper = get_object_or_404(
+            PaperExtraction,
+            pk=pk,
+            extraction_phase__project_id=project_id
+        )
         
         # Logging
         logger.info(
@@ -211,7 +212,7 @@ class PaperPDFView(LoginRequiredMixin, PaperAccessMixin, View):
             .replace('\\', '-')
         )[:100]
 
-class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
+class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
     Endpoint para marcar un paper como completado.
     
@@ -229,7 +230,7 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
-    def post(self, request, pk):
+    def post(self, request, project_id, pk):
         """
         Procesar solicitud de completar paper.
         
@@ -240,7 +241,11 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
         Returns:
             JsonResponse con resultado
         """
-        paper = get_object_or_404(PaperExtraction, pk=pk)
+        paper = get_object_or_404(
+            PaperExtraction,
+            pk=pk,
+            extraction_phase__project_id=project_id
+        )
         
         # Validar permisos (responsabilidad de la vista)
         if not self._can_complete_paper(request.user, paper):
@@ -263,15 +268,17 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
             # Obtener resumen para la respuesta
             summary = service.get_completion_summary(paper)
             
+            paper_dto = PaperCompletionSummaryDTO(
+                id=paper.id,
+                status=paper.get_status_display(),
+                quotes_count=summary['quotes_count'],
+                coverage_percentage=summary['coverage_percentage']
+            )
+
             return JsonResponse({
                 'success': True,
                 'message': '✅ Paper completado exitosamente',
-                'paper': {
-                    'id': paper.id,
-                    'status': paper.get_status_display(),
-                    'quotes_count': summary['quotes_count'],
-                    'coverage_percentage': summary['coverage_percentage']
-                }
+                'paper': paper_dto.to_dict()
             })
             
         except BusinessRuleViolation as e:
@@ -317,10 +324,10 @@ class PaperCompleteView(LoginRequiredMixin, PaperAccessMixin, View):
             user.is_superuser
         )
 
-class QuoteCreateView(LoginRequiredMixin, View):
+class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para crear quotes (JSON)."""
     
-    def post(self, request):
+    def post(self, request, project_id):
         try:
             # Parsear datos
             data = json.loads(request.body)
@@ -364,7 +371,7 @@ class QuoteCreateView(LoginRequiredMixin, View):
             logger.info(f"Form data: {form_data}")
             
             # Crear formulario
-            form = QuoteForm(form_data, paper=paper)
+            form = QuoteForm(form_data, paper=paper, user=request.user)
             
             # Validar
             if not form.is_valid():
@@ -384,21 +391,22 @@ class QuoteCreateView(LoginRequiredMixin, View):
             quote.save()
             form.save_m2m()
             
+            # ✅ Actualizar estado del paper a IN_PROGRESS si está en PENDING
+            if paper.status == PaperExtractionStatusChoices.PENDING:
+                paper.status = PaperExtractionStatusChoices.IN_PROGRESS
+                paper.save(update_fields=['status', 'updated_at'])
+                logger.info(
+                    f"Paper status updated: paper_id={paper.id}, "
+                    f"new_status={paper.status}, triggered_by=quote_creation"
+                )
+            
             logger.info(f"Quote created successfully: {quote.id}")
             logger.info("="*60)
             
+            quote_dto = QuoteDTO.from_model(quote, include_created_at=True)
             return JsonResponse({
                 'success': True,
-                'quote': {
-                    'id': quote.id,
-                    'text_fragment': quote.text_fragment,
-                    'location': quote.location,
-                    'tags': [
-                        {'id': t.id, 'name': t.name, 'color': t.color}
-                        for t in quote.tags.all()
-                    ],
-                    'created_at': quote.created_at.isoformat()
-                }
+                'quote': quote_dto.to_dict()
             }, status=201)
             
         except json.JSONDecodeError as e:
@@ -425,10 +433,10 @@ class QuoteCreateView(LoginRequiredMixin, View):
         )
 
 
-class QuoteDeleteView(LoginRequiredMixin, View):
+class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para eliminar quotes."""
     
-    def delete(self, request, pk):
+    def delete(self, request, project_id, pk):
         quote = get_object_or_404(Quote, pk=pk)
         
         if not self._can_delete_quote(request.user, quote):
@@ -462,3 +470,95 @@ class QuoteDeleteView(LoginRequiredMixin, View):
             user.is_staff or
             user.is_superuser
         )
+
+
+class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
+    """
+    Vista para reasignar un paper a otro miembro del proyecto.
+    
+    Solo el owner del proyecto puede reasignar papers.
+    """
+    
+    def post(self, request, project_id, pk):
+        """
+        POST /project/<project_id>/extraction/papers/<pk>/reassign/
+        
+        JSON payload:
+        {
+            "assigned_to_id": <user_id>
+        }
+        """
+        try:
+            # Obtener paper
+            paper = get_object_or_404(PaperExtraction, pk=pk)
+            phase = paper.extraction_phase
+            project = phase.project
+            
+            # Validar que el usuario sea owner
+            if request.user != project.owner and not request.user.is_staff:
+                return JsonResponse(
+                    {'error': 'Solo el owner puede reasignar papers'},
+                    status=403
+                )
+            
+            # Obtener datos
+            data = json.loads(request.body)
+            assigned_to_id = data.get('assigned_to_id')
+            
+            if not assigned_to_id:
+                return JsonResponse(
+                    {'error': 'assigned_to_id es requerido'},
+                    status=400
+                )
+            
+            # Obtener usuario a asignar
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            assigned_user = get_object_or_404(User, pk=assigned_to_id)
+            
+            # Validar que sea miembro del proyecto
+            from apps.project.structure.models.project_models import Membership
+            is_member = (
+                assigned_user == project.owner or
+                Membership.objects.filter(
+                    project=project,
+                    user=assigned_user
+                ).exists()
+            )
+            
+            if not is_member:
+                return JsonResponse(
+                    {'error': f'{assigned_user.username} no es miembro del proyecto'},
+                    status=400
+                )
+            
+            # Reasignar
+            old_assigned_to = paper.assigned_to
+            paper.assigned_to = assigned_user
+            paper.save(update_fields=['assigned_to', 'updated_at'])
+            
+            logger.info(
+                f"Paper {pk} reasignado de {old_assigned_to.username if old_assigned_to else 'nadie'} "
+                f"a {assigned_user.username} por {request.user.username}"
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Paper reasignado a {assigned_user.username}',
+                'assigned_to': {
+                    'id': assigned_user.id,
+                    'username': assigned_user.username
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {'error': 'JSON inválido'},
+                status=400
+            )
+        except Exception as e:
+            logger.exception("Error reasignando paper")
+            return JsonResponse(
+                {'error': f'Error al reasignar: {str(e)}'},
+                status=500
+            )

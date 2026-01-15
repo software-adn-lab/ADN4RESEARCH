@@ -1,5 +1,6 @@
 # language: es
-Característica: Validar artefactos de diseño generados por los investigadores    
+# F-DM-04
+Característica: Control de artefactos de diseño generados por los investigadores    
     Como owner de un proyecto de investigación
     Quiero controlar la consolidación de los artefactos generados por los investigadores dentro de las etapas de diseño
     Para asegurar que estos artefactos son los apropiados para la revisión sistemática de mi proyecto 
@@ -8,7 +9,7 @@ Característica: Validar artefactos de diseño generados por los investigadores
         Dado que la etapa de "discusión" esta activa en la fase de diseño
 
     # Consolidar: Convertir algo en definitivo y estable.
-    # En el negocio considero que consolidar es dejar las preguntas de investigacion aprobadas como guia
+    # En el negocio se considera que consolidar es dejar las preguntas de investigacion aprobadas como guia
     # de mi proyecto de investigacion. Ademas, cambiamos una fase de diseno cuando consolidamos
     Escenario: Consolidar la selección final de preguntas de investigación
         Dado que existen preguntas en el proyecto como:

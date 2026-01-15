@@ -59,7 +59,7 @@
                             <!-- Obligatorio + Usado -->
                             <div class="badge badge-sm gap-1 badge-success text-white"
                                 data-tag-id="{{ tag.id }}"
-                                title="🔒 Tag obligatorio cubierto">
+                                title="Pregunta relacionada: {{ tag.rq_related.text }}">
                                 <!-- Candado -->
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,7 +81,7 @@
                             <!-- Obligatorio + NO usado -->
                             <div class="badge badge-sm gap-1 badge-error"
                                 data-tag-id="{{ tag.id }}"
-                                title="🔒 Tag obligatorio pendiente"
+                                title="Pregunta relacionada: {{ tag.rq_related.text }}"
                                 style="opacity: 0.7;">
                                 <!-- Candado -->
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
@@ -99,7 +99,7 @@
                             <!-- Opcional + usado -->
                             <div class="badge badge-sm gap-1 badge-success text-white "
                                 data-tag-id="{{ tag.id }}"
-                                title="✅ Tag cubierto">
+                                title="Tag cubierto">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -126,28 +126,7 @@
             
             <!-- Alerta de estado (se actualiza dinámicamente) -->
             <div id="coverage-alert-container">
-                {% if paper.is_complete_compliant %}
-                    <div class="alert alert-success mt-3 py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Todos los tags obligatorios han sido cubiertos</span>
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning mt-3 py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div class="flex-1">
-                            <span class="font-semibold">Faltan {{ paper.get_missing_mandatory_tags.count }} tag(s):</span>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                {% for tag in paper.get_missing_mandatory_tags %}
-                                    <span class="badge badge-xs badge-ghost">{{ tag.name }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
+                
             </div>
         </div>
     </div>

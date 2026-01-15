@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-4">
+    {% include '_timeline.html' with project=project active='screening_discussion' %}
+    
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold">Screening - Discussion & Resolution</h1>
+            <p class="text-gray-600">{{ project.title }}</p>
+        </div>
+        {% if is_owner %}
+        <span class="badge badge-primary">Owner View</span>
+        {% else %}
+        <span class="badge badge-secondary">Reviewer View</span>
+        {% endif %}
+    </div>
+
+    {% if is_owner %}
+        {# Owner sees ALL conflicts and can resolve them #}
+        {% if conflicts %}
+            <div class="alert alert-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <p>{{ conflicts|length }} paper(s) with conflicting decisions require resolution</p>
+            </div>
+
+            <div class="space-y-4">
+                {% for conflict in conflicts %}
+                    <div class="card bg-base-100 shadow-md {% if conflict.is_resolved %}border-2 border-success{% else %}border-2 border-warning{% endif %}">
+                        <div class="card-body">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="card-title">{{ conflict.paper.title|default:conflict.paper.study_id|truncatechars:80 }}</h2>
+                                    <p class="text-sm text-gray-500">Study ID: {{ conflict.paper.study_id }}</p>
+                                </div>
+                                {% if conflict.is_resolved %}
+                                    <span class="badge badge-success">Resolved</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="divider my-2">Conflicting Reviews</div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {% for review in conflict.reviews %}
+                                    <div class="p-3 border rounded bg-gray-50">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="avatar placeholder">
+                                                <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                                    <span class="text-xs">{{ review.assignment.researcher.first_name|slice:":1"|upper }}{{ review.assignment.researcher.last_name|slice:":1"|upper }}</span>
+                                                </div>
+                                            </div>
+                                            <span class="font-semibold">{{ review.assignment.researcher.get_full_name }}</span>
+                                        </div>
+                                        <span class="badge {% if review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                                            {{ review.decision }}
+                                        </span>
+                                        {% if review.notes %}
+                                            <p class="text-sm mt-2 text-gray-600">{{ review.notes }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            {% if not conflict.is_resolved %}
+                                <div class="divider my-2">Resolution Actions</div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {# Option 1: Assign Third Reviewer #}
+                                    <div class="border rounded-lg p-4">
+                                        <h4 class="font-semibold mb-2">Assign Third Reviewer</h4>
+                                        <form method="post" action="{% url 'selection:assign_third_reviewer' project.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="conflict_id" value="{{ conflict.id }}">
+                                            <select name="reviewer_id" class="select select-bordered w-full mb-2" required>
+                                                <option value="">Select reviewer...</option>
+                                                {% for reviewer in conflict.eligible_reviewers %}
+                                                    <option value="{{ reviewer.id }}">{{ reviewer.get_full_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline btn-primary w-full">
+                                                Assign Reviewer
+                                            </button>
+                                        </form>
+                                    </div>
+                                    
+                                    {# Option 2: Owner Cast Final Vote #}
+                                    <div class="border rounded-lg p-4">
+                                        <h4 class="font-semibold mb-2">Cast Final Decision</h4>
+                                        <form method="post" action="{% url 'selection:owner_vote' project.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="conflict_id" value="{{ conflict.id }}">
+                                            <div class="flex gap-2">
+                                                <button type="submit" name="decision" value="INCLUDED" class="btn btn-sm btn-success flex-1">
+                                                    Include
+                                                </button>
+                                                <button type="submit" name="decision" value="EXCLUDED" class="btn btn-sm btn-error flex-1">
+                                                    Exclude
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success mt-4">
+                                    <span>Resolved via {{ conflict.get_resolution_method_display }} 
+                                        {% if conflict.resolution_method == 'THIRD_REVIEWER' %}
+                                            by {{ conflict.third_reviewer.get_full_name }}
+                                        {% endif %}
+                                        - Decision: {{ conflict.final_decision }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {% if all_resolved %}
+                <div class="alert alert-success mt-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>All conflicts resolved! You can now proceed to Full-text Review.</span>
+                    <a href="{% url 'selection:fulltext_overview' project.id %}" class="btn btn-success btn-sm">
+                        Go to Fulltext Overview
+                    </a>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>No conflicting papers - all screening reviews are consistent!</span>
+                <a href="{% url 'selection:fulltext_overview' project.id %}" class="btn btn-success btn-sm">
+                    Go to Fulltext Overview
+                </a>
+            </div>
+        {% endif %}
+    {% else %}
+        {# Researcher view: Only see papers where they are assigned as third reviewer #}
+        {% if third_reviewer_assignments %}
+            <div class="alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p>You have been assigned as a third reviewer for {{ third_reviewer_assignments|length }} paper(s)</p>
+            </div>
+
+            <div class="space-y-4">
+                {% for assignment in third_reviewer_assignments %}
+                    <div class="card bg-base-100 shadow-md border-2 border-info">
+                        <div class="card-body">
+                            <h2 class="card-title">{{ assignment.paper.title|default:assignment.paper.study_id|truncatechars:80 }}</h2>
+                            <p class="text-sm text-gray-500">Study ID: {{ assignment.paper.study_id }}</p>
+                            
+                            <div class="divider my-2">Previous Reviews</div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {% for review in assignment.conflict.reviews %}
+                                    <div class="p-3 border rounded bg-gray-50">
+                                        <span class="badge {% if review.decision == 'INCLUDED' %}badge-success{% else %}badge-error{% endif %}">
+                                            {{ review.decision }}
+                                        </span>
+                                        {% if review.notes %}
+                                            <p class="text-sm mt-2 text-gray-600">{{ review.notes }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if not assignment.reviewed %}
+                                <div class="divider my-2">Your Decision</div>
+                                
+                                <form method="post" action="{% url 'selection:third_reviewer_submit' project.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                                    <textarea name="notes" class="textarea textarea-bordered w-full mb-2" placeholder="Optional notes..."></textarea>
+                                    <div class="flex gap-2">
+                                        <button type="submit" name="decision" value="INCLUDED" class="btn btn-success flex-1">
+                                            Include
+                                        </button>
+                                        <button type="submit" name="decision" value="EXCLUDED" class="btn btn-error flex-1">
+                                            Exclude
+                                        </button>
+                                    </div>
+                                </form>
+                            {% else %}
+                                <div class="alert alert-success mt-4">
+                                    <span>You submitted: {{ assignment.review.decision }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>You have no pending third reviewer assignments.</span>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

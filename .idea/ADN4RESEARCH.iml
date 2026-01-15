@@ -17,8 +17,11 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 (ADN4RESEARCH)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.13 (ADN4RESEARCH) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyBDDFrameworkConfig">
+    <option name="preferedFrameworkName" value="behave" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
