@@ -72,7 +72,7 @@ def sidebar_context(request):
             if extraction_phase:
                 phases.append({
                     'name': 'Extraction',
-                    'url': f'/extraction/{extraction_phase.id}/',
+                    'url': f'/project/{project.id}/extraction/',
                     'icon': 'extraction',
                     'active': extraction_phase.status != 'CLOSED',
                 })
