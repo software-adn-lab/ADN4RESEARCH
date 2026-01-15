@@ -35,6 +35,7 @@ def open_search_strategy_panel(request, project_id, project):
         'current_stage_plan': current_stage_plan,
         'timeline_stages': timeline_stages,
         'active_tab': 'search_string',
+        'current_stage': project.design_phase.current_stage,
     }
     return render(request, 'search_strategy_panel.html', context)
 

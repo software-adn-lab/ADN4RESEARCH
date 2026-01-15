@@ -14,14 +14,20 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-base-content/50"><span class="loading loading-spinner"></span> Loading history...</td></tr>';
         modal.showModal();
 
-        const url = versionsApiUrl.replace('0', questionId);
+        const url = versionsApiUrl.replace('QUESTION_ID', questionId);
 
         fetch(url)
-            .then(response => response.json())
-            .then(data => renderTable(data.versions, questionId))
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                renderTable(data.versions, questionId);
+            })
             .catch(error => {
-                console.error('Error:', error);
-                tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-error py-4">Error loading versions.</td></tr>';
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-error py-4">Error loading versions: ${error.message}</td></tr>`;
             });
     }
 
@@ -97,26 +103,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const strategyId = btn.dataset.strategyId;
         const versionId = btn.dataset.versionId;
 
-        console.log('Action clicked:', action, 'Strategy ID:', strategyId, 'Version ID:', versionId);
-
         if (action === 'approve') {
-            openReviewModal(approveUrlBase.replace('0', strategyId), 'Approve');
+            openReviewModal(approveUrlBase.replace('STRATEGY_ID', strategyId), 'Approve');
         } else if (action === 'reject') {
-            openReviewModal(rejectUrlBase.replace('0', strategyId), 'Reject');
+            openReviewModal(rejectUrlBase.replace('STRATEGY_ID', strategyId), 'Reject');
         } else if (action === 'delete') {
-            performAction(deleteVersionApiUrl.replace('0', versionId), 'Delete');
+            performAction(deleteVersionApiUrl.replace('VERSION_ID', versionId), 'Delete');
         }
     });
 
     function openReviewModal(actionUrl, actionType) {
-        console.log('Opening review modal:', actionType, actionUrl);
         const modal = document.getElementById('review_strategy_modal');
         const form = document.getElementById('review-strategy-form');
         const title = document.getElementById('review-modal-title');
         const confirmBtn = document.getElementById('review-confirm-btn');
 
         if (!modal) {
-            console.error('Review modal not found!');
             return;
         }
 
@@ -154,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             })
             .catch(error => {
-                console.error('Action failed:', error);
                 showToast('Action failed. See console.', ToastType.ERROR);
             });
     }
