@@ -2,91 +2,144 @@
 {% load static %}
 
 {% block content %}
-<div class="min-h-screen bg-base-100 p-6">
+<div class="min-h-screen bg-base-100 p-4 md:p-6">
     <div class="max-w-7xl mx-auto">
 
-        {# Header with Stage Title #}
-        <div class="mb-8">
-            <a href="{{ stage_url }}"
-                class="text-3xl font-bold hover:text-primary transition-colors inline-flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Current Stage: {{ stage_display }}
-            </a>
-            <p class="text-base-content/60 mt-2">
-                Design Phase Protocol Overview
+        {# Project Title Section #}
+        <div class="mb-8 pt-4">
+            <p class="text-xs uppercase tracking-widest text-base-content/50 font-semibold mb-1">Current Project</p>
+            <h1 class="text-2xl md:text-3xl font-bold text-base-content">
+                {{ project_dto.title }}
+            </h1>
+        </div>
+
+        {# Objectives Section - Two Columns #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            {# General Objective #}
+            <div class="flex gap-3">
+                <div class="flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xs uppercase tracking-widest text-primary font-semibold mb-2">General Objective</h2>
+                    <p class="text-sm text-base-content/70 leading-relaxed">
+                        {{ project_dto.general_objective|default:"No general objective defined yet." }}
+                    </p>
+                </div>
+            </div>
+
+            {# Specific Objectives #}
+            <div class="flex gap-3">
+                <div class="flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xs uppercase tracking-widest text-secondary font-semibold mb-2">Specific Objectives</h2>
+                    {% if project_dto.specific_objectives %}
+                    <ul class="space-y-1">
+                        {% for objective in project_dto.specific_objectives %}
+                        <li class="text-sm text-base-content/70 leading-relaxed flex items-start gap-2">
+                            <span class="text-secondary">•</span>
+                            <span>{{ objective }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-sm text-base-content/50 italic">No specific objectives defined yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <hr class="text-base-content/20 mb-10" />
+
+        {# Protocol Overview Title #}
+        <div class="mb-6">
+            <h2 class="text-xl font-bold text-base-content">Design Phase Protocol Overview</h2>
+            <p class="text-sm text-base-content/60 mt-1">
+                Complete each stage to generate the required artifacts for your systematic review protocol.
             </p>
         </div>
 
-        {# Protocol Metrics Cards #}
-        <div class="bg-white dark:bg-base-200 py-16 sm:py-20 rounded-xl shadow-xl">
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
-                <dl class="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-4">
+        {# Stage Cards Grid #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            {% for stage in stages %}
+            <a href="{{ stage.url }}"
+               class="card bg-base-100 border-2 transition-all duration-200 hover:shadow-lg
+                      {% if stage.status == 'active' %}border-primary shadow-md{% elif stage.status == 'completed' %}border-base-200 bg-base-100{% else %}border-base-200 opacity-60{% endif %}">
+                <div class="card-body p-5 {% if stage.status == 'active' %} hover:scale-102 transition-transform duration-200 {% endif %}">
+                    {# Stage Header #}
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            {# Stage Number/Status Icon #}
+                            {% if stage.status == 'completed' %}
+                            <div class="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            {% elif stage.status == 'active' %}
+                            <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-bold">
+                                {{ stage.id }}
+                            </div>
+                            {% else %}
+                            <div class="w-8 h-8 rounded-full bg-base-200 text-base-content/40 flex items-center justify-center text-sm font-medium">
+                                {{ stage.id }}
+                            </div>
+                            {% endif %}
 
-                    {# Card 1: Research Questions #}
-                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-                        <dt class="text-base leading-7 text-base-content/60">Research Questions Approved</dt>
-                        <dd class="order-first text-3xl font-semibold tracking-tight text-primary sm:text-5xl">
-                            {{ metrics.questions }}
-                        </dd>
-                        <a href="{% url 'design:discussion:panel' project_id=project_id %}"
-                            class="link link-primary text-sm font-medium hover:text-primary-focus">
-                            View Questions →
-                        </a>
+                            <div>
+                                <h3 class="font-semibold text-base-content
+                                   {% if stage.status == 'pending' %}text-base-content/50{% endif %}">
+                                    {{ stage.title }}
+                                </h3>
+                                {% if stage.status == 'active' %}
+                                <span class="text-xs text-primary flex items-center gap-1 mt-0.5">
+                                    <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                                    Active Stage
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {# Arrow Icon #}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
                     </div>
 
-                    {# Card 2: Inclusion Criteria #}
-                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-                        <dt class="text-base leading-7 text-base-content/60">Inclusion Criteria</dt>
-                        <dd class="order-first text-3xl font-semibold tracking-tight text-secondary sm:text-5xl">
-                            {{ metrics.inclusion_criteria }}
-                        </dd>
-                        <a href="{% url 'design:criteria:panel' project_id=project_id %}"
-                            class="link link-secondary text-sm font-medium hover:text-secondary-focus">
-                            View Criteria →
-                        </a>
+                    {# Artifacts Section #}
+                    <div class="mt-4">
+                        <p class="text-xs uppercase tracking-wider text-base-content/40 font-semibold mb-2">Approved Artifacts</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for artifact in stage.artifacts %}
+                            {% if artifact.static %}
+                            <span class="badge badge-ghost badge-sm {% if stage.status == 'pending' %}opacity-50{% endif %}">
+                                {{ artifact.label }}
+                            </span>
+                            {% else %}
+                            <span class="badge {% if stage.status == 'active' %}badge-primary{% elif stage.status == 'completed' %}badge-success{% else %}badge-ghost{% endif %} badge-sm">
+                                {{ artifact.label }} ({{ artifact.count }})
+                            </span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
-
-                    {# Card 3: Exclusion Criteria #}
-                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-                        <dt class="text-base leading-7 text-base-content/60">Exclusion Criteria</dt>
-                        <dd class="order-first text-3xl font-semibold tracking-tight text-accent sm:text-5xl">
-                            {{ metrics.exclusion_criteria }}
-                        </dd>
-                        <a href="{% url 'design:criteria:panel' project_id=project_id %}"
-                            class="link link-accent text-sm font-medium hover:text-accent-focus">
-                            View Criteria →
-                        </a>
-                    </div>
-
-                    {# Card 4: Search Strategies #}
-                    <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-                        <dt class="text-base leading-7 text-base-content/60">Search Strategies Approved</dt>
-                        <dd class="order-first text-3xl font-semibold tracking-tight text-info sm:text-5xl">
-                            {{ metrics.search_strategies }}
-                        </dd>
-                        <a href="{% url 'design:strategies:panel' project_id=project_id %}"
-                            class="link link-info text-sm font-medium hover:text-info-focus">
-                            View Strategies →
-                        </a>
-                    </div>
-
-                </dl>
-            </div>
+                </div>
+            </a>
+            {% endfor %}
         </div>
 
-        {# Quick Actions #}
-        <div class="mt-8 flex justify-center gap-4">
-            <a href="{{ stage_url }}" class="btn btn-primary btn-lg gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
-                        clip-rule="evenodd" />
+        {# Action Button #}
+        <div class="flex justify-end">
+            <a href="{{ stage_url }}" class="btn btn-primary gap-2">
+                Go to the next phase
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
-                Go to Current Stage
             </a>
         </div>
 

@@ -215,22 +215,22 @@ def get_project_active_phase(project):
     except ImportError:
         pass
     
-    # Check Extraction Phase (most commonly used after design)
-    try:
-        from apps.extraction.planning.models import ExtractionPhase
+    # # Check Extraction Phase (most commonly used after design)
+    # try:
+    #     from apps.extraction.planning.models import ExtractionPhase
         
-        try:
-            extraction_phase = ExtractionPhase.objects.filter(project=project).first()
-            if extraction_phase and extraction_phase.status != 'CLOSED':
-                return {
-                    'phase_name': 'Extraction',
-                    'phase_url': f'/extraction/{extraction_phase.id}/',
-                    'phase_key': 'extraction'
-                }
-        except ExtractionPhase.DoesNotExist:
-            pass
-    except ImportError:
-        pass
+    #     try:
+    #         extraction_phase = ExtractionPhase.objects.filter(project=project).first()
+    #         if extraction_phase and extraction_phase.status != 'CLOSED':
+    #             return {
+    #                 'phase_name': 'Extraction',
+    #                 'phase_url': f'/extraction/{extraction_phase.id}/',
+    #                 'phase_key': 'extraction'
+    #             }
+    #     except ExtractionPhase.DoesNotExist:
+    #         pass
+    # except ImportError:
+    #     pass
     
     # Check Selection Phase if it exists
     try:
@@ -249,39 +249,23 @@ def get_project_active_phase(project):
     except (ImportError, AttributeError):
         pass
     
-    # Check Acquisition Phase if it exists
-    try:
-        from apps.acquisition.models import AcquisitionPhase
-        
-        try:
-            acquisition_phase = AcquisitionPhase.objects.get(project=project)
-            if acquisition_phase.is_active:
-                return {
-                    'phase_name': 'Acquisition',
-                    'phase_url': f'/acquisition/{project.id}/',
-                    'phase_key': 'acquisition'
-                }
-        except AcquisitionPhase.DoesNotExist:
-            pass
-    except (ImportError, AttributeError):
-        pass
     
     # Check Interpretation Phase if it exists
-    try:
-        from apps.interpretation.models import InterpretationPhase
+    # try:
+    #     from apps.interpretation.models import InterpretationPhase
         
-        try:
-            interpretation_phase = InterpretationPhase.objects.get(project=project)
-            if interpretation_phase.is_active:
-                return {
-                    'phase_name': 'Interpretation',
-                    'phase_url': f'/interpretation/{project.id}/',
-                    'phase_key': 'interpretation'
-                }
-        except InterpretationPhase.DoesNotExist:
-            pass
-    except (ImportError, AttributeError):
-        pass
+    #     try:
+    #         interpretation_phase = InterpretationPhase.objects.get(project=project)
+    #         if interpretation_phase.is_active:
+    #             return {
+    #                 'phase_name': 'Interpretation',
+    #                 'phase_url': f'/interpretation/{project.id}/',
+    #                 'phase_key': 'interpretation'
+    #             }
+    #     except InterpretationPhase.DoesNotExist:
+    #         pass
+    # except (ImportError, AttributeError):
+    #     pass
     
     # Fallback to Design if no active phase found
     return {

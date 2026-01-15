@@ -36,6 +36,8 @@ class ProjectManagementProvider(IProjectManagement):
             title=project.title,
             owner_id=project.owner.id,
             owner_username=project.owner.username,
+            general_objective=project.general_objective,
+            specific_objectives=project.specific_objectives.values_list('description', flat=True),
             created_at=project.created_at,
             end_date=project.end_date.date() if project.end_date else None
         )

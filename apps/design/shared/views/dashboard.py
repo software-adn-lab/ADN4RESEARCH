@@ -9,17 +9,113 @@ from apps.design.search_strategy.selectors import SearchStrategySelector
 from apps.shared.decorators import project_member_required
 
 
+# Define the visual stages for the dashboard (maps internal stages to UI)
+DASHBOARD_STAGES = [
+    {
+        'id': 1,
+        'key': 'research_questions',
+        'title': 'Research Questions Workspace',
+        'internal_stages': ['RQ_CREATION'],
+        'url_name': 'design:questions:workspace',
+        'artifacts': [
+            {'key': 'questions', 'label': 'Research Questions'},
+        ]
+    },
+    {
+        'id': 2,
+        'key': 'research_questions',
+        'title': 'Research Questions Discussion',
+        'internal_stages': ['RQ_DISCUSSION'],
+        'url_name': 'design:discussion:panel',
+        'artifacts': [
+            {'key': 'questions', 'label': 'Research Questions'},
+        ]
+    },
+    {
+        'id': 3,
+        'key': 'eligibility',
+        'title': 'Eligibility Criteria',
+        'internal_stages': ['CRITERIA_DEFINITION'],
+        'url_name': 'design:criteria:panel',
+        'artifacts': [
+            {'key': 'inclusion_criteria', 'label': 'Inclusion Criteria'},
+            {'key': 'exclusion_criteria', 'label': 'Exclusion Criteria'},
+        ]
+    },
+    {
+        'id': 4,
+        'key': 'search_strategy',
+        'title': 'Search Strategy Development',
+        'internal_stages': ['SEARCH_STRATEGY'],
+        'url_name': 'design:strategies:panel',
+        'artifacts': [
+            {'key': 'search_strategies', 'label': 'Search Strategies'},
+            {'key': 'databases', 'label': 'Database Selection', 'static': True},
+        ]
+    },
+]
+
+
+def _get_stage_status(stage_config: dict, current_stage: str) -> str:
+    """
+    Determine the status of a dashboard stage based on current internal stage.
+    Returns: 'completed', 'active', or 'pending'
+    """
+    if not current_stage:
+        return 'pending' if stage_config['id'] > 1 else 'active'
+
+    # Get the flow order
+    flow = DesignPhase.DESIGN_FLOW
+    try:
+        current_index = flow.index(current_stage)
+    except ValueError:
+        current_index = 0
+
+    # Find the highest index of internal stages for this dashboard stage
+    stage_indices = []
+    for internal in stage_config['internal_stages']:
+        try:
+            stage_indices.append(flow.index(internal))
+        except ValueError:
+            pass
+
+    if not stage_indices:
+        return 'pending'
+
+    max_stage_index = max(stage_indices)
+    min_stage_index = min(stage_indices)
+
+    # Determine status
+    if current_index > max_stage_index:
+        return 'completed'
+    elif current_index >= min_stage_index:
+        return 'active'
+    else:
+        return 'pending'
+
+
 def _get_stage_url(stage_code: str, project_id: int) -> str:
     """Map stage code to appropriate workspace URL."""
     stage_urls = {
         'RQ_CREATION': 'design:questions:workspace',
         'RQ_DISCUSSION': 'design:discussion:panel',
-        'ELIGIBILITY': 'design:criteria:panel',
+        'CRITERIA_DEFINITION': 'design:criteria:panel',
         'SEARCH_STRATEGY': 'design:strategies:panel',
-        'FINISHED': 'design:dashboard',  # Stay on dashboard
+        'FINISHED': 'design:dashboard',
     }
     url_name = stage_urls.get(stage_code, 'design:dashboard')
     return reverse(url_name, kwargs={'project_id': project_id})
+
+
+def _get_current_stage_number(current_stage: str) -> int:
+    """Get the dashboard stage number (1-4) for the current internal stage."""
+    if not current_stage:
+        return 1
+
+    for stage in DASHBOARD_STAGES:
+        if current_stage in stage['internal_stages']:
+            return stage['id']
+    return 1
 
 
 @project_member_required
@@ -28,12 +124,9 @@ def dashboard_view(request, project_id, project_dto):
     Design Dashboard - Shows current stage and protocol metrics.
 
     Displays:
-    - Current design stage (clickeable title)
-    - Count of approved research questions
-    - Count of approved inclusion and exclusion criteria
-    - Count of approved search strategies
-
-    CHANGED: project parameter is now project_dto (dict from IProjectManagement)
+    - Project info (title, objectives)
+    - Progress bar with current stage
+    - 4-stage protocol overview with status and artifacts
     """
     # Get current stage from DesignPhase model
     try:
@@ -47,10 +140,41 @@ def dashboard_view(request, project_id, project_dto):
     stage_url = _get_stage_url(current_stage, project_id) if current_stage else '#'
 
     # Get Protocol Metrics using Selectors
-    approved_questions = ResearchQuestionSelector.count_approved(project_id)
-    approved_inclusion = EligibilityCriterionSelector.count_approved_inclusion(project_id)
-    approved_exclusion = EligibilityCriterionSelector.count_approved_exclusion(project_id)
-    approved_strategies = SearchStrategySelector.count_approved(project_id)
+    metrics = {
+        'questions': ResearchQuestionSelector.count_approved(project_id),
+        'inclusion_criteria': EligibilityCriterionSelector.count_approved_inclusion(project_id),
+        'exclusion_criteria': EligibilityCriterionSelector.count_approved_exclusion(project_id),
+        'search_strategies': SearchStrategySelector.count_approved(project_id),
+    }
+
+    # Build stages data for template
+    stages = []
+    for stage_config in DASHBOARD_STAGES:
+        status = _get_stage_status(stage_config, current_stage)
+
+        # Build artifacts with counts
+        artifacts = []
+        for artifact in stage_config['artifacts']:
+            artifact_data = {
+                'label': artifact['label'],
+                'static': artifact.get('static', False),
+            }
+            if not artifact.get('static'):
+                artifact_data['count'] = metrics.get(artifact['key'], 0)
+            artifacts.append(artifact_data)
+
+        stages.append({
+            'id': stage_config['id'],
+            'title': stage_config['title'],
+            'status': status,
+            'url': reverse(stage_config['url_name'], kwargs={'project_id': project_id}),
+            'artifacts': artifacts,
+        })
+
+    # Calculate progress
+    current_stage_number = _get_current_stage_number(current_stage)
+    total_stages = len(DASHBOARD_STAGES)
+    progress_percentage = ((current_stage_number - 1) / total_stages) * 100 + (25 if current_stage else 0)
 
     context = {
         'project_dto': project_dto,
@@ -58,11 +182,10 @@ def dashboard_view(request, project_id, project_dto):
         'current_stage': current_stage,
         'stage_display': stage_display,
         'stage_url': stage_url,
-        'metrics': {
-            'questions': approved_questions,
-            'inclusion_criteria': approved_inclusion,
-            'exclusion_criteria': approved_exclusion,
-            'search_strategies': approved_strategies,
-        }
+        'stages': stages,
+        'current_stage_number': current_stage_number,
+        'total_stages': total_stages,
+        'progress_percentage': min(progress_percentage, 100),
+        'metrics': metrics,
     }
     return render(request, 'dashboard.html', context)
