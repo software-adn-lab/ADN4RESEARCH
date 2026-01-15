@@ -224,7 +224,7 @@ def get_project_active_phase(project):
             if extraction_phase and extraction_phase.status != 'CLOSED':
                 return {
                     'phase_name': 'Extraction',
-                    'phase_url': f'/extraction/{extraction_phase.id}/',
+                    'phase_url': f'/project/{project.id}/extraction/',
                     'phase_key': 'extraction'
                 }
         except ExtractionPhase.DoesNotExist:

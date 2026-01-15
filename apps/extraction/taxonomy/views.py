@@ -540,9 +540,7 @@ class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequir
                 }, status=400)
         
         return redirect(
-            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                'project_id': phase.project_id
-            })
+            f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': phase.project_id})}?tab=pending"
         )
 
 
@@ -610,9 +608,7 @@ class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
                 }, status=400)
         
         return redirect(
-            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                'project_id': phase.project_id
-            })
+            f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': phase.project_id})}?tab=pending"
         )
 
 
@@ -665,10 +661,7 @@ class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRe
             )
         
         return redirect(
-            reverse('extraction:planning:taxonomy:pending_tags', kwargs={
-                'project_id': phase.project_id,
-                'phase_id': phase_id
-            })
+            f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': phase.project_id})}?tab=pending"
         )
 
 

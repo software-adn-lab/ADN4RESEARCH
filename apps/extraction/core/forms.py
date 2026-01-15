@@ -40,13 +40,18 @@ class QuoteForm(forms.ModelForm):
         Configurar queryset de tags según la fase del paper.
         """
         paper = kwargs.pop('paper', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
         if paper:
-            # Solo tags aprobados de la fase
-            self.fields['tags'].queryset = paper.extraction_phase.tags.filter(
-                status='APPROVED'
-            )
+            if user:
+                # Tags usables por el usuario (incluye inductivos pendientes propios)
+                self.fields['tags'].queryset = paper.extraction_phase.tags.usable_by(user)
+            else:
+                # Fallback: solo tags aprobados
+                self.fields['tags'].queryset = paper.extraction_phase.tags.filter(
+                    status='APPROVED'
+                )
     
     def clean_text_fragment(self):
         """

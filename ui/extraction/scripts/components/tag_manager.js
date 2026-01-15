@@ -110,7 +110,7 @@ class TagManager {
         }
         
         console.groupEnd();
-    }*/
+    }
 }
 
 window.TagManager = TagManager;

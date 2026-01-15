@@ -3,6 +3,7 @@ Views - Planning Bounded Context
 """
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.generic import DetailView, UpdateView, View
@@ -87,15 +88,18 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
         """
         
         if tab == 'tags':
-            # Tags con optimización
-            all_tags = phase.tags.all().select_related('rq_related').order_by('-created_at')
+            # Tags con optimización - Solo mostrar deductivos y inductivos aprobados
+            all_tags = phase.tags.filter(
+                Q(type='DEDUCTIVE') | Q(type='INDUCTIVE', status='APPROVED')
+            ).select_related('rq_related').order_by('-created_at')
+            
             context['tags'] = all_tags
             adapter = DesignProtocolAdapter()
             context['protocol_questions'] = adapter.get_approved_questions(phase.project_id)
             
-            # ✅ Calcular counts por tipo
+            # ✅ Calcular counts por tipo (solo deductivos y inductivos aprobados)
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()
-            context['inductive_tags_count'] = all_tags.filter(type='INDUCTIVE').count()
+            context['inductive_tags_count'] = all_tags.filter(type='INDUCTIVE', status='APPROVED').count()
             
             if is_owner:
                 service = PhaseLifecycleService()
@@ -138,10 +142,16 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
 
         elif tab == 'pending':
             if is_owner:
+                # El owner ve todos los tags inductivos pendientes
                 service = TagApprovalService()
                 context['pending_tags'] = service.get_pending_tags_for_phase(phase.id)
             else:
-                context['pending_tags'] = phase.tags.none()
+                # El researcher solo ve sus propios tags inductivos pendientes
+                context['pending_tags'] = phase.tags.filter(
+                    type='INDUCTIVE',
+                    status='PENDING',
+                    created_by=self.request.user
+                ).select_related('created_by').order_by('-created_at')
 
 
 class PhaseConfigUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):

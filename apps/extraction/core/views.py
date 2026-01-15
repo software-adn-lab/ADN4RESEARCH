@@ -94,8 +94,8 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         phase = paper.extraction_phase
         
         # Tags disponibles
-        context['available_tags'] = phase.tags.filter(
-            status='APPROVED'
+        context['available_tags'] = phase.tags.usable_by(
+            self.request.user
         ).order_by('name')
         
         # Tags obligatorios
@@ -371,7 +371,7 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             logger.info(f"Form data: {form_data}")
             
             # Crear formulario
-            form = QuoteForm(form_data, paper=paper)
+            form = QuoteForm(form_data, paper=paper, user=request.user)
             
             # Validar
             if not form.is_valid():

@@ -52,6 +52,7 @@ class DeductiveTagForm(forms.ModelForm):
         """
         project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
+        self.project = project
         
         if project:
             self.fields['name'].required = True
@@ -67,6 +68,23 @@ class DeductiveTagForm(forms.ModelForm):
             )
             self.fields['rq_related'].required = False
             self.fields['rq_related'].empty_label = "-- Sin vincular a RQ --"
+    
+    def clean(self):
+        """
+        Convierte el ID de ResearchQuestion a la instancia correspondiente.
+        """
+        cleaned_data = super().clean()
+        rq_id = cleaned_data.get('rq_related')
+        
+        if rq_id:
+            try:
+                cleaned_data['rq_related'] = ResearchQuestion.objects.get(id=rq_id)
+            except ResearchQuestion.DoesNotExist:
+                raise ValidationError("Pregunta de investigación inválida.")
+        else:
+            cleaned_data['rq_related'] = None
+        
+        return cleaned_data
 
 
 class InductiveTagForm(forms.ModelForm):
