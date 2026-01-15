@@ -554,7 +554,8 @@ class AcquisitionFacade:
         study_id: str,
         file_obj: Any,
         filename: str,
-        user: Optional[User] = None
+        user: Optional[User] = None,
+        force: bool = False
     ) -> Dict[str, Any]:
         """
         Subir un archivo PDF manualmente para un estudio.
@@ -563,12 +564,14 @@ class AcquisitionFacade:
         - El texto completo no está disponible online (Open Access)
         - El usuario tiene acceso institucional no automatizable
         - El paper está en físico y fue escaneado
+        - Se necesita reemplazar un PDF corrupto o incorrecto (force=True)
 
         Args:
             study_id: UUID del estudio
             file_obj: Objeto archivo (Django UploadedFile o similar)
             filename: Nombre del archivo
             user: Usuario que sube el archivo (opcional)
+            force: Si True, permite reemplazar un PDF existente
 
         Returns:
             Dict con study_id, pdf_path, download_status
@@ -577,11 +580,11 @@ class AcquisitionFacade:
             ValueError: Si el estudio no existe o el archivo no es PDF válido
             Exception: Si falla el almacenamiento
         """
-        logger.info(f"[FACADE] Uploading PDF for study {study_id}")
+        logger.info(f"[FACADE] Uploading PDF for study {study_id} (force={force})")
 
         try:
             # Delegar al orquestador (que a su vez delega al ManualUploadAppService)
-            study = self._orchestrator.upload_study_pdf(study_id, file_obj, filename, user)
+            study = self._orchestrator.upload_study_pdf(study_id, file_obj, filename, user, force)
 
             return {
                 "study_id": str(study.id),

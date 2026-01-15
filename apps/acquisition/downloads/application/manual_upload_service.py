@@ -34,20 +34,21 @@ class ManualUploadService:
         """
         self.file_validator = file_validator
 
-    def attach_file(self, study: Study, file_path: str) -> Study:
+    def attach_file(self, study: Study, file_path: str, force: bool = False) -> Study:
         """
         Adjuntar un archivo PDF manualmente a un estudio.
 
         Args:
             study: Estudio al que se va a adjuntar el archivo
             file_path: Ruta al archivo PDF subido por el usuario
+            force: Si True, permite reemplazar un PDF existente
 
         Returns:
             Study con el archivo adjunto y metadatos actualizados
 
         Raises:
             ValueError: Si el archivo no es un PDF válido
-            ValueError: Si el estudio ya tiene un PDF adjunto
+            ValueError: Si el estudio ya tiene un PDF adjunto y force=False
 
         Ejemplos:
             >>> service = ManualUploadService(file_validator=FileValidator())
@@ -59,11 +60,15 @@ class ManualUploadService:
             'manual'
             >>> updated_study.download_status
             'texto_completo_disponible'
+            
+            # Reemplazar un PDF existente:
+            >>> updated_study = service.attach_file(study, "/uploads/new.pdf", force=True)
         """
         # 1. Validar precondiciones
-        if study.pdf_path is not None:
+        if study.pdf_path is not None and not force:
             raise ValueError(
-                f"El estudio '{study.title}' ya tiene un PDF adjunto: {study.pdf_path}"
+                f"El estudio '{study.title}' ya tiene un PDF adjunto: {study.pdf_path}. "
+                f"Usa force=True para reemplazarlo."
             )
 
         # 2. Validar que el archivo sea un PDF válido

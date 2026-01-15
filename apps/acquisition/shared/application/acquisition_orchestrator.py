@@ -847,7 +847,7 @@ class AcquisitionOrchestrator:
             logger.error(f"[MANUAL] Error updating study metadata: {e}", exc_info=True)
             raise
 
-    def upload_study_pdf(self, study_id: str, file_obj, filename: str, user: Optional[User] = None) -> Study:
+    def upload_study_pdf(self, study_id: str, file_obj, filename: str, user: Optional[User] = None, force: bool = False) -> Study:
         """
         Subir PDF manualmente para un estudio.
 
@@ -856,6 +856,7 @@ class AcquisitionOrchestrator:
             file_obj: Objeto archivo subido
             filename: Nombre del archivo
             user: Usuario que sube el archivo
+            force: Si True, permite reemplazar un PDF existente
 
         Returns:
             Study con PDF actualizado
@@ -863,7 +864,7 @@ class AcquisitionOrchestrator:
         Raises:
             RuntimeError: Si el servicio de upload no está configurado
         """
-        logger.info(f"[MANUAL] Uploading PDF for study {study_id}")
+        logger.info(f"[MANUAL] Uploading PDF for study {study_id} (force={force})")
 
         if self.manual_upload_service is None:
             raise RuntimeError(
@@ -873,7 +874,8 @@ class AcquisitionOrchestrator:
 
         return self.manual_upload_service.upload_pdf_for_study(
             study_id=study_id,
-            uploaded_file=file_obj
+            uploaded_file=file_obj,
+            force=force
         )
         """
         Sube un PDF manual para un estudio.

@@ -281,6 +281,130 @@ class ManualOperationsLiveTest(BaseLiveTest):
         
         print(f"\n✅ SUCCESS: PDF subido y almacenado correctamente")
     
+    def test_manual_pdf_upload_force_replace(self):
+        """
+        Validar reemplazo de PDF con force=True.
+        
+        CASO DE USO:
+        - Estudio ya tiene un PDF (descargado o subido)
+        - El PDF está corrupto o es incorrecto
+        - Usuario necesita reemplazarlo con el PDF correcto
+        
+        FLUJO:
+        1. Crear estudio sin PDF
+        2. Subir primer PDF
+        3. Intentar subir segundo PDF sin force (debe fallar)
+        4. Subir segundo PDF con force=True (debe reemplazar)
+        5. Validar que el nuevo PDF está disponible
+        """
+        print(f"\n{'='*60}")
+        print(f"TEST: Reemplazo de PDF con force=True")
+        print(f"{'='*60}")
+        
+        # PASO 1: CREAR ESTUDIO SIN PDF
+        print(f"\n1️⃣ PASO 1: Crear estudio sin PDF")
+        
+        study_data = {
+            "title": "Study For PDF Replacement Test",
+            "link": "https://example.com/pdf-replacement-test",
+            "doi": "10.1234/replace.pdf.001",
+            "authors": ["Test Author"],
+            "year": 2024
+        }
+        
+        created_study = self.facade.register_manual_study(
+            study_data=study_data,
+            user=None
+        )
+        
+        study_id = created_study['id']
+        self.track_created_study(study_id)
+        
+        print(f"   Estudio creado: {study_id[:8]}...")
+        
+        # PASO 2: SUBIR PRIMER PDF
+        print(f"\n2️⃣ PASO 2: Subir primer PDF")
+        
+        pdf_content_v1 = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"
+        pdf_content_v1 += b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+        pdf_content_v1 += b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
+        pdf_content_v1 += b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n"
+        pdf_content_v1 += b"xref\n0 4\n"
+        pdf_content_v1 += b"0000000000 65535 f\n"
+        pdf_content_v1 += b"0000000015 00000 n\n"
+        pdf_content_v1 += b"0000000068 00000 n\n"
+        pdf_content_v1 += b"0000000137 00000 n\n"
+        pdf_content_v1 += b"trailer\n<< /Size 4 /Root 1 0 R >>\n"
+        pdf_content_v1 += b"startxref\n228\n%%EOF\n"
+        
+        pdf_file_v1 = io.BytesIO(pdf_content_v1)
+        pdf_file_v1.name = "original_paper.pdf"
+        
+        upload_result_v1 = self.facade.upload_study_pdf(
+            study_id=study_id,
+            file_obj=pdf_file_v1,
+            filename="original_paper.pdf",
+            user=None
+        )
+        
+        original_pdf_path = upload_result_v1.get('pdf_path')
+        print(f"   ✓ Primer PDF subido: {original_pdf_path}")
+        
+        # PASO 3: INTENTAR SUBIR SEGUNDO PDF SIN FORCE (DEBE FALLAR)
+        print(f"\n3️⃣ PASO 3: Intentar subir segundo PDF sin force")
+        
+        pdf_file_v2 = io.BytesIO(pdf_content_v1)  # Mismo contenido
+        pdf_file_v2.name = "replacement_paper.pdf"
+        
+        try:
+            self.facade.upload_study_pdf(
+                study_id=study_id,
+                file_obj=pdf_file_v2,
+                filename="replacement_paper.pdf",
+                user=None,
+                force=False  # Sin force
+            )
+            self.fail("Debería haber lanzado ValueError")
+        except ValueError as e:
+            print(f"   ✓ Correctamente rechazado: {str(e)[:60]}...")
+        
+        # PASO 4: SUBIR CON FORCE=TRUE (DEBE REEMPLAZAR)
+        print(f"\n4️⃣ PASO 4: Subir segundo PDF con force=True")
+        
+        pdf_file_v3 = io.BytesIO(pdf_content_v1)
+        pdf_file_v3.name = "corrected_paper.pdf"
+        
+        upload_result_v3 = self.facade.upload_study_pdf(
+            study_id=study_id,
+            file_obj=pdf_file_v3,
+            filename="corrected_paper.pdf",
+            user=None,
+            force=True  # Con force
+        )
+        
+        new_pdf_path = upload_result_v3.get('pdf_path')
+        print(f"   ✓ PDF reemplazado exitosamente")
+        print(f"   Nueva ruta: {new_pdf_path}")
+        
+        # PASO 5: VALIDAR QUE EL NUEVO PDF ESTÁ DISPONIBLE
+        print(f"\n5️⃣ PASO 5: Validar que el nuevo PDF está disponible")
+        
+        study_status = self.facade.get_study_status([study_id])[0]
+        final_pdf_path = study_status.get('pdf_path')
+        
+        print(f"   PDF path final: {final_pdf_path}")
+        print(f"   Download status: {study_status.get('download_status')}")
+        
+        # VALIDACIONES
+        self.assertIsNotNone(final_pdf_path, "El PDF debe tener una ruta")
+        self.assertIn("corrected_paper", final_pdf_path, "Debe ser el PDF reemplazado")
+        
+        if os.path.exists(final_pdf_path):
+            self.assert_valid_pdf_file(final_pdf_path)
+            print(f"   ✓ Nuevo PDF validado correctamente")
+        
+        print(f"\n✅ SUCCESS: PDF reemplazado correctamente con force=True")
+    
     def test_manual_operations_persistence(self):
         """
         Validar que operaciones manuales persisten correctamente.
