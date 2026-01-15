@@ -1,8 +1,10 @@
 """
 Views - Planning Bounded Context
 """
+import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -16,9 +18,10 @@ from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequi
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.taxonomy.services import TagApprovalService
 from apps.extraction.core.models import PaperExtraction, Quote
-from apps.extraction.shared.design_protocol import DesignProtocolAdapter
+from apps.extraction.adapters.selection import get_selection_adapter
+from apps.extraction.adapters.acquisition import get_acquisition_adapter
 
-
+logger = logging.getLogger(__name__)
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
     """
     Dashboard principal de una fase de extracción.
@@ -94,15 +97,16 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             ).select_related('rq_related').order_by('-created_at')
             
             context['tags'] = all_tags
-            adapter = DesignProtocolAdapter()
-            context['protocol_questions'] = adapter.get_approved_questions(phase.project_id)
+            
+            # Obtener preguntas del protocolo a través de services
+            service = PhaseLifecycleService()
+            context['protocol_questions'] = service.get_protocol_questions_for_display(phase.project_id)
             
             # ✅ Calcular counts por tipo (solo deductivos y inductivos aprobados)
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()
             context['inductive_tags_count'] = all_tags.filter(type='INDUCTIVE', status='APPROVED').count()
             
             if is_owner:
-                service = PhaseLifecycleService()
                 coverage_report = service.get_protocol_coverage(phase)
                 context['coverage_report'] = coverage_report
                 context['can_open_phase'] = coverage_report.is_fully_covered
@@ -117,15 +121,9 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             
             # Agregar miembros del proyecto para el modal de reasignación
             if is_owner:
-                from apps.project.structure.models.project_models import Membership
-                members = [
-                    {'id': phase.project.owner.id, 'username': phase.project.owner.username}
-                ]
-                members.extend([
-                    {'id': m.user.id, 'username': m.user.username}
-                    for m in Membership.objects.filter(project=phase.project).select_related('user')
-                ])
-                context['team_members'] = members
+                from apps.extraction.adapters.project import get_project_adapter
+                adapter = get_project_adapter()
+                context['team_members'] = adapter.get_project_members(phase.project_id)
         
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
@@ -152,6 +150,135 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
                     status='PENDING',
                     created_by=self.request.user
                 ).select_related('created_by').order_by('-created_at')
+
+
+class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Initialize extraction phase from selection results.
+    
+    Triggered when user clicks "Go to Extraction Phase" button from Selection module.
+    
+    Workflow:
+    1. Create ExtractionPhase in CONFIG status if it doesn't exist
+    2. Get approved papers from Selection module via adapter
+    3. Create PaperExtraction records for each approved paper
+    4. Trigger fulltext downloads via Acquisition adapter (async)
+    5. Redirect to extraction dashboard
+    """
+    
+    http_method_names = ['get']
+    
+    @transaction.atomic
+    def get(self, request, project_id):
+        """
+        Initialize extraction phase and load approved papers.
+        """
+        from apps.project.structure.models.project_models import Project
+        
+        try:
+            # Get or create extraction phase
+            project = get_object_or_404(Project, id=project_id)
+            phase, created = ExtractionPhase.objects.get_or_create(
+                project_id=project_id,
+                defaults={'status': ExtractionStatusChoices.CONFIG}
+            )
+            
+            if created:
+                messages.success(
+                    request,
+                    f'Extraction phase created for "{project.title}". '
+                    'You can now configure tags and assign papers to researchers.'
+                )
+                logger.info(f"[INIT EXTRACTION] Created phase for project {project_id}")
+            else:
+                logger.info(f"[INIT EXTRACTION] Phase already exists for project {project_id}")
+            
+            # Get approved papers from selection
+            selection_adapter = get_selection_adapter()
+            approved_paper_ids = selection_adapter.get_approved_papers(project_id)
+            
+            if not approved_paper_ids:
+                messages.warning(
+                    request,
+                    'No approved papers found in selection phase. '
+                    'Please complete the selection phase first.'
+                )
+                logger.warning(f"[INIT EXTRACTION] No approved papers for project {project_id}")
+                return redirect(
+                    reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})
+                )
+            
+            # Get study data from acquisition
+            acquisition_adapter = get_acquisition_adapter()
+            all_studies = acquisition_adapter.get_studies_by_project(project_id)
+            
+            # Map study IDs to study objects
+            studies_by_id = {str(s['id']): s for s in all_studies}
+            
+            # Create PaperExtraction records for approved papers
+            created_count = 0
+            skipped_count = 0
+            
+            for paper_id in approved_paper_ids:
+                if str(paper_id) not in studies_by_id:
+                    logger.warning(f"[INIT EXTRACTION] Study {paper_id} not found in acquisition")
+                    skipped_count += 1
+                    continue
+                
+                # Create PaperExtraction if it doesn't exist
+                paper_ext, created = PaperExtraction.objects.get_or_create(
+                    extraction_phase=phase,
+                    study_id=str(paper_id),
+                    defaults={'status': 'PENDING'}
+                )
+                
+                if created:
+                    created_count += 1
+                else:
+                    skipped_count += 1
+            
+            # Trigger fulltext downloads asynchronously
+            try:
+                download_result = acquisition_adapter.download_fulltexts(
+                    approved_paper_ids
+                )
+                logger.info(
+                    f"[INIT EXTRACTION] Download triggered: "
+                    f"{download_result['downloaded_count']} completed, "
+                    f"{download_result['failed_count']} failed"
+                )
+            except Exception as e:
+                logger.error(
+                    f"[INIT EXTRACTION] Failed to trigger downloads: {e}",
+                    exc_info=True
+                )
+                # Don't fail the entire operation if downloads fail
+            
+            messages.success(
+                request,
+                f'Loaded {created_count} papers for extraction. '
+                f'({skipped_count} were already loaded). '
+                'PDFs are being downloaded in the background.'
+            )
+            logger.info(
+                f"[INIT EXTRACTION] Created {created_count} papers, "
+                f"skipped {skipped_count} for project {project_id}"
+            )
+            
+        except Exception as e:
+            logger.error(
+                f"[INIT EXTRACTION] Initialization failed: {e}",
+                exc_info=True
+            )
+            messages.error(
+                request,
+                f'Failed to initialize extraction phase: {str(e)}'
+            )
+        
+        # Redirect to extraction dashboard
+        return redirect(
+            reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})
+        )
 
 
 class PhaseConfigUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):
