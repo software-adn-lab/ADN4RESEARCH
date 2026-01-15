@@ -38,9 +38,9 @@
                 <div class="stat-desc text-error flex flex-wrap">
                     Faltan {{ coverage_report.missing_rq_count }} RQ(s):
                     {% for rq in coverage_report.missing_rqs %}
-                        <div class="tooltip" data-tip="{{ rq.question_text }}">
+                        <div class="tooltip" data-tip="{{ rq.text }}">
                             <span class="badge badge-xs badge-error mr-1">
-                                {{ rq.question }}
+                                {{ rq.text }}
                             </span>
                         </div>
                     {% endfor %}
@@ -113,7 +113,7 @@
                     </td>
                     <td>
                         {% if tag.rq_related %}
-                            <div class="tooltip" data-tip="{{ tag.rq_related.question_text }}">
+                            <div class="tooltip" data-tip="{{ tag.rq_related.text }}">
                                 <span class="badge badge-info badge-outline cursor-help">
                                     RQ #{{ tag.rq_related.id }}
                                 </span>
@@ -194,7 +194,7 @@
                         {% for rq in protocol_questions %}
                             <option value="{{ rq.id }}"
                                 {% if tag.rq_related_id == rq.id %}selected{% endif %}>
-                                {{ rq.question }}
+                                {{ rq.text }}
                             </option>
                         {% endfor %}
                     </select>
@@ -254,7 +254,7 @@
                         {% for rq in protocol_questions %}
                             <option value="{{ rq.id }}"
                                 {% if tag.rq_related_id == rq.id %}selected{% endif %}>
-                                {{ rq.question }}
+                                {{ rq.text }}
                             </option>
                         {% endfor %}
                     </select>

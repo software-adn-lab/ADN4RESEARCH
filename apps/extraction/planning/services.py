@@ -1,70 +1,62 @@
 from ..shared.exceptions import BusinessRuleViolation
-from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.extraction.shared.design_protocol import DesignProtocolAdapter
+from apps.extraction.adapters.design import DesignAdapter
 from ..planning.models import ExtractionPhase, ExtractionStatusChoices
 from .dtos import ProtocolCoverageReport
 
 
 class PhaseLifecycleService:
     
+    def get_protocol_questions_for_display(self, project_id: int):
+        """
+        Obtiene las preguntas del protocolo para mostrar en la UI.
+        Retorna List[ResearchQuestionDTO] a través del adapter.
+        """
+        adapter = DesignAdapter()
+        return adapter.get_protocol_questions(project_id)
+    
     def get_protocol_coverage(self, phase: ExtractionPhase) -> ProtocolCoverageReport:
         """
-        Calcula la cobertura de RQs basado en tags DEDUCTIVOS aprobados.
-        
-        Business Rules:
-        - Solo se consideran tags DEDUCTIVOS (type='DEDUCTIVE')
-        - Solo se consideran tags APROBADOS (status='APPROVED')
-        - Solo se consideran tags con RQ relacionada (rq_related__isnull=False)
-        - Una RQ está cubierta si existe AL MENOS UN tag deductivo aprobado que la referencia
-        
-        Args:
-            phase: Fase de extracción a evaluar
-            
-        Returns:
-            ProtocolCoverageReport con el estado de cobertura
+        Calcula la cobertura de RQs utilizando el DesignAdapter y lógica de conjuntos.
         """
-        # 1. Obtener RQs del proyecto
-        adapter = DesignProtocolAdapter()
-        approved_ids = adapter.get_approved_question_ids(phase.project_id)
-        protocol_rqs = ResearchQuestion.objects.filter(
-            id__in=approved_ids
-        ).only("id")
-        protocol_rq_ids = protocol_rqs.values_list("id", flat=True)
-        total_rqs = protocol_rqs.count()
+        # 1. Obtener RQs del proyecto vía Adapter (Devuelve Lista de DTOs, NO QuerySet)
+        adapter = DesignAdapter()
+        protocol_rqs = adapter.get_protocol_questions(phase.project_id)
+        
+        if not protocol_rqs:
+            return ProtocolCoverageReport(
+                is_fully_covered=True, # Si no hay preguntas, técnicamente está cubierto
+                missing_rqs=[],
+                total_rqs=0,
+                covered_count=0
+            )
 
+        # 2. Extraer IDs de las preguntas del protocolo (en memoria)
+        # Asumimos que el DTO tiene un atributo .id
+        protocol_rq_ids = {rq.id for rq in protocol_rqs}
+        total_rqs = len(protocol_rqs)
 
-        # 2. ✅ CORREGIDO: Filtrar solo tags DEDUCTIVOS aprobados con RQ
-        covered_rq_ids = phase.tags.filter(
-            type='DEDUCTIVE',              # ✅ Solo deductivos
-            status='APPROVED',             # ✅ Solo aprobados
-            rq_related__isnull=False       # ✅ Solo con RQ asignada
-        ).values_list('rq_related_id', flat=True).distinct()
-
-        covered_count = phase.tags.filter(
+        # 3. Consultar Tags Locales
+        covered_rq_ids = set(phase.tags.filter(
             type='DEDUCTIVE',
             status='APPROVED',
-            rq_related__in=protocol_rq_ids
-        ).values('rq_related_id').distinct().count()
+            rq_related_id__in=protocol_rq_ids  # Filtramos por los IDs del protocolo
+        ).values_list('rq_related_id', flat=True))
 
+        # 4. Calcular métricas usando conjuntos (Sets)
+        covered_count = len(covered_rq_ids)
         
-        # 3. Una fase está completamente cubierta si:
-        #    - Tiene al menos 1 RQ en el protocolo
-        #    - Todas las RQs tienen al menos un tag deductivo aprobado
-        is_fully_covered = (total_rqs > 0) and (total_rqs == covered_count)
+        # Calculamos la diferencia de conjuntos: {IDs Protocolo} - {IDs Cubiertos}
+        missing_rq_ids = protocol_rq_ids - covered_rq_ids
         
-        # 4. RQs faltantes (devolver QuerySet, no lista)
-        missing_rqs = protocol_rqs.exclude(
-            id__in=phase.tags.filter(
-                    type='DEDUCTIVE',
-                    status='APPROVED',
-                    rq_related__in=protocol_rq_ids
-                ).values('rq_related_id')
-        )
+        # Reconstruimos la lista de objetos faltantes filtrando la lista original
+        missing_rqs_dtos = [rq for rq in protocol_rqs if rq.id in missing_rq_ids]
 
+        # 5. Determinar si está totalmente cubierto
+        is_fully_covered = (total_rqs > 0) and (len(missing_rq_ids) == 0)
 
         return ProtocolCoverageReport(
             is_fully_covered=is_fully_covered,
-            missing_rqs=missing_rqs,  # QuerySet
+            missing_rqs=missing_rqs_dtos, # Ahora pasamos una lista de DTOs, no un QuerySet
             total_rqs=total_rqs,
             covered_count=covered_count
         )

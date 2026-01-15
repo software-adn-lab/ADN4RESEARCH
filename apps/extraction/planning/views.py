@@ -18,13 +18,10 @@ from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequi
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.taxonomy.services import TagApprovalService
 from apps.extraction.core.models import PaperExtraction, Quote
-from apps.extraction.shared.design_protocol import DesignProtocolAdapter
 from apps.extraction.adapters.selection import get_selection_adapter
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
 
 logger = logging.getLogger(__name__)
-
-
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
     """
     Dashboard principal de una fase de extracción.
@@ -100,15 +97,16 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             ).select_related('rq_related').order_by('-created_at')
             
             context['tags'] = all_tags
-            adapter = DesignProtocolAdapter()
-            context['protocol_questions'] = adapter.get_approved_questions(phase.project_id)
+            
+            # Obtener preguntas del protocolo a través de services
+            service = PhaseLifecycleService()
+            context['protocol_questions'] = service.get_protocol_questions_for_display(phase.project_id)
             
             # ✅ Calcular counts por tipo (solo deductivos y inductivos aprobados)
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()
             context['inductive_tags_count'] = all_tags.filter(type='INDUCTIVE', status='APPROVED').count()
             
             if is_owner:
-                service = PhaseLifecycleService()
                 coverage_report = service.get_protocol_coverage(phase)
                 context['coverage_report'] = coverage_report
                 context['can_open_phase'] = coverage_report.is_fully_covered
@@ -123,15 +121,9 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             
             # Agregar miembros del proyecto para el modal de reasignación
             if is_owner:
-                from apps.project.structure.models.project_models import Membership
-                members = [
-                    {'id': phase.project.owner.id, 'username': phase.project.owner.username}
-                ]
-                members.extend([
-                    {'id': m.user.id, 'username': m.user.username}
-                    for m in Membership.objects.filter(project=phase.project).select_related('user')
-                ])
-                context['team_members'] = members
+                from apps.extraction.adapters.project import get_project_adapter
+                adapter = get_project_adapter()
+                context['team_members'] = adapter.get_project_members(phase.project_id)
         
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(

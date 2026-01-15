@@ -36,6 +36,7 @@ class ExtractionPhase(AuditModel):
     )
     start_date = models.DateField(null=True, blank=True, verbose_name="Fecha de Inicio")
     due_date = models.DateField(null=True, blank=True, verbose_name="Fecha de Vencimiento")
+    is_active = models.BooleanField(default=False, verbose_name="¿Es Activa?")
     
     objects = ExtractionPhaseQuerySet.as_manager()
 
