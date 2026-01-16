@@ -27,6 +27,7 @@ from .shared.application.acquisition_orchestrator import (
 # Dominio
 from .shared.domain.entities.study import Study
 from .translation.domain.models import NormalizedStrategy
+from .shared.domain.constants import normalize_source_names
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -43,11 +44,23 @@ class PreviewSearchResult:
     Resultado de una búsqueda en modo preview (sin persistir).
 
     Usado por Design para mostrar resultados antes de decidir qué guardar.
+    
+    Attributes:
+        queries_by_source: Queries traducidas por fuente (ya filtradas por selected_sources)
+        total_found: Total de estudios únicos (después de deduplicar)
+        studies: Estudios como dicts simples (sin IDs de BD)
+        strategy_dict: Estrategia original (para finalize)
+        selected_sources: Fuentes que se consultaron (nombres canónicos)
     """
     queries_by_source: Dict[str, str]
     total_found: int
-    studies: List[Dict[str, Any]]  # Estudios como dicts simples
-    strategy_dict: Dict[str, Any]  # Estrategia original para finalize
+    studies: List[Dict[str, Any]]
+    strategy_dict: Dict[str, Any]
+    selected_sources: Optional[List[str]] = None  # Fuentes usadas (para trazabilidad)
+    
+    def __post_init__(self):
+        if self.selected_sources is None:
+            self.selected_sources = list(self.queries_by_source.keys())
 
 
 @dataclass
@@ -125,6 +138,7 @@ class AcquisitionFacade:
         strategy_dict: Dict[str, Any],
         user: Optional[User] = None,
         max_results_per_source: int = 25,
+        selected_sources: Optional[List[str]] = None,
     ) -> PreviewSearchResult:
         """
         Ejecutar búsqueda en modo preview (SIN persistir nada en BD).
@@ -133,11 +147,15 @@ class AcquisitionFacade:
         - Probar una cadena de búsqueda antes de confirmarla
         - Ver qué estudios retornaría sin contaminar la base de datos
         - Permitir al usuario seleccionar estudios relevantes
+        - Filtrar por motores de búsqueda específicos
 
         Args:
             strategy_dict: Estrategia normalizada para ejecutar
             user: Usuario que solicita el preview (opcional)
             max_results_per_source: Límite de resultados por fuente académica
+            selected_sources: Lista de fuentes a consultar (opcional).
+                             Acepta nombres UI ("IEEE") o canónicos ("IEEE Xplore").
+                             Si es None o vacío, consulta TODAS las fuentes disponibles.
 
         Returns:
             PreviewSearchResult con studies como dicts (sin IDs de BD)
@@ -145,15 +163,28 @@ class AcquisitionFacade:
         Raises:
             ValueError: Si la estrategia es inválida
             Exception: Si falla algún servicio crítico
+            
+        Examples:
+            # Buscar solo en Scopus
+            >>> facade.preview_search(strategy, selected_sources=["Scopus"])
+            
+            # Buscar solo en IEEE (acepta nombre UI)
+            >>> facade.preview_search(strategy, selected_sources=["IEEE"])
+            
+            # Buscar en ambos (comportamiento por defecto)
+            >>> facade.preview_search(strategy)
         """
-        logger.info(f"[FACADE] Preview search starting")
+        # BOUNDARY: Normalizar nombres UI → nombres internos canónicos
+        normalized_sources = normalize_source_names(selected_sources)
+        logger.info(f"[FACADE] Preview search starting with sources: {normalized_sources}")
 
         try:
-            # Delegar al orchestrator (que ya implementa la lógica)
+            # Delegar al orchestrator con las fuentes filtradas
             preview_result = self._orchestrator.preview_search_from_strategy(
                 strategy_dict=strategy_dict,
                 user=user,
                 max_results_per_source=max_results_per_source,
+                selected_sources=normalized_sources,
             )
 
             # Convertir a DTO simplificado para Design
@@ -161,7 +192,8 @@ class AcquisitionFacade:
                 queries_by_source=preview_result["queries_by_source"],
                 total_found=preview_result["total_found"],
                 studies=preview_result["studies"],
-                strategy_dict=strategy_dict,  # Guardar para finalize
+                strategy_dict=strategy_dict,
+                selected_sources=normalized_sources,  # Guardar para trazabilidad
             )
 
         except Exception as e:
@@ -189,11 +221,13 @@ class AcquisitionFacade:
         4. Crea los vínculos en ExecutionStudy (trazabilidad M2M)
         5. Actualiza estadísticas en la estrategia de Design
 
+        IMPORTANTE: Este método usa los datos del preview (queries_by_source, 
+        selected_sources) para mantener trazabilidad consistente. NO re-traduce
+        la estrategia, evitando inconsistencias entre preview y persist.
+
         Args:
             design_strategy_id: ID de la estrategia en design.SearchStrategy
-            preview_result: Resultado del preview con estudios y estrategia
-            design_strategy_id: ID de la estrategia en design.SearchStrategy
-            preview_result: Resultado del preview con estudios y estrategia
+            preview_result: Resultado del preview con estudios, estrategia y fuentes usadas
             user: Usuario que confirma la persistencia
 
         Returns:
@@ -203,15 +237,21 @@ class AcquisitionFacade:
             ValueError: Si parámetros inválidos
             Exception: Si falla persistencia
         """
-        logger.info(f"[FACADE] Finalize search for strategy {design_strategy_id} with {len(preview_result.studies)} studies")
+        logger.info(
+            f"[FACADE] Finalize search for strategy {design_strategy_id} "
+            f"with {len(preview_result.studies)} studies, "
+            f"sources: {preview_result.selected_sources}"
+        )
 
         try:
-            # Delegar al orchestrator (que ya implementa la lógica completa)
+            # Delegar al orchestrator usando datos del preview (no re-traducir)
             execution_result = self._orchestrator.execute_and_persist_final(
                 strategy_dict=preview_result.strategy_dict,
                 design_strategy_id=design_strategy_id,
                 selected_studies=preview_result.studies,
                 user=user,
+                queries_by_source=preview_result.queries_by_source,  # Del preview
+                selected_sources=preview_result.selected_sources,     # Del preview
             )
 
             # Convertir a DTO simplificado para Design

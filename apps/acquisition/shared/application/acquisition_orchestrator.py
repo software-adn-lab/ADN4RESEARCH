@@ -143,6 +143,7 @@ class AcquisitionOrchestrator:
         strategy_dict: Dict[str, Any],
         user: Optional[User] = None,
         max_results_per_source: int = 25,
+        selected_sources: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Piloto: traduce y ejecuta la estrategia pero NO persiste nada.
@@ -152,14 +153,16 @@ class AcquisitionOrchestrator:
             strategy_dict: Diccionario con la estrategia normalizada
             user: Usuario que ejecuta la búsqueda (opcional para preview)
             max_results_per_source: Máximo de resultados por fuente
+            selected_sources: Lista de fuentes canónicas a consultar (ya normalizadas).
+                             Si es None, consulta todas las fuentes disponibles.
 
         Returns:
             Dict con:
-            - queries_by_source: Dict[str, str] - Queries traducidas
+            - queries_by_source: Dict[str, str] - Queries traducidas (filtradas)
             - total_found: int - Total de estudios únicos encontrados
             - studies: List[Dict] - Estudios como dicts (sin persistir)
         """
-        logger.info(f"[PREVIEW] Executing preview search")
+        logger.info(f"[PREVIEW] Executing preview search with sources: {selected_sources}")
 
         # Convertir a dominio
         normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
@@ -169,7 +172,19 @@ class AcquisitionOrchestrator:
         queries_by_source = translation_results["queries_by_source"]
         translation_statuses = translation_results["translation_statuses"]
 
-        # Ejecutar discovery SIN persistir
+        # FILTRAR por selección del usuario (si se especificó)
+        if selected_sources:
+            queries_by_source = {
+                k: v for k, v in queries_by_source.items()
+                if k in selected_sources
+            }
+            translation_statuses = {
+                k: v for k, v in translation_statuses.items()
+                if k in selected_sources
+            }
+            logger.info(f"[PREVIEW] Filtered to sources: {list(queries_by_source.keys())}")
+
+        # Ejecutar discovery SIN persistir (solo con fuentes filtradas)
         discovery_result = self.discovery_service.execute(
             translation_statuses=translation_statuses,
             supported_sources=list(queries_by_source.keys()),
@@ -216,6 +231,8 @@ class AcquisitionOrchestrator:
         design_strategy_id: int,
         selected_studies: List[Dict[str, Any]],
         user: Optional[User] = None,
+        queries_by_source: Optional[Dict[str, str]] = None,
+        selected_sources: Optional[List[str]] = None,
     ) -> SearchExecutionResult:
         """
         Flujo FINAL: persiste estrategia + estudios + ejecución + trazabilidad.
@@ -225,9 +242,16 @@ class AcquisitionOrchestrator:
             design_strategy_id: ID de la estrategia en design.SearchStrategy
             selected_studies: Estudios seleccionados por Design para persistir
             user: Usuario que ejecuta la búsqueda
+            queries_by_source: Queries del preview (ya filtradas). Si None, se retraducen.
+            selected_sources: Fuentes usadas en el preview (para trazabilidad).
 
         Returns:
             SearchExecutionResult con toda la información de la ejecución
+            
+        Note:
+            Si queries_by_source viene del preview, se usa directamente para mantener
+            consistencia entre preview y persist. Esto evita que el finalize tenga
+            queries de fuentes que no fueron consultadas en el preview.
         """
         from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
@@ -238,12 +262,27 @@ class AcquisitionOrchestrator:
         strategy.json_definition = strategy_dict
         strategy.save(update_fields=['json_definition'])
 
-        logger.info(f"[FINAL] Executing strategy {design_strategy_id} with {len(selected_studies)} studies")
+        logger.info(
+            f"[FINAL] Executing strategy {design_strategy_id} "
+            f"with {len(selected_studies)} studies, sources: {selected_sources}"
+        )
 
-        # Traducir estrategia para obtener queries (trazabilidad completa)
-        normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
-        translation_results = self._translate_strategy(normalized_strategy)
-        queries_by_source = translation_results["queries_by_source"]
+        # USAR queries del preview si vienen (trazabilidad consistente)
+        # Si no vienen, re-traducir (backward compatible)
+        if queries_by_source is None:
+            normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
+            translation_results = self._translate_strategy(normalized_strategy)
+            queries_by_source = translation_results["queries_by_source"]
+            
+            # Filtrar si se especificaron fuentes
+            if selected_sources:
+                queries_by_source = {
+                    k: v for k, v in queries_by_source.items()
+                    if k in selected_sources
+                }
+                logger.info(f"[FINAL] Filtered queries to sources: {list(queries_by_source.keys())}")
+        else:
+            logger.info(f"[FINAL] Using queries from preview: {list(queries_by_source.keys())}")
 
         # Convertir estudios seleccionados a entidades de dominio
         study_entities = []
@@ -261,8 +300,8 @@ class AcquisitionOrchestrator:
                         "year": raw.get("year"),
                         "journal": raw.get("journal"),
                         "keywords": raw.get("keywords", []),
-                        "is_open_access": raw.get("is_open_access"),  # ✅ AGREGADO
-                        "pdf_url": raw.get("pdf_url"),  # ✅ AGREGADO
+                        "is_open_access": raw.get("is_open_access"),
+                        "pdf_url": raw.get("pdf_url"),
                         "pdf_path": raw.get("pdf_path"),
                         "pdf_source": raw.get("pdf_source"),
                         "download_status": raw.get("download_status"),
@@ -278,7 +317,10 @@ class AcquisitionOrchestrator:
         execution_model = SearchExecutionModel.objects.create(
             strategy=strategy,
             executed_by=user,
-            translated_queries={"queries_by_source": queries_by_source},  # ← TRAZABILIDAD COMPLETA
+            translated_queries={
+                "queries_by_source": queries_by_source,
+                "selected_sources": selected_sources or list(queries_by_source.keys()),
+            },
             results_count=len(persisted_studies),
             new_studies_count=0,  # Se ajusta abajo
             status="SUCCESS",

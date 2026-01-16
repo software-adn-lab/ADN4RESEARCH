@@ -55,3 +55,64 @@ DISCOVERY_RESULT_PARTIAL = "partial"
 
 # Type hint para validación estática
 DiscoveryResultStatus = Literal["complete", "partial"]
+
+
+# ============================================================================
+# ALIASES DE FUENTES (Solo para traducción UI → Dominio en Facade)
+# ============================================================================
+
+# Mapeo de nombres UI → nombres internos canónicos
+# Uso: SOLO en el Facade (boundary), no contaminar el dominio
+SOURCE_ALIASES: dict[str, str] = {
+    # IEEE variantes (UI puede enviar cualquiera de estas)
+    "IEEE": "IEEE Xplore",
+    "ieee": "IEEE Xplore",
+    "IEEE Xplore": "IEEE Xplore",
+    "ieee xplore": "IEEE Xplore",
+    "ieee-xplore": "IEEE Xplore",
+    # Scopus variantes
+    "Scopus": "Scopus",
+    "scopus": "Scopus",
+    "SCOPUS": "Scopus",
+}
+
+
+def normalize_source_names(sources: list[str] | None) -> list[str]:
+    """
+    Normaliza una lista de nombres de fuentes UI a nombres internos canónicos.
+    
+    Esta función actúa como BOUNDARY entre la UI y el dominio:
+    - Acepta nombres "amigables" de UI ("IEEE", "scopus")
+    - Retorna nombres canónicos del dominio ("IEEE Xplore", "Scopus")
+    - Si la lista está vacía o es None, retorna TODAS las fuentes de discovery
+    
+    Args:
+        sources: Lista de nombres como vienen de UI (puede ser None o vacío)
+        
+    Returns:
+        Lista de nombres canónicos (solo fuentes válidas de DISCOVERY_SOURCES)
+        
+    Examples:
+        >>> normalize_source_names(["IEEE", "Scopus"])
+        ["IEEE Xplore", "Scopus"]
+        
+        >>> normalize_source_names(None)
+        ["Scopus", "IEEE Xplore"]  # Todas las fuentes
+        
+        >>> normalize_source_names(["ieee"])
+        ["IEEE Xplore"]
+    """
+    if not sources:
+        return list(DISCOVERY_SOURCES)
+    
+    normalized = []
+    for s in sources:
+        # Buscar en aliases, si no existe usar el nombre tal cual
+        canonical = SOURCE_ALIASES.get(s, s)
+        # Solo agregar si es una fuente válida de discovery y no está duplicada
+        if canonical in DISCOVERY_SOURCES and canonical not in normalized:
+            normalized.append(canonical)
+    
+    # Si después de normalizar no hay fuentes válidas, retornar todas
+    return normalized if normalized else list(DISCOVERY_SOURCES)
+
