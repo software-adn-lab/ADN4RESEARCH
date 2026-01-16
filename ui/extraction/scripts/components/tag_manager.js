@@ -1,6 +1,7 @@
 /**
  * TagManager Component
- * Responsabilidad: Actualizar tags obligatorios, calcular coverage
+ * Responsibility: Update UI state of tags (Mandatory/Optional), calculate coverage, update progress bar.
+ * Style: Adapted for MacOS/Atlas.ti split-view
  */
 
 class TagManager {
@@ -14,102 +15,129 @@ class TagManager {
     }
 
     setupEventListeners() {
-        // Escuchar cuando se crea una quote
+        // Listen for new quotes to update tag status immediately
         window.addEventListener('quote:created', (e) => {
-            this.updateMandatoryTagsUI(e.detail.quote.tags);
+            this.updateTagsUI(e.detail.quote.tags);
         });
     }
 
-    updateMandatoryTagsUI(quoteTags) {
-        quoteTags.forEach(tag => {
-            const badge = document.querySelector(`[data-tag-id="${tag.id}"]`);
-            if (badge && !badge.classList.contains('badge-success')) {
-                badge.classList.remove('badge-ghost');
-                badge.classList.add('badge-success', 'text-white');
-                badge.style.opacity = '1';
-                badge.title = '✅ Tag cubierto';
+    /**
+     * Updates the visual state of specific tags in the sidebar
+     * @param {Array} quoteTags - Array of tag objects from the created quote
+     */
+    updateTagsUI(quoteTags) {
+        const container = document.getElementById('mandatory-tags-container');
+        if (!container) return;
 
-                if (!badge.querySelector('svg')) {
-                    const checkmark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    checkmark.setAttribute('class', 'inline-block w-3 h-3 stroke-current');
-                    checkmark.setAttribute('fill', 'none');
-                    checkmark.setAttribute('viewBox', '0 0 24 24');
-                    checkmark.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
-                    badge.insertBefore(checkmark, badge.firstChild);
-                    badge.insertBefore(document.createTextNode(' '), badge.firstChild.nextSibling);
+        quoteTags.forEach(tag => {
+            // Find the specific tag chip
+            const tagEl = container.querySelector(`[data-tag-id="${tag.id}"]`);
+            
+            if (tagEl) {
+                // Scenario 1: It was a MISSING MANDATORY tag (Red dashed)
+                if (tagEl.classList.contains('border-dashed')) {
+                    // Update Classes: Red Dashed -> Green Solid
+                    tagEl.className = 'inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 border border-green-200 cursor-help transition-all hover:bg-green-100';
+                    tagEl.title = 'Mandatory Tag: Covered';
+                    
+                    // Update Icon: Replace Red Dot with Green Checkmark
+                    tagEl.innerHTML = `
+                        <svg class="w-3 h-3 mr-1 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        ${tag.name}
+                    `;
+                }
+                
+                // Scenario 2: It was an UNUSED OPTIONAL tag (Gray)
+                else if (tagEl.classList.contains('bg-gray-50')) {
+                    // Update Classes: Gray -> Blue
+                    tagEl.className = 'inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200';
+                    // No icon change needed for optional tags based on your template
                 }
             }
         });
 
-        this.updateCoveragePercentage();
-        this.updateMissingTagsAlert();
+        // Recalculate global coverage
+        this.updateCoverageLogic();
     }
 
-    updateCoveragePercentage() {
-        console.group('🔍 Debug: updateCoveragePercentage');
+    updateCoverageLogic() {
+        // 1. Selectors based on the new HTML structure
+        const container = document.getElementById('mandatory-tags-container');
+        if (!container) return;
 
-        // 1. Identificar qué estamos seleccionando como "Total"
-        // ⚠️ OJO: Esto selecciona CUALQUIER elemento con data-tag-id en toda la página
-        const allMandatoryBadges = document.querySelectorAll('#mandatory-tags-container [data-tag-id]');
+        // Count Total Mandatory Tags (Green Covered + Red Missing)
+        // We identify them by the specific classes used in the HTML template
+        const coveredBadges = container.querySelectorAll('.bg-green-50.border-green-200'); // Mandatory Covered
+        const missingBadges = container.querySelectorAll('.border-dashed.text-red-600');  // Mandatory Missing
         
-        // 2. Identificar cuáles considera "Cubiertos"
-        const coveredBadges = document.querySelectorAll('[data-tag-id].badge-success');
-        
-        const totalMandatory = allMandatoryBadges.length;
         const coveredCount = coveredBadges.length;
-        
-        console.log(`📊 Conteo: ${coveredCount} cubiertos de ${totalMandatory} totales.`);
-        
-        // Loguear los IDs para ver si hay duplicados o elementos incorrectos
-        const totalIds = Array.from(allMandatoryBadges).map(el => el.dataset.tagId);
-        console.log('📋 IDs Totales encontrados:', totalIds);
-        
-        const coveredIds = Array.from(coveredBadges).map(el => el.dataset.tagId);
-        console.log('✅ IDs Cubiertos detectados:', coveredIds);
+        const missingCount = missingBadges.length;
+        const totalMandatory = coveredCount + missingCount;
 
-        if (totalMandatory === 0) {
-            console.warn('⚠️ No se encontraron etiquetas obligatorias. Saliendo.');
-            console.groupEnd();
-            return;
-        }
-        
+        if (totalMandatory === 0) return; // No mandatory tags configured
+
+        // 2. Calculate Percentage
         const percentage = Math.round((coveredCount / totalMandatory) * 100);
-        console.log(`🧮 Cálculo: (${coveredCount} / ${totalMandatory}) * 100 = ${percentage}%`);
-
-        const progressContainer = document.querySelector('#coverage-progress-container');
         
-        if (!progressContainer) {
-            console.error('❌ No se encontró el contenedor #coverage-progress-container en el DOM');
-        } else {
-            const progressBar = progressContainer.querySelector('.progress');
-            const badge = progressContainer.querySelector('.badge');
+        // 3. Update UI Elements
+        this.updateProgressBar(percentage);
+        this.updateMissingAlert(missingCount);
+    }
+
+    updateProgressBar(percentage) {
+        const progressContainer = document.getElementById('tag_list_container');
+        if (!progressContainer) return;
+
+        // 1. Update Percentage Text
+        // Finds the percentage number span
+        const percentText = progressContainer.querySelector('.font-mono.font-bold');
+        if (percentText) {
+            percentText.textContent = `${percentage}%`;
             
-            console.log('UI Updates:', { 
-                foundBar: !!progressBar, 
-                foundBadge: !!badge,
-                newPercentage: percentage 
-            });
+            // Color transition
+            percentText.classList.remove('text-green-600', 'text-amber-600', 'text-red-600');
+            if (percentage === 100) percentText.classList.add('text-green-600');
+            else percentText.classList.add('text-amber-600');
+        }
 
-            if (progressBar) {
-                progressBar.value = percentage;
-                // ... lógica de clases ...
-                progressBar.classList.remove('progress-success', 'progress-warning', 'progress-error');
-                if (percentage === 100) progressBar.classList.add('progress-success');
-                else if (percentage >= 50) progressBar.classList.add('progress-warning');
-                else progressBar.classList.add('progress-error');
-            }
-
-            if (badge) {
-                badge.textContent = `${percentage}%`;
-                // ... lógica de clases ...
-                badge.classList.remove('badge-warning', 'badge-success', 'badge-error');
-                if (percentage === 100) badge.classList.add('badge-success');
-                else if (percentage >= 50) badge.classList.add('badge-warning');
-                else badge.classList.add('badge-error');
+        // 2. Update Progress Bar Fill
+        // Finds the inner div responsible for the width
+        const progressBarFill = progressContainer.querySelector('.w-full.bg-gray-100 > div');
+        if (progressBarFill) {
+            progressBarFill.style.width = `${percentage}%`;
+            
+            // Color transition logic matching HTML template
+            progressBarFill.classList.remove('bg-green-500', 'bg-amber-400', 'bg-red-400');
+            
+            if (percentage === 100) {
+                progressBarFill.classList.add('bg-green-500');
+            } else if (percentage >= 50) {
+                progressBarFill.classList.add('bg-amber-400');
+            } else {
+                progressBarFill.classList.add('bg-red-400');
             }
         }
+    }
+
+    updateMissingAlert(missingCount) {
+        const alertContainer = document.querySelector('#tag_list_container .text-amber-600.font-medium');
         
-        console.groupEnd();
+        if (missingCount === 0) {
+            // Hide the alert if it exists
+            if (alertContainer) {
+                alertContainer.style.display = 'none';
+            }
+        } else {
+            // If the element exists, update text; if not, we assume it's there from server render
+            // or we could recreate it. For now, assuming it exists or we update text.
+            if (alertContainer) {
+                alertContainer.style.display = 'flex';
+                const span = alertContainer.querySelector('span');
+                if (span) span.textContent = `Missing ${missingCount} required tags`;
+            }
+        }
     }
 }
 

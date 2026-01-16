@@ -78,7 +78,7 @@
                 </a>
             {% else %}
                 <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                   class="btn btn-sm btn-primary bg-blue-600 hover:bg-blue-700 border-none text-white font-medium normal-case ml-auto">
+                   class="btn btn-sm btn-primary border-none text-white font-medium normal-case ml-auto">
                    Continue
                 </a>
             {% endif %}
@@ -113,7 +113,7 @@
                 <label class="label px-0 pt-0">
                     <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wide">Assign To</span>
                 </label>
-                <select id="reassign-member-select" class="select select-bordered w-full bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-10 min-h-0 text-sm">
+                <select id="reassign-member-select" class="select select-bordered w-full bg-white text-gray-900 border-gray-300 h-10 min-h-0 text-sm">
                     <option disabled selected>Select team member...</option>
                     {% for member in team_members %}
                         <option value="{{ member.id }}">{{ member.username }}</option>
@@ -126,7 +126,7 @@
             <button type="button" class="btn btn-sm btn-ghost text-gray-600 font-normal hover:bg-gray-200" onclick="document.getElementById('reassign-modal').close()">
                 Cancel
             </button>
-            <button type="button" class="btn btn-sm btn-primary bg-blue-600 hover:bg-blue-700 border-none text-white font-medium shadow-sm" onclick="submitReassignment()">
+            <button type="button" class="btn btn-sm btn-primary border-none text-white font-medium shadow-sm" onclick="submitReassignment()">
                 Confirm Reassignment
             </button>
         </div>

@@ -20,7 +20,7 @@
             {% csrf_token %}
             <button type="submit" 
                     id="bulk-approve-btn"
-                    class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md rounded-lg px-5 gap-2 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all"
+                    class="btn btn-primary text-white border-none shadow-md rounded-lg px-5 gap-2 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all"
                     disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -51,7 +51,7 @@
                     
                     <tbody class="text-sm">
                         {% for tag in pending_tags %}
-                        <tr class="group hover:bg-blue-50/50 transition-colors border-b border-gray-50 last:border-none">
+                        <tr class="group hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-none">
                             
                             <td class="pl-6 py-4">
                                 <label class="cursor-pointer">
