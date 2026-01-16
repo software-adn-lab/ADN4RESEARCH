@@ -1,134 +1,119 @@
 {% load static %}
 
-{% comment %}
-Template: Listado de Tags Inductivos Pendientes de Aprobación
-
-Vista exclusiva para líderes de proyecto para aprobar/rechazar
-tags inductivos creados por researchers.
-
-Referencia Django Templates:
-https://docs.djangoproject.com/en/stable/topics/templates/
-{% endcomment %}
-
-{% block title %}Tags Pendientes - {{ phase.project.title }}{% endblock %}
-
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12">
     
-    {# Header #}
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
-            <h1 class="text-2xl font-bold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div class="flex items-center gap-2 text-amber-600 mb-1">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                Tags Inductivos Pendientes
-            </h1>
-            <p class="text-base-content/70 mt-1">
-                Revisa y aprueba los tags creados por tu equipo
-            </p>
+                <span class="text-xs font-bold uppercase tracking-wider">Review Required</span>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900">Pending Inductive Tags</h1>
+            <p class="text-base text-gray-500 mt-1">Review and standardize new codes created by your research team.</p>
         </div>
         
-        {# Botón de aprobación masiva #}
         {% if pending_tags %}
         <form method="post" action="{% url 'extraction:planning:taxonomy:tags_bulk_approve' project_id=phase.project_id %}" id="bulk-approve-form">
             {% csrf_token %}
             <button type="submit" 
-                    class="btn btn-success btn-sm"
                     id="bulk-approve-btn"
+                    class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md rounded-lg px-5 gap-2 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none transition-all"
                     disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
-                Aprobar Seleccionados (<span id="selected-count">0</span>)
+                Approve Selected (<span id="selected-count">0</span>)
             </button>
         </form>
         {% endif %}
     </div>
     
     {% if pending_tags %}
-        {# Tabla de tags pendientes #}
-        <div class="card bg-base-100 shadow-xl">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="table table-zebra">
-                    <thead>
-                        <tr>
-                            <th>
-                                <label>
-                                    <input type="checkbox" 
-                                           class="checkbox checkbox-sm" 
-                                           id="select-all">
+                <table class="table w-full whitespace-nowrap">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr class="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                            <th class="w-12 pl-6 py-4">
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" class="checkbox checkbox-xs rounded-sm border-gray-400 checked:border-blue-600 [--chkbg:theme(colors.blue.600)]" id="select-all">
                                 </label>
                             </th>
-                            <th>Tag</th>
-                            <th>Creado por</th>
-                            <th>Fecha</th>
-                            <th class="text-right">Acciones</th>
+                            <th class="py-4">Proposed Tag</th>
+                            <th>Author</th>
+                            <th>Created</th>
+                            <th class="text-right pr-6">Decisions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    
+                    <tbody class="text-sm">
                         {% for tag in pending_tags %}
-                        <tr class="hover">
-                            <td>
-                                <label>
+                        <tr class="group hover:bg-blue-50/50 transition-colors border-b border-gray-50 last:border-none">
+                            
+                            <td class="pl-6 py-4">
+                                <label class="cursor-pointer">
                                     <input type="checkbox" 
-                                           class="checkbox checkbox-sm tag-checkbox"
+                                           class="checkbox checkbox-xs rounded-sm border-gray-300 group-hover:border-gray-400 checked:border-blue-600 [--chkbg:theme(colors.blue.600)] tag-checkbox"
                                            name="tag_ids[]"
                                            value="{{ tag.pk }}"
                                            form="bulk-approve-form">
                                 </label>
                             </td>
-                            <td>
+
+                            <td class="py-4">
                                 <div class="flex items-center gap-3">
-                                    {# Color badge #}
-                                    <div class="w-4 h-4 rounded-full ring-1 ring-base-300" 
-                                         style="background-color: {{ tag.color|default:'#6366F1' }};">
-                                    </div>
+                                    <span class="w-3 h-3 rounded-full shadow-sm ring-1 ring-black/5" 
+                                          style="background-color: {{ tag.color|default:'#6366F1' }};"></span>
                                     <div>
-                                        <div class="font-medium">{{ tag.name }}</div>
-                                        <span class="badge badge-ghost badge-sm">Inductivo</span>
+                                        <div class="font-semibold text-gray-900">{{ tag.name }}</div>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-100 mt-0.5">
+                                            Inductive
+                                        </span>
                                     </div>
                                 </div>
                             </td>
-                            <td>
+
+                            <td class="py-4">
                                 <div class="flex items-center gap-2">
                                     <div class="avatar placeholder">
-                                        <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
-                                            <span class="text-xs">
-                                                {{ tag.created_by.get_initials|default:tag.created_by.username|slice:":2"|upper }}
-                                            </span>
+                                        <div class="bg-gray-100 text-gray-600 rounded-full w-8 h-8 ring-2 ring-white">
+                                            <span class="text-xs font-bold">{{ tag.created_by.get_initials|default:tag.created_by.username|slice:":2"|upper }}</span>
                                         </div>
                                     </div>
-                                    <span>{{ tag.created_by.get_full_name|default:tag.created_by.username }}</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-gray-700 text-xs">{{ tag.created_by.get_full_name|default:tag.created_by.username }}</span>
+                                    </div>
                                 </div>
                             </td>
-                            <td>
-                                <span class="text-sm text-base-content/70">
-                                    {{ tag.created_at|date:"d M Y, H:i" }}
-                                </span>
+
+                            <td class="py-4 text-gray-500 text-xs font-mono">
+                                {{ tag.created_at|date:"M d, H:i" }}
                             </td>
-                            <td>
-                                <div class="flex justify-end gap-2">
-                                    {# Botón Aprobar #}
+
+                            <td class="py-4 pr-6 text-right">
+                                <div class="flex justify-end items-center gap-1">
+                                    
                                     <form method="post" 
                                           action="{% url 'extraction:planning:taxonomy:tag_approve' project_id=phase.project_id pk=tag.pk %}"
                                           class="inline">
                                         {% csrf_token %}
                                         <button type="submit" 
-                                                class="btn btn-success btn-sm"
-                                                title="Aprobar tag">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                class="btn btn-sm btn-square btn-ghost text-gray-400 hover:text-green-600 hover:bg-green-50 transition-all"
+                                                title="Approve Tag">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                             </svg>
                                         </button>
                                     </form>
                                     
-                                    {# Botón Rechazar (abre modal) #}
                                     <button type="button" 
-                                            class="btn btn-error btn-sm"
-                                            title="Rechazar tag"
-                                            onclick="openRejectModal({{ tag.pk }}, '{{ tag.name }}')">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            class="btn btn-sm btn-square btn-ghost text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                            title="Reject Tag"
+                                            onclick="openRejectModal({{ tag.pk }}, '{{ tag.name|escapejs }}')">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
@@ -142,51 +127,59 @@ https://docs.djangoproject.com/en/stable/topics/templates/
         </div>
         
     {% else %}
-        {# Estado vacío #}
-        <div class="card bg-base-100 shadow-xl">
-            <div class="card-body items-center text-center py-16">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-success mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center py-20 text-center shadow-sm">
+            <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 class="card-title text-xl">¡Todo al día!</h2>
-                <p class="text-base-content/70 max-w-md">
-                    No hay tags inductivos pendientes de aprobación. 
-                    Cuando tu equipo cree nuevos tags, aparecerán aquí para tu revisión.
-                </p>
-                <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id %}?tab=tags" 
-                   class="btn btn-primary mt-4">
-                    Ver todos los tags
-                </a>
             </div>
+            <h2 class="text-xl font-bold text-gray-900">All Caught Up</h2>
+            <p class="text-gray-500 max-w-sm mt-2 mb-6 text-sm">
+                There are no pending inductive tags to review. When your team creates new tags during extraction, they will appear here.
+            </p>
+            <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id %}?tab=tags" 
+               class="btn btn-outline border-gray-300 text-gray-700 hover:bg-gray-50 font-medium normal-case">
+                View All Tags
+            </a>
         </div>
     {% endif %}
     
 </div>
 
-{# Modal de rechazo #}
-<dialog id="reject-modal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Rechazar Tag</h3>
+<dialog id="reject-modal" class="modal backdrop-blur-sm">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl p-0 w-full max-w-md overflow-hidden">
+        
+        <div class="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-3">
+            <div class="p-1.5 bg-red-100 rounded-full text-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <h3 class="font-bold text-lg text-red-900">Reject Tag</h3>
+        </div>
+
         <form method="post" id="reject-form" action="">
             {% csrf_token %}
-            <p class="mb-4">
-                ¿Estás seguro de rechazar el tag "<span id="reject-tag-name" class="font-medium"></span>"?
-            </p>
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Motivo del rechazo (opcional)</span>
-                </label>
-                <textarea name="rejection_reason" 
-                          class="textarea textarea-bordered" 
-                          rows="3"
-                          placeholder="Explica por qué rechazas este tag..."></textarea>
+            
+            <div class="p-6">
+                <p class="text-gray-600 text-sm mb-4">
+                    Are you sure you want to reject the tag "<span id="reject-tag-name" class="font-bold text-gray-900"></span>"? This action cannot be undone.
+                </p>
+                
+                <div class="form-control">
+                    <label class="label px-0 pt-0">
+                        <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wide">Reason for Rejection (Optional)</span>
+                    </label>
+                    <textarea name="rejection_reason" 
+                              class="textarea textarea-bordered w-full h-24 text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" 
+                              placeholder="e.g., Duplicate of existing tag, Too vague..."></textarea>
+                </div>
             </div>
-            <div class="modal-action">
-                <button type="button" class="btn btn-ghost" onclick="closeRejectModal()">
-                    Cancelar
+
+            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" class="btn btn-sm btn-ghost text-gray-600 font-normal hover:bg-gray-200" onclick="closeRejectModal()">
+                    Cancel
                 </button>
-                <button type="submit" class="btn btn-error">
-                    Rechazar Tag
+                <button type="submit" class="btn btn-sm btn-error bg-red-600 hover:bg-red-700 text-white border-none shadow-sm font-medium">
+                    Reject Tag
                 </button>
             </div>
         </form>
@@ -199,16 +192,25 @@ https://docs.djangoproject.com/en/stable/topics/templates/
 
 {% block extra_js %}
 <script>
-    // Selección múltiple
+    // Selection Logic
     const selectAllCheckbox = document.getElementById('select-all');
     const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
     const bulkApproveBtn = document.getElementById('bulk-approve-btn');
     const selectedCountSpan = document.getElementById('selected-count');
     
     function updateBulkButton() {
+        if (!bulkApproveBtn) return;
         const checkedCount = document.querySelectorAll('.tag-checkbox:checked').length;
         selectedCountSpan.textContent = checkedCount;
-        bulkApproveBtn.disabled = checkedCount === 0;
+        
+        if (checkedCount > 0) {
+            bulkApproveBtn.disabled = false;
+            // Visual pop effect
+            bulkApproveBtn.classList.add('scale-105');
+            setTimeout(() => bulkApproveBtn.classList.remove('scale-105'), 200);
+        } else {
+            bulkApproveBtn.disabled = true;
+        }
     }
     
     if (selectAllCheckbox) {
@@ -222,13 +224,15 @@ https://docs.djangoproject.com/en/stable/topics/templates/
         cb.addEventListener('change', updateBulkButton);
     });
     
-    // Modal de rechazo
+    // Modal Logic
     const rejectModal = document.getElementById('reject-modal');
     const rejectForm = document.getElementById('reject-form');
     const rejectTagName = document.getElementById('reject-tag-name');
     
     function openRejectModal(tagId, tagName) {
-        rejectForm.action = "{% url 'extraction:planning:taxonomy:tag_reject' project_id=phase.project_id pk=0 %}".replace('/0/', '/' + tagId + '/');
+        // Construct standard Django URL pattern replacement
+        const baseUrl = "{% url 'extraction:planning:taxonomy:tag_reject' project_id=phase.project_id pk=0 %}";
+        rejectForm.action = baseUrl.replace('/0/', '/' + tagId + '/');
         rejectTagName.textContent = tagName;
         rejectModal.showModal();
     }
