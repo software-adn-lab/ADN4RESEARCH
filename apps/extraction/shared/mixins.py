@@ -8,17 +8,25 @@ from apps.project.api.providers import ProjectManagementProvider
 
 class OwnerRequiredMixin(UserPassesTestMixin):
     """
-    Mixin para asegurar que solo el staff/owner pueda ejecutar acciones.
+    Mixin para asegurar que solo el dueño del proyecto pueda ejecutar acciones.
     
     Uso:
         class MyView(LoginRequiredMixin, OwnerRequiredMixin, View):
             pass
+
+    Requisitos:
+        - La vista debe tener `project_id` en sus kwargs.
     
     Referencia: https://docs.djangoproject.com/en/stable/topics/auth/default/#the-userpassestestmixin-mixin
     """
     
     def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
+        project_id = self.kwargs.get('project_id')
+        if not project_id:
+            raise PermissionDenied("project_id es requerido")
+        
+        provider = ProjectManagementProvider()
+        return provider.is_project_owner(project_id, self.request.user)
 
 
 class ProjectMemberRequiredMixin(UserPassesTestMixin):

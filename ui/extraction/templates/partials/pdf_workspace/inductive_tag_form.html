@@ -1,94 +1,90 @@
 {% comment %}
-Formulario Inline de Tag Inductivo
-Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
+Inline Inductive Tag Form
+Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=phase %}
 {% endcomment %}
 
-<!-- Container del formulario (oculto por defecto) -->
-<div id="inductive-tag-inline-container" class="hidden mt-3">
-    <div class="card bg-secondary/5 border border-secondary/20">
-        <div class="card-body p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h4 class="font-medium text-sm flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nuevo Tag Inductivo
-                </h4>
-                <button type="button" 
-                        class="btn btn-ghost btn-xs btn-circle"
-                        onclick="toggleInductiveTagForm(false)"
-                        title="Cerrar">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+<div id="inductive-tag-inline-container" class="hidden animate-fade-in-down">
+    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm relative">
+        
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-2">
+                <span class="p-1 rounded bg-purple-100 text-primary">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                </span>
+                New Inductive Tag
+            </h4>
+            <button type="button" 
+                    class="btn btn-xs btn-circle btn-ghost text-gray-400 hover:text-gray-600"
+                    onclick="toggleInductiveTagForm(false)"
+                    title="Close">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        
+        <form id="inline-inductive-tag-form" class="space-y-4" onsubmit="return false;">
+            {% csrf_token %}
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-1">Tag Name</label>
+                <input type="text" 
+                       name="name" 
+                       id="inline-tag-name"
+                       class="input input-sm input-bordered w-full rounded-lg text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
+                       placeholder="e.g. Emerging Theme"
+                       required
+                       maxlength="100">
             </div>
             
-            <!-- ✅ Formulario separado del form de quote -->
-            <form id="inline-inductive-tag-form" class="space-y-3" onsubmit="return false;">
-                {% csrf_token %}
-                
-                {# Nombre del tag #}
-                <div class="form-control">
-                    <input type="text" 
-                           name="name" 
-                           class="input input-bordered input-sm w-full"
-                           placeholder="Nombre del tag (ej: Tema emergente)"
-                           required
-                           maxlength="100"
-                           id="inline-tag-name">
-                </div>
-                
-                {# Color #}
-                <div class="flex items-center gap-3">
-                    <label class="text-xs text-base-content/60">Color:</label>
-                    <input type="color" 
-                           name="color" 
-                           value="#6366F1"
-                           class="w-8 h-8 rounded cursor-pointer"
-                           id="inline-tag-color">
-                    <div id="inline-color-preview" 
-                         class="badge badge-sm"
-                         style="background-color: #6366F1; color: white;">
-                        Preview
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-1">Identifier Color</label>
+                <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <div class="relative w-8 h-8 overflow-hidden rounded-full shadow-sm ring-1 ring-black/5 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all">
+                        <input type="color" 
+                               name="color" 
+                               id="inline-tag-color"
+                               value="#6366F1"
+                               class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 border-0 cursor-pointer">
+                    </div>
+                    
+                    <div class="flex-1">
+                        <div id="inline-color-preview" 
+                             class="text-xs font-mono px-2 py-1 rounded bg-white border border-gray-200 text-gray-600 inline-block">
+                            #6366F1
+                        </div>
                     </div>
                 </div>
-                
-                {# Botones #}
-                <div class="flex justify-end gap-2">
-                    <button type="button" 
-                            class="btn btn-ghost btn-sm"
-                            onclick="toggleInductiveTagForm(false)">
-                        Cancelar
-                    </button>
-                    <button type="button" 
-                            class="btn btn-secondary btn-sm"
-                            id="inline-tag-submit"
-                            onclick="submitInductiveTag()">
-                        <span class="loading loading-spinner loading-xs hidden" id="inline-tag-loading"></span>
-                        Crear Tag
-                    </button>
-                </div>
-            </form>
+            </div>
             
-            {# Mensaje de éxito/error #}
-            <div id="inline-tag-message" class="hidden mt-2"></div>
-            
-            {# Info #}
-            <p class="text-xs text-base-content/50 mt-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                El tag estará pendiente de aprobación pero podrás usarlo inmediatamente.
-            </p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" 
+                        class="btn btn-sm btn-ghost text-gray-500 font-normal hover:bg-gray-100"
+                        onclick="toggleInductiveTagForm(false)">
+                    Cancel
+                </button>
+                <button type="button" 
+                        id="inline-tag-submit"
+                        class="btn btn-sm btn-primary border-none text-white shadow-sm font-medium"
+                        onclick="submitInductiveTag()">
+                    <span class="loading loading-spinner loading-xs hidden" id="inline-tag-loading"></span>
+                    Create Tag
+                </button>
+            </div>
+        </form>
+        
+        <div id="inline-tag-message" class="hidden mt-3 text-xs rounded-lg p-2.5"></div>
+        
+        <div class="mt-3 pt-3 border-t border-gray-100 flex items-start gap-2 text-[10px] text-gray-400 leading-tight">
+            <svg class="w-3 h-3 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <p>This tag will be marked as <strong>Pending Approval</strong> but can be used immediately in your extractions.</p>
         </div>
     </div>
 </div>
 
 <script>
 (function() {
+    // DOM Elements
     const container = document.getElementById('inductive-tag-inline-container');
-    const showBtn = document.getElementById('show-inductive-tag-form-btn');
+    const showBtn = document.getElementById('show-inductive-tag-form-btn'); // Must exist in parent context
     const form = document.getElementById('inline-inductive-tag-form');
     const colorInput = document.getElementById('inline-tag-color');
     const colorPreview = document.getElementById('inline-color-preview');
@@ -97,25 +93,36 @@ Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.
     const loadingSpinner = document.getElementById('inline-tag-loading');
     const nameInput = document.getElementById('inline-tag-name');
     
-    // ✅ Toggle visibilidad del formulario
+    // Toggle Logic
     window.toggleInductiveTagForm = function(show) {
         if (!container || !showBtn) return;
         
-        container.classList.toggle('hidden', !show);
-        showBtn.classList.toggle('hidden', show);
-        
         if (show) {
-            nameInput.focus();
+            container.classList.remove('hidden');
+            showBtn.classList.add('hidden');
+            // Scroll modal to bottom to show form
+            const modalBox = container.closest('.modal-box');
+            if(modalBox) {
+                setTimeout(() => {
+                    modalBox.scrollTop = modalBox.scrollHeight;
+                    nameInput.focus();
+                }, 100);
+            } else {
+                nameInput.focus();
+            }
         } else {
-            // Limpiar formulario al cerrar
+            container.classList.add('hidden');
+            showBtn.classList.remove('hidden');
+            // Reset form state
             form.reset();
             colorInput.value = '#6366F1';
-            colorPreview.style.backgroundColor = '#6366F1';
-            messageDiv.classList.add('hidden');
+            updateColorPreview('#6366F1');
+            messageDiv.className = 'hidden mt-3 text-xs rounded-lg p-2.5';
+            messageDiv.innerHTML = '';
         }
     };
     
-    // ✅ Botón para mostrar formulario
+    // Attach Listener to Trigger Button
     if (showBtn) {
         showBtn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -124,23 +131,33 @@ Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.
         });
     }
     
-    // Actualizar preview de color
+    // Color Preview Logic
+    function updateColorPreview(color) {
+        if(colorPreview) {
+            colorPreview.textContent = color.toUpperCase();
+            colorPreview.style.borderLeft = `4px solid ${color}`;
+        }
+    }
+
     if (colorInput) {
         colorInput.addEventListener('input', function() {
-            colorPreview.style.backgroundColor = this.value;
+            updateColorPreview(this.value);
         });
     }
     
-    // ✅ Función para enviar tag via AJAX
+    // Submit Logic
     window.submitInductiveTag = async function() {
         const nameValue = nameInput.value.trim();
         
         if (!nameValue) {
-            alert('El nombre del tag es requerido');
+            showMessage('Tag name is required', 'error');
+            nameInput.classList.add('input-error');
             return;
+        } else {
+            nameInput.classList.remove('input-error');
         }
         
-        // Mostrar loading
+        // UI Loading State
         submitBtn.disabled = true;
         loadingSpinner.classList.remove('hidden');
         messageDiv.classList.add('hidden');
@@ -148,107 +165,99 @@ Uso: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.
         const formData = new FormData();
         formData.append('name', nameValue);
         formData.append('color', colorInput.value);
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        // Ensure CSRF token is grabbed from the main page context if not in form
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if(csrf) formData.append('csrfmiddlewaretoken', csrf);
         
         try {
-            // ✅ Usar phase.id del contexto
-            const phaseId = {{ phase.id }};
-            const projectId = {{ phase.project_id }};
+            const phaseId = {{ phase.id }}; // Context variable
+            const projectId = {{ phase.project_id }}; // Context variable
             const url = `/project/${projectId}/extraction/tags/create-inductive/`;
             
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             
             const data = await response.json();
             
             if (data.success) {
-                // ✅ Agregar tag a la lista
                 addTagToList(data.tag);
+                showMessage(data.message || 'Tag created successfully', 'success');
                 
-                // Mostrar mensaje de éxito
-                messageDiv.innerHTML = `
-                    <div class="alert alert-success py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>${data.message}</span>
-                    </div>
-                `;
-                messageDiv.classList.remove('hidden');
-                
-                // Cerrar formulario después de 1.5s
+                // Auto-close after delay
                 setTimeout(() => {
                     toggleInductiveTagForm(false);
                 }, 1500);
                 
             } else {
-                const errorMsg = data.error || data.errors?.name?.[0] || 'Error al crear el tag';
-                messageDiv.innerHTML = `
-                    <div class="alert alert-error py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>${errorMsg}</span>
-                    </div>
-                `;
-                messageDiv.classList.remove('hidden');
+                const errorMsg = data.error || (data.errors?.name ? data.errors.name[0] : 'Error creating tag');
+                showMessage(errorMsg, 'error');
             }
             
         } catch (error) {
             console.error('Error:', error);
-            messageDiv.innerHTML = `
-                <div class="alert alert-error py-2 text-xs">
-                    <span>Error de conexión. Intenta de nuevo.</span>
-                </div>
-            `;
-            messageDiv.classList.remove('hidden');
+            showMessage('Connection error. Please try again.', 'error');
         } finally {
             submitBtn.disabled = false;
             loadingSpinner.classList.add('hidden');
         }
     };
     
-    // ✅ Función para agregar tag a la lista
+    // Helper: Show Inline Message
+    function showMessage(msg, type) {
+        messageDiv.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700');
+        
+        if (type === 'success') {
+            messageDiv.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-100');
+            messageDiv.innerHTML = `<div class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>${msg}</div>`;
+        } else {
+            messageDiv.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
+            messageDiv.innerHTML = `<div class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${msg}</div>`;
+        }
+    }
+    
+    // Helper: Add Tag to List (Mac Style Row)
     function addTagToList(tag) {
         const tagsContainer = document.getElementById('tags-list-container');
+        const emptyState = document.getElementById('no-tags-message');
+        
         if (!tagsContainer) return;
+        if (emptyState) emptyState.classList.add('hidden'); // Hide empty state if visible
         
-        // Crear elemento de tag
-        const tagItem = document.createElement('label');
-        tagItem.className = 'tag-item flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer rounded transition-colors';
-        tagItem.dataset.tagName = tag.name.toLowerCase();
-        tagItem.dataset.tagId = tag.id;
+        // Create Tag Row
+        const tagLabel = document.createElement('label');
+        tagLabel.className = 'tag-item flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors group animate-fade-in-down';
+        tagLabel.dataset.tagName = tag.name.toLowerCase();
+        tagLabel.dataset.tagId = tag.id;
         
-        tagItem.innerHTML = `
+        tagLabel.innerHTML = `
             <input type="checkbox" 
                    name="tags" 
                    value="${tag.id}"
-                   class="checkbox checkbox-sm checkbox-primary tag-checkbox"
+                   class="checkbox checkbox-sm rounded border-gray-300 checked:border-blue-500 [--chkbg:theme(colors.blue.500)] tag-checkbox"
                    checked>
-            <span class="text-sm flex-1">${tag.name}</span>
-            <span class="badge badge-xs badge-success">Inductivo</span>
-            <span class="badge badge-xs" 
-                  style="background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
-            </span>
+            
+            <span class="w-3 h-3 rounded-full shadow-sm ring-1 ring-black/5" 
+                  style="background-color: ${tag.color};"></span>
+            
+            <div class="flex-1 flex items-center justify-between">
+                <span class="text-sm text-gray-700 font-semibold">${tag.name}</span>
+                <span class="text-[9px] uppercase tracking-wider font-bold text-gray-400 bg-gray-100 px-1.5 rounded">Inductive</span>
+            </div>
         `;
         
-        // Agregar al inicio de la lista
-        tagsContainer.insertBefore(tagItem, tagsContainer.firstChild);
+        // Insert at top
+        tagsContainer.insertBefore(tagLabel, tagsContainer.firstChild);
         
-        // Actualizar contador
+        // Update Counter
         const counter = document.getElementById('tags-counter');
         if (counter) {
-            const checkboxes = tagsContainer.querySelectorAll('.tag-checkbox:checked');
-            const count = checkboxes.length;
-            counter.textContent = count === 1 ? '1 seleccionada' : `${count} seleccionadas`;
+            // Trigger change event to update counter via main script logic
+            const event = new Event('change', { bubbles: true });
+            tagsContainer.dispatchEvent(event);
         }
-        
-        console.log('✅ Tag added to list:', tag);
     }
 })();
 </script>

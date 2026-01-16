@@ -1,6 +1,7 @@
 /**
  * PDFViewer Component
- * Responsabilidad: Renderizar PDF, aplicar highlights, lazy loading
+ * Responsibility: PDF Rendering, Highlighting, Lazy Loading
+ * Style: Refactored for MacOS/Atlas.ti aesthetic
  */
 
 class PDFViewer {
@@ -44,13 +45,14 @@ class PDFViewer {
                     resolve();
                 } else if (attempts >= maxAttempts) {
                     clearInterval(checkInterval);
-                    reject(new Error('PDF.js no se cargó'));
+                    reject(new Error('PDF.js failed to load'));
                 }
             }, 100);
         });
     }
 
     async loadPDF() {
+        // Ensure this matches your CDN or local path
         pdfjsLib.GlobalWorkerOptions.workerSrc = 
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -62,7 +64,7 @@ class PDFViewer {
         loadingTask.onProgress = (progress) => {
             if (progress.total > 0) {
                 const percent = Math.round((progress.loaded / progress.total) * 100);
-                this.updateLoader(`Cargando PDF... ${percent}%`);
+                this.updateLoader(`Loading PDF... ${percent}%`);
             }
         };
 
@@ -80,36 +82,37 @@ class PDFViewer {
         const pageWidth = viewport.width;
         const pageHeight = viewport.height;
 
-        // 1. Calcular páginas prioritarias
+        // 1. Calculate Priority Pages
         const priorityPages = this.calculatePriorityPages();
         
-        // 2. Crear placeholders
+        // 2. Create Placeholders
         const pagePlaceholders = this.createPlaceholders(pageWidth, pageHeight);
         
-        // 3. Separar en colas
+        // 3. Separate into Queues
         const { highPriorityQueue, lowPriorityQueue } = this.createRenderQueues(priorityPages);
         
-        // 4. Renderizar
+        // 4. Render High Priority First
         for (const pageNum of highPriorityQueue) {
             await this.renderPage(pageNum, pagePlaceholders[pageNum]);
         }
 
+        // 5. Render Low Priority with Yielding
         for (const pageNum of lowPriorityQueue) {
             await this.renderPage(pageNum, pagePlaceholders[pageNum]);
-            if (pageNum % 5 === 0) await new Promise(r => setTimeout(r, 0));
+            if (pageNum % 5 === 0) await new Promise(r => setTimeout(r, 0)); // Yield to main thread
         }
     }
 
     calculatePriorityPages() {
         const priorityPages = new Set();
         
-        // Primeras 10 páginas
+        // First 10 pages usually contain abstract/intro
         const initialPages = Math.min(10, this.pdf.numPages);
         for (let i = 1; i <= initialPages; i++) {
             priorityPages.add(i);
         }
 
-        // Páginas con quotes ± 5
+        // Pages around existing quotes (+/- 5 context)
         if (this.config.existingQuotes && Array.isArray(this.config.existingQuotes)) {
             this.config.existingQuotes.forEach(quote => {
                 const p = quote.location?.page || 0;
@@ -130,21 +133,20 @@ class PDFViewer {
         for (let i = 1; i <= this.pdf.numPages; i++) {
             const placeholder = document.createElement('div');
             placeholder.id = `page-placeholder-${i}`;
-            placeholder.className = 'pdf-page-placeholder relative mb-5';
+            // Mac Style: White paper, soft shadow, centered
+            placeholder.className = 'pdf-page-placeholder relative mb-5 bg-white shadow-lg mx-auto';
             placeholder.style.width = `${pageWidth}px`;
             placeholder.style.height = `${pageHeight}px`;
-            placeholder.style.margin = '0 auto 20px';
-            placeholder.style.backgroundColor = 'white';
-            placeholder.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
 
+            // Skeleton Loader (Mac Style)
             placeholder.innerHTML = `
-                <div class="w-full h-full p-8 flex flex-col gap-4 animate-pulse">
-                    <div class="skeleton h-8 w-3/4 bg-gray-200"></div>
-                    <div class="skeleton h-4 w-full bg-gray-200"></div>
-                    <div class="skeleton h-4 w-full bg-gray-200"></div>
-                    <div class="skeleton h-4 w-5/6 bg-gray-200"></div>
-                    <div class="mt-8 skeleton h-32 w-full bg-gray-200"></div>
-                    <div class="mt-4 skeleton h-4 w-full bg-gray-200"></div>
+                <div class="w-full h-full p-12 flex flex-col gap-6 animate-pulse">
+                    <div class="h-8 w-3/4 bg-gray-100 rounded-md"></div>
+                    <div class="h-4 w-full bg-gray-50 rounded-md"></div>
+                    <div class="h-4 w-full bg-gray-50 rounded-md"></div>
+                    <div class="h-4 w-5/6 bg-gray-50 rounded-md"></div>
+                    <div class="mt-12 h-40 w-full bg-gray-100 rounded-xl"></div>
+                    <div class="mt-6 h-4 w-full bg-gray-50 rounded-md"></div>
                 </div>
             `;
 
@@ -286,13 +288,27 @@ class PDFViewer {
 
         if (startSpanIdx === -1 || endSpanIdx === -1) return;
 
+        // Apply Highlight Style
         for (let i = startSpanIdx; i <= endSpanIdx; i++) {
             const span = textSpans[i];
             if (!span.classList.contains('highlight-quote')) {
                 span.classList.add('highlight-quote');
                 span.dataset.quoteId = quote.id;
+                
+                // Mac/Atlas.ti Style Highlight:
+                // Yellow tint, multiply blend mode for realism
+                span.style.backgroundColor = 'rgba(255, 240, 0, 0.4)';
                 span.style.mixBlendMode = 'multiply';
+                span.style.cursor = 'pointer';
                 span.title = `Quote #${quote.id}`;
+                
+                // Add Hover Effect class via JS or ensure CSS handles it
+                span.addEventListener('mouseenter', () => {
+                    span.style.backgroundColor = 'rgba(255, 240, 0, 0.6)';
+                });
+                span.addEventListener('mouseleave', () => {
+                    span.style.backgroundColor = 'rgba(255, 240, 0, 0.4)';
+                });
                 
                 span.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -309,7 +325,7 @@ class PDFViewer {
         const pageContainer = document.querySelector(`.page-container[data-page-number="${pageNum}"]`);
         
         if (!pageContainer) {
-            console.warn(`⚠️ Page ${pageNum} not rendered`);
+            console.warn(`⚠️ Page ${pageNum} not rendered yet`);
             return;
         }
 
@@ -326,12 +342,14 @@ class PDFViewer {
 
         highlightedSpans.forEach(span => {
             span.classList.remove('highlight-quote');
+            // Clear inline styles
             span.style.backgroundColor = '';
             span.style.cursor = '';
             span.style.mixBlendMode = '';
             span.title = '';
             delete span.dataset.quoteId;
 
+            // Clone/replace to strip event listeners
             const newSpan = span.cloneNode(true);
             span.parentNode.replaceChild(newSpan, span);
         });
@@ -345,13 +363,14 @@ class PDFViewer {
         if (!text) return '';
         return text
             .replace(/\s+/g, '')
-            .replace(/\u00A0/g, '')
+            .replace(/\u00A0/g, '') // Remove non-breaking spaces
             .toLowerCase();
     }
 
     updateLoader(message) {
         if (this.loader) {
-            const text = this.loader.querySelector('span:last-child');
+            // Assuming the loader structure matches the new Mac spinner
+            const text = this.loader.querySelector('.loading-text');
             if (text) text.textContent = message;
         }
     }
@@ -359,13 +378,17 @@ class PDFViewer {
     showError(message) {
         if (this.loader) {
             this.loader.innerHTML = `
-                <div class="text-center p-8">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <h3 class="font-bold text-lg mb-2 text-error">Error cargando PDF</h3>
-                    <p class="text-sm mb-4">${message}</p>
-                    <button onclick="location.reload()" class="btn btn-primary btn-sm">Reintentar</button>
+                <div class="text-center p-8 bg-white/90 backdrop-blur-sm rounded-xl border border-red-100 shadow-xl">
+                    <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-lg mb-1 text-gray-900">PDF Load Error</h3>
+                    <p class="text-sm text-gray-500 mb-6 max-w-xs mx-auto">${message}</p>
+                    <button onclick="location.reload()" class="btn btn-sm btn-error bg-red-600 hover:bg-red-700 text-white border-none shadow-md">
+                        Retry
+                    </button>
                 </div>
             `;
         }

@@ -1,112 +1,139 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
 {% for paper in papers %}
-<div class="card bg-base-100 border {% if paper.status == 'COMPLETED' %}border-success{% else %}border-base-300{% endif %} shadow-sm hover:shadow-md transition-all cursor-pointer relative group">
+<div class="group relative flex flex-col justify-between bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 ease-out overflow-hidden h-full">
     
-    <!-- ✅ Link invisible que cubre todo el card -->
     <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-       class="absolute inset-0 z-0"
-       aria-label="Ver paper {{ paper.study.title }}"></a>
+       class="absolute inset-0 z-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-2xl"
+       aria-label="View paper {{ paper.study.title }}"></a>
     
-    <div class="card-body p-5 relative z-10">
-        <div class="flex justify-between items-start mb-2">
-            <span class="badge {% if paper.status == 'COMPLETED' %}badge-success text-white{% else %}badge-warning text-white{% endif %} text-xs font-bold">
-                {{ paper.get_status_display }}
-            </span>
-            {% if is_owner and paper.assigned_to %}
-                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    Asignado a: {{ paper.assigned_to.username }}
+    <div class="p-6 relative z-10">
+        
+        <div class="flex justify-between items-start mb-4 gap-2">
+            {% if paper.status == 'COMPLETED' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 border border-green-200">
+                    Completed
+                </span>
+            {% elif paper.status == 'IN_PROGRESS' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 border border-blue-200">
+                    In Progress
+                </span>
+            {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-gray-100 text-gray-600 border border-gray-200">
+                    Pending
                 </span>
             {% endif %}
-        </div>
 
-        <h4 class="card-title text-base leading-tight text-gray-800 group-hover:text-primary transition-colors">
-            {{ paper.study.title|truncatechars:80 }}
-        </h4>
-        <p class="text-xs text-gray-500 mt-1">
-            {{ paper.study.authors }} ({{ paper.study.publication_year }})
-        </p>
-
-        {% if paper.status == 'IN_PROGRESS' %}
-        <progress class="progress progress-primary w-full mt-3 h-1" value="40" max="100"></progress>
-        {% endif %}
-
-        <div class="card-actions justify-end mt-4 pt-4 border-t border-gray-100">
-            {% if phase.status == 'OPEN' %}
-                {% if is_owner %}
-                    <!-- ✅ Botones con relative z-20 para que sean clickables sobre el overlay -->
-                    <button class="btn btn-sm btn-ghost text-xs relative z-20" 
-                            onclick="event.stopPropagation(); event.preventDefault(); openReassignModal({{ paper.pk }}, '{{ paper.study.title|escapejs }}')">
-                        Reasignar
-                    </button>
-                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                       class="btn btn-sm btn-outline relative z-20">
-                        Ver Avance
-                    </a>
-                {% endif %}
-                
-                {% if paper.status == 'PENDING' %}
-                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                       class="btn btn-sm btn-primary w-full relative z-20">
-                        ▶ Iniciar Extracción
-                    </a>
-                {% elif paper.status == 'COMPLETED' %}
-                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                       class="btn btn-sm btn-outline w-full relative z-20">
-                        👁 Ver mis respuestas
-                    </a>
-                {% else %}
-                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                       class="btn btn-sm btn-primary w-full relative z-20">
-                        ✎ Continuar
-                    </a>
-                {% endif %}
-            {% else %}
-                <span class="text-xs text-gray-400 italic">Fase Cerrada</span>
+            {% if is_owner and paper.assigned_to %}
+                <div class="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100" title="Assigned to {{ paper.assigned_to.username }}">
+                    <div class="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[9px] font-bold text-gray-500">
+                        {{ paper.assigned_to.username|slice:":1"|upper }}
+                    </div>
+                    <span class="text-[10px] font-medium text-gray-500 truncate max-w-[80px]">
+                        {{ paper.assigned_to.username }}
+                    </span>
+                </div>
             {% endif %}
         </div>
+
+        <div class="space-y-2">
+            <h4 class="text-lg font-bold text-gray-900 leading-snug group-hover:text-primary transition-colors line-clamp-3">
+                {{ paper.study.title }}
+            </h4>
+            <p class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                {{ paper.study.authors|truncatechars:30 }} <span class="text-gray-300">•</span> {{ paper.study.publication_year }}
+            </p>
+        </div>
+
+        {% if paper.status == 'IN_PROGRESS' %}
+        <div class="mt-4">
+            <div class="flex justify-between text-[10px] text-gray-400 mb-1">
+                <span>Progress</span>
+                <span>40%</span> </div>
+            <progress class="progress progress-primary w-full h-1.5" value="40" max="100"></progress>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-auto border-t border-gray-100 p-4 bg-gray-50/50 relative z-20 flex flex-wrap gap-2 justify-end">
+        {% if phase.status == 'OPEN' %}
+            
+            {% if is_owner %}
+                <button class="btn btn-xs btn-ghost text-gray-500 hover:bg-gray-100 font-normal normal-case" 
+                        onclick="event.stopPropagation(); event.preventDefault(); openReassignModal({{ paper.pk }}, '{{ paper.study.title|escapejs }}')">
+                    Reassign
+                </button>
+            {% endif %}
+
+            {% if paper.status == 'PENDING' %}
+                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                   class="btn btn-sm bg-gray-900 hover:bg-black text-white border-none shadow-md rounded-lg font-medium normal-case w-auto px-4 ml-auto">
+                   Start Extraction
+                </a>
+            {% elif paper.status == 'COMPLETED' %}
+                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                   class="btn btn-sm btn-outline border-gray-300 hover:bg-gray-100 hover:text-gray-900 text-gray-600 font-medium normal-case ml-auto">
+                   View Response
+                </a>
+            {% else %}
+                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                   class="btn btn-sm btn-primary border-none text-white font-medium normal-case ml-auto">
+                   Continue
+                </a>
+            {% endif %}
+
+        {% else %}
+            <span class="text-xs text-gray-400 italic w-full text-center py-1">Phase Closed</span>
+        {% endif %}
     </div>
 </div>
+
 {% empty %}
-<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-    <p class="text-gray-500 font-medium">No tienes papers asignados en esta fase.</p>
-    <p class="text-sm text-gray-400">Contacta al administrador del proyecto.</p>
+<div class="col-span-full flex flex-col items-center justify-center py-16 bg-white border border-dashed border-gray-300 rounded-2xl">
+    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    </div>
+    <p class="text-gray-900 font-medium">No papers assigned</p>
+    <p class="text-sm text-gray-500 mt-1">Please contact the project administrator.</p>
 </div>
 {% endfor %}
 
-<!-- Modal de Reasignación -->
-{% if is_owner and team_members %}
-<dialog id="reassign-modal" class="modal">
-    <div class="modal-box w-full max-w-md">
-        <h3 class="font-bold text-lg mb-4">Reasignar Paper</h3>
+</div> {% if is_owner and team_members %}
+<dialog id="reassign-modal" class="modal backdrop-blur-sm">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl p-0 w-full max-w-sm overflow-hidden">
         
-        <div class="mb-4">
-            <p class="text-sm text-gray-600">
-                Paper: <span id="reassign-paper-title" class="font-semibold"></span>
-            </p>
+        <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 class="font-bold text-lg text-gray-900">Reassign Paper</h3>
+            <p class="text-xs text-gray-500 mt-1 truncate" id="reassign-paper-title"></p>
         </div>
         
-        <div class="form-control mb-4">
-            <label class="label">
-                <span class="label-text">Asignar a:</span>
-            </label>
-            <select id="reassign-member-select" class="select select-bordered">
-                <option disabled selected>Selecciona un miembro...</option>
-                {% for member in team_members %}
-                    <option value="{{ member.id }}">{{ member.username }}</option>
-                {% endfor %}
-            </select>
+        <div class="p-6">
+            <div class="form-control w-full">
+                <label class="label px-0 pt-0">
+                    <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wide">Assign To</span>
+                </label>
+                <select id="reassign-member-select" class="select select-bordered w-full bg-white text-gray-900 border-gray-300 h-10 min-h-0 text-sm">
+                    <option disabled selected>Select team member...</option>
+                    {% for member in team_members %}
+                        <option value="{{ member.id }}">{{ member.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
         
-        <div class="modal-action">
-            <button type="button" class="btn btn-ghost" onclick="document.getElementById('reassign-modal').close()">
-                Cancelar
+        <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+            <button type="button" class="btn btn-sm btn-ghost text-gray-600 font-normal hover:bg-gray-200" onclick="document.getElementById('reassign-modal').close()">
+                Cancel
             </button>
-            <button type="button" class="btn btn-primary" onclick="submitReassignment()">
-                Reasignar
+            <button type="button" class="btn btn-sm btn-primary border-none text-white font-medium shadow-sm" onclick="submitReassignment()">
+                Confirm Reassignment
             </button>
         </div>
     </div>
+    
     <form method="dialog" class="modal-backdrop">
-        <button type="submit">Cerrar</button>
+        <button type="submit">Close</button>
     </form>
 </dialog>
 
@@ -116,27 +143,29 @@ let currentPaperId = null;
 function openReassignModal(paperId, paperTitle) {
     currentPaperId = paperId;
     document.getElementById('reassign-paper-title').textContent = paperTitle;
-    document.getElementById('reassign-member-select').value = '';
+    document.getElementById('reassign-member-select').value = ''; // Reset selection
     document.getElementById('reassign-modal').showModal();
 }
 
 function submitReassignment() {
     if (!currentPaperId) {
-        alert('Error: Paper no seleccionado');
+        alert('Error: No paper selected');
         return;
     }
     
     const selectEl = document.getElementById('reassign-member-select');
     const assignedToId = selectEl.value;
     
-    if (!assignedToId) {
-        alert('Por favor selecciona un miembro');
+    if (!assignedToId || assignedToId === "Select team member...") {
+        // Optional: Add a visual error state to the select box instead of alert
+        selectEl.classList.add('select-error');
         return;
     }
     
     const button = event.target;
+    const originalText = button.textContent;
     button.disabled = true;
-    button.textContent = 'Reasignando...';
+    button.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Processing...';
     
     const projectId = '{{ phase.project_id }}';
     const url = `/project/${projectId}/extraction/papers/${currentPaperId}/reassign/`;
@@ -154,23 +183,20 @@ function submitReassignment() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Mostrar éxito
-            const modal = document.getElementById('reassign-modal');
-            modal.close();
-            
-            // Recargar la página
+            document.getElementById('reassign-modal').close();
+            // Optional: Show a toast here before reloading
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Error desconocido'));
+            alert('Error: ' + (data.error || 'Unknown error'));
             button.disabled = false;
-            button.textContent = 'Reasignar';
+            button.textContent = originalText;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al reasignar el paper');
+        alert('Network error while reassigning');
         button.disabled = false;
-        button.textContent = 'Reasignar';
+        button.textContent = originalText;
     });
 }
 
