@@ -11,12 +11,16 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from apps.project.structure.models.project_models import Project, Membership
-from apps.selection.models import (
-    SelectionPhase, PaperAssignment, PaperReview,
-    SelectionDecisionChoices, AssignmentStageChoices,
-    SubPhaseStatusChoices, SelectionStageChoices
+from apps.selection.features.distribution.models import SelectionPhase
+from apps.selection.features.screening.models import PaperAssignment, PaperReview
+from apps.selection.models.choices import (
+    SelectionDecisionChoices,
+    AssignmentStageChoices,
+    SubPhaseStatusChoices,
+    SelectionStageChoices,
 )
-from apps.selection.services import PaperDistributionService, DiscrepancyResolutionService
+from apps.selection.features.distribution.services import PaperDistributionService
+from apps.selection.features.discussion.services import DiscrepancyResolutionService
 
 
 def _calculate_progress(selection_phase, user, stage='SCREENING'):

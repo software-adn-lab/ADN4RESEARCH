@@ -13,9 +13,12 @@ from django.core.files.storage import default_storage
 from apps.project.structure.models.project_models import Project
 from apps.project.facade import get_project_facade
 from apps.design.api import get_design_protocol
-from apps.selection.models import (
-    SelectionPhase, PaperAssignment, PaperReview,
-    SelectionDecisionChoices, AssignmentStageChoices, SubPhaseStatusChoices
+from apps.selection.features.distribution.models import SelectionPhase
+from apps.selection.features.screening.models import PaperAssignment, PaperReview
+from apps.selection.models.choices import (
+    SelectionDecisionChoices,
+    AssignmentStageChoices,
+    SubPhaseStatusChoices,
 )
 
 

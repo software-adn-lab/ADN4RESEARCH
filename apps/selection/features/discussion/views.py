@@ -11,11 +11,15 @@ from django.contrib import messages
 
 from apps.project.structure.models.project_models import Project
 from apps.project.facade import get_project_facade
-from apps.selection.models import (
-    SelectionPhase, PaperAssignment, PaperReview, ConflictResolution,
-    SelectionDecisionChoices, AssignmentStageChoices, SelectionStageChoices
+from apps.selection.features.distribution.models import SelectionPhase
+from apps.selection.features.screening.models import PaperAssignment, PaperReview
+from apps.selection.features.discussion.models import ConflictResolution
+from apps.selection.models.choices import (
+    SelectionDecisionChoices,
+    AssignmentStageChoices,
+    SelectionStageChoices,
 )
-from apps.selection.services import DiscrepancyResolutionService
+from apps.selection.features.discussion.services import DiscrepancyResolutionService
 from apps.design.api import get_design_protocol
 
 

@@ -13,12 +13,16 @@ from django.core.files.storage import default_storage
 
 from apps.project.structure.models.project_models import Project, Membership
 from apps.project.facade import get_project_facade
-from apps.selection.models import (
-    SelectionPhase, PaperAssignment, PaperReview,
-    SelectionDecisionChoices, AssignmentStageChoices,
-    SubPhaseStatusChoices, SelectionStageChoices
+from apps.selection.features.distribution.models import SelectionPhase
+from apps.selection.features.screening.models import PaperAssignment, PaperReview
+from apps.selection.models.choices import (
+    SelectionDecisionChoices,
+    AssignmentStageChoices,
+    SubPhaseStatusChoices,
+    SelectionStageChoices,
 )
-from apps.selection.services import FulltextDistributionService, DiscrepancyResolutionService
+from apps.selection.features.screening.fulltext.services import FulltextDistributionService
+from apps.selection.features.discussion.services import DiscrepancyResolutionService
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +147,7 @@ def _get_included_papers_from_screening(selection_phase):
     """
     Get papers that were included in screening phase.
     """
-    from apps.selection.models import ConflictResolution
+    from apps.selection.features.discussion.models import ConflictResolution
     
     included_papers = set()
     
