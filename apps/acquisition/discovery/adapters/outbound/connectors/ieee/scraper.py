@@ -230,7 +230,7 @@ class IeeePlaywrightConnector:
                 api_url = "https://ieeexplore.ieee.org/rest/search"
                 payload = {
                     "queryText": query,
-                    "highlight": True,
+                    "highlight": False,
                     "returnFacets": ["ALL"],
                     "returnType": "SEARCH",
                     "matchPubs": True,

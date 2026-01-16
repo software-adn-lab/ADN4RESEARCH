@@ -162,29 +162,18 @@
         </div>
     </div>
 
-    {% if is_owner and phase_mode == 'finalizado' %}
-    <!-- Screening Summary - Separate card for bulk decisions -->
-    <div class="card bg-white shadow">
-        <div class="card-body">
-            <h2 class="card-title">Screening Summary</h2>
-            <div class="text-center py-6">
-                <p class="text-5xl font-bold text-gray-400">{{ user_progress.pending }}</p>
-                <p class="text-sm text-gray-600 mt-2">Pending Studies</p>
-            </div>
-            <div class="divider my-2">Take Action</div>
-            <form method="post" action="{% url 'selection:screening_bulk_decision' project.id %}" class="space-y-2">
-                {% csrf_token %}
-                <button type="submit" name="action" value="include_all" class="btn btn-success btn-block">
-                    INCLUDE ALL PENDING
-                </button>
-                <button type="submit" name="action" value="exclude_all" class="btn btn-error btn-block">
-                    EXCLUDE ALL PENDING
-                </button>
-                <button type="submit" name="action" value="send_to_discussion" class="btn btn-warning btn-block">
-                    SEND ALL TO DISCUSSION
-                </button>
-            </form>
-        </div>
+
+    {% if is_owner and can_finalize %}
+    <div class="flex justify-end mt-6">
+        <form method="post" action="{% url 'selection:finalize_screening' project.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Finalizar screening
+            </button>
+        </form>
     </div>
     {% endif %}
 </div>

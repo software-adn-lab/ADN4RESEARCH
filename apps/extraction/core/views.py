@@ -115,7 +115,12 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         
         # URLs para JavaScript
         project_id = paper.extraction_phase.project_id
-        context['pdf_url'] = reverse('extraction:core:paper_pdf', kwargs={'project_id': project_id, 'pk': paper.pk})
+        
+        # ✅ Get PDF URL from Acquisition adapter (S3/filesystem compatible)
+        pdf_url = self._get_pdf_url(paper)
+        context['pdf_url'] = pdf_url
+        context['has_pdf'] = pdf_url is not None
+        
         context['quote_create_url'] = reverse('extraction:core:quote_create', kwargs={'project_id': project_id})
         context['quote_delete_url_template'] = reverse(
             'extraction:core:quote_delete', 
@@ -124,12 +129,49 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         
         logger.info(
             f"Paper workspace loaded: paper_id={paper.id}, "
-            f"user={self.request.user.username}, quotes_count={len(context['quotes'])}"
+            f"user={self.request.user.username}, quotes_count={len(context['quotes'])}, "
+            f"has_pdf={context['has_pdf']}"
         )
         context['paper_complete_url'] = reverse('extraction:core:paper_complete', kwargs={'project_id': project_id, 'pk': paper.pk})
 
-        
         return context
+    
+    def _get_pdf_url(self, paper):
+        """
+        Get PDF URL from Acquisition module through adapter.
+        
+        Uses the AcquisitionAdapter to access pdf_url in a centralized way,
+        supporting both filesystem and S3/MinIO storage backends.
+        
+        Returns:
+            PDF URL string or None if PDF not available
+        """
+        try:
+            from apps.extraction.adapters.acquisition import get_acquisition_adapter
+            
+            adapter = get_acquisition_adapter()
+            pdf_url = adapter.get_study_pdf_url(
+                study_id=str(paper.study_id),
+                project_id=paper.extraction_phase.project_id
+            )
+            
+            if pdf_url:
+                logger.debug(
+                    f"[PAPER DETAIL] Got PDF URL for paper {paper.id}: {pdf_url}"
+                )
+            else:
+                logger.debug(
+                    f"[PAPER DETAIL] No PDF available for paper {paper.id}"
+                )
+            
+            return pdf_url
+            
+        except Exception as e:
+            logger.error(
+                f"[PAPER DETAIL] Failed to get PDF URL for paper {paper.id}: {e}",
+                exc_info=True
+            )
+            return None
 
 
 class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):

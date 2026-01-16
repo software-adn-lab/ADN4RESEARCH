@@ -10,9 +10,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .models import Tag, TagTypeChoices, VisibilityChoices, ApprovalStatusChoices
-from apps.design.research_question.models.research_question import ResearchQuestion
-from apps.extraction.shared.design_protocol import DesignProtocolAdapter
-
+from apps.extraction.adapters.design import DesignAdapter
 
 class DeductiveTagForm(forms.ModelForm):
     """
@@ -44,11 +42,7 @@ class DeductiveTagForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """
-        Inicializa el form y configura el queryset de rq_related
-        según el proyecto proporcionado.
-        
-        Args:
-            project: Instancia de Project para filtrar ResearchQuestions
+        Inicializa el form y configura las opciones usando el Adapter.
         """
         project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
@@ -56,30 +50,34 @@ class DeductiveTagForm(forms.ModelForm):
         
         if project:
             self.fields['name'].required = True
-            adapter = DesignProtocolAdapter()
-            approved_questions = adapter.get_approved_questions(project.id)
-            # Configurar queryset solo con RQs aprobadas del protocolo
             
+            adapter = DesignAdapter()
+            questions_dto = adapter.get_protocol_questions(project.id)
+
+            choices = [("", "-- Sin vincular a RQ --")]
+            
+            for q in questions_dto:
+                # El DTO tiene atributos .id y .text
+                choices.append((q.id, q.text))
+
             self.fields['rq_related'] = forms.ChoiceField(
-                required=False,
-                choices=[("", "-- Sin vincular a RQ --")] + [
-                    (q["id"], q["question"]) for q in approved_questions
-                ],
+                choices=choices,
+                required=False
             )
-            self.fields['rq_related'].required = False
-            self.fields['rq_related'].empty_label = "-- Sin vincular a RQ --"
     
     def clean(self):
         """
-        Convierte el ID de ResearchQuestion a la instancia correspondiente.
+        Convierte el ID de ResearchQuestion a la instancia correspondiente
+        usando el adapter para obtener la instancia desde el módulo Design.
         """
         cleaned_data = super().clean()
         rq_id = cleaned_data.get('rq_related')
         
         if rq_id:
             try:
-                cleaned_data['rq_related'] = ResearchQuestion.objects.get(id=rq_id)
-            except ResearchQuestion.DoesNotExist:
+                adapter = DesignAdapter()
+                cleaned_data['rq_related'] = adapter.get_research_question_by_id(int(rq_id))
+            except Exception as e:
                 raise ValidationError("Pregunta de investigación inválida.")
         else:
             cleaned_data['rq_related'] = None

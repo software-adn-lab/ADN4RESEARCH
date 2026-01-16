@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from django.db.models import QuerySet
+from typing import List
 
 
 @dataclass
@@ -14,7 +14,7 @@ class ProtocolCoverageReport:
     - La cobertura es completa cuando todas las RQs están cubiertas
     """
     is_fully_covered: bool
-    missing_rqs: QuerySet  # QuerySet de ResearchQuestion
+    missing_rqs: List  # Lista de ResearchQuestionDTO
     total_rqs: int
     covered_count: int
 
@@ -48,4 +48,4 @@ class ProtocolCoverageReport:
     @property
     def missing_rq_count(self) -> int:
         """Número de RQs faltantes."""
-        return self.missing_rqs.count()
+        return len(self.missing_rqs)
