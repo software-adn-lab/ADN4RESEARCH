@@ -19,7 +19,7 @@
 
         {% if is_owner and phase.status == 'CONFIG' and active_tab == 'tags' %}
              {% if can_open_phase %}
-                <form action="{% url 'extraction:open_phase' phase.id %}" method="POST">
+                <form action="{% url 'extraction:planning:phase_open' project_id=project.id %}" method="POST">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary text-white animate-pulse">
                         Abrir Fase de Extracción

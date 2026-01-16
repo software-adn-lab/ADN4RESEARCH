@@ -17,7 +17,7 @@ from apps.extraction.shared.exceptions import BusinessRuleViolation
 from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.taxonomy.services import TagApprovalService
-from apps.extraction.core.models import PaperExtraction, Quote
+from apps.extraction.core.models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.adapters.selection import get_selection_adapter
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
 
@@ -208,57 +208,33 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                     reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})
                 )
             
-            # Get study data from acquisition
             acquisition_adapter = get_acquisition_adapter()
-            all_studies = acquisition_adapter.get_studies_by_project(project_id)
-            
-            # Map study IDs to study objects
-            studies_by_id = {str(s['id']): s for s in all_studies}
-            
-            # Create PaperExtraction records for approved papers
             created_count = 0
             skipped_count = 0
-            
+
             for paper_id in approved_paper_ids:
-                if str(paper_id) not in studies_by_id:
-                    logger.warning(f"[INIT EXTRACTION] Study {paper_id} not found in acquisition")
-                    skipped_count += 1
-                    continue
-                
-                # Create PaperExtraction if it doesn't exist
+                pdf_url = acquisition_adapter.get_study_pdf_url(
+                    str(paper_id), project_id=project_id
+                )
+
                 paper_ext, created = PaperExtraction.objects.get_or_create(
                     extraction_phase=phase,
                     study_id=str(paper_id),
-                    defaults={'status': 'PENDING'}
+                    defaults={
+                        'status': PaperExtractionStatusChoices.PENDING,
+                        'path': pdf_url
+                    }
                 )
-                
+
                 if created:
                     created_count += 1
                 else:
                     skipped_count += 1
             
-            # Trigger fulltext downloads asynchronously
-            try:
-                download_result = acquisition_adapter.download_fulltexts(
-                    approved_paper_ids
-                )
-                logger.info(
-                    f"[INIT EXTRACTION] Download triggered: "
-                    f"{download_result['downloaded_count']} completed, "
-                    f"{download_result['failed_count']} failed"
-                )
-            except Exception as e:
-                logger.error(
-                    f"[INIT EXTRACTION] Failed to trigger downloads: {e}",
-                    exc_info=True
-                )
-                # Don't fail the entire operation if downloads fail
-            
             messages.success(
                 request,
                 f'Loaded {created_count} papers for extraction. '
-                f'({skipped_count} were already loaded). '
-                'PDFs are being downloaded in the background.'
+                f'({skipped_count} were already loaded).'
             )
             logger.info(
                 f"[INIT EXTRACTION] Created {created_count} papers, "
