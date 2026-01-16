@@ -480,6 +480,7 @@ class AcquisitionFacade:
     def register_manual_study(
         self,
         study_data: Dict[str, Any],
+        strategy_id: Optional[str] = None,
         user: Optional[User] = None
     ) -> Dict[str, Any]:
         """
@@ -492,6 +493,7 @@ class AcquisitionFacade:
 
         Args:
             study_data: Dict con keys: title, link, doi, authors, year, abstract, keywords, etc.
+            strategy_id: ID de la estrategia de búsqueda a la que asociar (opcional)
             user: Usuario que realiza la acción (opcional)
 
         Returns:
@@ -504,7 +506,7 @@ class AcquisitionFacade:
         logger.info(f"[FACADE] Registering manual study: {study_data.get('title')}")
 
         try:
-            study = self._orchestrator.add_manual_study(study_data, user)
+            study = self._orchestrator.add_manual_study(study_data, user, strategy_id)
 
             # Retornar DTO simple (dict)
             return study.to_dict()

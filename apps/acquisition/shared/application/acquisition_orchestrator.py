@@ -711,7 +711,12 @@ class AcquisitionOrchestrator:
     # USE CASE 4: Gestión Manual (Cuando los robots fallan o se necesita intervención humana)
     # ==========================================================================
 
-    def add_manual_study(self, study_data: Dict[str, Any], user: Optional[User] = None) -> Study:
+    def add_manual_study(
+        self,
+        study_data: Dict[str, Any],
+        user: Optional[User] = None,
+        strategy_id: Optional[str] = None
+    ) -> Study:
         """
         Registra un estudio manualmente (ej. el usuario lo tiene en físico).
 
@@ -720,10 +725,12 @@ class AcquisitionOrchestrator:
         2. Completar información faltante manualmente
         3. Marcar trazabilidad de origen manual
         4. Persistir usando el repositorio estándar
+        5. (Opcional) Vincular a una estrategia existente
 
         Args:
             study_data: Diccionario con datos del estudio
             user: Usuario que agrega el estudio (opcional)
+            strategy_id: ID de la estrategia a la cual vincular el estudio (opcional)
 
         Returns:
             Study: Entidad de dominio creada/persistida
@@ -767,8 +774,39 @@ class AcquisitionOrchestrator:
             study.field_origins = {k: "manual" for k in study_data.keys()}
             study.field_origins["source"] = "manual"  # Explícito para debugging
 
-            # 3. Persistir usando el repositorio estándar
+            # 4. Persistir usando el repositorio estándar
             persisted_study = self.study_repository.save(study)
+
+            # 5. Vincular a la estrategia (Si se proporcionó strategy_id)
+            if strategy_id:
+                try:
+                    # Buscar la última ejecución de esta estrategia
+                    last_execution = SearchExecutionModel.objects.filter(
+                        strategy_id=strategy_id
+                    ).order_by('-executed_at').first()
+
+                    if last_execution:
+                        # Crear el vínculo M2M (ExecutionStudy)
+                        ExecutionStudy.objects.create(
+                            execution=last_execution,
+                            study_id=persisted_study.id,  # UUID del estudio
+                            is_new=True,                  # Siempre es nuevo si es manual
+                            providers=['Manual'],
+                            rank_position=0               # Prioridad alta / Manual
+                        )
+                        
+                        # Actualizar contadores de la ejecución
+                        last_execution.results_count += 1
+                        last_execution.new_studies_count += 1
+                        last_execution.save(update_fields=["results_count", "new_studies_count"])
+                        
+                        logger.info(f"[MANUAL] Linked study {persisted_study.id} to strategy {strategy_id} (Execution {last_execution.id})")
+                    else:
+                        logger.warning(f"[MANUAL] Strategy {strategy_id} has no executions. Study created but not linked.")
+                
+                except Exception as link_error:
+                    # No fallamos todo el proceso si solo falla el linkeo, pero lo loggeamos
+                    logger.error(f"[MANUAL] Failed to link study to strategy {strategy_id}: {link_error}")
 
             logger.info(f"[MANUAL] Successfully added manual study: {persisted_study.id}")
             return persisted_study
