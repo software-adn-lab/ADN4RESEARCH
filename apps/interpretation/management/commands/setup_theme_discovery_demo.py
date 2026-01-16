@@ -10,6 +10,7 @@ from apps.project.structure.models.project_models import Project
 from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
     ThemeDiscoveryService,
 )
+from apps.interpretation.conclusion_assistant.models import InterpretationPhase
 from django.utils import timezone
 
 User = get_user_model()
@@ -64,6 +65,16 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING(f"→ Using existing project: {project.title}")
             )
+        
+        # Create Interpretation Phase
+        phase, _ = InterpretationPhase.objects.get_or_create(
+            project=project,
+            defaults={'is_active': True}
+        )
+        # Ensure it is active
+        if not phase.is_active:
+            phase.is_active = True
+            phase.save()
 
         # Sample initial codes (tags) from a mental health systematic review
         sample_codes = [

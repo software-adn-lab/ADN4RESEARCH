@@ -81,7 +81,7 @@ def sidebar_context(request):
         
         # Check Interpretation phase
         try:
-            from apps.interpretation.models import InterpretationPhase
+            from apps.interpretation.conclusion_assistant.models import InterpretationPhase
             interpretation_phase = InterpretationPhase.objects.filter(project=project).first()
             if interpretation_phase:
                 phases.append({
@@ -90,7 +90,7 @@ def sidebar_context(request):
                     'icon': 'interpretation',
                     'active': getattr(interpretation_phase, 'is_active', False),
                 })
-        except:
+        except ImportError:
             pass
         
         projects_data.append({
