@@ -94,6 +94,45 @@ class AcquisitionAdapter:
             )
             raise
 
+    def upload_study_pdf(
+        self,
+        study_id: str,
+        file_obj: Any,
+        filename: str,
+        user: Any,
+    ) -> Dict[str, Any]:
+        """
+        Uploads a new PDF for a study.
+        
+        Args:
+            study_id: The UUID of the study.
+            file_obj: The file object to upload.
+            filename: The name of the file.
+            user: The user performing the upload.
+            
+        Returns:
+            A dictionary with the result of the upload.
+        """
+        try:
+            logger.info(
+                f"[ACQUISITION ADAPTER] Uploading new PDF for study {study_id} by user {user.username}"
+            )
+            # Use force=True to allow replacing existing PDFs
+            result = self._facade.upload_study_pdf(
+                study_id=study_id,
+                file_obj=file_obj,
+                filename=filename,
+                user=user,
+                force=True
+            )
+            return result
+        except Exception as e:
+            logger.error(
+                f"[ACQUISITION ADAPTER] Failed to upload PDF for study {study_id}: {e}",
+                exc_info=True
+            )
+            raise
+
 
 def get_acquisition_adapter() -> AcquisitionAdapter:
     """Factory function to get AcquisitionAdapter instance."""

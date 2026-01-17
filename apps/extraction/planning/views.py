@@ -128,15 +128,22 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
                 paper_extraction__extraction_phase=phase
-            )
-            
+            ).order_by('-created_at')
+
             if is_researcher:
                 quotes_qs = quotes_qs.filter(created_by=self.request.user)
             
-            context['quotes'] = quotes_qs.select_related(
+            from django.core.paginator import Paginator
+            paginator = Paginator(quotes_qs.select_related(
                 'paper_extraction__study',
                 'created_by'
-            ).prefetch_related('tags')
+            ).prefetch_related('tags'), 10)
+
+            page_number = self.request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            
+            context['quotes_page'] = page_obj
+            context['quotes_count'] = paginator.count
 
         elif tab == 'pending':
             if is_owner:
@@ -211,6 +218,7 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
             acquisition_adapter = get_acquisition_adapter()
             created_count = 0
             skipped_count = 0
+            paper_ext_map = {}  # Map paper_id -> PaperExtraction instance
 
             for paper_id in approved_paper_ids:
                 pdf_url = acquisition_adapter.get_study_pdf_url(
@@ -226,20 +234,60 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                     }
                 )
 
+                paper_ext_map[str(paper_id)] = paper_ext
+                
                 if created:
                     created_count += 1
                 else:
                     skipped_count += 1
             
-            messages.success(
-                request,
-                f'Loaded {created_count} papers for extraction. '
-                f'({skipped_count} were already loaded).'
-            )
-            logger.info(
-                f"[INIT EXTRACTION] Created {created_count} papers, "
-                f"skipped {skipped_count} for project {project_id}"
-            )
+            # Distribute papers among researchers
+            try:
+                from .services import ApprovedPaperDistributionService
+                from django.contrib.auth.models import User
+                
+                distribution_service = ApprovedPaperDistributionService(project_id)
+                distribution = distribution_service.distribute_approved_papers(
+                    approved_paper_ids
+                )
+                
+                # Apply distribution: assign papers to researchers
+                assignment_count = 0
+                for user_id, paper_ids in distribution.items():
+                    user = User.objects.get(id=user_id)
+                    
+                    for paper_id in paper_ids:
+                        if str(paper_id) in paper_ext_map:
+                            paper_ext = paper_ext_map[str(paper_id)]
+                            # Only assign if not already assigned
+                            if not paper_ext.assigned_to:
+                                paper_ext.assigned_to = user
+                                paper_ext.save()
+                                assignment_count += 1
+                                logger.info(
+                                    f"[INIT EXTRACTION] Assigned paper {paper_id} to {user.username}"
+                                )
+                
+                messages.success(
+                    request,
+                    f'Loaded {created_count} papers and distributed {assignment_count} assignments. '
+                    f'({skipped_count} were already loaded).'
+                )
+                logger.info(
+                    f"[INIT EXTRACTION] Created {created_count} papers, "
+                    f"assigned {assignment_count}, skipped {skipped_count} for project {project_id}"
+                )
+                
+            except (ValueError, Exception) as e:
+                # If distribution fails, still show success for paper loading
+                logger.warning(
+                    f"[INIT EXTRACTION] Could not distribute papers: {e}"
+                )
+                messages.warning(
+                    request,
+                    f'Loaded {created_count} papers, but distribution failed: {str(e)}. '
+                    f'You can manually assign papers to researchers.'
+                )
             
         except Exception as e:
             logger.error(

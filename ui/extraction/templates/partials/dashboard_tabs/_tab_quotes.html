@@ -1,5 +1,3 @@
-
-
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
 
@@ -9,19 +7,15 @@
                 {% if is_owner %}Quotes Repository{% else %}My Extracted Quotes{% endif %}
             </h2>
             <p class="text-sm text-gray-500 mt-1">
-                Found <span class="font-semibold text-gray-900">{{ quotes.count }}</span> quotations in this phase.
+                Found <span class="font-semibold text-gray-900">{{ quotes_count }}</span> quotations in this phase.
             </p>
         </div>
         
         <div class="flex gap-2">
-            <button class="btn btn-sm bg-white border border-gray-300 shadow-sm hover:bg-gray-50 text-gray-700 font-normal normal-case h-9 px-4 rounded-lg">
-                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-                Filter
-            </button>
-            <button class="btn btn-sm bg-gray-900 hover:bg-black text-white border-none font-medium normal-case h-9 px-4 rounded-lg shadow-md">
+            <a href="{% url 'extraction:core:export_quotes_csv' project_id=phase.project_id %}" class="btn btn-sm bg-gray-900 hover:bg-black text-white border-none font-medium normal-case h-9 px-4 rounded-lg shadow-md">
                 <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Export
-            </button>
+            </a>
         </div>
     </div>
 
@@ -40,7 +34,7 @@
                 </thead>
                 
                 <tbody class="text-sm">
-                    {% for quote in quotes %}
+                    {% for quote in quotes_page %}
                     <tr class="group hover:bg-gray-50/50 transition-colors duration-200 border-b border-gray-50 last:border-none">
                         
                         <td class="align-top py-5 pl-6">
@@ -91,8 +85,8 @@
                                     {{ quote.created_by.username }}
                                 </span>
                                 <div class="avatar placeholder">
-                                    <div class="bg-gray-200 text-gray-600 rounded-full w-8 h-8 ring-2 ring-white shadow-sm">
-                                        <span class="text-xs font-bold">{{ quote.created_by.username|slice:":1"|upper }}</span>
+                                    <div class="bg-gray-200 text-gray-600 rounded-full w-8 h-8 ring-2 ring-white shadow-sm flex items-center justify-center">
+                                        <span class="text-xs font-bold">JS</span>
                                     </div>
                                 </div>
                             </div>
@@ -116,14 +110,35 @@
             </table>
         </div>
         
+        {% if quotes_page.has_other_pages %}
         <div class="bg-gray-50 border-t border-gray-100 px-6 py-3 flex items-center justify-between">
-            <span class="text-xs text-gray-400">Showing all {{ quotes.count }} items</span>
+            <span class="text-xs text-gray-500">
+                Showing
+                <span class="font-semibold text-gray-700">{{ quotes_page.start_index }}</span>
+                to
+                <span class="font-semibold text-gray-700">{{ quotes_page.end_index }}</span>
+                of
+                <span class="font-semibold text-gray-700">{{ quotes_count }}</span>
+                results
+            </span>
+
             <div class="join">
-                <button class="join-item btn btn-xs btn-ghost">«</button>
-                <button class="join-item btn btn-xs btn-ghost text-gray-900">Page 1</button>
-                <button class="join-item btn btn-xs btn-ghost">»</button>
+                {% if quotes_page.has_previous %}
+                    <a href="?tab=quotes&page={{ quotes_page.previous_page_number }}" class="join-item btn btn-xs btn-ghost">«</a>
+                {% else %}
+                    <button class="join-item btn btn-xs btn-ghost" disabled>«</button>
+                {% endif %}
+
+                <button class="join-item btn btn-xs btn-ghost text-gray-900">Page {{ quotes_page.number }} of {{ quotes_page.paginator.num_pages }}</button>
+                
+                {% if quotes_page.has_next %}
+                    <a href="?tab=quotes&page={{ quotes_page.next_page_number }}" class="join-item btn btn-xs btn-ghost">»</a>
+                {% else %}
+                    <button class="join-item btn btn-xs btn-ghost" disabled>»</button>
+                {% endif %}
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

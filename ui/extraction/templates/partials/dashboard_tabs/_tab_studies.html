@@ -56,35 +56,50 @@
         {% endif %}
     </div>
 
-    <div class="mt-auto border-t border-gray-100 p-4 bg-gray-50/50 relative z-20 flex flex-wrap gap-2 justify-end">
-        {% if phase.status == 'OPEN' %}
-            
-            {% if is_owner %}
-                <button class="btn btn-xs btn-ghost text-gray-500 hover:bg-gray-100 font-normal normal-case" 
-                        onclick="event.stopPropagation(); event.preventDefault(); openReassignModal({{ paper.pk }}, '{{ paper.study.title|escapejs }}')">
-                    Reassign
-                </button>
-            {% endif %}
+    <div class="mt-auto border-t border-gray-100 p-4 bg-gray-50/50 relative z-20 space-y-4">
+        <div class="flex flex-wrap gap-2 justify-end">
+            {% if phase.status == 'OPEN' %}
+                
+                {% if is_owner %}
+                    <button class="btn btn-xs btn-ghost text-gray-500 hover:bg-gray-100 font-normal normal-case" 
+                            onclick="event.stopPropagation(); event.preventDefault(); openReassignModal({{ paper.pk }}, '{{ paper.study.title|escapejs }}')">
+                        Reassign
+                    </button>
+                {% endif %}
 
-            {% if paper.status == 'PENDING' %}
-                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                   class="btn btn-sm bg-gray-900 hover:bg-black text-white border-none shadow-md rounded-lg font-medium normal-case w-auto px-4 ml-auto">
-                   Start Extraction
-                </a>
-            {% elif paper.status == 'COMPLETED' %}
-                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                   class="btn btn-sm btn-outline border-gray-300 hover:bg-gray-100 hover:text-gray-900 text-gray-600 font-medium normal-case ml-auto">
-                   View Response
-                </a>
+                {% if paper.status == 'PENDING' %}
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                       class="btn btn-sm bg-gray-900 hover:bg-black text-white border-none shadow-md rounded-lg font-medium normal-case w-auto px-4 ml-auto">
+                       Start Extraction
+                    </a>
+                {% elif paper.status == 'COMPLETED' %}
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                       class="btn btn-sm btn-outline border-gray-300 hover:bg-gray-100 hover:text-gray-900 text-gray-600 font-medium normal-case ml-auto">
+                       View Response
+                    </a>
+                {% else %}
+                    <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                       class="btn btn-sm btn-primary border-none text-white font-medium normal-case ml-auto">
+                       Continue
+                    </a>
+                {% endif %}
+
             {% else %}
-                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
-                   class="btn btn-sm btn-primary border-none text-white font-medium normal-case ml-auto">
-                   Continue
-                </a>
+                <span class="text-xs text-gray-400 italic w-full text-center py-1">Phase Closed</span>
             {% endif %}
+        </div>
 
-        {% else %}
-            <span class="text-xs text-gray-400 italic w-full text-center py-1">Phase Closed</span>
+        {% if is_owner %}
+        <div class="border-t border-gray-200 pt-4">
+            <form action="{% url 'extraction:core:paper_update_pdf' project_id=phase.project_id pk=paper.pk %}" method="post" enctype="multipart/form-data" class="flex items-center gap-2 justify-between" onclick="event.stopPropagation();" onsubmit="return confirmUpdate(this);">
+                {% csrf_token %}
+                <label class="block">
+                    <span class="sr-only">Choose file</span>
+                    <input type="file" name="pdf_file" required class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200"/>
+                </label>
+                <button type="submit" class="btn btn-xs btn-outline">Update</button>
+            </form>
+        </div>
         {% endif %}
     </div>
 </div>
@@ -139,6 +154,16 @@
 
 <script>
 let currentPaperId = null;
+
+function confirmUpdate(form) {
+    const confirmation = confirm("Updating the PDF will delete all existing extractions for this paper. This action cannot be undone. Are you sure you want to continue?");
+    if (confirmation) {
+        form.querySelector('button').disabled = true;
+        form.querySelector('button').innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+        return true;
+    }
+    return false;
+}
 
 function openReassignModal(paperId, paperTitle) {
     currentPaperId = paperId;

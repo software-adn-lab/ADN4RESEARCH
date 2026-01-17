@@ -5,7 +5,7 @@
         
         <div class="md:col-span-4 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
             <div>
-                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">RQ Coverage</h4>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Research Questions Coverage</h4>
                 <div class="text-2xl font-bold text-gray-900 mt-1">
                     {{ coverage_report.coverage_fraction_display }}
                 </div>
@@ -155,7 +155,7 @@
                                 {% csrf_token %}
                                 <button type="submit" 
                                         class="btn btn-xs btn-ghost text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onclick="event.stopPropagation(); return confirm('Are you sure you want to delete the tag \'{{ tag.name }}\'? This cannot be undone.');">
+                                        onclick="event.stopPropagation(); return confirm('Are you sure you want to delete the tag \'{{ tag.name }}\'? This action cannot be undone. \nAll quotes currently associated with this tag will be unlinked from it.');">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
                             </form>
@@ -280,7 +280,7 @@
 
                     <div class="form-control w-full mt-4">
                         <label class="label px-0 pt-0">
-                            <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wide">Linked Question</span>
+                            <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wide">Linked Research Question</span>
                         </label>
                         <select name="rq_related" class="select select-bordered w-full">
                             <option value="">-- No Link --</option>

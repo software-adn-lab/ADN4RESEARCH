@@ -53,6 +53,14 @@ class QuoteManager {
     }
 
     showQuoteModal(text, page) {
+        // Validar que el paper no esté completado
+        if (window.PAPER_CONFIG && window.PAPER_CONFIG.paperStatus === 'COMPLETED') {
+            if (window.showToast) {
+                window.showToast('Cannot add extractions to a completed paper', 'error');
+            }
+            return;
+        }
+
         this.currentSelection = { text, page };
 
         const textArea = document.getElementById('selected-text');
