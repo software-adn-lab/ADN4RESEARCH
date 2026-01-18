@@ -20,6 +20,7 @@ from apps.extraction.taxonomy.services import TagApprovalService
 from apps.extraction.core.models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.adapters.selection import get_selection_adapter
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
+from apps.interpretation.conclusion_assistant.models import InterpretationPhase
 
 logger = logging.getLogger(__name__)
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
@@ -342,3 +343,27 @@ class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         
         # ✅ Redirigir al tab de tags para ver el estado
         return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")
+
+class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Transition from Extraction to Interpretation phase.
+    """
+
+    def post(self, request, *args, **kwargs):
+        project_id = self.kwargs.get('project_id')
+        extraction_phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        
+        # Get or Create Interpretation Phase
+        interp_phase, created = InterpretationPhase.objects.get_or_create(
+            project=extraction_phase.project,
+            defaults={'is_active': False}
+        )
+        
+        # Activate it
+        interp_phase.is_active = True
+        interp_phase.save()
+        
+        messages.success(request, "Interpretation Phase has been activated successfully.")
+        
+        # Redirect to Interpretation Theme Discovery (step 1)
+        return redirect(f"{reverse('interpretation:theme_discovery', args=[project_id])}?step=1")

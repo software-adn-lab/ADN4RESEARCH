@@ -40,6 +40,19 @@
             </div>
         </div>
 
+        <div class="flex gap-2">
+        {% if is_owner and phase.status != 'CONFIG' %}
+             <form action="{% url 'extraction:planning:start_interpretation' project_id=project.id %}" method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary bg-purple-600 hover:bg-purple-700 text-white border-none rounded-lg shadow-md px-6 flex gap-2 items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Interpret Results
+                </button>
+            </form>
+        {% endif %}
+
         {% if is_owner and phase.status == 'CONFIG' and active_tab == 'tags' %}
             {% if can_open_phase %}
                 <form action="{% url 'extraction:planning:phase_open' project_id=project.id %}" method="POST">
@@ -56,6 +69,7 @@
                 </div>
             {% endif %}
         {% endif %}
+        </div>
     </div>
 
     {% if messages %}

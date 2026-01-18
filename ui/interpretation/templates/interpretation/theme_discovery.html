@@ -16,25 +16,25 @@
     <!-- Step Indicator -->
     <div class="flex items-center justify-center mb-8">
         <div class="flex items-center space-x-4">
-            <div class="flex items-center">
-                <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">1</div>
-                <span class="ml-2 font-medium">Code Normalization</span>
-            </div>
+            <a href="{% url 'interpretation:theme_discovery' project.id %}?step=1" class="flex items-center group">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">1</div>
+                <span class="ml-2 font-medium group-hover:text-primary transition-colors">Code Normalization</span>
+            </a>
             <div class="w-16 h-1 bg-base-300"></div>
-            <div class="flex items-center">
-                <div class="w-10 h-10 rounded-full {% if step >= 2 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold">2</div>
-                <span class="ml-2 font-medium {% if step < 2 %}text-base-content/60{% endif %}">Theme Generation</span>
-            </div>
+            <a href="{% url 'interpretation:theme_discovery' project.id %}?step=2" class="flex items-center group">
+                <div class="w-10 h-10 rounded-full {% if step >= 2 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">2</div>
+                <span class="ml-2 font-medium {% if step < 2 %}text-base-content/60{% endif %} group-hover:text-primary transition-colors">Theme Generation</span>
+            </a>
             <div class="w-16 h-1 bg-base-300"></div>
-            <div class="flex items-center">
-                <div class="w-10 h-10 rounded-full {% if step >= 3 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold">3</div>
-                <span class="ml-2 font-medium {% if step < 3 %}text-base-content/60{% endif %}">Themes Dashboard</span>
-            </div>
+            <a href="{% url 'interpretation:themes_created' %}?project_id={{ project.id }}" class="flex items-center group">
+                <div class="w-10 h-10 rounded-full {% if step >= 3 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">3</div>
+                <span class="ml-2 font-medium {% if step < 3 %}text-base-content/60{% endif %} group-hover:text-primary transition-colors">Themes Dashboard</span>
+            </a>
             <div class="w-16 h-1 bg-base-300"></div>
-            <div class="flex items-center">
-                <div class="w-10 h-10 rounded-full {% if step >= 4 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold">4</div>
-                <span class="ml-2 font-medium {% if step < 4 %}text-base-content/60{% endif %}">Inference</span>
-            </div>
+            <a href="{% url 'interpretation:index' %}?project_id={{ project.id }}" class="flex items-center group">
+                <div class="w-10 h-10 rounded-full {% if step >= 4 %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/60{% endif %} flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">4</div>
+                <span class="ml-2 font-medium {% if step < 4 %}text-base-content/60{% endif %} group-hover:text-primary transition-colors">Inference</span>
+            </a>
         </div>
     </div>
 

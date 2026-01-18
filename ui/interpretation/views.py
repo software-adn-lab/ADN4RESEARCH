@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.db.models import Prefetch
 from django.http import HttpResponse
 
-from apps.interpretation.exporter.services import MarkdownExporter
+from apps.interpretation.exporter.markdown_exporter import MarkdownExporter
+from apps.interpretation.exporter.pdf_exporter import ThemePdfExporter
 from apps.interpretation.conclusion_assistant.services.interpretation_services import (
     InterpretationService,
 )
@@ -26,7 +27,12 @@ service = InterpretationService()
 
 def index(request):
     """List available themes and subthemes to start interpretation."""
-    themes = Theme.objects.all().prefetch_related(
+    queryset = Theme.objects.all()
+    project_id = request.GET.get('project_id')
+    if project_id:
+        queryset = queryset.filter(project_id=project_id)
+
+    themes = queryset.prefetch_related(
         Prefetch(
             "subthemes",
             queryset=SubTheme.objects.prefetch_related(
@@ -40,7 +46,7 @@ def index(request):
             ),
         )
     )
-    return render(request, "interpretation/index.html", {"themes": themes})
+    return render(request, "interpretation/index.html", {"themes": themes, "project_id": project_id})
 
 
 @require_http_methods(["POST", "GET"])
@@ -237,11 +243,28 @@ def results_dashboard(request, project_id):
 @require_http_methods(["GET"])
 def export_report_view(request, project_id):
     """
-    Exports the interpretation report in Markdown format.
+    Exports the interpretation report in PDF format, covering the entire project.
     """
-    exporter = MarkdownExporter()
-    content = exporter.generate_report(project_id)
+    from apps.project.structure.models.project_models import Project
+    from apps.interpretation.exporter.pdf_exporter import ProjectPdfExporter
     
-    response = HttpResponse(content, content_type='text/markdown')
-    response['Content-Disposition'] = f'attachment; filename="reporte_interpretacion_{project_id}.md"'
+    project = get_object_or_404(Project, id=project_id)
+    exporter = ProjectPdfExporter()
+    pdf_content = exporter.generate_project_pdf(project)
+    
+    response = HttpResponse(pdf_content, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="interpretation_report_{project_id}.pdf"'
+    return response
+
+
+def export_theme_pdf(request, theme_id):
+    """
+    Exports a single theme with full traceability to PDF.
+    """
+    theme = get_object_or_404(Theme, id=theme_id)
+    exporter = ThemePdfExporter()
+    pdf_content = exporter.generate_pdf(theme)
+    
+    response = HttpResponse(pdf_content, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="theme_report_{theme_id}.pdf"'
     return response

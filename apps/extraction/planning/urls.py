@@ -33,6 +33,11 @@ urlpatterns = [
     path('open/', 
          views.PhaseOpenView.as_view(), 
          name='phase_open'),
+
+    # Start Interpretation
+    path('start-interpretation/',
+         views.StartInterpretationView.as_view(),
+         name='start_interpretation'),
     
     # Tags - anidados bajo la phase del proyecto
     path('tags/', 
