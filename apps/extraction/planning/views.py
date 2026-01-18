@@ -21,6 +21,8 @@ from apps.extraction.core.models import PaperExtraction, Quote, PaperExtractionS
 from apps.extraction.adapters.selection import get_selection_adapter
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
 from apps.interpretation.conclusion_assistant.models import InterpretationPhase
+from apps.extraction.taxonomy.models import Tag, ApprovalStatusChoices
+from apps.interpretation.conclusion_assistant.models.normalization_models import InitialCode
 
 logger = logging.getLogger(__name__)
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
@@ -411,7 +413,30 @@ class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
         interp_phase.is_active = True
         interp_phase.save()
         
-        messages.success(request, "Interpretation Phase has been activated successfully.")
+        # --- POPULATE INITIAL CODES FROM EXTRACTION TAGS ---
+        # 1. Fetch all APPROVED tags from the extraction phase
+        tags = Tag.objects.filter(
+            extraction_phase=extraction_phase,
+            status=ApprovalStatusChoices.APPROVED
+        )
+        
+        for tag in tags:
+            # Check how many times this tag was used in quotes
+            # Assuming Quote has a ManyToManyField 'tags'
+            usage_count = Quote.objects.filter(tags=tag).count()
+            
+            # Create or Update InitialCode in Interpretation
+            # We map Tag.name -> InitialCode.code_name
+            InitialCode.objects.update_or_create(
+                project=extraction_phase.project,
+                code=tag.name,  # Mapping name to code
+                defaults={
+                    'frequency': usage_count,
+                }
+            )
+        
+        messages.success(request, f"Interpretation Phase activated. {tags.count()} tags have been loaded as initial codes.")
         
         # Redirect to Interpretation Theme Discovery (step 1)
         return redirect(f"{reverse('interpretation:theme_discovery', args=[project_id])}?step=1")
+
