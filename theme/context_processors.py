@@ -36,6 +36,16 @@ def sidebar_context(request):
         
         # Determine available phases for this project
         phases = []
+
+        extraction_phase = None
+        extraction_active = False
+        try:
+            from apps.extraction.planning.models import ExtractionPhase
+            extraction_phase = ExtractionPhase.objects.filter(project=project).first()
+            if extraction_phase:
+                extraction_active = extraction_phase.status != 'CLOSED'
+        except Exception:
+            extraction_phase = None
         
         # Check Design phase
         try:
@@ -56,28 +66,26 @@ def sidebar_context(request):
             from apps.selection.models import SelectionPhase
             selection_phase = SelectionPhase.objects.filter(project=project).first()
             if selection_phase:
+                selection_active = selection_phase.is_active
+                if selection_phase.status == 'FINALIZED' or extraction_active:
+                    selection_active = False
                 phases.append({
                     'name': 'Selection',
                     'url': f'/project/{project.id}/selection/',
                     'icon': 'selection',
-                    'active': selection_phase.is_active,
+                    'active': selection_active,
                 })
         except:
             pass
         
         # Check Extraction phase
-        try:
-            from apps.extraction.planning.models import ExtractionPhase
-            extraction_phase = ExtractionPhase.objects.filter(project=project).first()
-            if extraction_phase:
-                phases.append({
-                    'name': 'Extraction',
-                    'url': f'/project/{project.id}/extraction/',
-                    'icon': 'extraction',
-                    'active': extraction_phase.status != 'CLOSED',
-                })
-        except:
-            pass
+        if extraction_phase:
+            phases.append({
+                'name': 'Extraction',
+                'url': f'/project/{project.id}/extraction/',
+                'icon': 'extraction',
+                'active': extraction_active,
+            })
         
         # Check Interpretation phase
         try:

@@ -571,6 +571,7 @@ def finalize_fulltext(request, project_id):
     selection_phase.fulltext_screening_status = SubPhaseStatusChoices.COMPLETED
     selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
     selection_phase.status = 'FINALIZED'
+    selection_phase.is_active = False
     selection_phase.save()
     
     # Count approved papers

@@ -217,6 +217,16 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                 return redirect(
                     reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})
                 )
+
+            # Mark selection phase as inactive once extraction starts
+            try:
+                from apps.selection.features.distribution.models import SelectionPhase
+                selection_phase = SelectionPhase.objects.filter(project_id=project_id).first()
+                if selection_phase and selection_phase.is_active:
+                    selection_phase.is_active = False
+                    selection_phase.save(update_fields=['is_active'])
+            except Exception:
+                pass
             
             acquisition_adapter = get_acquisition_adapter()
             created_count = 0
@@ -439,4 +449,3 @@ class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
         
         # Redirect to Interpretation Theme Discovery (step 1)
         return redirect(f"{reverse('interpretation:theme_discovery', args=[project_id])}?step=1")
-

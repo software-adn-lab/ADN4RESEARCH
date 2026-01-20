@@ -121,9 +121,25 @@
                     <div class="p-4 rounded-lg border border-blue-200 bg-blue-50">
                         <h3 class="font-bold text-lg mb-3">RESOLUTION OPTIONS</h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-info badge-outline badge-sm">Choose one</span>
+                                <span class="text-xs text-gray-600">Pick a resolution path for this conflict</span>
+                            </div>
+                        </div>
+
+                        <div class="join mb-4">
+                            <button type="button" class="btn btn-sm join-item btn-outline" data-resolution-toggle="third" data-paper-id="{{ conflict.paper_id }}">
+                                Third Reviewer
+                            </button>
+                            <button type="button" class="btn btn-sm join-item btn-outline" data-resolution-toggle="owner" data-paper-id="{{ conflict.paper_id }}">
+                                Owner Final Decision
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4">
                             <!-- Option 1: Assign Third Reviewer -->
-                            <div class="border rounded-lg p-4 bg-white">
+                            <div class="border rounded-xl p-4 bg-white shadow-sm" data-resolution-panel="third" data-paper-id="{{ conflict.paper_id }}">
                                 <h4 class="font-semibold mb-2">Assign Third Reviewer</h4>
                                 <form method="post" action="{% url 'selection:assign_screening_third_reviewer' project.id %}">
                                     {% csrf_token %}
@@ -141,7 +157,7 @@
                             </div>
                             
                             <!-- Option 2: Owner Final Decision -->
-                            <div class="border rounded-lg p-4 bg-white">
+                            <div class="border rounded-xl p-4 bg-white shadow-sm hidden" data-resolution-panel="owner" data-paper-id="{{ conflict.paper_id }}">
                                 <h4 class="font-semibold mb-2">Cast Final Decision</h4>
                                 <form method="post" action="{% url 'selection:screening_owner_vote' project.id %}" id="owner-vote-form-{{ conflict.paper_id }}">
                                     {% csrf_token %}
@@ -494,8 +510,37 @@ function saveDecisionAndNotes() {
     form.submit();
 }
 
+function setResolutionMode(paperId, mode) {
+    const panels = document.querySelectorAll(`[data-resolution-panel][data-paper-id="${paperId}"]`);
+    panels.forEach(panel => {
+        panel.classList.toggle('hidden', panel.dataset.resolutionPanel !== mode);
+    });
+
+    const buttons = document.querySelectorAll(`[data-resolution-toggle][data-paper-id="${paperId}"]`);
+    buttons.forEach(button => {
+        const isActive = button.dataset.resolutionToggle === mode;
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline', !isActive);
+    });
+}
+
+function initResolutionToggles() {
+    const buttons = document.querySelectorAll('[data-resolution-toggle]');
+    const seen = new Set();
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            setResolutionMode(button.dataset.paperId, button.dataset.resolutionToggle);
+        });
+        seen.add(button.dataset.paperId);
+    });
+
+    seen.forEach(paperId => setResolutionMode(paperId, 'third'));
+}
+
 // Initialize: show first item as selected
 document.addEventListener('DOMContentLoaded', function() {
+    initResolutionToggles();
     const firstConflict = document.querySelector('.conflict-item');
     if (firstConflict) {
         firstConflict.classList.add('ring-2', 'ring-primary');

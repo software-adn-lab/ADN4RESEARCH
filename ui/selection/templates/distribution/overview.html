@@ -98,7 +98,7 @@
                                 </div>
                                 <div>
                                     <p class="font-semibold">{{ item.researcher.get_full_name|default:item.researcher.username }}</p>
-                                    <p class="text-xs text-gray-500">{{ item.total_assigned }} articles assigned</p>
+                                    <p class="text-xs text-gray-500">{{ item.total }} articles assigned</p>
                                 </div>
                             </div>
                             {% if is_owner and phase_mode == 'en_curso' and item.pending > 0 %}
