@@ -74,7 +74,7 @@ def create_eligibility_criterion(request, project_id, project):
         })
 
     except (CreationError, NotFoundError) as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}, status=403)
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Unexpected error: {str(e)}'}, status=500)
 
@@ -105,7 +105,7 @@ def update_eligibility_criterion(request, project_id, criterion_id, project):
         })
 
     except (UpdateError, NotFoundError) as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}, status=403)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -143,7 +143,7 @@ def approve_eligibility_criterion(request, project_id, criterion_id, project):
             'message': 'Criterion approved successfully'
         })
     except (UpdateError, NotFoundError) as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}, status=403)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -181,9 +181,9 @@ def reject_eligibility_criterion(request, project_id, criterion_id, project):
             'message': 'Criterion rejected successfully'
         })
     except UpdateError as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': str(e)}, status=403)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': 'Unexpected error occurred'})
+        return JsonResponse({'success': False, 'error': 'Unexpected error occurred'}, status=500)
 
 
 @project_member_required
@@ -192,10 +192,12 @@ def delete_eligibility_criterion(request, project_id, criterion_id, project):
     try:
         eligibility_service.delete_eligibility_criterion(criterion_id, user=request.user)
         return JsonResponse({'success': True, 'message': 'Criterion deleted successfully'})
+    except UpdateError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=403)
     except EligibilityCriterion.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Criterion not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': 'An unexpected error occurred during deletion'})
+        return JsonResponse({'success': False, 'error': 'An unexpected error occurred during deletion'}, status=500)
 
 
 @project_member_required

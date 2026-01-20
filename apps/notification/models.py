@@ -11,7 +11,7 @@ class Notification(models.Model):
         ('CRITERION_REJECTED', 'Eligibility Criterion Rejected'),
         ('STRATEGY_APPROVED', 'Search Strategy Approved'),
         ('STRATEGY_REJECTED', 'Search Strategy Rejected'),
-        ('STAGE_CONSOLIDATED', 'Design Stage Consolidated'),
+        ('STAGE_CONSOLIDATED', 'Design Stage Finalized'),
         ('REMINDER', 'Review Reminder'),
     ]
     

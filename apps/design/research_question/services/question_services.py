@@ -20,14 +20,13 @@ class ResearchQuestionService:
         except DesignPhase.DoesNotExist:
             raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
         project = design_phase.project
-        user = User.objects.get(id=researcher_id)  # We need the user object for the policy
+        user = User.objects.get(id=researcher_id)
 
-        # Authorization Check
-        # Note: We are checking if they can *add*, which is similar to *edit* a new question.
-        # Ideally we would have can_add_question(user, project), but reusing logic for now.
-        if design_phase.current_stage not in DesignPhase.RQ_EDITION_STAGES:
-            if not DesignAccessPolicy.is_owner(user, project):
-                raise ValidationError(f"Locked Stage: Only the owner can add questions during '{design_phase.get_current_stage_display()}'.")
+        # Create a temporary question object to check permissions using DesignAccessPolicy
+        # We need to check if the user can "edit" (create is similar to edit) a question in this stage
+        temp_question = ResearchQuestion(design_phase=design_phase, researcher_id=researcher_id)
+        if not DesignAccessPolicy.can_edit_question(user, temp_question):
+            raise ValidationError("You do not have permission to create questions in this stage.")
 
         if not self._is_valid_framework_fields(project.research_framework, framework_fields or {}):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")

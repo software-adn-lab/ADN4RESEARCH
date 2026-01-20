@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='notification',
             name='type',
-            field=models.CharField(choices=[('RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW', 'Research Question Submitted for Review'), ('RESEARCH_QUESTION_REVIEWED', 'Research Question Reviewed'), ('SUGGESTION_QUESTION_REJECT', 'Suggestion Question Reject'), ('CRITERION_APPROVED', 'Eligibility Criterion Approved'), ('CRITERION_REJECTED', 'Eligibility Criterion Rejected'), ('STRATEGY_APPROVED', 'Search Strategy Approved'), ('STRATEGY_REJECTED', 'Search Strategy Rejected'), ('STAGE_CONSOLIDATED', 'Design Stage Consolidated'), ('REMINDER', 'Review Reminder')], max_length=50),
+            field=models.CharField(choices=[('RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW', 'Research Question Submitted for Review'), ('RESEARCH_QUESTION_REVIEWED', 'Research Question Reviewed'), ('SUGGESTION_QUESTION_REJECT', 'Suggestion Question Reject'), ('CRITERION_APPROVED', 'Eligibility Criterion Approved'), ('CRITERION_REJECTED', 'Eligibility Criterion Rejected'), ('STRATEGY_APPROVED', 'Search Strategy Approved'), ('STRATEGY_REJECTED', 'Search Strategy Rejected'), ('STAGE_CONSOLIDATED', 'Design Stage Finalized'), ('REMINDER', 'Review Reminder')], max_length=50),
         ),
     ]
