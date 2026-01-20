@@ -207,7 +207,11 @@ def search_results_view(request, project_id, strategy_id, project):
         if not strategy_dto:
             raise Http404("Strategy not found")
 
-        results_dto = search_strategy_service.get_search_results_dto(strategy_id)
+        # Filtro por motor de búsqueda (opcional)
+        # Acepta: ?sources=Scopus o ?sources=IEEE o ?sources=Scopus&sources=IEEE
+        selected_sources = request.GET.getlist('sources') or None
+        
+        results_dto = search_strategy_service.get_search_results_dto(strategy_id, selected_sources=selected_sources)
         year_filter = request.GET.get('year')
         studies = getattr(results_dto, 'studies', []) if results_dto else []
 
@@ -221,6 +225,7 @@ def search_results_view(request, project_id, strategy_id, project):
             'studies': studies,
             'years_range': range(2025, 2000, -1),
             'current_year_filter': year_filter,
+            'selected_sources': selected_sources,  # Para mantener estado en UI
             'timeline_stages': DesignPhaseSelector.get_design_timeline_context(project.id)
         }
         return render(request, 'search_results.html', context)

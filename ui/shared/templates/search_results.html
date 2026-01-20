@@ -71,6 +71,32 @@
         </div>
     </div>
 
+    <!-- Filtro por Motor de Búsqueda -->
+    <div class="card bg-base-100 border border-base-200 shadow-sm mb-8">
+        <div class="card-body p-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h3 class="text-xs font-bold uppercase text-base-content/50 mb-1">Filter by Search Engine</h3>
+                    <p class="text-xs text-base-content/40">Select which database to query</p>
+                </div>
+                <div class="join">
+                    <a href="?{% if current_year_filter %}year={{ current_year_filter }}{% endif %}" 
+                       class="btn btn-sm join-item {% if not selected_sources %}btn-primary{% else %}btn-outline{% endif %}">
+                        All
+                    </a>
+                    <a href="?sources=Scopus{% if current_year_filter %}&year={{ current_year_filter }}{% endif %}" 
+                       class="btn btn-sm join-item {% if selected_sources and 'Scopus' in selected_sources %}btn-primary{% else %}btn-outline{% endif %}">
+                        Scopus
+                    </a>
+                    <a href="?sources=IEEE{% if current_year_filter %}&year={{ current_year_filter }}{% endif %}" 
+                       class="btn btn-sm join-item {% if selected_sources and 'IEEE' in selected_sources %}btn-primary{% else %}btn-outline{% endif %}">
+                        IEEE
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="space-y-3">
         {% for study in studies %}
         <div class="card bg-base-100 border border-base-200 shadow-sm hover:border-primary/30 transition-colors">

@@ -200,9 +200,18 @@ class SearchStrategyService:
 
         return strategy
 
-    def get_search_results_dto(self, strategy_id: int):
+    def get_search_results_dto(self, strategy_id: int, selected_sources: list = None):
+        """
+        Obtiene resultados de preview para una estrategia.
+        
+        Args:
+            strategy_id: ID de la estrategia
+            selected_sources: Lista de fuentes a consultar (opcional).
+                             Acepta nombres UI ("IEEE") o canónicos ("IEEE Xplore").
+                             Si es None, consulta todas las fuentes disponibles.
+        """
         strategy = SearchStrategy.objects.get(id=strategy_id)
-        return self.preview_service.get_search_results_dto(strategy)
+        return self.preview_service.get_search_results_dto(strategy, selected_sources=selected_sources)
 
     def change_strategy_status(self, strategy_id: int, status: str, user: User, justification: str = None) -> SearchStrategy:
         strategy = SearchStrategy.objects.select_related('research_question__design_phase__project').get(id=strategy_id)
