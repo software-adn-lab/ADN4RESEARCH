@@ -1,52 +1,77 @@
-<div class="max-w-2xl mx-auto">
-    <h3 class="text-lg font-bold mb-6">Configuración de la Fase</h3>
+<div class="max-w-2xl mx-auto py-4">
+    
+    <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 tracking-tight">Phase Configuration</h3>
+        <p class="text-sm text-gray-500 mt-1">Manage the timeline and general parameters for this extraction phase.</p>
+    </div>
 
-    <form action="{% url 'extraction:planning:phase_config_update' project_id=phase.project_id %}" method="POST" class="space-y-4">
+    <form action="{% url 'extraction:planning:phase_config_update' project_id=phase.project_id %}" method="POST" class="space-y-8">
         {% csrf_token %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Fecha de Inicio</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="form-control w-full">
+                <label class="label px-0 pt-0 pb-1.5">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Start Date</span>
                 </label>
-                {{ config_form.start_date }}
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    {{ config_form.start_date }}
+                </div>
                 {% if config_form.start_date.errors %}
-                    <label class="label">
-                        <span class="label-text-alt text-error">
+                    <label class="label px-0">
+                        <span class="label-text-alt text-red-500 flex items-center gap-1 font-medium">
                             {{ config_form.start_date.errors.0 }}
                         </span>
                     </label>
                 {% endif %}
             </div>
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Fecha de Vencimiento</span>
+            <div class="form-control w-full">
+                <label class="label px-0 pt-0 pb-1.5">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</span>
                 </label>
-                {{ config_form.due_date }}
+                <div class="relative">
+                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    {{ config_form.due_date }}
+                </div>
                 {% if config_form.due_date.errors %}
-                    <label class="label">
-                        <span class="label-text-alt text-error">
+                    <label class="label px-0">
+                        <span class="label-text-alt text-red-500 flex items-center gap-1 font-medium">
                             {{ config_form.due_date.errors.0 }}
                         </span>
                     </label>
                 {% endif %}
             </div>
         </div>
-<!---
-        <div class="alert alert-info mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>La visibilidad de la lista de tags se gestiona automáticamente según el estado de la fase.</span>
-        </div>
--->
 
-        <div class="flex justify-end mt-6">
+        <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 flex gap-4 items-start">
+            <div class="p-2 bg-white rounded-lg border border-gray-200 shadow-sm shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-blue-500 w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900">Visibility Settings</h4>
+                <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                    Tag list visibility is managed automatically by the system based on the current phase status. You do not need to manually toggle access permissions.
+                </p>
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-gray-100 flex justify-end">
             <button type="submit" 
-                    class="btn btn-primary" 
+                    class="btn btn-primary hover:bg-blue-700 text-white border-none shadow-md rounded-lg px-8 font-medium normal-case" 
                     {% if phase.status == 'CLOSED' %}disabled{% endif %}>
-                Guardar Cambios
+                {% if phase.status == 'CLOSED' %}
+                    Phase Locked
+                {% else %}
+                    Save Changes
+                {% endif %}
             </button>
         </div>
     </form>

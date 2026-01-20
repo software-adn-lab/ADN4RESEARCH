@@ -10,6 +10,7 @@ from apps.project.structure.models.project_models import Project
 from apps.interpretation.conclusion_assistant.services.theme_discovery_services import (
     ThemeDiscoveryService,
 )
+from apps.interpretation.conclusion_assistant.models import InterpretationPhase
 from django.utils import timezone
 
 User = get_user_model()
@@ -48,20 +49,32 @@ class Command(BaseCommand):
 
         # Create or get test project
         project, created = Project.objects.get_or_create(
-            name="Theme Discovery Demo Project",
+            title="Theme Discovery Demo Project",
             defaults={
-                "description": "Demo project for testing AI-Driven Theme Discovery feature",
+                "summary": "Demo project for testing AI-Driven Theme Discovery feature",
+                "motivation": "Testing automation.",
+                "general_objective": "Validate theme discovery features.",
                 "owner": user,
             },
         )
         if created:
             self.stdout.write(
-                self.style.SUCCESS(f"✓ Created demo project: {project.name}")
+                self.style.SUCCESS(f"✓ Created demo project: {project.title}")
             )
         else:
             self.stdout.write(
-                self.style.WARNING(f"→ Using existing project: {project.name}")
+                self.style.WARNING(f"→ Using existing project: {project.title}")
             )
+        
+        # Create Interpretation Phase
+        phase, _ = InterpretationPhase.objects.get_or_create(
+            project=project,
+            defaults={'is_active': True}
+        )
+        # Ensure it is active
+        if not phase.is_active:
+            phase.is_active = True
+            phase.save()
 
         # Sample initial codes (tags) from a mental health systematic review
         sample_codes = [
@@ -111,7 +124,7 @@ class Command(BaseCommand):
                 "✓ Demo setup complete!\n"
                 "=" * 70 + "\n"
                 f"Project ID: {project.id}\n"
-                f"Project Name: {project.name}\n"
+                f"Project Name: {project.title}\n"
                 f"Initial Codes: {len(loaded_codes)}\n"
                 f"\nAccess the Theme Discovery UI at:\n"
                 f"http://localhost:8000/interpretation/theme-discovery/{project.id}/\n"

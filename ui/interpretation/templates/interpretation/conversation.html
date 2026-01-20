@@ -3,211 +3,295 @@
 {% load markdown_extras %}
 {% block content %}
 
-<div class="p-4" data-context-id="{{ context.id }}">
-    {% csrf_token %}
+<div class="h-[calc(100vh-6rem)] p-4 flex flex-col gap-4" data-context-id="{{ context.id }}">
     
-    <!-- Title & Header -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <a href="{% url 'interpretation:index' %}" class="text-primary hover:text-primary-focus transition font-medium flex items-center gap-2 mb-2 text-sm">
-                ← Volver a temas
+    <!-- Step Indicator -->
+    <div class="flex flex-shrink-0 items-center justify-center py-2 bg-base-100 rounded-xl border border-base-300 shadow-sm">
+        <div class="flex items-center space-x-4 scale-90">
+            <a href="{% url 'interpretation:theme_discovery' current_project_id %}?step=1" class="flex items-center group">
+                <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm group-hover:ring-2 ring-offset-1 ring-primary transition-all">1</div>
+                <span class="ml-2 font-medium text-sm group-hover:text-primary transition-colors">Code Normalization</span>
             </a>
-            <h1 class="text-2xl font-bold text-base-content">{{ context.subtheme.name }}</h1>
-        </div>
-        <div class="text-right text-xs text-base-content/80">
-            <span class="font-semibold">Estado:</span>
-            <span class="badge {% if context.is_active %}badge-success{% else %}badge-ghost{% endif %} badge-sm ml-2">
-                {% if context.is_active %}Activo{% else %}Finalizado{% endif %}
-            </span>
+            <div class="w-12 h-1 bg-base-300"></div>
+            <a href="{% url 'interpretation:theme_discovery' current_project_id %}?step=2" class="flex items-center group">
+                <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm group-hover:ring-2 ring-offset-1 ring-primary transition-all">2</div>
+                <span class="ml-2 font-medium text-sm group-hover:text-primary transition-colors">Theme Generation</span>
+            </a>
+            <div class="w-12 h-1 bg-base-300"></div>
+            <a href="{% url 'interpretation:themes_created' %}?project_id={{ current_project_id }}" class="flex items-center group">
+                <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm group-hover:ring-2 ring-offset-1 ring-primary transition-all">3</div>
+                <span class="ml-2 font-medium text-sm group-hover:text-primary transition-colors">Themes Dashboard</span>
+            </a>
+            <div class="w-12 h-1 bg-base-300"></div>
+            <a href="{% url 'interpretation:index' %}?project_id={{ current_project_id }}" class="flex items-center group">
+                <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm group-hover:ring-2 ring-offset-1 ring-primary transition-all">4</div>
+                <span class="ml-2 font-medium text-sm group-hover:text-primary transition-colors">Inference</span>
+            </a>
         </div>
     </div>
 
-    <!-- Messages / Alerts -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} text-sm mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="space-y-6">
-
-        <!-- Context Info Card -->
-        <div class="card bg-base-100 border border-base-300">
-            <div class="card-body">
-                <h2 class="text-lg font-semibold text-base-content mb-4">Contexto de Investigación</h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="text-sm text-base-content/70 font-medium mb-1">Tema principal</p>
-                        <p class="text-base-content">{{ context.theme_name }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-base-content/70 font-medium mb-1">Pregunta de investigación</p>
-                        <p class="text-base-content">{{ context.research_question }}</p>
-                    </div>
-                </div>
-                <div class="divider"></div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm text-base-content/70 font-medium mb-2">Códigos centrales</p>
-                        {% if context.extractions_context.central_codes %}
-                            <div class="flex flex-wrap gap-1">
-                                {% for code in context.extractions_context.central_codes %}
-                                <span class="badge badge-sm badge-primary badge-outline">{{ code }}</span>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-sm text-base-content/60">No especificados</p>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <p class="text-sm text-base-content/70 font-medium mb-2">Citas clave</p>
-                        {% if context.extractions_context.key_citations %}
-                            <ul class="text-sm text-base-content space-y-1">
-                                {% for citation in context.extractions_context.key_citations %}
-                                <li class="flex items-start gap-1"><span class="text-primary">•</span> {{ citation }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <p class="text-sm text-base-content/60">No especificadas</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Two Column Layout -->
-        <div class="grid lg:grid-cols-2 gap-6">
-            <!-- Left Column: Conversation Trace -->
-            <div class="space-y-6">
-                <div class="card bg-base-100 border border-base-300">
-                    <div class="card-body">
-                        <h2 class="text-lg font-semibold text-base-content mb-4">Conversación con el Asistente</h2>
-                        <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
-                            {% for t in traces %}
-                                <div class="{% if t.role == 'COPILOT' %}bg-primary/10 border-l-4 border-primary{% else %}bg-secondary/10 border-l-4 border-secondary{% endif %} rounded-lg p-4">
-                                    <div class="flex items-start justify-between mb-2">
-                                        <div>
-                                            <p class="text-xs text-base-content/60 uppercase tracking-wide mb-1">{{ t.get_role_display }}</p>
-                                            <p class="font-semibold text-base-content">{{ t.title }}</p>
-                                        </div>
-                                        <span class="text-xs text-base-content/60">{{ t.created_at|date:"H:i" }}</span>
-                                    </div>
-                                    <div class="bg-base-100 rounded p-3 mb-2 prose prose-sm max-w-none">
-                                        <div class="text-sm text-base-content leading-relaxed markdown-content">{{ t.body|markdown }}</div>
-                                    </div>
-                                    {% if t.tags %}
-                                    <div class="flex flex-wrap gap-1 mt-2">
-                                        <span class="badge badge-sm badge-ghost">{{ t.tags }}</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            {% empty %}
-                                <div class="text-center py-12 text-base-content/60">
-                                    <p>No hay mensajes aún. Genera tu primera proposición para comenzar.</p>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Generate Draft Form -->
-                <div class="card bg-base-100 border border-base-300">
-                    <div class="card-body">
-                        <h2 class="text-lg font-semibold text-base-content mb-4">Generar Borrador</h2>
-                        <form method="post" action="{% url 'interpretation:create_draft' context.id %}">
-                            {% csrf_token %}
-                            <div class="form-control mb-4">
-                                <label class="label">
-                                    <span class="label-text font-medium">Instrucción para el asistente</span>
-                                </label>
-                                <textarea 
-                                    name="instruction" 
-                                    rows="4"
-                                    class="textarea textarea-bordered w-full"
-                                    placeholder="Ej: 'Genera una proposición interpretativa que relacione los desafíos de comunicación asíncrona con las zonas horarias en equipos DevOps distribuidos'"
-                                    required
-                                ></textarea>
-                                <label class="label">
-                                    <span class="label-text-alt">Describe qué quieres que el asistente genere como proposición interpretativa.</span>
-                                </label>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-full">
-                                Generar proposición borrador
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Propositions -->
+    <!-- Header Summary (Compact) -->
+    <div class="flex flex-shrink-0 justify-between items-center bg-base-100 p-4 rounded-xl border border-base-300 shadow-sm">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'interpretation:index' %}" class="btn btn-circle btn-ghost btn-sm" title="Volver a temas">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
             <div>
-                <div class="card bg-base-100 border border-base-300">
-                    <div class="card-body">
-                        <h2 class="text-lg font-semibold text-base-content mb-4">Proposiciones Interpretativas</h2>
-                        <div class="space-y-4">
-                            {% for p in propositions %}
-                                <div class="border-2 {% if p.status == 'FINAL' %}border-success bg-success/10{% elif p.status == 'REFINED' %}border-warning bg-warning/10{% else %}border-base-300 bg-base-200{% endif %} rounded-lg p-4">
-                                    <div class="flex items-start justify-between mb-3">
-                                        <span class="badge {% if p.status == 'FINAL' %}badge-success{% elif p.status == 'REFINED' %}badge-warning{% else %}badge-ghost{% endif %} badge-sm">
-                                            {{ p.get_status_display }}
-                                        </span>
-                                        <span class="text-xs text-base-content/60">{{ p.modified_at|date:"d/m/Y H:i" }}</span>
-                                    </div>
-                                    <div class="bg-base-100 rounded border border-base-300 p-3 mb-4 prose prose-sm max-w-none">
-                                        <div class="text-base-content leading-relaxed text-sm markdown-content">{{ p.proposition_text|markdown }}</div>
-                                    </div>
+                <h1 class="text-xl font-bold text-base-content">{{ context.subtheme.name }}</h1>
+                <div class="flex items-center gap-2 text-xs text-base-content/70">
+                    <span class="font-semibold">{{ context.theme_name }}</span>
+                    <span>•</span>
+                    <span class="badge {% if context.is_active %}badge-success{% else %}badge-ghost{% endif %} badge-xs">
+                        {% if context.is_active %}Activo{% else %}Finalizado{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="context_details_modal.showModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Ver Contexto
+        </button>
+        {% if context.is_active %}
+        <form method="post" action="{% url 'interpretation:finish_interpretation' context.id %}" class="ml-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-error btn-sm btn-outline" onclick="return confirm('¿Estás seguro de finalizar la interpretación de este subtema? Se marcará como completado.')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+                Finalizar
+            </button>
+        </form>
+        {% endif %}
+    </div>
 
-                                    {% if p.status != 'FINAL' %}
-                                    <form method="post" action="{% url 'interpretation:refine_proposition' context.id p.id %}" class="space-y-3">
-                                        {% csrf_token %}
-                                        <div class="form-control">
-                                            <label class="label">
-                                                <span class="label-text text-sm font-medium">Refinar esta proposición</span>
-                                            </label>
-                                            <textarea 
-                                                name="refinement" 
-                                                rows="3"
-                                                class="textarea textarea-bordered textarea-sm w-full"
-                                                placeholder="Ej: 'Enfatiza el concepto de comunicación asíncrona y su impacto en los ciclos de feedback'"
-                                            ></textarea>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button type="submit" class="btn btn-primary btn-sm flex-1">
-                                                Refinar
-                                            </button>
-                                            <button 
-                                                type="submit"
-                                                formaction="{% url 'interpretation:finalize_proposition' context.id p.id %}"
-                                                class="btn btn-success btn-sm flex-1"
-                                                onclick="return confirm('¿Finalizar esta proposición como hallazgo final? Esta acción marcará el subtema como completado.')"
-                                            >
-                                                Finalizar
-                                            </button>
-                                        </div>
-                                    </form>
-                                    {% else %}
-                                    <div class="alert alert-success">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        <span class="text-sm">Proposición finalizada como hallazgo final</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            {% empty %}
-                                <div class="text-center py-12 text-base-content/60">
-                                    <p class="font-medium mb-2">No hay proposiciones aún</p>
-                                    <p class="text-sm">Usa el formulario de la izquierda para generar tu primera proposición interpretativa</p>
-                                </div>
-                            {% endfor %}
+    <!-- Main Workspace Grid -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+        
+        <!-- Left Column: Chat Interface (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col bg-base-100 rounded-xl border border-base-300 shadow-sm overflow-hidden h-full">
+            
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="chat-container">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} shadow-sm text-sm">
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% for t in traces %}
+                    <div class="flex flex-col {% if t.role == 'INVESTIGATOR' %}items-end{% else %}items-start{% endif %} space-y-1">
+                        <!-- Sender Name -->
+                        <div class="flex items-center gap-2 px-1">
+                            <span class="text-xs font-semibold opacity-70">
+                                {% if t.role == 'INVESTIGATOR' %}Tú{% else %}Copilot{% endif %}
+                            </span>
+                            <span class="text-[10px] opacity-50">{{ t.created_at|date:"H:i" }}</span>
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div class="max-w-[90%] rounded-2xl p-4 shadow-sm relative group
+                            {% if t.role == 'INVESTIGATOR' %}
+                                bg-primary text-primary-content rounded-tr-none
+                            {% else %}
+                                bg-base-200 text-base-content rounded-tl-none border border-base-300
+                            {% endif %}">
+                            
+                            <div class="prose prose-base max-w-none 
+                                {% if t.role == 'INVESTIGATOR' %}prose-invert{% endif %}">
+                                <div class="markdown-content">{{ t.body|markdown }}</div>
+                            </div>
                         </div>
                     </div>
+                {% empty %}
+                    <div class="h-full flex flex-col items-center justify-center text-base-content/40 space-y-4">
+                        <div class="p-4 bg-base-200 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
+                        <p class="text-sm font-medium">Inicia la conversación para generar proposiciones</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-base-100 border-t border-base-200">
+                <form method="post" action="{% url 'interpretation:create_draft' context.id %}" class="relative">
+                    {% csrf_token %}
+                    <div class="relative">
+                        <textarea 
+                            name="instruction" 
+                            rows="2"
+                            class="textarea textarea-bordered w-full pr-12 resize-none text-base leading-normal shadow-sm focus:ring-2 focus:ring-primary/20"
+                            placeholder="Escribe una instrucción para generar una proposición (ej: 'Relaciona los códigos centrales con...')"
+                            required
+                            onkeydown="if(event.keyCode == 13 && !event.shiftKey) { event.preventDefault(); this.form.submit(); }"
+                        ></textarea>
+                        <button type="submit" class="absolute right-2 bottom-2 btn btn-circle btn-primary btn-sm btn-ghost text-primary hover:bg-primary/10" title="Enviar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </div>
+                    <div class="text-[10px] text-base-content/40 mt-1 px-1 flex justify-between">
+                        <span>Presiona Enter para enviar, Shift+Enter para nueva línea</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Propositions (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col h-full min-h-0">
+            <div class="bg-base-100 rounded-xl border border-base-300 shadow-sm flex flex-col h-full overflow-hidden">
+                <div class="p-4 border-b border-base-300 bg-base-50 flex items-center justify-between">
+                    <h2 class="font-bold text-base-content flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Proposiciones
+                    </h2>
+                    <span class="badge badge-sm badge-neutral">{{ propositions|length }}</span>
+                </div>
+                
+                <div class="overflow-y-auto p-4 space-y-4 flex-1 bg-base-50/50">
+                    {% for p in propositions %}
+                        <div class="card bg-base-100 shadow-sm border {% if p.status == 'FINAL' %}border-success{% elif p.status == 'REFINED' %}border-warning{% else %}border-base-300{% endif %}">
+                            <div class="card-body p-4">
+                                <!-- Status Header -->
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="badge {% if p.status == 'FINAL' %}badge-success{% elif p.status == 'REFINED' %}badge-warning{% else %}badge-ghost{% endif %} badge-sm gap-1 pl-1.5">
+                                            {% if p.status == 'FINAL' %}<div class="w-1.5 h-1.5 rounded-full bg-current"></div>{% endif %}
+                                            {{ p.get_status_display }}
+                                        </div>
+                                    </div>
+                                    <span class="text-xs text-base-content/50">{{ p.modified_at|date:"d M, H:i" }}</span>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="prose prose-sm max-w-none text-base-content/90 mb-4 bg-base-50 p-3 rounded-lg border border-base-200/50">
+                                    <div class="markdown-content">{{ p.proposition_text|markdown }}</div>
+                                </div>
+
+                                <!-- Actions -->
+                                {% if p.status != 'FINAL' %}
+                                <div class="join w-full grid grid-cols-2">
+                                    <button class="btn btn-sm join-item btn-outline border-base-300 hover:bg-base-200 text-base-content/70 font-normal" 
+                                            onclick="toggleRefine('refine-{{ p.id }}')">
+                                        Refinar
+                                    </button>
+                                    <form method="post" action="{% url 'interpretation:finalize_proposition' context.id p.id %}" class="contents">
+                                        {% csrf_token %}
+                                        <button 
+                                            type="submit"
+                                            class="btn btn-sm join-item btn-outline border-base-300 hover:bg-success hover:text-success-content hover:border-success font-normal"
+                                            onclick="return confirm('¿Finalizar esta proposición?')"
+                                        >
+                                            Finalizar
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <!-- Refine Form (Collapsible) -->
+                                <div id="refine-{{ p.id }}" class="hidden mt-3 pt-3 border-t border-base-200">
+                                    <form method="post" action="{% url 'interpretation:refine_proposition' context.id p.id %}" class="flex gap-2">
+                                        {% csrf_token %}
+                                        <input 
+                                            name="refinement" 
+                                            type="text"
+                                            class="input input-sm input-bordered flex-1"
+                                            placeholder="Instrucción de refinamiento..."
+                                            required
+                                        >
+                                        <button type="submit" class="btn btn-sm btn-square btn-primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-8 text-base-content/40">
+                            <p class="text-sm">No hay proposiciones aún.</p>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal for Context Details -->
+<dialog id="context_details_modal" class="modal">
+  <div class="modal-box w-11/12 max-w-3xl">
+    <h3 class="font-bold text-lg mb-4">Contexto de Investigación</h3>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+        <div>
+            <p class="text-sm text-base-content/60 font-medium mb-1">Tema principal</p>
+            <div class="p-3 bg-base-200 rounded-lg text-sm">{{ context.theme_name }}</div>
+        </div>
+        <div>
+            <p class="text-sm text-base-content/60 font-medium mb-1">Pregunta de investigación</p>
+            <div class="p-3 bg-base-200 rounded-lg text-sm">{{ context.research_question }}</div>
+        </div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="space-y-4">
+        <div>
+            <p class="text-sm text-base-content/60 font-medium mb-2">Códigos centrales</p>
+            {% if context.extractions_context.central_codes %}
+                <div class="flex flex-wrap gap-2">
+                    {% for code in context.extractions_context.central_codes %}
+                    <span class="badge badge-primary badge-outline">{{ code }}</span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-sm text-base-content/40 italic">No especificados</p>
+            {% endif %}
+        </div>
+        
+        <div>
+            <p class="text-sm text-base-content/60 font-medium mb-2">Citas clave</p>
+            {% if context.extractions_context.key_citations %}
+                <div class="bg-base-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    <ul class="space-y-3 text-sm">
+                        {% for citation in context.extractions_context.key_citations %}
+                        <li class="flex gap-2">
+                            <span class="text-primary mt-1">•</span>
+                            <span class="text-base-content/80">{{ citation }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <p class="text-sm text-base-content/40 italic">No especificadas</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cerrar</button>
+      </form>
+    </div>
+  </div>
+   <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+    function toggleRefine(id) {
+        const el = document.getElementById(id);
+        el.classList.toggle('hidden');
+    }
+    
+    // Auto-scroll to bottom of chat
+    window.onload = function() {
+        const container = document.getElementById('chat-container');
+        if(container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+</script>
 
 <style>
     /* Markdown Content Styling */

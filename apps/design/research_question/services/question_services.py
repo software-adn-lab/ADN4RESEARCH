@@ -20,14 +20,13 @@ class ResearchQuestionService:
         except DesignPhase.DoesNotExist:
             raise InvalidProjectStateError("The project does not have an initialized Design Phase.")
         project = design_phase.project
-        user = User.objects.get(id=researcher_id)  # We need the user object for the policy
+        user = User.objects.get(id=researcher_id)
 
-        # Authorization Check
-        # Note: We are checking if they can *add*, which is similar to *edit* a new question.
-        # Ideally we would have can_add_question(user, project), but reusing logic for now.
-        if design_phase.current_stage not in DesignPhase.RQ_EDITION_STAGES:
-            if not DesignAccessPolicy.is_owner(user, project):
-                raise ValidationError(f"Locked Stage: Only the owner can add questions during '{design_phase.get_current_stage_display()}'.")
+        # Create a temporary question object to check permissions using DesignAccessPolicy
+        # We need to check if the user can "edit" (create is similar to edit) a question in this stage
+        temp_question = ResearchQuestion(design_phase=design_phase, researcher_id=researcher_id)
+        if not DesignAccessPolicy.can_edit_question(user, temp_question):
+            raise ValidationError("You do not have permission to create questions in this stage.")
 
         if not self._is_valid_framework_fields(project.research_framework, framework_fields or {}):
             raise InvalidFrameworkFieldsError("The provided fields do not match the project's research framework structure.")
@@ -39,6 +38,9 @@ class ResearchQuestionService:
             motivation=motivation,
             framework_fields=framework_fields
         )
+
+        # Notify if owner creates in closed stage
+        self._notify_if_owner_action_in_closed_stage(new_question, user, is_creation=True)
 
         return new_question
 
@@ -56,7 +58,15 @@ class ResearchQuestionService:
         if not DesignAccessPolicy.can_edit_question(user, question):
             raise ValidationError("You do not have permission to edit this question.")
 
+        # Check if need to notify before updating
+        should_notify = self._should_notify_owner_modification(question, user)
+
         updated_question = self._apply_updates(question, data)
+        
+        # Notify after successful update
+        if should_notify:
+            self._notify_if_owner_action_in_closed_stage(updated_question, user, is_creation=False)
+        
         return updated_question
 
     @transaction.atomic
@@ -193,3 +203,61 @@ class ResearchQuestionService:
             "rejected_automatically": affected_rows,
             "total_approved": design_phase.research_questions.filter(status=ResearchQuestion.Status.APPROVED).count()
         }
+
+    def _should_notify_owner_modification(self, question: ResearchQuestion, user: User) -> bool:
+        """Check if we should notify about owner modification in closed stage."""
+        design_phase = question.design_phase
+        project = design_phase.project
+        
+        # Only notify if user is owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return False
+        
+        # Only notify if stage is closed (not in RQ_EDITION_STAGES)
+        if design_phase.current_stage in DesignPhase.RQ_EDITION_STAGES:
+            return False
+        
+        # Only notify if question is approved
+        if question.status != ResearchQuestion.Status.APPROVED:
+            return False
+        
+        return True
+
+    def _notify_if_owner_action_in_closed_stage(self, question: ResearchQuestion, user: User, is_creation: bool):
+        """Send notification if owner creates/edits in closed stage."""
+        design_phase = question.design_phase
+        project = design_phase.project
+        
+        # Only notify if owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return
+        
+        # Only notify if stage is closed
+        if design_phase.current_stage in DesignPhase.RQ_EDITION_STAGES:
+            return
+        
+        # For creation, always notify in closed stage
+        # For edit, only notify if approved
+        if not is_creation and question.status != ResearchQuestion.Status.APPROVED:
+            return
+        
+        try:
+            from apps.notification.models import Notification
+            from apps.project.api.providers import ProjectManagementProvider
+            
+            provider = ProjectManagementProvider()
+            members = provider.get_project_member_users(project.id)
+            
+            action_text = "created" if is_creation else "modified"
+            
+            for member in members:
+                Notification.objects.create(
+                    recipient=member,
+                    sender=user,
+                    type='OWNER_MODIFIED_APPROVED_QUESTION',
+                    title=f'Owner {action_text} research question in closed stage',
+                    custom_message=f'The project owner has {action_text} a research question in a closed stage. Please review the changes for audit purposes.',
+                    project=project
+                )
+        except Exception:
+            pass  # Silent fail on notification errors

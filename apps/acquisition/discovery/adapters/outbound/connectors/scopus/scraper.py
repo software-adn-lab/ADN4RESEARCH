@@ -76,7 +76,7 @@ class ScopusPlaywrightConnector:
     def search(
         self,
         query: str,
-        max_results: int = 25
+        max_results: int = 5
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Busca en Scopus usando estrategia híbrida:

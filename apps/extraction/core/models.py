@@ -79,6 +79,13 @@ class PaperExtraction(AuditModel):
         used_tag_ids = self.quotes.values_list('tags__id', flat=True).distinct()
         return mandatory_tags.filter(id__in=used_tag_ids)
     
+    def get_used_tags(self):
+        """
+        Tags que SÍ se han usado en este paper.
+        """
+        used_tag_ids = self.quotes.values_list('tags__id', flat=True).distinct()
+        return self.extraction_phase.tags.filter(id__in=used_tag_ids)
+
     def get_coverage_percentage(self):
         """
         Porcentaje de tags obligatorios cubiertos (0-100).

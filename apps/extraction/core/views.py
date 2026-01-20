@@ -1,8 +1,10 @@
 """
 Views - Core Bounded Context
 """
+import csv
 import json
 import logging
+from io import StringIO
 from pathlib import Path
 
 from django.conf import settings
@@ -10,8 +12,8 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
-from django.http import FileResponse, JsonResponse, Http404
-from django.shortcuts import get_object_or_404
+from django.http import FileResponse, JsonResponse, Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.generic import DetailView, View
 
@@ -21,6 +23,7 @@ from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.core.services import PaperExtractionService
 from apps.extraction.shared.mixins import ProjectMemberRequiredMixin
 from apps.extraction.shared.exceptions import BusinessRuleViolation
+from apps.extraction.adapters.acquisition import get_acquisition_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -115,21 +118,65 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         
         # URLs para JavaScript
         project_id = paper.extraction_phase.project_id
-        context['pdf_url'] = reverse('extraction:core:paper_pdf', kwargs={'project_id': project_id, 'pk': paper.pk})
+        
+        # ✅ Get PDF URL from Acquisition adapter (S3/filesystem compatible)
+        pdf_url = self._get_pdf_url(paper)
+        context['pdf_url'] = pdf_url
+        context['has_pdf'] = pdf_url is not None
+        
         context['quote_create_url'] = reverse('extraction:core:quote_create', kwargs={'project_id': project_id})
         context['quote_delete_url_template'] = reverse(
             'extraction:core:quote_delete', 
             kwargs={'project_id': project_id, 'pk': 0}
         ).replace('/0/', '/{id}/')
+        context['paper_status'] = paper.status
         
         logger.info(
             f"Paper workspace loaded: paper_id={paper.id}, "
-            f"user={self.request.user.username}, quotes_count={len(context['quotes'])}"
+            f"user={self.request.user.username}, quotes_count={len(context['quotes'])}, "
+            f"has_pdf={context['has_pdf']}"
         )
         context['paper_complete_url'] = reverse('extraction:core:paper_complete', kwargs={'project_id': project_id, 'pk': paper.pk})
+        context['paper_reopen_url'] = reverse('extraction:core:paper_reopen', kwargs={'project_id': project_id, 'pk': paper.pk})
 
-        
         return context
+    
+    def _get_pdf_url(self, paper):
+        """
+        Get PDF URL from Acquisition module through adapter.
+        
+        Uses the AcquisitionAdapter to access pdf_url in a centralized way,
+        supporting both filesystem and S3/MinIO storage backends.
+        
+        Returns:
+            PDF URL string or None if PDF not available
+        """
+        try:
+            from apps.extraction.adapters.acquisition import get_acquisition_adapter
+            
+            adapter = get_acquisition_adapter()
+            pdf_url = adapter.get_study_pdf_url(
+                study_id=str(paper.study_id),
+                project_id=paper.extraction_phase.project_id
+            )
+            
+            if pdf_url:
+                logger.debug(
+                    f"[PAPER DETAIL] Got PDF URL for paper {paper.id}: {pdf_url}"
+                )
+            else:
+                logger.debug(
+                    f"[PAPER DETAIL] No PDF available for paper {paper.id}"
+                )
+            
+            return pdf_url
+            
+        except Exception as e:
+            logger.error(
+                f"[PAPER DETAIL] Failed to get PDF URL for paper {paper.id}: {e}",
+                exc_info=True
+            )
+            return None
 
 
 class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
@@ -324,6 +371,58 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
             user.is_superuser
         )
 
+class PaperReopenView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
+    """
+    Endpoint para reabrir un paper completado.
+    """
+
+    def post(self, request, project_id, pk):
+        """
+        Procesar solicitud de reabrir paper.
+        """
+        paper = get_object_or_404(
+            PaperExtraction,
+            pk=pk,
+            extraction_phase__project_id=project_id
+        )
+
+        if not self._can_reopen_paper(request.user, paper):
+            logger.warning(
+                f"Permission denied: user={request.user.username}, "
+                f"paper_id={paper.id}, action=reopen"
+            )
+            return JsonResponse(
+                {'error': 'No tienes permiso para reabrir este paper'},
+                status=403
+            )
+
+        if paper.status == PaperExtractionStatusChoices.COMPLETED:
+            paper.status = PaperExtractionStatusChoices.IN_PROGRESS
+            paper.save(update_fields=['status', 'updated_at'])
+            logger.info(f"Paper reabierto: id={paper.id}, user={request.user.username}")
+            return JsonResponse({
+                'success': True,
+                'message': 'Extracción reabierta. Ahora puedes editarla de nuevo.'
+            })
+        
+        return JsonResponse(
+            {'error': 'El paper no está completado.'},
+            status=400
+        )
+
+    def _can_reopen_paper(self, user, paper):
+        """
+        Validar permisos para reabrir. Por ahora, los mismos que para completar.
+        """
+        project = paper.extraction_phase.project
+        return (
+            user == project.owner or
+            paper.assigned_to == user or
+            user.is_staff or
+            user.is_superuser
+        )
+
+
 class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para crear quotes (JSON)."""
     
@@ -355,6 +454,12 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             
             # Validar permisos
             if not self._can_create_quote(request.user, paper):
+                if paper.status == PaperExtractionStatusChoices.COMPLETED:
+                    logger.error("Paper is completed, cannot create quotes")
+                    return JsonResponse(
+                        {'error': 'No se pueden agregar quotes a un paper completado'},
+                        status=403
+                    )
                 logger.error("Permission denied")
                 return JsonResponse(
                     {'error': 'No tienes permiso para crear quotes en este paper'},
@@ -424,6 +529,10 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     
     def _can_create_quote(self, user, paper):
         """Validar permisos de creación."""
+        # No permitir crear quotes en papers completados
+        if paper.status == PaperExtractionStatusChoices.COMPLETED:
+            return False
+        
         project = paper.extraction_phase.project
         return (
             user == project.owner or
@@ -436,10 +545,23 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
 class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """API endpoint para eliminar quotes."""
     
+    def post(self, request, project_id, pk):
+        """Handle POST requests for quote deletion (from AJAX)."""
+        return self._delete_quote(request, pk)
+    
     def delete(self, request, project_id, pk):
+        """Handle DELETE requests for quote deletion (RESTful)."""
+        return self._delete_quote(request, pk)
+    
+    def _delete_quote(self, request, pk):
         quote = get_object_or_404(Quote, pk=pk)
         
         if not self._can_delete_quote(request.user, quote):
+            if quote.paper_extraction.status == PaperExtractionStatusChoices.COMPLETED:
+                return JsonResponse(
+                    {'error': 'No se pueden eliminar quotes de un paper completado'},
+                    status=403
+                )
             return JsonResponse(
                 {'error': 'No tienes permiso para eliminar esta quote'},
                 status=403
@@ -463,6 +585,10 @@ class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     
     def _can_delete_quote(self, user, quote):
         """Validar permisos de eliminación."""
+        # No permitir eliminar quotes de papers completados
+        if quote.paper_extraction.status == PaperExtractionStatusChoices.COMPLETED:
+            return False
+        
         project = quote.paper_extraction.extraction_phase.project
         return (
             user == quote.created_by or
@@ -560,5 +686,143 @@ class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             logger.exception("Error reasignando paper")
             return JsonResponse(
                 {'error': f'Error al reasignar: {str(e)}'},
+                status=500
+            )
+
+class PaperUpdatePDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
+    """
+    View to handle updating the PDF of a PaperExtraction.
+    """
+    def post(self, request, project_id, pk):
+        paper = get_object_or_404(PaperExtraction, pk=pk, extraction_phase__project_id=project_id)
+
+        if 'pdf_file' not in request.FILES:
+            messages.error(request, 'No PDF file was provided.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        file = request.FILES['pdf_file']
+
+        # Permission check (only owner or staff can do this)
+        project = paper.extraction_phase.project
+        if not (request.user == project.owner or request.user.is_staff):
+            messages.error(request, 'You do not have permission to update the PDF for this paper.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        try:
+            # Delete all existing quotes for this paper
+            deleted_count, _ = paper.quotes.all().delete()
+            logger.info(f"Deleted {deleted_count} quotes from PaperExtraction {paper.id} before PDF update.")
+
+            adapter = get_acquisition_adapter()
+            upload_result = adapter.upload_study_pdf(
+                study_id=str(paper.study_id),
+                file_obj=file,
+                filename=file.name,
+                user=request.user
+            )
+
+            # Update PaperExtraction instance
+            paper.path = upload_result.get('pdf_path')
+            # The study_id should not change when updating a PDF for an existing study,
+            # but we can log if something unexpected happens.
+            if str(paper.study_id) != upload_result.get('study_id'):
+                logger.warning(f"Study ID mismatch for PaperExtraction {paper.id} during PDF update.")
+
+            paper.save(update_fields=['path', 'updated_at'])
+
+            messages.success(request, f'Successfully updated PDF for "{paper.study.title}".')
+            logger.info(f"PDF for PaperExtraction {paper.id} updated by {request.user.username}")
+
+        except Exception as e:
+            logger.error(f"Failed to update PDF for PaperExtraction {paper.id}: {e}", exc_info=True)
+            messages.error(request, f'An error occurred while updating the PDF: {e}')
+
+        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=studies")
+
+
+class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
+    """
+    Exporta todas las quotes a CSV con atributos completos.
+    
+    Incluye:
+    - Atributos de la quote (id, text_fragment, location, created_at, updated_at)
+    - Usuario que realizó la extracción (created_by.username)
+    - UUID y título del estudio
+    - Path del paper_extraction
+    - Tags asociados a la quote
+    """
+    
+    def get(self, request, project_id):
+        """Exporta las quotes de la fase de extracción a CSV."""
+        try:
+            # Obtener la fase de extracción del proyecto
+            from apps.extraction.planning.models import ExtractionPhase
+            phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+            
+            # Obtener todas las quotes de la fase
+            quotes = Quote.objects.filter(
+                paper_extraction__extraction_phase=phase
+            ).select_related(
+                'paper_extraction',
+                'paper_extraction__study',
+                'created_by'
+            ).prefetch_related('tags')
+            
+            # Crear archivo CSV en memoria
+            output = StringIO()
+            writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+            
+            # Escribir encabezados
+            headers = [
+                'Quote ID',
+                'Text Fragment',
+                'Location',
+                'Extracted By',
+                'Study UUID',
+                'Study Title',
+                'Paper Path',
+                'Tags',
+                'Created At',
+                'Updated At'
+            ]
+            writer.writerow(headers)
+            
+            # Escribir datos de cada quote
+            for quote in quotes:
+                tags_str = ', '.join([tag.name for tag in quote.tags.all()]) or ''
+                location_str = json.dumps(quote.location, ensure_ascii=False) if quote.location else ''
+                
+                row = [
+                    quote.id,
+                    quote.text_fragment or '',
+                    location_str,
+                    quote.created_by.username if quote.created_by else '',
+                    str(quote.paper_extraction.study.uuid) if quote.paper_extraction and quote.paper_extraction.study else '',
+                    quote.paper_extraction.study.title if quote.paper_extraction and quote.paper_extraction.study else '',
+                    quote.paper_extraction.path or '' if quote.paper_extraction else '',
+                    tags_str,
+                    quote.created_at.isoformat() if quote.created_at else '',
+                    quote.updated_at.isoformat() if quote.updated_at else ''
+                ]
+                writer.writerow(row)
+            
+            # Crear respuesta HTTP con el CSV
+            csv_content = output.getvalue()
+            response = HttpResponse(
+                csv_content,
+                content_type='text/csv; charset=utf-8'
+            )
+            response['Content-Disposition'] = 'attachment; filename="quotes_export.csv"'
+            
+            logger.info(
+                f"Usuario {request.user.username} exportó {quotes.count()} quotes del proyecto {project_id}"
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.exception(f"Error exportando quotes: {str(e)}")
+            return JsonResponse(
+                {'error': f'Error al exportar: {str(e)}'},
                 status=500
             )

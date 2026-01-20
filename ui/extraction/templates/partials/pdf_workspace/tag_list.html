@@ -1,133 +1,64 @@
-<!-- partials/pdf_workspace/tag_list.html -->
-<div class="p-4 border-b border-gray-200 bg-gray-50" id="tag_list_container">
+<div id="tag_list_container" class="space-y-4">
     
-    <div class="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box mt-2">
-        <input type="checkbox" checked />
-        
-        <!-- Header con badge de porcentaje -->
-        <div class="collapse-title text-xs font-bold uppercase text-gray-500 py-3 min-h-0 flex justify-between items-center">
-            <span>ETIQUETAS OBLIGATORIAS</span>
+    <div class="px-4 pt-4">
+        <div class="flex justify-between items-end mb-2">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Protocol Coverage</span>
+            <span class="text-xs font-mono font-bold {% if paper.get_coverage_percentage == 100 %}text-green-600{% else %}text-amber-600{% endif %}">
+                {{ paper.get_coverage_percentage }}%
+            </span>
         </div>
         
-        <div class="collapse-content px-3 pb-3" id="mandatory_tags">
-            <!-- ✅ Progress bar con ID para fácil acceso -->
-            <div class="mb-3" id="coverage-progress-container">
-                <div class="flex justify-between text-xs mb-1">
-                    <span class="font-medium text-gray-600">Progreso</span>
-<!--<span class="font-semibold text-gray-800">{{ paper.get_used_mandatory_tags.count }}/{{ mandatory_tags.count }}</span>-->
-                    <span class="badge badge-sm {% if paper.get_coverage_percentage == 100 %}badge-success{% elif paper.get_coverage_percentage >= 50 %}badge-warning{% else %}badge-error{% endif %}">
-                        {{ paper.get_coverage_percentage }}%
-                    </span>
-                </div>
-                <progress class="progress {% if paper.get_coverage_percentage == 100 %}progress-success{% elif paper.get_coverage_percentage >= 50 %}progress-warning{% else %}progress-error{% endif %} w-full h-2" 
-                          value="{{ paper.get_coverage_percentage }}" 
-                          max="100"></progress>
+        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden border border-gray-200">
+            <div class="h-full rounded-full transition-all duration-500 ease-out {% if paper.get_coverage_percentage == 100 %}bg-green-500{% elif paper.get_coverage_percentage >= 50 %}bg-amber-400{% else %}bg-red-400{% endif %}"
+                 style="width: {{ paper.get_coverage_percentage }}%"></div>
+        </div>
+        
+        {% if not paper.is_complete_compliant %}
+            <div class="mt-2 text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>Missing {{ paper.get_missing_mandatory_tags.count }} required tags</span>
             </div>
+        {% endif %}
+    </div>
 
-            <!-- Alerta de estado (se actualiza dinámicamente) --
-            <div id="coverage-alert-container" class="mb-3">
-                {% if paper.is_complete_compliant %}
-                    <div class="alert alert-success mt-3 py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Todos los tags obligatorios han sido cubiertos</span>
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning mt-3 py-2 text-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div class="flex-1">
-                            <span class="font-semibold">Faltan {{ paper.get_missing_mandatory_tags.count }} tag(s):</span>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                {% for tag in paper.get_missing_mandatory_tags %}
-                                    <span class="badge badge-xs badge-ghost">{{ tag.name }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        -->
-            <!-- Tags obligatorios -->
-            <div class="flex flex-wrap gap-2" id="mandatory-tags-container">
-                {% for tag in available_tags %}
-
-                    {% if tag in mandatory_tags %}
-                        {% if tag in paper.get_used_mandatory_tags %}
-                            <!-- Obligatorio + Usado -->
-                            <div class="badge badge-sm gap-1 badge-success text-white"
-                                data-tag-id="{{ tag.id }}"
-                                title="Pregunta relacionada: {{ tag.rq_related.text }}">
-                                <!-- Candado -->
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 11V7a4 4 0 118 0v4m-8 0H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-2z"/>
-                                </svg>
-
-                                <!-- Check -->
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7"/>
-                                </svg>
-
-                                {{ tag.name }}
-                            </div>
-
-                        {% else %}
-                            <!-- Obligatorio + NO usado -->
-                            <div class="badge badge-sm gap-1 badge-error"
-                                data-tag-id="{{ tag.id }}"
-                                title="Pregunta relacionada: {{ tag.rq_related.text }}"
-                                style="opacity: 0.7;">
-                                <!-- Candado -->
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 11V7a4 4 0 118 0v4m-8 0H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-2z"/>
-                                </svg>
-
-                                {{ tag.name }}
-                            </div>
-                        {% endif %}
-
-                    {% else %}
-                        {% if tag in paper.get_used_mandatory_tags %}
-                            <!-- Opcional + usado -->
-                            <div class="badge badge-sm gap-1 badge-success text-white "
-                                data-tag-id="{{ tag.id }}"
-                                title="Tag cubierto">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7"/>
-                                </svg>
-                                {{ tag.name }}
-                            </div>
-
-                        {% else %}
-                            <!-- Opcional + NO usado -->
-                            <div class="badge badge-sm gap-1 badge-ghost"
-                                data-tag-id="{{ tag.id }}"
-                                title="Tag opcional"
-                                style="opacity: 0.5;">
-                                {{ tag.name }}
-                            </div>
-                        {% endif %}
-                    {% endif %}
-
-                {% empty %}
-                    <span class="text-xs text-gray-400 italic">No hay etiquetas obligatorias.</span>
-                {% endfor %}
-            </div>
-            
-            <!-- Alerta de estado (se actualiza dinámicamente) -->
-            <div id="coverage-alert-container">
+    <div class="px-4 pb-4">
+        <div class="flex flex-wrap gap-2" id="mandatory-tags-container">
+            {% for tag in available_tags %}
                 
-            </div>
+                {% if tag in mandatory_tags %}
+                    {% if tag in paper.get_used_mandatory_tags %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 border border-green-200 cursor-help transition-all hover:bg-green-100"
+                              data-tag-id="{{ tag.id }}"
+                              title="Mandatory Tag: Covered">
+                            <svg class="w-3 h-3 mr-1 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            {{ tag.name }}
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-white text-red-600 border border-red-200 border-dashed cursor-help transition-all hover:bg-red-50"
+                              data-tag-id="{{ tag.id }}"
+                              title="Required: {{ tag.rq_related.question }}">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse"></span>
+                            {{ tag.name }}
+                        </span>
+                    {% endif %}
+                
+                {% else %}
+                    {% if tag in paper.get_used_tags %}
+                         <span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 border border-blue-200"
+                              data-tag-id="{{ tag.id }}">
+                             {{ tag.name }}
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-[11px] font-medium bg-gray-50 text-gray-400 border border-gray-100 opacity-60 hover:opacity-100 transition-opacity"
+                              data-tag-id="{{ tag.id }}">
+                            {{ tag.name }}
+                        </span>
+                    {% endif %}
+                {% endif %}
+
+            {% empty %}
+                <p class="text-xs text-gray-400 italic w-full text-center py-2">No tags available for this phase.</p>
+            {% endfor %}
         </div>
     </div>
 </div>

@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect
@@ -36,6 +37,7 @@ def open_search_strategy_panel(request, project_id, project):
         'timeline_stages': timeline_stages,
         'active_tab': 'search_string',
         'current_stage': project.design_phase.current_stage,
+        'is_owner': project.owner == request.user,
     }
     return render(request, 'search_strategy_panel.html', context)
 
@@ -141,6 +143,8 @@ def save_visual_strategy(request, project_id, strategy_id, project):
             'final_string': updated_strategy.final_search_string
         })
 
+    except ValidationError as e:
+        return JsonResponse({'error': str(e)}, status=403)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -247,9 +251,29 @@ def approve_strategy(request, project_id, strategy_id, project):
             SearchStrategy.Status.APPROVED,
             request.user,
             justification=justification
-        )
+        )        
+
+        # Notify strategy creator
+        try:
+            from apps.notification.models import Notification
+            strategy_dto = SearchStrategySelector.get_by_id(strategy_id)
+            if strategy_dto and strategy_dto.created_by_id != request.user.id:
+                Notification.objects.create(
+                    recipient_id=strategy_dto.created_by_id,
+                    sender=request.user,
+                    type='STRATEGY_APPROVED',
+                    title='Search Strategy Approved',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has approved your search strategy.',
+                    project_id=project_id
+                )
+        except Exception:
+            pass
+        
         messages.success(request, f"Strategy approved successfully!", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
+    except ValidationError as e:
+        messages.error(request, str(e), extra_tags='design')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
     except Exception as e:
         messages.error(request, str(e), extra_tags='design')
         return redirect(request.META.get('HTTP_REFERER', '/'))
@@ -272,6 +296,9 @@ def reject_strategy(request, project_id, strategy_id, project):
         )
         messages.warning(request, "Strategy rejected.", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
+    except ValidationError as e:
+        messages.error(request, str(e), extra_tags='design')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
     except Exception as e:
         messages.error(request, str(e), extra_tags='design')
         return redirect(request.META.get('HTTP_REFERER', '/'))

@@ -78,8 +78,8 @@
                                 <h2 class="text-2xl font-bold">{{ conflict.study.title|default:conflict.paper_id }}</h2>
                                 <p class="text-sm text-gray-500 mt-1">Study ID: {{ conflict.paper_id }}</p>
                             </div>
-                            {% if conflict.study.pdf_path %}
-                            <a href="{{ conflict.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
+                            {% if conflict.study.pdf_url or conflict.study.pdf_path %}
+                            <a href="{{ conflict.study.pdf_url|default:conflict.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
@@ -133,9 +133,25 @@
                     <div class="p-4 rounded-lg border border-blue-200 bg-blue-50">
                         <h3 class="font-bold text-lg mb-3">RESOLUTION OPTIONS</h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-info badge-outline badge-sm">Choose one</span>
+                                <span class="text-xs text-gray-600">Pick a resolution path for this conflict</span>
+                            </div>
+                        </div>
+
+                        <div class="join mb-4">
+                            <button type="button" class="btn btn-sm join-item btn-outline" data-resolution-toggle="third" data-paper-id="{{ conflict.paper_id }}">
+                                Third Reviewer
+                            </button>
+                            <button type="button" class="btn btn-sm join-item btn-outline" data-resolution-toggle="owner" data-paper-id="{{ conflict.paper_id }}">
+                                Owner Final Decision
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4">
                             <!-- Option 1: Assign Third Reviewer -->
-                            <div class="border rounded-lg p-4 bg-white">
+                            <div class="border rounded-xl p-4 bg-white shadow-sm" data-resolution-panel="third" data-paper-id="{{ conflict.paper_id }}">
                                 <h4 class="font-semibold mb-2">Assign Third Reviewer</h4>
                                 <form method="post" action="{% url 'selection:assign_fulltext_third_reviewer' project.id %}">
                                     {% csrf_token %}
@@ -153,7 +169,7 @@
                             </div>
                             
                             <!-- Option 2: Owner Final Decision -->
-                            <div class="border rounded-lg p-4 bg-white">
+                            <div class="border rounded-xl p-4 bg-white shadow-sm hidden" data-resolution-panel="owner" data-paper-id="{{ conflict.paper_id }}">
                                 <h4 class="font-semibold mb-2">Cast Final Decision</h4>
                                 <form method="post" action="{% url 'selection:fulltext_owner_vote' project.id %}" id="owner-vote-form-{{ conflict.paper_id }}">
                                     {% csrf_token %}
@@ -197,16 +213,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span>No conflicting papers - all full-text reviews are consistent!</span>
                 </div>
-                <div class="card bg-white shadow mt-6 max-w-lg">
-                    <div class="card-body">
-                        <h2 class="card-title text-success">Selection Complete</h2>
-                        <p class="text-gray-600">{{ approved_count|default:0 }} papers approved for extraction.</p>
-                        <div class="card-actions justify-end mt-4">
-                            <a href="{% url 'selection:approved_papers_api' project.id %}" class="btn btn-outline btn-sm" target="_blank">
-                                View API Response
-                            </a>
-                        </div>
-                    </div>
+                <div class="fixed bottom-6 right-6 z-30">
+                    <a href="{% url 'extraction:planning:initialize' project.id %}" class="btn btn-primary gap-2 shadow-lg">
+                        Go to Extraction Phase
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </a>
                 </div>
             </div>
         </div>
@@ -277,8 +290,8 @@
                                 <h2 class="text-2xl font-bold">{{ paper.study.title|default:paper.assignment.paper_id }}</h2>
                                 <p class="text-sm text-gray-500 mt-1">Study ID: {{ paper.assignment.paper_id }}</p>
                             </div>
-                            {% if paper.study.pdf_path %}
-                            <a href="{{ paper.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
+                            {% if paper.study.pdf_url or paper.study.pdf_path %}
+                            <a href="{{ paper.study.pdf_url|default:paper.study.pdf_path }}" target="_blank" class="btn btn-sm btn-outline btn-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
@@ -524,8 +537,37 @@ function saveDecisionAndNotes() {
     form.submit();
 }
 
+function setResolutionMode(paperId, mode) {
+    const panels = document.querySelectorAll(`[data-resolution-panel][data-paper-id="${paperId}"]`);
+    panels.forEach(panel => {
+        panel.classList.toggle('hidden', panel.dataset.resolutionPanel !== mode);
+    });
+
+    const buttons = document.querySelectorAll(`[data-resolution-toggle][data-paper-id="${paperId}"]`);
+    buttons.forEach(button => {
+        const isActive = button.dataset.resolutionToggle === mode;
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline', !isActive);
+    });
+}
+
+function initResolutionToggles() {
+    const buttons = document.querySelectorAll('[data-resolution-toggle]');
+    const seen = new Set();
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            setResolutionMode(button.dataset.paperId, button.dataset.resolutionToggle);
+        });
+        seen.add(button.dataset.paperId);
+    });
+
+    seen.forEach(paperId => setResolutionMode(paperId, 'third'));
+}
+
 // Initialize: show first item as selected
 document.addEventListener('DOMContentLoaded', function() {
+    initResolutionToggles();
     const firstConflict = document.querySelector('.conflict-item');
     if (firstConflict) {
         firstConflict.classList.add('ring-2', 'ring-primary');

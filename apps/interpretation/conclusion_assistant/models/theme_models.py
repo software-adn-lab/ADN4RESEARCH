@@ -15,6 +15,13 @@ class Theme(models.Model):
         on_delete=models.CASCADE,
         related_name='themes'
     )
+    project = models.ForeignKey(
+        'project.Project',
+        on_delete=models.CASCADE,
+        related_name='themes',
+        null=True,
+        blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 

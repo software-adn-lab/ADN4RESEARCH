@@ -30,6 +30,10 @@ class EligibilityCriterionService:
             )
             criterion.full_clean()
             criterion.save()
+            
+            # Notify if owner creates in closed stage
+            self._notify_if_owner_action_in_closed_stage(criterion, researcher, is_creation=True)
+            
             return criterion
 
         except ValidationError as e:
@@ -52,12 +56,20 @@ class EligibilityCriterionService:
         if not DesignAccessPolicy.can_edit_criteria(user, criterion):
             raise UpdateError("You do not have permission to edit this criterion.")
 
+        # Check if need to notify before updating
+        should_notify = self._should_notify_owner_modification(criterion, user)
+
         criterion.description = description
         criterion.motivation = motivation
         criterion.last_modified_by = user
         try:
             criterion.full_clean()
             criterion.save(update_fields=['description', 'motivation', 'updated_at', 'last_modified_by'])
+            
+            # Notify after successful update
+            if should_notify:
+                self._notify_if_owner_action_in_closed_stage(criterion, user, is_creation=False)
+            
             return criterion
         except ValidationError as e:
             raise UpdateError(f"Validation error: {str(e)}")
@@ -163,3 +175,62 @@ class EligibilityCriterionService:
             stats['auto_rejected'] += 1
 
         return stats
+
+    def _should_notify_owner_modification(self, criterion: EligibilityCriterion, user: User) -> bool:
+        """Check if we should notify about owner modification in closed stage."""
+        design_phase = criterion.design_phase
+        project = design_phase.project
+        
+        # Only notify if user is owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return False
+        
+        # Only notify if stage is closed
+        if design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            return False
+        
+        # Only notify if criterion is approved
+        if criterion.status != EligibilityCriterion.CriterionStatus.APPROVED:
+            return False
+        
+        return True
+
+    def _notify_if_owner_action_in_closed_stage(self, criterion: EligibilityCriterion, user: User, is_creation: bool):
+        """Send notification if owner creates/edits in closed stage."""
+        design_phase = criterion.design_phase
+        project = design_phase.project
+        
+        # Only notify if owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return
+        
+        # Only notify if stage is closed
+        if design_phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
+            return
+        
+        # For creation, always notify in closed stage
+        # For edit, only notify if approved
+        if not is_creation and criterion.status != EligibilityCriterion.CriterionStatus.APPROVED:
+            return
+        
+        try:
+            from apps.notification.models import Notification
+            from apps.project.api.providers import ProjectManagementProvider
+            
+            provider = ProjectManagementProvider()
+            members = provider.get_project_member_users(project.id)
+            
+            action_text = "created" if is_creation else "modified"
+            criterion_type = "inclusion" if criterion.type == EligibilityCriterion.CriterionType.INCLUSION else "exclusion"
+            
+            for member in members:
+                Notification.objects.create(
+                    recipient=member,
+                    sender=user,
+                    type='OWNER_MODIFIED_APPROVED_CRITERION',
+                    title=f'Owner {action_text} {criterion_type} criterion in closed stage',
+                    custom_message=f'The project owner has {action_text} an {criterion_type} criterion in a closed stage. Please review the changes for audit purposes.',
+                    project=project
+                )
+        except Exception:
+            pass  # Silent fail on notification errors

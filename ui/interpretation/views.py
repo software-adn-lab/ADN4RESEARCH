@@ -2,7 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from django.contrib import messages
+from django.db.models import Prefetch
+from django.http import HttpResponse
 
+from apps.interpretation.exporter.markdown_exporter import MarkdownExporter
+from apps.interpretation.exporter.pdf_exporter import ThemePdfExporter
 from apps.interpretation.conclusion_assistant.services.interpretation_services import (
     InterpretationService,
 )
@@ -13,6 +17,7 @@ from apps.interpretation.conclusion_assistant.models import (
 )
 from apps.interpretation.conclusion_assistant.models.subtheme_models import SubTheme
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
+from apps.interpretation.conclusion_assistant.models.theme_discovery_models import ThemeDiscoveryProposal
 from apps.interpretation.structured_data.manager import StructuredDataManager
 from apps.interpretation.visualization.engine import ResultsVisualizationEngine
 
@@ -22,8 +27,26 @@ service = InterpretationService()
 
 def index(request):
     """List available themes and subthemes to start interpretation."""
-    themes = Theme.objects.all().prefetch_related("subthemes")
-    return render(request, "interpretation/index.html", {"themes": themes})
+    queryset = Theme.objects.all()
+    project_id = request.GET.get('project_id')
+    if project_id:
+        queryset = queryset.filter(project_id=project_id)
+
+    themes = queryset.prefetch_related(
+        Prefetch(
+            "subthemes",
+            queryset=SubTheme.objects.prefetch_related(
+                Prefetch(
+                    "propositions",
+                    queryset=InterpretativeProposition.objects.filter(
+                        status=InterpretativeProposition.PropositionStatus.FINAL
+                    ),
+                    to_attr="final_propositions",
+                )
+            ),
+        )
+    )
+    return render(request, "interpretation/index.html", {"themes": themes, "project_id": project_id})
 
 
 @require_http_methods(["POST", "GET"])
@@ -74,6 +97,20 @@ def conversation_view(request, context_id):
     propositions = InterpretativeProposition.objects.filter(
         subtheme=context.subtheme
     ).order_by("-created_at")
+    
+    # Attempt to find the associated project to highlight in sidebar
+    current_project_id = None
+    try:
+        # Heuristic: Find a proposal with the same theme name that was accepted
+        proposal = ThemeDiscoveryProposal.objects.filter(
+            theme_name=context.theme_name, 
+            status__in=['ACCEPTED', 'MODIFIED']
+        ).first()
+        if proposal and proposal.project:
+            current_project_id = proposal.project.id
+    except Exception:
+        pass
+
     return render(
         request,
         "interpretation/conversation.html",
@@ -81,6 +118,7 @@ def conversation_view(request, context_id):
             "context": context,
             "traces": traces,
             "propositions": propositions,
+            "current_project_id": current_project_id,
         },
     )
 
@@ -148,6 +186,27 @@ def finalize_proposition(request, context_id, prop_id):
         return redirect(reverse("interpretation:conversation", args=[context_id]))
 
 
+@require_http_methods(["POST"])
+def finish_interpretation(request, context_id):
+    """Mark the interpretation context as finished without finalizing a specific proposition (or if manual finish needed)."""
+    context = get_object_or_404(InterpretationContext, id=context_id)
+    
+    try:
+        # Manually close the context and subtheme status
+        context.is_active = False
+        context.save()
+        
+        subtheme = context.subtheme
+        subtheme.status = SubTheme.Status.INTERPRETATION_COMPLETED
+        subtheme.save()
+        
+        messages.success(request, "Interpretación finalizada exitosamente.")
+        return redirect(reverse("interpretation:index"))
+    except Exception as e:
+        messages.error(request, f"Error al finalizar interpretación: {e}")
+        return redirect(reverse("interpretation:conversation", args=[context_id]))
+
+
 @require_http_methods(["GET"])
 def results_dashboard(request, project_id):
     """
@@ -179,3 +238,33 @@ def results_dashboard(request, project_id):
         "interpretation/results_dashboard.html",
         {"dashboard_data": dashboard_data, "project_id": project_id},
     )
+
+
+@require_http_methods(["GET"])
+def export_report_view(request, project_id):
+    """
+    Exports the interpretation report in PDF format, covering the entire project.
+    """
+    from apps.project.structure.models.project_models import Project
+    from apps.interpretation.exporter.pdf_exporter import ProjectPdfExporter
+    
+    project = get_object_or_404(Project, id=project_id)
+    exporter = ProjectPdfExporter()
+    pdf_content = exporter.generate_project_pdf(project)
+    
+    response = HttpResponse(pdf_content, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="interpretation_report_{project_id}.pdf"'
+    return response
+
+
+def export_theme_pdf(request, theme_id):
+    """
+    Exports a single theme with full traceability to PDF.
+    """
+    theme = get_object_or_404(Theme, id=theme_id)
+    exporter = ThemePdfExporter()
+    pdf_content = exporter.generate_pdf(theme)
+    
+    response = HttpResponse(pdf_content, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="theme_report_{theme_id}.pdf"'
+    return response

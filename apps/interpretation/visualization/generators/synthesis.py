@@ -18,21 +18,21 @@ class SynthesisGenerator:
             return {"matrix": [], "themes": [], "studies": []}
 
         # 1. Get study IDs
-        try:
-            # Ensure study_ids are integers as per PaperExtraction model
-            study_ids = [int(s.study_id) for s in studies if str(s.study_id).isdigit()]
-        except (ValueError, TypeError):
-            return {"matrix": [], "themes": [], "studies": []}
+        # Support both Integer and UUID IDs
+        study_ids = [s.study_id for s in studies]
 
         if not study_ids:
             return {"matrix": [], "themes": [], "studies": []}
 
         # 2. Identify Project Context
-        first_extraction = PaperExtraction.objects.filter(study_id=study_ids[0]).first()
+        # Try to find extraction by string ID (UUID) or int ID
+        first_extraction = PaperExtraction.objects.filter(study_id__in=study_ids).first()
+        
         if not first_extraction:
+            # If no extractions found, return empty
             return {"matrix": [], "themes": [], "studies": []}
 
-        project_id = first_extraction.project_id
+        project_id = first_extraction.extraction_phase.project_id
 
         # 3. Build Mapping: Original Tag -> Theme(s)
 
@@ -44,9 +44,7 @@ class SynthesisGenerator:
         valid_norm_codes = set(norm_code_to_tags.keys())
 
         # Get SubThemes that use these normalized codes
-        # Since we can't easily filter JSONField list containment for many items in all DBs,
-        # and assuming SubTheme count is manageable, we fetch all and filter in Python.
-        all_subthemes = SubTheme.objects.select_related("theme").all()
+        all_subthemes = SubTheme.objects.filter(theme__project_id=project_id).select_related("theme")
 
         tag_to_themes = defaultdict(set)
 
@@ -60,6 +58,10 @@ class SynthesisGenerator:
                     original_tags = norm_code_to_tags.get(code, [])
                     for tag in original_tags:
                         tag_to_themes[tag].add(theme_name)
+        
+        # FALLBACK: If no normalization mapping exists (e.g. raw extraction phase),
+        # treat Tags directly as "Themes" for visualization.
+        use_raw_tags = not bool(tag_to_themes)
 
         # 4. Query Evidence (Quotes & Tags)
         extractions = PaperExtraction.objects.filter(
@@ -74,10 +76,16 @@ class SynthesisGenerator:
             s_id_str = str(extraction.study_id)
             for quote in extraction.quotes.all():
                 for tag in quote.tags.all():
-                    if tag.name in tag_to_themes:
-                        for theme_name in tag_to_themes[tag.name]:
-                            study_theme_counts[s_id_str][theme_name] += 1
-                            all_found_themes.add(theme_name)
+                    
+                    themes_for_tag = []
+                    if use_raw_tags:
+                        themes_for_tag = [tag.name]
+                    elif tag.name in tag_to_themes:
+                        themes_for_tag = tag_to_themes[tag.name]
+                    
+                    for theme_name in themes_for_tag:
+                        study_theme_counts[s_id_str][theme_name] += 1
+                        all_found_themes.add(theme_name)
 
         sorted_themes = sorted(list(all_found_themes))
 

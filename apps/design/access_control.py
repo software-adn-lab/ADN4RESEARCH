@@ -88,18 +88,15 @@ class DesignAccessPolicy:
     def can_edit_criteria(user: User, criterion) -> bool:
         """
         Determines if a user can edit a specific eligibility criterion.
-        Rule:
-        - If stage is CRITERIA_DEFINITION:
-            - Owner can always edit.
-            - Researcher can edit their own criteria.
-        - If stage is past CRITERIA_DEFINITION:
-            - Only Owner can edit.
+        Rule: Collaborative editing during active stage.
+        - During CRITERIA_DEFINITION stage: All project members can edit any criterion (collaborative).
+        - After stage is closed: Only Owner can edit.
         """
         phase = criterion.design_phase
         is_owner = DesignAccessPolicy.is_owner(user, phase.project)
 
         if phase.current_stage == DesignPhase.DesignStage.CRITERIA_DEFINITION:
-            return is_owner or (criterion.researcher_id == user.id)
+            return True  # Collaborative: All project members can edit any criterion
 
         return is_owner
 
@@ -122,15 +119,15 @@ class DesignAccessPolicy:
     def can_edit_strategy(user: User, strategy) -> bool:
         """
         Determines if a user can edit a search strategy.
-        Rule: Same as questions/criteria.
-        - Owner of project can always edit.
-        - Researcher who created the strategy can edit their own.
+        Rule: Collaborative editing during active stage.
+        - During SEARCH_STRATEGY stage: All project members can edit any strategy (collaborative).
+        - After stage is closed: Only Owner can edit.
         """
         phase = strategy.research_question.design_phase
         is_owner = DesignAccessPolicy.is_owner(user, phase.project)
 
         if phase.current_stage == DesignPhase.DesignStage.SEARCH_STRATEGY:
-            return is_owner or (strategy.created_by_id == user.id)
+            return True  # Collaborative: All project members can edit any strategy
 
         return is_owner
 

@@ -106,7 +106,7 @@ class ScopusApiStrategy(SearchStrategy):
         
         results = []
         start = 0
-        count = min(max_results, 25)  # Scopus API limit per request
+        count = min(max_results, 5)  # Scopus API limit per request
         
         # Format query for Scopus
         if query.strip().startswith("TITLE-ABS-KEY"):

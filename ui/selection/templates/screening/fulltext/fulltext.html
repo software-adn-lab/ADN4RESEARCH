@@ -3,146 +3,250 @@
 
 {% block content %}
 <div class="container mx-auto p-6 h-screen flex flex-col">
-    {% include '_timeline.html' with project=project active='fulltext' %}
-
-    <!-- Header -->
-    <div class="flex-none flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">Selection - Full-text Screening</h1>
-            <p class="text-gray-600">{{ project.title }}</p>
-        </div>
-        <!-- Download button removed for fulltext -->
-    </div>
-    <div id="global-download-status" class="text-sm text-gray-600 mt-2 hidden"></div>
-
     <!-- Full-text Interface -->
-    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 mt-4">
-        <!-- Papers List -->
-        <div class="col-span-4 bg-white rounded-lg shadow overflow-y-auto h-full">
-            <div class="p-4">
-                <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
-                    <span>Total: {{ papers|length }}</span>
-                    <span>Assigned for Full-text Review</span>
+    <div class="flex-1 min-h-0">
+        <!-- List View -->
+        <div id="fulltext-list-view" class="h-full min-h-0 flex flex-col gap-4">
+            {% include '_timeline.html' with project=project active='fulltext' %}
+
+            <!-- Header -->
+            <div class="flex-none flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Selection - Full-text Screening</h1>
+                    <p class="text-gray-600">{{ project.title }}</p>
                 </div>
-                <div class="space-y-3">
-                {% for paper in papers %}
-                 <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-primary cursor-pointer paper-item shadow-sm transition"
-                    data-paper-id="{{ paper.study.id }}"
-                    data-pdf-url="{{ paper.pdf_url }}"
-                    onclick="showPaperDetail('{{ paper.study.id }}')"
-                    id="paper-item-{{ paper.study.id }}">
-                   <h3 class="font-semibold text-sm line-clamp-2">{{ paper.study.title }}</h3>
-                   {% if paper.review %}
-                       <span class="badge badge-sm mt-2 text-white uppercase font-bold"
-                           {% if paper.review.decision == 'INCLUDED' %}
-                           style="background-color: #00A30E; border-color: #00A30E;"
-                           {% elif paper.review.decision == 'EXCLUDED' %}
-                           style="background-color: #EE0000; border-color: #EE0000;"
-                           {% else %}
-                           {% endif %}>
-                           {{ paper.review.get_decision_display }}
-                       </span>
-                   {% else %}
-                       <span class="badge badge-sm badge-ghost mt-2">Pending</span>
-                   {% endif %}
-                    {% if paper.pdf_url %}
-                        <span class="badge badge-sm badge-success mt-2">PDF Available</span>
-                    {% else %}
-                        <span class="badge badge-sm badge-warning mt-2">No PDF</span>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div class="p-8 text-center text-gray-500">
-                    <p>No papers assigned for full-text review yet</p>
-                </div>
-                {% endfor %}
+                <!-- Download button removed for fulltext -->
+            </div>
+            <div id="global-download-status" class="text-sm text-gray-600 hidden"></div>
+
+            <div class="card bg-white shadow flex-1 overflow-y-auto">
+                <div class="card-body p-4">
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                        <span>Total: {{ papers|length }}</span>
+                        <span>Assigned for Full-text Review</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {% for paper in papers %}
+                        <a href="?paper={{ paper.study.id }}"
+                           class="card border border-gray-200 border-l-4 bg-gray-50 hover:bg-white hover:border-primary cursor-pointer paper-item shadow-sm transition"
+                           style="{% if paper.review %}{% if paper.review.decision == 'INCLUDED' %}border-left-color: #00A30E;{% elif paper.review.decision == 'EXCLUDED' %}border-left-color: #EE0000;{% else %}border-left-color: #d1d5db;{% endif %}{% else %}border-left-color: #d1d5db;{% endif %}"
+                           data-paper-id="{{ paper.study.id }}"
+                           data-pdf-url="{{ paper.pdf_url }}"
+                           id="paper-item-{{ paper.study.id }}">
+                            <div class="card-body p-5 min-h-[160px] flex flex-col">
+                                <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {% if paper.pdf_url %}text-primary{% else %}text-warning{% endif %}" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h6.586A2 2 0 0012 17.414L16.414 13A2 2 0 0017 11.586V4a2 2 0 00-2-2H4zm7 6a1 1 0 10-2 0 1 1 0 002 0zm-5 3a1 1 0 100-2 1 1 0 000 2zm2 2a1 1 0 10-2 0 1 1 0 002 0z" />
+                                        </svg>
+                                        <span class="uppercase tracking-wide {% if paper.pdf_url %}text-primary{% else %}text-warning{% endif %}">
+                                            {% if paper.pdf_url %}PDF{% else %}No PDF{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        {% if paper.review %}
+                                            {% if paper.review.decision == 'INCLUDED' %}
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" style="color: #00A30E;" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span class="uppercase tracking-wide" style="color: #00A30E;">Included</span>
+                                            {% elif paper.review.decision == 'EXCLUDED' %}
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" style="color: #EE0000;" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 00-1.414-1.414L10 7.757 7.879 5.636a1 1 0 00-1.414 1.414L8.586 9.172 6.464 11.293a1 1 0 101.414 1.414L10 10.586l2.121 2.121a1 1 0 001.414-1.414L11.414 9.172l2.121-2.121z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span class="uppercase tracking-wide" style="color: #EE0000;">Excluded</span>
+                                            {% else %}
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2 2a1 1 0 101.414-1.414L11 9.586V6z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span class="uppercase tracking-wide text-gray-400">Pending</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2 2a1 1 0 101.414-1.414L11 9.586V6z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="uppercase tracking-wide text-gray-400">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <h3 class="font-semibold text-sm leading-relaxed flex-1">{{ paper.study.title }}</h3>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="p-8 text-center text-gray-500">
+                            <p>No papers assigned for full-text review yet</p>
+                        </div>
+                    {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- PDF Viewer -->
-        <div class="col-span-8 bg-white rounded-lg shadow flex flex-col overflow-hidden h-full relative" id="pdf-viewer-container">
-            {% if papers %}
-                {% for paper in papers %}
-                <div class="pdf-viewer-content h-full flex flex-col {% if not forloop.first %}hidden{% endif %}" 
-                     id="paper-{{ paper.study.id }}"
-                     data-assignment-id="{{ paper.assignment.id }}">
-                    <!-- PDF Toolbar -->
-                    <div class="flex-none p-3 border-b border-gray-200 bg-gray-50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <button onclick="zoomOut('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                                <span class="text-sm" id="zoom-level-{{ paper.study.id }}">100%</span>
-                                <button onclick="zoomIn('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                <span id="page-info-{{ paper.study.id }}"></span>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Detail View -->
+        <div id="fulltext-detail-view" class="hidden h-full min-h-0 flex flex-col">
+            <div class="flex items-center justify-between mb-2 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
+                <button type="button" class="btn btn-ghost btn-sm gap-2 p-0 hover:bg-transparent hover:text-base-content hover:border-transparent hover:shadow-none focus:bg-transparent active:bg-transparent" onclick="showListView()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L8.414 10l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Back to list
+                </button>
+                <span class="text-xs uppercase tracking-wide text-gray-500">PDF View</span>
+            </div>
 
-                    <!-- PDF Canvas Container (scrollable) -->
-                    <div class="flex-1 overflow-auto bg-gray-100 h-full" id="pdf-scroll-container-{{ paper.study.id }}" style="height:calc(100vh - 220px);">
-                        {% if paper.pdf_url %}
-                            <div class="flex justify-center p-4">
-                                <canvas id="pdf-canvas-{{ paper.study.id }}" class="shadow-lg"></canvas>
-                            </div>
-                        {% else %}
-                            <div class="flex items-center justify-center h-full text-gray-500">
-                                <div class="text-center space-y-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <p class="text-lg font-semibold">PDF not available</p>
-                                    <p class="text-sm mt-2">This paper's PDF could not be downloaded</p>
+            <div class="grid grid-cols-12 gap-4 flex-1 min-h-0">
+                <!-- PDF Viewer -->
+                <div class="col-span-12 lg:col-span-8 bg-white rounded-lg shadow flex flex-col min-h-0 overflow-hidden" id="pdf-viewer-container">
+                    {% if papers %}
+                        {% for paper in papers %}
+                        <div class="pdf-viewer-content h-full flex flex-col min-h-0 {% if not forloop.first %}hidden{% endif %}" 
+                             id="paper-{{ paper.study.id }}"
+                             data-assignment-id="{{ paper.assignment.id }}">
+                            <!-- PDF Toolbar -->
+                            <div class="flex-none p-3 border-b border-gray-200 bg-gray-50">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="zoomOut('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                        <span class="text-sm" id="zoom-level-{{ paper.study.id }}">100%</span>
+                                        <button onclick="zoomIn('{{ paper.study.id }}')" class="btn btn-sm btn-ghost">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        <span id="page-info-{{ paper.study.id }}"></span>
+                                    </div>
                                 </div>
                             </div>
-                        {% endif %}
-                    </div>
 
-                    <!-- Decision Buttons -->
-                    <form method="post" action="{% url 'selection:submit_fulltext_review' project.id paper.assignment.id %}" 
-                          id="review-form-{{ paper.assignment.id }}"
-                          class="sticky bottom-4 z-10 flex justify-center">
-                        {% csrf_token %}
-                        <input type="hidden" name="stage" value="FULL_TEXT">
-                        <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.notes|default:'' }}{% endif %}">
-                        <input type="hidden" name="criterion_id" id="criterion-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_id|default:'' }}{% endif %}">
-                        <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_label|default:'' }}{% endif %}">
-                        <div class="flex gap-3 bg-white rounded-xl drop-shadow-xl border border-gray-200 px-4 py-3">
-                            <button type="button" 
-                                    class="btn btn-md text-base rounded-lg text-white"
-                                    style="background-color: #00A30E; border-color: #00A30E;"
-                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'INCLUDED')">
-                                INCLUDE
-                            </button>
-                            <button type="button" 
-                                    class="btn btn-md text-base rounded-lg text-white"
-                                    style="background-color: #EE0000; border-color: #EE0000;"
-                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'EXCLUDED')">
-                                EXCLUDE
-                            </button>
-                            <button type="button" class="btn btn-outline btn-md text-base rounded-lg"
-                                    onclick="openDecisionModal('{{ paper.assignment.id }}', null)">
-                                NOTES
-                            </button>
+                            <!-- PDF Canvas Container (scrollable) -->
+                            <div class="flex-1 min-h-0 overflow-auto bg-gray-100" id="pdf-scroll-container-{{ paper.study.id }}">
+                                {% if paper.pdf_url %}
+                                    <div class="flex justify-center p-4">
+                                        <canvas id="pdf-canvas-{{ paper.study.id }}" class="shadow-lg"></canvas>
+                                    </div>
+                                {% else %}
+                                    <div class="flex items-center justify-center h-full text-gray-500">
+                                        <div class="text-center space-y-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <p class="text-lg font-semibold">PDF not available</p>
+                                            <p class="text-sm mt-2">This paper's PDF could not be downloaded</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    </form>
+                        {% endfor %}
+                    {% else %}
+                        <div class="flex items-center justify-center h-full text-gray-500">
+                            <p>No papers assigned for full-text review yet</p>
+                        </div>
+                    {% endif %}
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="flex items-center justify-center h-full text-gray-500">
-                    <p>No papers assigned for full-text review yet</p>
+
+                <!-- Decision Panel -->
+                <div class="col-span-12 lg:col-span-4 bg-white rounded-lg shadow p-4 overflow-y-auto">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Decision Panel</h3>
+                    </div>
+                    {% if papers %}
+                        {% for paper in papers %}
+                        <div class="decision-panel-content space-y-4 {% if not forloop.first %}hidden{% endif %}"
+                             id="decision-{{ paper.study.id }}"
+                             data-assignment-id="{{ paper.assignment.id }}">
+                            <div class="card bg-base-200/40 border border-base-300">
+                                <div class="card-body p-4">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <h3 class="text-sm font-semibold line-clamp-2">{{ paper.study.title }}</h3>
+                                        {% if paper.review %}
+                                            <span class="badge badge-sm text-white uppercase font-bold"
+                                                {% if paper.review.decision == 'INCLUDED' %}
+                                                style="background-color: #00A30E; border-color: #00A30E;"
+                                                {% elif paper.review.decision == 'EXCLUDED' %}
+                                                style="background-color: #EE0000; border-color: #EE0000;"
+                                                {% endif %}>
+                                                {{ paper.review.get_decision_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-sm badge-ghost">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Study ID: {{ paper.study.id }}</p>
+                                    {% if paper.study.year or paper.study.authors %}
+                                    <p class="text-xs text-gray-500 mt-1 line-clamp-2">
+                                        {% if paper.study.year %}{{ paper.study.year }}{% endif %}
+                                        {% if paper.study.authors %}{% if paper.study.year %} · {% endif %}{{ paper.study.authors }}{% endif %}
+                                    </p>
+                                    {% endif %}
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        {% if paper.pdf_url %}
+                                            <span class="badge badge-sm badge-success">PDF Available</span>
+                                        {% else %}
+                                            <span class="badge badge-sm badge-warning">No PDF</span>
+                                        {% endif %}
+                                        {% if paper.review and paper.review.criterion_label %}
+                                            <span class="badge badge-sm badge-outline whitespace-normal text-left h-auto py-1 leading-tight max-w-full">
+                                                Criterion: {{ paper.review.criterion_label }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form method="post" action="{% url 'selection:submit_fulltext_review' project.id paper.assignment.id %}" 
+                                  id="review-form-{{ paper.assignment.id }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="stage" value="FULL_TEXT">
+                                <input type="hidden" name="notes" id="notes-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.notes|default:'' }}{% endif %}">
+                                <input type="hidden" name="criterion_id" id="criterion-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_id|default:'' }}{% endif %}">
+                                <input type="hidden" name="criterion_label" id="criterion-label-{{ paper.assignment.id }}" value="{% if paper.review %}{{ paper.review.criterion_label|default:'' }}{% endif %}">
+                                <div class="card bg-base-200/40 border border-base-300">
+                                    <div class="card-body p-4">
+                                        <div class="text-xs font-semibold uppercase text-gray-500">Decision</div>
+                                        <div class="join w-full">
+                                            <button type="button" class="btn btn-sm join-item text-white flex-1 uppercase"
+                                                    style="background-color: #00A30E; border-color: #00A30E;"
+                                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'INCLUDED')">
+                                                Include
+                                            </button>
+                                            <button type="button" class="btn btn-sm join-item text-white flex-1 uppercase"
+                                                    style="background-color: #EE0000; border-color: #EE0000;"
+                                                    onclick="openDecisionModal('{{ paper.assignment.id }}', 'EXCLUDED')">
+                                                Exclude
+                                            </button>
+                                        </div>
+                                        <button type="button" class="btn btn-outline btn-sm w-full"
+                                                onclick="openDecisionModal('{{ paper.assignment.id }}', null)">
+                                            Notes / Criteria
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="card bg-base-200/40 border border-base-300">
+                                <div class="card-body p-4 space-y-1">
+                                    <div class="text-xs font-semibold uppercase text-gray-500">Notes</div>
+                                    {% if paper.review and paper.review.notes %}
+                                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ paper.review.notes }}</p>
+                                    {% else %}
+                                        <p class="text-sm text-gray-500">No notes yet.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-sm text-gray-500">No papers assigned for full-text review yet</p>
+                    {% endif %}
                 </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>

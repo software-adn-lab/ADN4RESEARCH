@@ -3,105 +3,68 @@ Acquisition Module Adapter
 
 Centralizes communication with the Acquisition module.
 Provides clean interface for Extraction to access acquired studies and PDFs.
+
+Architecture:
+- Studies are acquired in the Selection phase (not here)
+- This adapter provides access to existing PDFs for display in Extraction UI
+- All PDF URLs are generated using default_storage (FileSystem or S3 compatible)
 """
 import logging
-from typing import List, Dict, Any
+from typing import Optional, List, Dict, Any
+from django.core.files.storage import default_storage
+
+from apps.acquisition.facade import get_acquisition_facade
 
 logger = logging.getLogger(__name__)
 
 
 class AcquisitionAdapter:
     """
-    Adapter for Acquisition module integration.
+    Adapter for accessing studies acquired in Selection phase.
     
     Responsible for:
-    - Getting studies by project
-    - Downloading full texts (PDFs)
-    - Accessing study metadata
+    - Getting PDF URLs for existing studies (for UI display)
     """
 
-    @staticmethod
-    def get_studies_by_project(
-        project_id: int,
-        include_metadata: bool = True
-    ) -> List[Dict[str, Any]]:
-        """
-        Get all studies acquired for a project.
-        
-        Args:
-            project_id: Project ID
-            include_metadata: Whether to include full metadata
-            
-        Returns:
-            List of study dicts with id, title, status, etc.
-        """
-        try:
-            from apps.acquisition.facade import get_acquisition_facade
-            
-            facade = get_acquisition_facade()
-            studies = facade.get_studies_by_project(
-                project_id=project_id,
-                include_metadata=include_metadata
-            )
-            
-            logger.info(
-                f"[ACQUISITION ADAPTER] Retrieved {len(studies)} studies "
-                f"for project {project_id}"
-            )
-            
-            return studies
-            
-        except Exception as e:
-            logger.error(
-                f"[ACQUISITION ADAPTER] Failed to get studies: {e}",
-                exc_info=True
-            )
-            raise
+    def __init__(self):
+        self._facade = get_acquisition_facade()
 
-    @staticmethod
-    def download_fulltexts(study_ids: List[str]) -> Dict[str, Any]:
+    def get_study_pdf_url(self, study_id: str, project_id: int) -> Optional[str]:
         """
-        Download full text PDFs for studies.
+        Get PDF URL for a study already acquired in Selection phase.
         
-        Triggers the acquisition workflow to:
-        1. Check Open Access availability
-        2. Download PDFs from available sources
-        3. Store in configured storage (filesystem or S3)
+        The PDF file is already stored in StudyModel.pdf_path.
+        This method only generates the accessible URL using default_storage.
         
         Args:
-            study_ids: List of study UUIDs to download
+            study_id: Study UUID (from PaperExtraction.study_id)
+            project_id: The ID of the project.
             
         Returns:
-            Dict with download status (downloaded_count, failed_count, etc.)
+            PDF URL string or None if PDF not available
         """
         try:
-            from apps.acquisition.facade import get_acquisition_facade
+            # Use facade to get all studies for the project
+            project_studies = self._facade.get_studies_by_project(project_id)
             
-            facade = get_acquisition_facade()
-            result = facade.download_fulltexts(study_ids)
+            # Find the specific study
+            study_data = next((s for s in project_studies if s['id'] == study_id), None)
+
+            if not study_data or not study_data.get('pdf_path'):
+                logger.debug(f"[ACQUISITION ADAPTER] Study {study_id} not found in project {project_id} or has no PDF path.")
+                return None
             
-            logger.info(
-                f"[ACQUISITION ADAPTER] Downloaded {result.downloaded_count} PDFs "
-                f"(failed: {result.failed_count})"
-            )
+            # Generate URL from the path
+            pdf_url = default_storage.url(study_data['pdf_path'])
+            logger.debug(f"[ACQUISITION ADAPTER] Generated PDF URL for study {study_id}: {pdf_url}")
             
-            return {
-                'total_count': result.total_count,
-                'downloaded_count': result.downloaded_count,
-                'available_count': result.available_count,
-                'failed_count': result.failed_count,
-                'study_statuses': result.study_statuses
-            }
+            return pdf_url
             
         except Exception as e:
-            logger.error(
-                f"[ACQUISITION ADAPTER] Failed to download fulltexts: {e}",
-                exc_info=True
-            )
-            raise
+            logger.error(f"[ACQUISITION ADAPTER] Failed to get PDF URL for study {study_id}: {e}", exc_info=True)
+            return None
     
-    @staticmethod
-    def enrich_studies(study_ids: List[str]) -> Dict[str, Any]:
+    def enrich_studies(self, study_ids: List[str]) -> Dict[str, Any]:
         """
         Enrich study metadata (consolidate author info, abstract, keywords, etc.).
         
@@ -112,10 +75,7 @@ class AcquisitionAdapter:
             Dict with enrichment status
         """
         try:
-            from apps.acquisition.facade import get_acquisition_facade
-            
-            facade = get_acquisition_facade()
-            result = facade.enrich_studies(study_ids)
+            result = self._facade.enrich_studies(study_ids)
             
             logger.info(
                 f"[ACQUISITION ADAPTER] Enriched {result.enriched_count} studies"
@@ -130,6 +90,45 @@ class AcquisitionAdapter:
         except Exception as e:
             logger.error(
                 f"[ACQUISITION ADAPTER] Failed to enrich studies: {e}",
+                exc_info=True
+            )
+            raise
+
+    def upload_study_pdf(
+        self,
+        study_id: str,
+        file_obj: Any,
+        filename: str,
+        user: Any,
+    ) -> Dict[str, Any]:
+        """
+        Uploads a new PDF for a study.
+        
+        Args:
+            study_id: The UUID of the study.
+            file_obj: The file object to upload.
+            filename: The name of the file.
+            user: The user performing the upload.
+            
+        Returns:
+            A dictionary with the result of the upload.
+        """
+        try:
+            logger.info(
+                f"[ACQUISITION ADAPTER] Uploading new PDF for study {study_id} by user {user.username}"
+            )
+            # Use force=True to allow replacing existing PDFs
+            result = self._facade.upload_study_pdf(
+                study_id=study_id,
+                file_obj=file_obj,
+                filename=filename,
+                user=user,
+                force=True
+            )
+            return result
+        except Exception as e:
+            logger.error(
+                f"[ACQUISITION ADAPTER] Failed to upload PDF for study {study_id}: {e}",
                 exc_info=True
             )
             raise

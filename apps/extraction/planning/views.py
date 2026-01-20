@@ -17,9 +17,12 @@ from apps.extraction.shared.exceptions import BusinessRuleViolation
 from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 from apps.extraction.taxonomy.forms import DeductiveTagForm
 from apps.extraction.taxonomy.services import TagApprovalService
-from apps.extraction.core.models import PaperExtraction, Quote
+from apps.extraction.core.models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.adapters.selection import get_selection_adapter
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
+from apps.interpretation.conclusion_assistant.models import InterpretationPhase
+from apps.extraction.taxonomy.models import Tag, ApprovalStatusChoices
+from apps.interpretation.conclusion_assistant.models.normalization_models import InitialCode
 
 logger = logging.getLogger(__name__)
 class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, DetailView):
@@ -128,15 +131,22 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
         elif tab == 'quotes':
             quotes_qs = Quote.objects.filter(
                 paper_extraction__extraction_phase=phase
-            )
-            
+            ).order_by('-created_at')
+
             if is_researcher:
                 quotes_qs = quotes_qs.filter(created_by=self.request.user)
             
-            context['quotes'] = quotes_qs.select_related(
+            from django.core.paginator import Paginator
+            paginator = Paginator(quotes_qs.select_related(
                 'paper_extraction__study',
                 'created_by'
-            ).prefetch_related('tags')
+            ).prefetch_related('tags'), 10)
+
+            page_number = self.request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            
+            context['quotes_page'] = page_obj
+            context['quotes_count'] = paginator.count
 
         elif tab == 'pending':
             if is_owner:
@@ -178,6 +188,16 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
         try:
             # Get or create extraction phase
             project = get_object_or_404(Project, id=project_id)
+            selection_adapter = get_selection_adapter()
+            if not selection_adapter.is_selection_complete(project_id):
+                messages.warning(
+                    request,
+                    'Selection phase is not complete yet. Resolve discussions and finalize full-text before extraction.'
+                )
+                return redirect(
+                    reverse('selection:fulltext_overview', kwargs={'project_id': project_id})
+                )
+
             phase, created = ExtractionPhase.objects.get_or_create(
                 project_id=project_id,
                 defaults={'status': ExtractionStatusChoices.CONFIG}
@@ -194,7 +214,6 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                 logger.info(f"[INIT EXTRACTION] Phase already exists for project {project_id}")
             
             # Get approved papers from selection
-            selection_adapter = get_selection_adapter()
             approved_paper_ids = selection_adapter.get_approved_papers(project_id)
             
             if not approved_paper_ids:
@@ -207,63 +226,90 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                 return redirect(
                     reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})
                 )
+
+            # Mark selection phase as inactive once extraction starts
+            try:
+                from apps.selection.features.distribution.models import SelectionPhase
+                selection_phase = SelectionPhase.objects.filter(project_id=project_id).first()
+                if selection_phase and selection_phase.is_active:
+                    selection_phase.is_active = False
+                    selection_phase.save(update_fields=['is_active'])
+            except Exception:
+                pass
             
-            # Get study data from acquisition
             acquisition_adapter = get_acquisition_adapter()
-            all_studies = acquisition_adapter.get_studies_by_project(project_id)
-            
-            # Map study IDs to study objects
-            studies_by_id = {str(s['id']): s for s in all_studies}
-            
-            # Create PaperExtraction records for approved papers
             created_count = 0
             skipped_count = 0
-            
+            paper_ext_map = {}  # Map paper_id -> PaperExtraction instance
+
             for paper_id in approved_paper_ids:
-                if str(paper_id) not in studies_by_id:
-                    logger.warning(f"[INIT EXTRACTION] Study {paper_id} not found in acquisition")
-                    skipped_count += 1
-                    continue
-                
-                # Create PaperExtraction if it doesn't exist
+                pdf_url = acquisition_adapter.get_study_pdf_url(
+                    str(paper_id), project_id=project_id
+                )
+
                 paper_ext, created = PaperExtraction.objects.get_or_create(
                     extraction_phase=phase,
                     study_id=str(paper_id),
-                    defaults={'status': 'PENDING'}
+                    defaults={
+                        'status': PaperExtractionStatusChoices.PENDING,
+                        'path': pdf_url
+                    }
                 )
+
+                paper_ext_map[str(paper_id)] = paper_ext
                 
                 if created:
                     created_count += 1
                 else:
                     skipped_count += 1
             
-            # Trigger fulltext downloads asynchronously
+            # Distribute papers among researchers
             try:
-                download_result = acquisition_adapter.download_fulltexts(
+                from .services import ApprovedPaperDistributionService
+                from django.contrib.auth.models import User
+                
+                distribution_service = ApprovedPaperDistributionService(project_id)
+                distribution = distribution_service.distribute_approved_papers(
                     approved_paper_ids
                 )
+                
+                # Apply distribution: assign papers to researchers
+                assignment_count = 0
+                for user_id, paper_ids in distribution.items():
+                    user = User.objects.get(id=user_id)
+                    
+                    for paper_id in paper_ids:
+                        if str(paper_id) in paper_ext_map:
+                            paper_ext = paper_ext_map[str(paper_id)]
+                            # Only assign if not already assigned
+                            if not paper_ext.assigned_to:
+                                paper_ext.assigned_to = user
+                                paper_ext.save()
+                                assignment_count += 1
+                                logger.info(
+                                    f"[INIT EXTRACTION] Assigned paper {paper_id} to {user.username}"
+                                )
+                
+                messages.success(
+                    request,
+                    f'Loaded {created_count} papers and distributed {assignment_count} assignments. '
+                    f'({skipped_count} were already loaded).'
+                )
                 logger.info(
-                    f"[INIT EXTRACTION] Download triggered: "
-                    f"{download_result['downloaded_count']} completed, "
-                    f"{download_result['failed_count']} failed"
+                    f"[INIT EXTRACTION] Created {created_count} papers, "
+                    f"assigned {assignment_count}, skipped {skipped_count} for project {project_id}"
                 )
-            except Exception as e:
-                logger.error(
-                    f"[INIT EXTRACTION] Failed to trigger downloads: {e}",
-                    exc_info=True
+                
+            except (ValueError, Exception) as e:
+                # If distribution fails, still show success for paper loading
+                logger.warning(
+                    f"[INIT EXTRACTION] Could not distribute papers: {e}"
                 )
-                # Don't fail the entire operation if downloads fail
-            
-            messages.success(
-                request,
-                f'Loaded {created_count} papers for extraction. '
-                f'({skipped_count} were already loaded). '
-                'PDFs are being downloaded in the background.'
-            )
-            logger.info(
-                f"[INIT EXTRACTION] Created {created_count} papers, "
-                f"skipped {skipped_count} for project {project_id}"
-            )
+                messages.warning(
+                    request,
+                    f'Loaded {created_count} papers, but distribution failed: {str(e)}. '
+                    f'You can manually assign papers to researchers.'
+                )
             
         except Exception as e:
             logger.error(
@@ -366,3 +412,49 @@ class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         
         # ✅ Redirigir al tab de tags para ver el estado
         return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")
+
+class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Transition from Extraction to Interpretation phase.
+    """
+
+    def post(self, request, *args, **kwargs):
+        project_id = self.kwargs.get('project_id')
+        extraction_phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        
+        # Get or Create Interpretation Phase
+        interp_phase, created = InterpretationPhase.objects.get_or_create(
+            project=extraction_phase.project,
+            defaults={'is_active': False}
+        )
+        
+        # Activate it
+        interp_phase.is_active = True
+        interp_phase.save()
+        
+        # --- POPULATE INITIAL CODES FROM EXTRACTION TAGS ---
+        # 1. Fetch all APPROVED tags from the extraction phase
+        tags = Tag.objects.filter(
+            extraction_phase=extraction_phase,
+            status=ApprovalStatusChoices.APPROVED
+        )
+        
+        for tag in tags:
+            # Check how many times this tag was used in quotes
+            # Assuming Quote has a ManyToManyField 'tags'
+            usage_count = Quote.objects.filter(tags=tag).count()
+            
+            # Create or Update InitialCode in Interpretation
+            # We map Tag.name -> InitialCode.code_name
+            InitialCode.objects.update_or_create(
+                project=extraction_phase.project,
+                code=tag.name,  # Mapping name to code
+                defaults={
+                    'frequency': usage_count,
+                }
+            )
+        
+        messages.success(request, f"Interpretation Phase activated. {tags.count()} tags have been loaded as initial codes.")
+        
+        # Redirect to Interpretation Theme Discovery (step 1)
+        return redirect(f"{reverse('interpretation:theme_discovery', args=[project_id])}?step=1")

@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from unittest.mock import patch, MagicMock
 
 from apps.project.structure.models.project_models import Project, Membership
-from apps.selection.services import PaperDistributionService
+from apps.selection.features.distribution.services import PaperDistributionService
 
 
 @given('investigadores con cargas horarias definidas:')
@@ -91,7 +91,7 @@ def step_when_distribution_executed(context):
     """Execute the distribution algorithm"""
     
     # Mock the project facade
-    with patch('apps.selection.services.get_project_facade') as mock_facade:
+    with patch('apps.selection.features.distribution.services.get_project_facade') as mock_facade:
         mock_instance = MagicMock()
         mock_instance.get_studies_by_project.return_value = context.mock_papers
         mock_facade.return_value = mock_instance

@@ -624,14 +624,14 @@ class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRe
     
     http_method_names = ['post']
     
-    def post(self, request, phase_id):
+    def post(self, request, project_id):
         """
         Aprobar múltiples tags.
         
         Espera un parámetro 'tag_ids' con IDs separados por coma
         o múltiples parámetros 'tag_ids[]'.
         """
-        phase = get_object_or_404(ExtractionPhase, pk=phase_id)
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
         # Obtener IDs de tags (soporta ambos formatos)
         tag_ids = request.POST.getlist('tag_ids[]') or request.POST.get('tag_ids', '').split(',')

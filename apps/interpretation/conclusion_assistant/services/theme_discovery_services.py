@@ -290,6 +290,7 @@ class ThemeDiscoveryService:
             description=proposal.theme_description,
             research_question=proposal.research_question_focus,
             created_by=reviewer,
+            project=proposal.project,
         )
 
         # NOTE: No SubThemes are created for Level 1 themes

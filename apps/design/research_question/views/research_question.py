@@ -1,5 +1,6 @@
 import json
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -68,7 +69,23 @@ def send_research_question_for_review(request, project_id, question_id, project)
 
     try:
         research_question_service.submit_research_question_for_review(question_id)
-    except QuestionSubmissionError as e:
+        
+        # Notify project owner
+        try:
+            from apps.notification.models import Notification
+            if project.owner_id != request.user.id:
+                Notification.objects.create(
+                    recipient=project.owner,
+                    sender=request.user,
+                    type='RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW',
+                    title='New Research Question for Review',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has submitted a research question for your review.',
+                    project=project
+                )
+        except Exception:
+            pass
+        
+    except (QuestionSubmissionError, ValidationError) as e:
         messages.warning(request, str(e), extra_tags='design')
 
     return redirect(build_design_url(project_id, 'research-questions/'))
@@ -107,7 +124,7 @@ def delete_research_question(request, project_id, question_id, project):
     try:
         research_question_service.delete_research_question(question_id=question_id, user=request.user)
         messages.success(request, "Research question deleted successfully.", extra_tags='design')
-    except ResearchQuestionError as e:
+    except (ResearchQuestionError, ValidationError) as e:
         messages.error(request, str(e), extra_tags='design')
 
     return redirect(build_design_url(project_id, 'research-questions/'))

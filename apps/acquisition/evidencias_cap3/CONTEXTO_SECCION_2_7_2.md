@@ -55,38 +55,5 @@
 
 ---
 
-## Numeración para tesis
 
-- Última tabla antes de 2.7: **Tabla 8**
-- **Tabla 9**: Niveles de prueba
-- **Tabla 10**: Resultados BDD por feature
-- **Tabla 11**: Comparación Entorno A vs Entorno B
-- **Ilustración 12**: Pipeline BDD (Mermaid)
-- **Ilustración 13**: Captura terminal BDD
-- **Anexo A**: behave_output.txt
-- **Anexo B**: pilot_output.txt
-
----
-
-## Estructura de sección 2.7 completa
-
-1. **2.7.1** Niveles de prueba y alcance (Tabla 9)
-2. **2.7.2** Verificación operativa mediante ejecución piloto
-   - Diseño del piloto (usa fachada, flujo completo)
-   - Resultados de ejecución (datos de pilot_output.txt)
-   - Tabla 11: Comparación entornos
-3. **2.7.3** Pipeline de verificación BDD (Ilustración 12)
-4. **2.7.4** Resultados de ejecución BDD (Tabla 10 + Ilustración 13)
-5. **2.7.5** Dobles de prueba y control del determinismo (rutas de mocks)
-
----
-
-## Resumen de resultados piloto (para narrativa)
-
-- Total estudios descubiertos: 10 (automáticos) + 1 (control manual) = 11
-- Fuentes consultadas: Scopus, IEEE Xplore
-- Enriquecimiento exitoso: 100% (10/10)
-- PDFs automáticos: 0%
-- PDFs manuales: 1 (estudio control)
-- La fachada opera correctamente con adaptadores reales
-- El fallback manual garantiza evidencia incluso si APIs fallan
+}

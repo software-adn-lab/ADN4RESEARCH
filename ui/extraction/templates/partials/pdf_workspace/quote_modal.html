@@ -1,160 +1,116 @@
-<!-- partials/pdf_workspace/quote_modal.html -->
-<dialog id="quote_modal" class="modal">
-    <div class="modal-box max-w-lg">
-        <h3 class="font-bold text-lg mb-4">Nueva Extracción</h3>
+<dialog id="quote_modal" class="modal backdrop-blur-sm">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl p-0 w-full max-w-lg overflow-hidden">
         
-        <form id="quote-form" method="post">
-            {% csrf_token %}
-            
-            <!-- Texto Seleccionado -->
-            <div class="form-control mb-4">
-                <label class="label mb-1">
-                    <span class="label-text font-medium">Texto Seleccionado</span>
-                </label>
-                <textarea id="selected-text" 
-                          class="textarea textarea-bordered w-full mb-2 focus:outline-none text-sm" 
-                          rows="4" 
-                          readonly></textarea>
-                <label class="label pt-0">
-                    <span id="page-info" class="label-text-alt text-gray-500"></span>
-                </label>
-            </div>
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-lg text-gray-900">New Quotation</h3>
+            <span id="page-info" class="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-1 rounded">Page -</span>
+        </div>
 
-            <!-- Etiquetas con Búsqueda -->
-            <div class="form-control mb-4">
-                <label class="label mb-1">
-                    <span class="label-text font-medium">Etiquetas</span>
-                    <span class="label-text-alt text-xs" id="tags-counter">
-                        0 seleccionadas
-                    </span>
-                </label>
+        <div class="p-0">
+            <form id="quote-form" method="post" class="flex flex-col h-full">
+                {% csrf_token %}
                 
-                <!-- ✅ Input de Búsqueda -->
-                <div class="relative mb-2">
-                    <input type="text" 
-                           id="tag-search-input"
-                           class="input input-sm input-bordered w-full pr-8 focus:outline-none" 
-                           placeholder="🔍 Buscar etiquetas..."
-                           autocomplete="off">
-                    <!-- Botón Limpiar (oculto por defecto) -->
-                    <button type="button" 
-                            id="clear-search-btn"
-                            class="btn btn-ghost btn-xs btn-circle absolute right-2 top-1/2 -translate-y-1/2 hidden"
-                            title="Limpiar búsqueda">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Lista de Tags Filtrable -->
-                <div id="tags-list-container" class="border border-gray-300 rounded p-2 max-h-48 overflow-y-auto">
-                    {% for tag in available_tags %}
-                    <label class="tag-item flex items-center gap-2 p-2 hover:bg-base-200 cursor-pointer rounded transition-colors"
-                           data-tag-name="{{ tag.name|lower }}"
-                           data-tag-id="{{ tag.id }}">
-                        <input type="checkbox" 
-                               name="tags" 
-                               value="{{ tag.id }}"
-                               class="checkbox checkbox-sm checkbox-primary tag-checkbox">
-                        <span class="text-sm flex-1">{{ tag.name }}</span>
-                        {% if tag.type == 'INDUCTIVE' %}
-                            <span class="badge badge-xs badge-success">Inductivo</span>
-                        {% endif %}
-                        <span class="badge badge-xs" 
-                              style="background-color: {{ tag.color }}70; border: 1px solid {{ tag.color }};">
-                        </span>
-                    </label>
-                    {% empty %}
-                    <div class="text-center text-gray-400 py-4 text-xs">
-                        No hay etiquetas disponibles
+                <div class="p-6 space-y-5">
+                    
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Selected Fragment</label>
+                        <div class="relative">
+                            <textarea id="selected-text" 
+                                      class="textarea textarea-bordered w-full h-24 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 bg-yellow-50/50 border-yellow-200 text-gray-800 font-serif italic text-sm leading-relaxed resize-none rounded-xl" 
+                                      readonly></textarea>
+                            <div class="absolute top-2 right-2 text-yellow-400 opacity-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </div>
+                        </div>
                     </div>
-                    {% endfor %}
+
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-end">
+                            <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assign Tags</label>
+                            <span class="text-[10px] text-primary font-medium" id="tags-counter">0 selected</span>
+                        </div>
+                        
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            </div>
+                            <input type="text" 
+                                   id="tag-search-input"
+                                   class="input input-sm input-bordered w-full pl-9 pr-8 rounded-lg bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 transition-colors" 
+                                   placeholder="Search tags..."
+                                   autocomplete="off">
+                            <button type="button" id="clear-search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        <div id="tags-list-container" class="border border-gray-200 rounded-xl h-48 overflow-y-auto custom-scroll p-1">
+                            {% for tag in available_tags %}
+                            <label class="tag-item flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors group"
+                                   data-tag-name="{{ tag.name|lower }}"
+                                   data-tag-id="{{ tag.id }}">
+                                
+                                <input type="checkbox" 
+                                       name="tags" 
+                                       value="{{ tag.id }}"
+                                       class="checkbox checkbox-sm rounded border-gray-300 checked:border-blue-500 [--chkbg:theme(colors.blue.500)] tag-checkbox">
+                                
+                                <span class="w-3 h-3 rounded-full shadow-sm ring-1 ring-black/5" 
+                                      style="background-color: {{ tag.color }};"></span>
+                                
+                                <div class="flex-1 flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ tag.name }}</span>
+                                    {% if tag.type == 'INDUCTIVE' %}
+                                        <span class="text-[9px] uppercase tracking-wider font-bold text-gray-400 bg-gray-100 px-1.5 rounded">Inductive</span>
+                                    {% endif %}
+                                </div>
+                            </label>
+                            {% empty %}
+                            <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                                <span class="text-xs">No tags available</span>
+                            </div>
+                            {% endfor %}
+
+                            <div id="no-tags-message" class="hidden flex-col items-center justify-center h-full text-gray-400 py-4">
+                                <p class="text-sm font-medium text-gray-500">No tags found</p>
+                                <p class="text-xs">Try a different search term</p>
+                            </div>
+                        </div>
+
+                        <button type="button" 
+                                id="show-inductive-tag-form-btn"
+                                class="btn btn-sm btn-ghost w-full text-gray-500 font-normal hover:bg-gray-100 border border-dashed border-gray-300 normal-case gap-2 h-9 mt-1">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            Create new inductive tag
+                        </button>
+                    </div>
                 </div>
-                
-                <!-- Mensaje cuando no hay resultados -->
-                <div id="no-tags-message" class="hidden text-center text-gray-400 py-4 text-xs border rounded mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    No se encontraron etiquetas
-                </div>
-                
-                <!-- ✅ Botón para crear tag inductivo (FUERA del form de quote) -->
-                <div class="mt-2">
-                    <button type="button" 
-                            id="show-inductive-tag-form-btn"
-                            class="btn btn-ghost btn-sm btn-block text-secondary justify-start">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Crear nuevo tag inductivo
+
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3 mt-auto">
+                    <button type="button" class="btn btn-sm btn-ghost text-gray-600 font-normal hover:bg-gray-200" onclick="quote_modal.close()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-primary text-white border-none shadow-sm font-medium px-6">
+                        Save Quotation
                     </button>
                 </div>
+            </form>
+            
+            <div id="inductive-form-wrapper" class="hidden border-t border-gray-100 bg-gray-50 p-4">
+                 {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=paper.extraction_phase %}
             </div>
-
-            <div class="modal-action">
-                <button type="button" class="btn btn-sm" onclick="quote_modal.close()">Cancelar</button>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Guardar
-                </button>
-            </div>
-        </form>
-        
-        <!-- ✅ FUERA del form de quote - Formulario de tag inductivo -->
-        {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_form.html' with phase=paper.extraction_phase %}
+        </div>
     </div>
 </dialog>
 
-<!-- Estilos -->
 <style>
-.tag-item {
-    transition: all 0.2s ease;
-}
-
-.tag-item:hover {
-    transform: translateX(2px);
-}
-
-/* Highlight del input de búsqueda */
-#tag-search-input:focus {
-    border-color: hsl(var(--p));
-    box-shadow: 0 0 0 3px hsl(var(--p) / 0.1);
-}
-
-/* Scrollbar personalizado para lista de tags */
-#tags-list-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-#tags-list-container::-webkit-scrollbar-track {
-    background: hsl(var(--b2));
-}
-
-#tags-list-container::-webkit-scrollbar-thumb {
-    background: hsl(var(--bc) / 0.3);
-    border-radius: 3px;
-}
-
-#tags-list-container::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--bc) / 0.5);
-}
-
-/* Animación de fade para mensaje de "no encontrado" */
-#no-tags-message {
-    animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+/* Smooth Scrollbar for the Tag List */
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>
 
-<!-- ✅ Script de filtrado (inline) -->
 <script>
 (function() {
     const modal = document.getElementById('quote_modal');
@@ -163,10 +119,11 @@
     const tagsContainer = document.getElementById('tags-list-container');
     const noTagsMessage = document.getElementById('no-tags-message');
     const tagsCounter = document.getElementById('tags-counter');
+    const inductiveBtn = document.getElementById('show-inductive-tag-form-btn');
 
     if (!searchInput || !tagsContainer) return;
 
-    // Filtrar tags
+    // Filter Logic
     searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
         const tagItems = tagsContainer.querySelectorAll('.tag-item');
@@ -174,9 +131,7 @@
 
         tagItems.forEach(item => {
             const tagName = item.dataset.tagName;
-            const matches = tagName.includes(searchTerm);
-            
-            if (matches) {
+            if (tagName.includes(searchTerm)) {
                 item.style.display = 'flex';
                 visibleCount++;
             } else {
@@ -184,14 +139,16 @@
             }
         });
 
+        // Toggle Empty State
         if (visibleCount === 0 && searchTerm !== '') {
-            tagsContainer.classList.add('hidden');
             noTagsMessage.classList.remove('hidden');
+            noTagsMessage.classList.add('flex');
         } else {
-            tagsContainer.classList.remove('hidden');
             noTagsMessage.classList.add('hidden');
+            noTagsMessage.classList.remove('flex');
         }
 
+        // Toggle Clear Button
         if (searchTerm) {
             clearBtn.classList.remove('hidden');
         } else {
@@ -199,20 +156,28 @@
         }
     });
 
-    // Limpiar búsqueda
+    // Clear Search
     clearBtn.addEventListener('click', function() {
         searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
         searchInput.focus();
     });
 
-    // Actualizar contador
+    // Update Counter
     function updateTagsCounter() {
-        const checkboxes = tagsContainer.querySelectorAll('.tag-checkbox:checked');
-        const count = checkboxes.length;
-        tagsCounter.textContent = count === 0 ? '0 seleccionadas' : 
-                                  count === 1 ? '1 seleccionada' : 
-                                  `${count} seleccionadas`;
+        const checkedCount = tagsContainer.querySelectorAll('.tag-checkbox:checked').length;
+        tagsCounter.textContent = checkedCount === 0 ? '0 selected' : 
+                                  checkedCount === 1 ? '1 selected' : 
+                                  `${checkedCount} selected`;
+        
+        // Visual flair
+        if(checkedCount > 0) {
+            tagsCounter.classList.add('text-blue-700', 'font-bold');
+            tagsCounter.classList.remove('text-gray-400');
+        } else {
+            tagsCounter.classList.remove('text-blue-700', 'font-bold');
+            tagsCounter.classList.add('text-gray-400');
+        }
     }
 
     tagsContainer.addEventListener('change', function(e) {
@@ -221,16 +186,21 @@
         }
     });
     
-    // ✅ Limpiar al abrir modal
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) return;
-        setTimeout(() => {
-            if (modal.open) {
-                searchInput.value = '';
-                clearBtn.classList.add('hidden');
-                updateTagsCounter();
+    // Reset Modal on Open
+    // Note: Assuming logic elsewhere calls quote_modal.showModal()
+    // We attach a mutation observer or rely on the click trigger to reset
+    
+    // Logic for Inductive Form Toggle (Optional, depends on your included template)
+    if(inductiveBtn) {
+        inductiveBtn.addEventListener('click', function() {
+            const wrapper = document.getElementById('inductive-form-wrapper');
+            if(wrapper) {
+                wrapper.classList.toggle('hidden');
+                // Scroll to bottom
+                modal.querySelector('.modal-box').scrollTop = modal.querySelector('.modal-box').scrollHeight;
             }
-        }, 100);
-    });
+        });
+    }
+
 })();
 </script>

@@ -10,6 +10,7 @@ from .normalization_models import (
 )
 from .theme_discovery_models import ThemeDiscoveryProposal
 from .trace_models import AnalysisTrace
+from .phase_models import InterpretationPhase
 
 __all__ = [
     'Theme',
@@ -22,4 +23,5 @@ __all__ = [
     'NormalizedCode',
     'ThemeDiscoveryProposal',
     'AnalysisTrace',
+    'InterpretationPhase',
 ]
