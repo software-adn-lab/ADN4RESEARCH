@@ -47,9 +47,10 @@ function loadPDF(paperId, pdfUrl) {
     if (!canvas) return;
     
     const loadingTask = pdfjsLib.getDocument(url);
-    loadingTask.promise.then(pdf => {
+    loadingTask.promise.then(async pdf => {
         pdfInstances[paperId] = pdf;
-        zoomLevels[paperId] = 1.0;
+        zoomLevels[paperId] = await getFitScale(paperId, pdf);
+        updateZoomDisplay(paperId);
         renderAllPages(paperId);
     }).catch(error => {
         console.error('Error loading PDF:', error);
@@ -58,6 +59,25 @@ function loadPDF(paperId, pdfUrl) {
             container.innerHTML = '<div class="flex items-center justify-center h-full text-error"><p>Error loading PDF</p></div>';
         }
     });
+}
+
+async function getFitScale(paperId, pdf) {
+    const container = document.getElementById(`pdf-scroll-container-${paperId}`);
+    if (!container) {
+        return 1.0;
+    }
+
+    const containerWidth = container.clientWidth;
+    if (!containerWidth) {
+        return 1.0;
+    }
+
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.0 });
+    const padding = 32; // matches p-4 in pages container
+    const availableWidth = Math.max(containerWidth - padding, 320);
+    const scale = availableWidth / viewport.width;
+    return Math.min(Math.max(scale, 0.6), 3.0);
 }
 
 function renderAllPages(paperId) {
@@ -223,6 +243,8 @@ function saveDecisionAndNotes() {
 }
 
 function showPaperDetail(paperId) {
+    setFulltextView('detail');
+
     // Hide all paper viewers
     document.querySelectorAll('.pdf-viewer-content').forEach(el => {
         el.classList.add('hidden');
@@ -232,6 +254,15 @@ function showPaperDetail(paperId) {
     const paperViewer = document.getElementById('paper-' + paperId);
     if (paperViewer) {
         paperViewer.classList.remove('hidden');
+    }
+
+    // Update decision panel
+    document.querySelectorAll('.decision-panel-content').forEach(el => {
+        el.classList.add('hidden');
+    });
+    const decisionPanel = document.getElementById('decision-' + paperId);
+    if (decisionPanel) {
+        decisionPanel.classList.remove('hidden');
     }
     currentPaperId = paperId;
     
@@ -248,12 +279,48 @@ function showPaperDetail(paperId) {
         const pdfUrl = paperItem.dataset.pdfUrl;
         if (pdfUrl && !pdfInstances[paperId]) {
             loadPDF(paperId, pdfUrl);
+        } else if (pdfInstances[paperId]) {
+            getFitScale(paperId, pdfInstances[paperId]).then(scale => {
+                zoomLevels[paperId] = scale;
+                updateZoomDisplay(paperId);
+                renderAllPages(paperId);
+            });
         }
     }
 }
 
+function setFulltextView(view) {
+    const listView = document.getElementById('fulltext-list-view');
+    const detailView = document.getElementById('fulltext-detail-view');
+    if (!listView || !detailView) {
+        return;
+    }
+    if (view === 'detail') {
+        listView.classList.add('hidden');
+        detailView.classList.remove('hidden');
+    } else {
+        detailView.classList.add('hidden');
+        listView.classList.remove('hidden');
+    }
+}
+
+function showListView() {
+    setFulltextView('list');
+}
+
 // Select first paper on load
 document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.paper-item').forEach(item => {
+        item.addEventListener('click', event => {
+            const paperId = item.dataset.paperId;
+            if (!paperId) {
+                return;
+            }
+            event.preventDefault();
+            showPaperDetail(paperId);
+        });
+    });
+
     const params = new URLSearchParams(window.location.search);
     const paperFromUrl = params.get('paper');
     let target = null;
@@ -265,9 +332,11 @@ document.addEventListener('DOMContentLoaded', function() {
         target = document.querySelector('.paper-item');
     }
     
-    if (target) {
+    if (target && paperFromUrl) {
         const paperId = target.dataset.paperId;
         showPaperDetail(paperId);
+    } else {
+        setFulltextView('list');
     }
 });
 
