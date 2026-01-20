@@ -53,6 +53,23 @@ def review_research_question_action(request, project_id, project):
             justification=justification,
             user_id=request.user.id
         )
+        
+        # Send notification to question author
+        try:
+            from apps.notification.models import Notification
+            question = ResearchQuestionSelector.get_by_id(int(question_id), request.user)
+            if question and question.researcher_id != request.user.id:
+                Notification.objects.create(
+                    recipient_id=question.researcher_id,
+                    sender=request.user,
+                    type='RESEARCH_QUESTION_REVIEWED',
+                    title=f'Research Question {verdict.capitalize()}',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has {verdict.lower()} your research question.',
+                    project_id=project_id
+                )
+        except Exception as e:
+            pass  
+        
         return JsonResponse({'status': 'success', 'message': 'Question reviewed successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -66,6 +83,28 @@ def consolidate_discussion_stage_action(request, project_id, project):
             project_id=project_id,
             user=request.user
         )
+        
+        # Notify all project members
+        try:
+            from apps.notification.models import Notification
+            from apps.project.api.providers import ProjectManagementProvider
+            
+            provider = ProjectManagementProvider()
+            members = provider.get_project_member_users(project_id)
+            
+            for member in members:
+                if member.id != request.user.id:  # Don't notify the person who consolidated
+                    Notification.objects.create(
+                        recipient=member,
+                        sender=request.user,
+                        type='STAGE_CONSOLIDATED',
+                        title='Discussion Stage Consolidated',
+                        custom_message=f'The Research Questions Discussion stage has been consolidated. Moving to Eligibility Criteria Definition.',
+                        project_id=project_id
+                    )
+        except Exception as e:
+            pass  # Don't fail consolidation if notification fails
+        
         msg = "Stage consolidated successfully! Questions approved and suggestions auto-rejected. Proceeding to Eligibility Criteria Definition."
         messages.success(request, msg, extra_tags='design')
         return redirect(build_design_url(project_id, 'eligibility-criteria/'))

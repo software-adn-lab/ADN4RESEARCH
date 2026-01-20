@@ -103,3 +103,17 @@ class ProjectManagementProvider(IProjectManagement):
             'created_at': project.created_at,
             'end_date': project.end_date
         }
+
+    def get_project_member_users(self, project_id: int) -> List[User]:
+        """
+        Get all project member User objects.
+
+        Returns owner + all researchers as User QuerySet.
+        """
+        from django.db.models import Q
+        
+        project = Project.objects.only('owner').get(pk=project_id)
+        
+        return User.objects.filter(
+            Q(id=project.owner_id) | Q(memberships__project=project)
+        ).distinct()

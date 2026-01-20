@@ -120,6 +120,22 @@ def approve_eligibility_criterion(request, project_id, criterion_id, project):
             request.user,
             justification=justification
         )
+        
+        # Notify criterion author
+        try:
+            from apps.notification.models import Notification
+            if criterion.author_id != request.user.id:
+                Notification.objects.create(
+                    recipient_id=criterion.author_id,
+                    sender=request.user,
+                    type='CRITERION_APPROVED',
+                    title='Eligibility Criterion Approved',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has approved your eligibility criterion.',
+                    project_id=project_id
+                )
+        except Exception:
+            pass
+        
         return JsonResponse({
             'success': True,
             'criterion_id': criterion.id,
@@ -142,6 +158,22 @@ def reject_eligibility_criterion(request, project_id, criterion_id, project):
             request.user,
             justification=justification
         )
+        
+        # Notify criterion author
+        try:
+            from apps.notification.models import Notification
+            if criterion.author_id != request.user.id:
+                Notification.objects.create(
+                    recipient_id=criterion.author_id,
+                    sender=request.user,
+                    type='CRITERION_REJECTED',
+                    title='Eligibility Criterion Rejected',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has rejected your eligibility criterion.',
+                    project_id=project_id
+                )
+        except Exception:
+            pass
+        
         return JsonResponse({
             'success': True,
             'criterion_id': criterion.id,

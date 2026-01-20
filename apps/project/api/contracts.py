@@ -86,3 +86,16 @@ class IProjectManagement(ABC):
             Dict with 'created_at' (datetime) and 'end_date' (date or None)
         """
         pass
+
+    @abstractmethod
+    def get_project_member_users(self, project_id: int) -> List[User]:
+        """
+        Get all project member User objects (owner + researchers).
+
+        Args:
+            project_id: Project ID
+
+        Returns:
+            QuerySet of User objects who are members of the project
+        """
+        pass

@@ -28,7 +28,6 @@ urlpatterns = [
     path('project/<int:project_id>/design/', include('apps.design.urls')),
     path('project/<int:project_id>/selection/', include('apps.selection.urls')),
     path('interpretation/', include('apps.interpretation.urls')),
-    path('project/<int:project_id>/design/', include('apps.design.urls')),  
     path('project/<int:project_id>/extraction/', include('apps.extraction.urls')),
     path('acquisition/', include('apps.acquisition.urls')),
     path('notifications/', include('apps.notification.urls')),

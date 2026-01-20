@@ -68,6 +68,22 @@ def send_research_question_for_review(request, project_id, question_id, project)
 
     try:
         research_question_service.submit_research_question_for_review(question_id)
+        
+        # Notify project owner
+        try:
+            from apps.notification.models import Notification
+            if project.owner_id != request.user.id:
+                Notification.objects.create(
+                    recipient=project.owner,
+                    sender=request.user,
+                    type='RESEARCH_QUESTION_SUBMITTED_FOR_REVIEW',
+                    title='New Research Question for Review',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has submitted a research question for your review.',
+                    project=project
+                )
+        except Exception:
+            pass
+        
     except QuestionSubmissionError as e:
         messages.warning(request, str(e), extra_tags='design')
 

@@ -242,7 +242,24 @@ def approve_strategy(request, project_id, strategy_id, project):
             SearchStrategy.Status.APPROVED,
             request.user,
             justification=justification
-        )
+        )        
+
+        # Notify strategy creator
+        try:
+            from apps.notification.models import Notification
+            strategy_dto = SearchStrategySelector.get_by_id(strategy_id)
+            if strategy_dto and strategy_dto.created_by_id != request.user.id:
+                Notification.objects.create(
+                    recipient_id=strategy_dto.created_by_id,
+                    sender=request.user,
+                    type='STRATEGY_APPROVED',
+                    title='Search Strategy Approved',
+                    custom_message=f'{request.user.get_full_name() or request.user.username} has approved your search strategy.',
+                    project_id=project_id
+                )
+        except Exception:
+            pass
+        
         messages.success(request, f"Strategy approved successfully!", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
     except Exception as e:
