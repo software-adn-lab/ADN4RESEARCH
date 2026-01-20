@@ -12,7 +12,19 @@
             <p class="text-gray-600">{{ project.title }}</p>
         </div>
         <div class="flex items-center space-x-2">
-            <span class="badge {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-success{% elif selection_phase.screening_status == 'COMPLETED' %}badge-info{% else %}badge-neutral{% endif %}">
+            {% if is_owner and can_finalize %}
+            <form method="post" action="{% url 'selection:finalize_screening' project.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm px-2 text-white font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Finalize Screening
+                </button>
+            </form>
+            {% endif %}
+            <span class="badge uppercase font-bold text-white {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
+                  {% if selection_phase.screening_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.screening_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
                 {{ selection_phase.get_screening_status_display }}
             </span>
             {% if selection_phase.end_date %}
@@ -105,7 +117,10 @@
                             <form method="post" action="{% url 'selection:send_screening_reminder' project.id %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="researcher_id" value="{{ item.researcher.id }}">
-                                <button type="submit" class="btn btn-xs btn-outline btn-warning" title="Send reminder">
+                                <button type="submit" class="btn btn-xs btn-outline btn-warning gap-1" title="Send reminder">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 2a6 6 0 00-6 6v3.586L3.293 13.293A1 1 0 004 15h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a2 2 0 001.995-1.85L12 16H8a2 2 0 001.85 1.995L10 18z" />
+                                    </svg>
                                     Remind
                                 </button>
                             </form>
@@ -153,8 +168,15 @@
                 {% if is_owner %}
                     {% if phase_mode == 'en_curso' %}
                     <!-- Mode: en_curso - Distribution and reminders -->
-                    <button type="button" class="btn btn-success btn-block mt-6" onclick="document.getElementById('distribute-modal').showModal()">
-                        DISTRIBUTE PAPERS
+                    <button type="button" class="btn btn-block mt-6 {% if selection_phase.screening_distributed %}btn-warning{% else %}btn-success{% endif %}" onclick="document.getElementById('distribute-modal').showModal()">
+                        {% if selection_phase.screening_distributed %}
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            REDISTRIBUTE PAPERS
+                        {% else %}
+                            DISTRIBUTE PAPERS
+                        {% endif %}
                     </button>
                     {% endif %}
                 {% endif %}
@@ -163,19 +185,6 @@
     </div>
 
 
-    {% if is_owner and can_finalize %}
-    <div class="flex justify-end mt-6">
-        <form method="post" action="{% url 'selection:finalize_screening' project.id %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Finalizar screening
-            </button>
-        </form>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Distribution Modal -->
