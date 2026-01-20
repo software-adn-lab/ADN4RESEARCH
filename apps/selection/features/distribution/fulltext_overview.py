@@ -21,7 +21,7 @@ from apps.selection.models.choices import (
     SubPhaseStatusChoices,
     SelectionStageChoices,
 )
-from apps.selection.features.screening.fulltext.services import FulltextDistributionService
+from apps.selection.features.distribution.services import FulltextDistributionService
 from apps.selection.features.discussion.services import DiscrepancyResolutionService
 
 logger = logging.getLogger(__name__)
@@ -250,21 +250,33 @@ def fulltext_overview(request, project_id):
         studies_by_id = {str(s['id']): s for s in all_studies}
         
         # Get page_count directly from StudyModel (since facade doesn't return it)
-        page_counts_by_id = {}
+        study_models_by_id = {}
         try:
             from apps.acquisition.models import StudyModel
-            study_models = StudyModel.objects.filter(uuid__in=included_paper_ids).values('uuid', 'page_count', 'pdf_path')
-            page_counts_by_id = {str(sm['uuid']): {'page_count': sm['page_count'], 'pdf_path': sm['pdf_path']} for sm in study_models}
+            study_models = StudyModel.objects.filter(uuid__in=included_paper_ids).values(
+                'uuid',
+                'page_count',
+                'pdf_path',
+                'title',
+                'authors',
+                'year'
+            )
+            study_models_by_id = {str(sm['uuid']): sm for sm in study_models}
         except Exception:
             pass
         
         for paper_id in included_paper_ids:
-            study = studies_by_id.get(paper_id)
-            if not study:
-                continue
+            study = studies_by_id.get(paper_id, {})
             
             # Get page_count and pdf_path from direct model query
-            model_data = page_counts_by_id.get(paper_id, {})
+            model_data = study_models_by_id.get(paper_id, {})
+            if not study:
+                study = {
+                    'title': model_data.get('title') or paper_id,
+                    'authors': model_data.get('authors') or 'N/A',
+                    'year': model_data.get('year'),
+                    'pdf_path': model_data.get('pdf_path'),
+                }
             pdf_path = model_data.get('pdf_path') or study.get('pdf_path')
             pdf_url = None
             page_count = model_data.get('page_count')

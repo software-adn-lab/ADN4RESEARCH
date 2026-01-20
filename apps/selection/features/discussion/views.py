@@ -30,7 +30,22 @@ def _get_paper_metadata(selection_phase, paper_ids):
         project_id=selection_phase.project_id,
         include_metadata=True
     )
-    return {str(s['id']): s for s in all_studies}
+    studies_by_id = {str(s['id']): s for s in all_studies}
+
+    if paper_ids:
+        from django.core.files.storage import default_storage
+        for paper_id in paper_ids:
+            study = studies_by_id.get(str(paper_id))
+            if not study:
+                continue
+            pdf_path = study.get('pdf_path')
+            if pdf_path:
+                try:
+                    study['pdf_url'] = default_storage.url(pdf_path)
+                except Exception:
+                    study['pdf_url'] = None
+
+    return studies_by_id
 
 
 def _get_criteria(project_id):

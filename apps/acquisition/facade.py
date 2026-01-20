@@ -124,7 +124,7 @@ class AcquisitionFacade:
         self,
         strategy_dict: Dict[str, Any],
         user: Optional[User] = None,
-        max_results_per_source: int = 25,
+        max_results_per_source: int = 5,
     ) -> PreviewSearchResult:
         """
         Ejecutar búsqueda en modo preview (SIN persistir nada en BD).

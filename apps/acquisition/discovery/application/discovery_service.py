@@ -39,7 +39,7 @@ class DiscoveryService:
         self,
         translation_statuses: dict,
         supported_sources: list[str],
-        max_results_per_source: int = 25,
+        max_results_per_source: int = 5,
         persist: bool = True
     ) -> DiscoveryResult:
         """
@@ -144,7 +144,7 @@ class DiscoveryService:
         executable_sources: list[str],
         translation_statuses: dict,
         no_ejecutadas: dict[str, str],
-        max_results: int = 25
+        max_results: int = 5
     ) -> tuple[list[Study], dict[str, int], dict[str, list[Study]]]:
         """Consultar cada fuente ejecutable en paralelo con manejo robusto de excepciones."""
         all_studies: list[Study] = []

@@ -1,7 +1,11 @@
 from apps.project.facade import get_project_facade
 
-from apps.selection.features.distribution.services import PaperDistributionService, PaperInfo, ResearcherCapacity
-from apps.selection.features.screening.fulltext.services import FulltextDistributionService
+from apps.selection.features.distribution.services import (
+    PaperDistributionService,
+    PaperInfo,
+    ResearcherCapacity,
+    FulltextDistributionService,
+)
 from apps.selection.features.discussion.services import DiscrepancyResolutionService
 from .facade import SelectionFacade, get_selection_facade
 

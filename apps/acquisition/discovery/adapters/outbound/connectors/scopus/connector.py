@@ -95,7 +95,7 @@ class ScopusConnector(IAcademicConnector):
     def search(
         self,
         query: str,
-        max_results: int = 25
+        max_results: int = 5
     ) -> Iterable[Dict[str, Any]]:
         """
         Busca en Scopus usando la mejor estrategia disponible.
