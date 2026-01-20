@@ -8,7 +8,7 @@ import logging
 from typing import List, Dict, Any
 import requests
 
-from .search_strategy import SearchStrategy
+from .search_strategy import SearchStrategy, SearchResult
 from apps.acquisition.discovery.infrastructure.http import HttpClient
 from apps.acquisition.discovery.infrastructure.normalization import IeeeResultNormalizer
 
@@ -79,7 +79,7 @@ class IeeeApiStrategy(SearchStrategy):
             logger.debug(f"IEEE API not accessible: {e}")
             return False
     
-    def execute(self, query: str, max_results: int) -> List[Dict[str, Any]]:
+    def execute(self, query: str, max_results: int) -> SearchResult:
         """Execute search using IEEE REST API.
         
         Performs paginated search through the IEEE API and normalizes results.
@@ -89,13 +89,16 @@ class IeeeApiStrategy(SearchStrategy):
             max_results: Maximum number of results to return
             
         Returns:
-            List of normalized result dictionaries
+            SearchResult with results list and total_available count
             
         Raises:
             requests.RequestException: If API requests fail
             ValueError: If API returns non-JSON response
         """
         logger.info(f"Executing IEEE API search: '{query}' (max: {max_results})")
+        
+        # Track total available (thread-safe: local variable, not instance state)
+        total_available: int | None = None
         
         results = []
         page_size = min(max_results, 100)
@@ -147,6 +150,10 @@ class IeeeApiStrategy(SearchStrategy):
             records = data.get('records', [])
             total_records = data.get('totalRecords', 0)
             
+            # Store total available (from API) - only on first page
+            if total_available is None:
+                total_available = total_records
+            
             logger.info(
                 f"Page {page_number}: {len(records)} results "
                 f"(total available: {total_records})"
@@ -170,4 +177,4 @@ class IeeeApiStrategy(SearchStrategy):
             page_number += 1
         
         logger.info(f"IEEE API search completed: {len(results)} results")
-        return results
+        return SearchResult(results=results, total_available=total_available)

@@ -6,9 +6,22 @@ enabling the Strategy pattern for flexible search execution.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SearchResult:
+    """Result of a search operation (thread-safe, no mutable state).
+    
+    Attributes:
+        results: List of normalized result dictionaries
+        total_available: Total results available in the API (None if not provided)
+    """
+    results: List[Dict[str, Any]]
+    total_available: Optional[int] = None
 
 
 class SearchStrategy(ABC):
@@ -23,6 +36,10 @@ class SearchStrategy(ABC):
     - Add new search strategies without modifying existing code
     - Test strategies independently
     - Select the best available strategy at runtime
+    
+    Note:
+        execute() returns a SearchResult dataclass to avoid mutable state
+        that could cause race conditions in concurrent environments.
     """
     
     @abstractmethod
@@ -40,7 +57,7 @@ class SearchStrategy(ABC):
         pass
     
     @abstractmethod
-    def execute(self, query: str, max_results: int) -> List[Dict[str, Any]]:
+    def execute(self, query: str, max_results: int) -> SearchResult:
         """Execute the search using this strategy.
         
         This method performs the actual search and returns normalized results.
@@ -55,7 +72,7 @@ class SearchStrategy(ABC):
             max_results: Maximum number of results to return
             
         Returns:
-            List of normalized result dictionaries
+            SearchResult with results list and total_available count
             
         Raises:
             Exception: If the search fails for any reason

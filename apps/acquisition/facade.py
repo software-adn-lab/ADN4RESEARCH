@@ -51,16 +51,24 @@ class PreviewSearchResult:
         studies: Estudios como dicts simples (sin IDs de BD)
         strategy_dict: Estrategia original (para finalize)
         selected_sources: Fuentes que se consultaron (nombres canónicos)
+        total_por_fuente: Cantidad de estudios retornados por fuente (limitado por max_results)
+        total_available_by_source: Total REAL disponible en la API por fuente (None si no aplica)
     """
     queries_by_source: Dict[str, str]
     total_found: int
     studies: List[Dict[str, Any]]
     strategy_dict: Dict[str, Any]
     selected_sources: Optional[List[str]] = None  # Fuentes usadas (para trazabilidad)
+    total_por_fuente: Optional[Dict[str, int]] = None  # Cantidad limitada por fuente
+    total_available_by_source: Optional[Dict[str, Optional[int]]] = None  # Total real en API
     
     def __post_init__(self):
         if self.selected_sources is None:
             self.selected_sources = list(self.queries_by_source.keys())
+        if self.total_por_fuente is None:
+            self.total_por_fuente = {}
+        if self.total_available_by_source is None:
+            self.total_available_by_source = {}
 
 
 @dataclass
@@ -194,6 +202,8 @@ class AcquisitionFacade:
                 studies=preview_result["studies"],
                 strategy_dict=strategy_dict,
                 selected_sources=normalized_sources,  # Guardar para trazabilidad
+                total_por_fuente=preview_result.get("total_por_fuente", {}),  # ✅ Cantidad limitada
+                total_available_by_source=preview_result.get("total_available_by_source", {}),  # ✅ Total real
             )
 
         except Exception as e:

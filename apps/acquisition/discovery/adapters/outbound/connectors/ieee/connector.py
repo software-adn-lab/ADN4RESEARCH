@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, Any, Optional
+from typing import Iterable, Dict, Any, Optional, List, Tuple
 import logging
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
@@ -7,6 +7,7 @@ from apps.acquisition.discovery.infrastructure.http import HttpClient, RateLimit
 from apps.acquisition.discovery.infrastructure.normalization import IeeeResultNormalizer
 from apps.acquisition.discovery.infrastructure.config import IeeeConfig
 from .strategies import SearchStrategy, IeeeApiStrategy, IeeeWebStrategy
+from .strategies.search_strategy import SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class IeeeConnector(IAcademicConnector):
     - Circuit breaker for fault tolerance
     - Rate limiting to avoid blocking
     - Clean separation of concerns
+    - Thread-safe: no mutable state for total_available
     """
 
     def __init__(
@@ -125,14 +127,14 @@ class IeeeConnector(IAcademicConnector):
         """
         try:
             # Execute search with circuit breaker protection
-            results = self.circuit_breaker.call(
+            search_result = self.circuit_breaker.call(
                 self._search_with_strategy,
                 query,
                 max_results
             )
             
             # Yield results
-            for result in results:
+            for result in search_result.results:
                 yield result
             
             # Apply rate limiting
@@ -145,8 +147,39 @@ class IeeeConnector(IAcademicConnector):
         except Exception as e:
             logger.error(f"Error en búsqueda IEEE: {e}")
             raise
+    
+    def search_with_total(
+        self,
+        query: str,
+        max_results: int = 10
+    ) -> Tuple[List[Dict[str, Any]], Optional[int]]:
+        """
+        Busca en IEEE y retorna resultados con total disponible (thread-safe).
 
-    def _search_with_strategy(self, query: str, max_results: int) -> list:
+        Args:
+            query: Término de búsqueda
+            max_results: Máximo de resultados a retornar
+
+        Returns:
+            Tuple of (results_list, total_available)
+            total_available is None if not provided by API (e.g., web scraping)
+        """
+        try:
+            search_result = self.circuit_breaker.call(
+                self._search_with_strategy,
+                query,
+                max_results
+            )
+            self.rate_limiter.wait()
+            return search_result.results, search_result.total_available
+        except CircuitBreakerOpenError as e:
+            logger.error(f"Circuit breaker open: {e}")
+            return [], None
+        except Exception as e:
+            logger.error(f"Error en búsqueda IEEE: {e}")
+            raise
+
+    def _search_with_strategy(self, query: str, max_results: int) -> SearchResult:
         """
         Select and execute the best available search strategy.
         
@@ -160,7 +193,7 @@ class IeeeConnector(IAcademicConnector):
             max_results: Maximum results to return
             
         Returns:
-            List of normalized results
+            SearchResult with results and total_available
             
         Raises:
             Exception: If no strategy can execute

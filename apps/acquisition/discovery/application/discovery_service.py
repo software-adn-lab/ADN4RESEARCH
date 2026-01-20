@@ -58,7 +58,7 @@ class DiscoveryService:
         executable_sources, no_ejecutadas = self._determine_execution_plan(
             supported_sources, sane_statuses
         )
-        all_studies, total_por_fuente, studies_by_source = self._fetch_studies(
+        all_studies, total_por_fuente, studies_by_source, total_available_by_source = self._fetch_studies(
             executable_sources, sane_statuses, no_ejecutadas, max_results_per_source
         )
         unique_studies = self.deduplicator.deduplicate(all_studies)
@@ -72,7 +72,7 @@ class DiscoveryService:
             logger.info(f"Modo preview: {len(unique_studies)} estudios NO persistidos")
 
         return self._build_result(
-            unique_studies, total_por_fuente, no_ejecutadas, studies_by_source
+            unique_studies, total_por_fuente, no_ejecutadas, studies_by_source, total_available_by_source
         )
 
 
@@ -145,14 +145,19 @@ class DiscoveryService:
         translation_statuses: dict,
         no_ejecutadas: dict[str, str],
         max_results: int = 5
-    ) -> tuple[list[Study], dict[str, int], dict[str, list[Study]]]:
-        """Consultar cada fuente ejecutable en paralelo con manejo robusto de excepciones."""
+    ) -> tuple[list[Study], dict[str, int], dict[str, list[Study]], dict[str, int | None]]:
+        """Consultar cada fuente ejecutable en paralelo con manejo robusto de excepciones.
+        
+        Returns:
+            tuple: (all_studies, total_por_fuente, studies_by_source, total_available_by_source)
+        """
         all_studies: list[Study] = []
         total_por_fuente: dict[str, int] = {}
         studies_by_source: dict[str, list[Study]] = {}
+        total_available_by_source: dict[str, int | None] = {}
 
         if not executable_sources:
-            return all_studies, total_por_fuente, studies_by_source
+            return all_studies, total_por_fuente, studies_by_source, total_available_by_source
 
         with ThreadPoolExecutor(max_workers=len(executable_sources)) as executor:
             future_to_source = {
@@ -169,11 +174,15 @@ class DiscoveryService:
                 source = future_to_source[future]
 
                 try:
-                    converted = future.result()
+                    converted, total_available = future.result()
                     all_studies.extend(converted)
                     total_por_fuente[source] = len(converted)
-                    studies_by_source[source] = converted  # ← Guardar estudios por fuente
-                    logger.info(f"✓ {source}: {len(converted)} estudios obtenidos")
+                    studies_by_source[source] = converted
+                    total_available_by_source[source] = total_available
+                    logger.info(
+                        f"✓ {source}: {len(converted)} estudios obtenidos "
+                        f"(total disponible: {total_available if total_available is not None else 'N/D'})"
+                    )
 
                 except Exception as e:
                     error_msg = f"connection_error: {type(e).__name__}: {str(e)}"
@@ -184,17 +193,30 @@ class DiscoveryService:
                         exc_info=True
                     )
 
-        return all_studies, total_por_fuente, studies_by_source
+        return all_studies, total_por_fuente, studies_by_source, total_available_by_source
 
     def _fetch_single_source(
         self,
         source: str,
         query: str,
         max_results: int
-    ) -> list[Study]:
-        """Consulta una fuente individual y convierte resultados a Study."""
+    ) -> tuple[list[Study], int | None]:
+        """Consulta una fuente individual y convierte resultados a Study.
+        
+        Returns:
+            tuple: (converted_studies, total_available) donde total_available es el
+                   total de resultados disponibles en la API (None si no está disponible).
+        """
         connector = self.connectors[source]
-        raw_results = list(connector.search(query, max_results=max_results))
+        
+        # Use search_with_total for thread-safe access to total_available
+        if hasattr(connector, 'search_with_total'):
+            raw_results, total_available = connector.search_with_total(query, max_results=max_results)
+        else:
+            # Fallback for connectors that don't support search_with_total
+            raw_results = list(connector.search(query, max_results=max_results))
+            total_available = None
+        
         converted: list[Study] = []
 
         for item in raw_results:
@@ -238,16 +260,25 @@ class DiscoveryService:
                 f"{source}: Tipo de resultado inesperado {type(item)}, se descarta"
             )
 
-        return converted
+        return converted, total_available
 
     def _build_result(
         self,
         unique_studies: list[Study],
         total_por_fuente: dict[str, int],
         no_ejecutadas: dict[str, str],
-        studies_by_source: dict[str, list[Study]]
+        studies_by_source: dict[str, list[Study]],
+        total_available_by_source: dict[str, int | None]
     ) -> DiscoveryResult:
-        """Construir el resultado final con summary completo."""
+        """Construir el resultado final con summary completo.
+        
+        Args:
+            unique_studies: Estudios deduplicados
+            total_por_fuente: Cantidad limitada retornada por fuente
+            no_ejecutadas: Fuentes no ejecutadas con razón
+            studies_by_source: Estudios agrupados por fuente
+            total_available_by_source: Total disponible en la API por fuente (None si no aplica)
+        """
         total_bruto = sum(total_por_fuente.values())
         resultado = DISCOVERY_RESULT_COMPLETE if not no_ejecutadas else DISCOVERY_RESULT_PARTIAL
 
@@ -256,8 +287,9 @@ class DiscoveryService:
             "total_bruto": total_bruto,
             "total_unicos": len(unique_studies),
             "total_por_fuente": total_por_fuente,
+            "total_available_by_source": total_available_by_source,  # ← Total real disponible en API
             "no_ejecutadas": no_ejecutadas,
-            "studies_by_source": studies_by_source,  # ← Agregar para orchestrator
+            "studies_by_source": studies_by_source,
         }
 
         return DiscoveryResult(studies=unique_studies, summary=summary)

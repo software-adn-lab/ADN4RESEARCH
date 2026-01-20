@@ -7,7 +7,7 @@ web automation when the API is not accessible or credentials are needed.
 import logging
 from typing import List, Dict, Any
 
-from .search_strategy import SearchStrategy
+from .search_strategy import SearchStrategy, SearchResult
 from apps.acquisition.discovery.infrastructure.normalization import ScopusResultNormalizer
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class ScopusWebStrategy(SearchStrategy):
         
         return has_credentials
     
-    def execute(self, query: str, max_results: int) -> List[Dict[str, Any]]:
+    def execute(self, query: str, max_results: int) -> SearchResult:
         """Execute search using Playwright web scraping.
         
         This method delegates to the existing ScopusPlaywrightConnector
@@ -81,7 +81,7 @@ class ScopusWebStrategy(SearchStrategy):
             max_results: Maximum number of results to return
             
         Returns:
-            List of normalized result dictionaries
+            SearchResult with results list (total_available is None for web scraping)
             
         Raises:
             Exception: If web scraping fails
@@ -103,7 +103,8 @@ class ScopusWebStrategy(SearchStrategy):
             results = list(connector.search(query, max_results=max_results))
             
             logger.info(f"Scopus web scraping completed: {len(results)} results")
-            return results
+            # Web scraping doesn't provide total_available
+            return SearchResult(results=results, total_available=None)
             
         finally:
             # Always close the connector to release browser resources

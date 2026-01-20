@@ -1,11 +1,12 @@
 import logging
-from typing import Dict, List, Any, Iterable, Optional
+from typing import Dict, List, Any, Iterable, Optional, Tuple
 
 from apps.acquisition.discovery.domain.interfaces.i_academic_connector import IAcademicConnector
 from apps.acquisition.discovery.infrastructure.http import HttpClient, RateLimiter
 from apps.acquisition.discovery.infrastructure.normalization import ScopusResultNormalizer
 from apps.acquisition.discovery.infrastructure.config import ScopusConfig
 from .strategies import SearchStrategy, ScopusApiStrategy, ScopusWebStrategy
+from .strategies.search_strategy import SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ScopusConnector(IAcademicConnector):
     - Rate limiting to avoid blocking
     - Clean separation of concerns
     - Backward compatible interface
+    - Thread-safe: no mutable state for total_available
     """
 
     def __init__(
@@ -95,7 +97,7 @@ class ScopusConnector(IAcademicConnector):
     def search(
         self,
         query: str,
-        max_results: int = 5
+        max_results: int = 25
     ) -> Iterable[Dict[str, Any]]:
         """
         Busca en Scopus usando la mejor estrategia disponible.
@@ -109,10 +111,10 @@ class ScopusConnector(IAcademicConnector):
         """
         try:
             # Execute search with strategy selection
-            results = self._search_with_strategy(query, max_results)
+            search_result = self._search_with_strategy(query, max_results)
             
             # Yield results
-            for result in results:
+            for result in search_result.results:
                 yield result
             
             # Apply rate limiting
@@ -122,7 +124,31 @@ class ScopusConnector(IAcademicConnector):
             logger.error(f"Error en búsqueda Scopus: {e}")
             raise
     
-    def _search_with_strategy(self, query: str, max_results: int) -> List[Dict[str, Any]]:
+    def search_with_total(
+        self,
+        query: str,
+        max_results: int = 25
+    ) -> Tuple[List[Dict[str, Any]], Optional[int]]:
+        """
+        Busca en Scopus y retorna resultados con total disponible (thread-safe).
+
+        Args:
+            query: Término de búsqueda
+            max_results: Máximo de resultados a retornar
+
+        Returns:
+            Tuple of (results_list, total_available)
+            total_available is None if not provided by API (e.g., web scraping)
+        """
+        try:
+            search_result = self._search_with_strategy(query, max_results)
+            self.rate_limiter.wait()
+            return search_result.results, search_result.total_available
+        except Exception as e:
+            logger.error(f"Error en búsqueda Scopus: {e}")
+            raise
+    
+    def _search_with_strategy(self, query: str, max_results: int) -> SearchResult:
         """
         Select and execute the best available search strategy.
         
@@ -136,7 +162,7 @@ class ScopusConnector(IAcademicConnector):
             max_results: Maximum results to return
             
         Returns:
-            List of normalized results
+            SearchResult with results and total_available
             
         Raises:
             ValueError: If no strategy can execute

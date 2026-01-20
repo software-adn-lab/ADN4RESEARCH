@@ -3,6 +3,7 @@ import json
 from typing import List, Optional
 from django.core.cache import cache
 from apps.acquisition.facade import get_acquisition_facade
+from apps.acquisition.shared.domain.constants import normalize_source_names
 from apps.design.search_strategy.services.nlp.translation_service import TranslationService
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
@@ -34,8 +35,10 @@ class SearchPreviewService:
             json.dumps(strategy.json_definition, sort_keys=True).encode()
         ).hexdigest()
         
-        # INCLUIR FUENTES EN CACHE KEY para evitar mezclar resultados
-        sources_key = ",".join(sorted(selected_sources or ["all"]))
+        # Normalizar fuentes antes de crear cache key para evitar duplicados
+        # "IEEE" y "IEEE Xplore" deben generar la misma clave
+        normalized_sources = normalize_source_names(selected_sources)
+        sources_key = ",".join(sorted(normalized_sources or ["all"]))
         cache_key = f"search_preview:{strategy.id}:{strategy_hash}:{sources_key}"
         
         cached_result = cache.get(cache_key)

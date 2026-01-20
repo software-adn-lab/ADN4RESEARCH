@@ -1,5 +1,7 @@
 {% extends 'base_tabs.html' %}
 {% load static %}
+{% load design_tags %}
+{% load humanize %}
 
 {% block search_string_content %}
 <div class="p-6">
@@ -96,6 +98,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Resumen por Fuente: "X de Y" -->
+    {% if results.total_por_fuente %}
+    <div class="card bg-base-100 border border-base-200 shadow-sm mb-8">
+        <div class="card-body p-4">
+            <h3 class="text-xs font-bold uppercase text-base-content/50 mb-3">Results by Source</h3>
+            <div class="flex flex-wrap gap-4">
+                {% for source, count in results.total_por_fuente.items %}
+                <div class="stat bg-base-200/50 rounded-lg p-3 min-w-[150px]">
+                    <div class="stat-title text-xs font-semibold">{{ source }}</div>
+                    <div class="stat-value text-lg text-primary">
+                        {{ count }}
+                        {% with results.total_available_by_source|get_item:source as available %}
+                            {% if available is not None %}
+                                <span class="text-sm font-normal text-base-content/60">de {{ available|intcomma }}</span>
+                            {% else %}
+                                <span class="text-sm font-normal text-base-content/40">de N/D</span>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="stat-desc text-xs">studies found</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="space-y-3">
         {% for study in studies %}

@@ -217,6 +217,8 @@ class AcquisitionOrchestrator:
         return {
             "queries_by_source": queries_by_source,
             "total_found": discovery_result.total_unique_studies,
+            "total_por_fuente": discovery_result.total_por_fuente,  # ✅ Cantidad limitada
+            "total_available_by_source": discovery_result.total_available_by_source,  # ✅ Total real en API
             "studies": studies_payload,
         }
 

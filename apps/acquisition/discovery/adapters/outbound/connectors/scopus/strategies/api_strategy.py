@@ -9,7 +9,7 @@ import time
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .search_strategy import SearchStrategy
+from .search_strategy import SearchStrategy, SearchResult
 from apps.acquisition.discovery.infrastructure.http import HttpClient
 from apps.acquisition.discovery.infrastructure.normalization import ScopusResultNormalizer
 
@@ -87,7 +87,7 @@ class ScopusApiStrategy(SearchStrategy):
             logger.debug(f"Scopus API not accessible: {e}")
             return False
     
-    def execute(self, query: str, max_results: int) -> List[Dict[str, Any]]:
+    def execute(self, query: str, max_results: int) -> SearchResult:
         """Execute search using Scopus API.
         
         Performs paginated search through the Scopus API and normalizes results.
@@ -97,16 +97,19 @@ class ScopusApiStrategy(SearchStrategy):
             max_results: Maximum number of results to return
             
         Returns:
-            List of normalized result dictionaries
+            SearchResult with results list and total_available count
             
         Raises:
             Exception: If API requests fail
         """
         logger.info(f"Executing Scopus API search: '{query}' (max: {max_results})")
         
+        # Track total available (thread-safe: local variable, not instance state)
+        total_available: int | None = None
+        
         results = []
         start = 0
-        count = min(max_results, 5)  # Scopus API limit per request
+        count = min(max_results, 25)  # Scopus API limit per request
         
         # Format query for Scopus
         if query.strip().startswith("TITLE-ABS-KEY"):
@@ -144,6 +147,10 @@ class ScopusApiStrategy(SearchStrategy):
             search_results = data.get('search-results', {})
             entries = search_results.get('entry', [])
             total_results = int(search_results.get('opensearch:totalResults', 0))
+            
+            # Store total available (from API) - only on first page
+            if total_available is None:
+                total_available = total_results
             
             logger.info(
                 f"Scopus API returned {len(entries)} results "
@@ -190,7 +197,7 @@ class ScopusApiStrategy(SearchStrategy):
             time.sleep(0.5)  # Small delay between pages
         
         logger.info(f"Scopus API search completed: {len(results)} results")
-        return results
+        return SearchResult(results=results, total_available=total_available)
     
     def _fetch_abstracts_parallel(self, scopus_ids: List[str]) -> Dict[str, str]:
         """Fetch abstracts in parallel using ThreadPoolExecutor.

@@ -3,6 +3,18 @@ from django import template
 register = template.Library()
 
 
+@register.filter
+def get_item(dictionary, key):
+    """
+    Accede a un item de un diccionario por clave.
+    
+    Uso en template: {{ my_dict|get_item:"key_name" }}
+    """
+    if dictionary is None:
+        return None
+    return dictionary.get(key)
+
+
 @register.inclusion_tag('partials/status_filter.html')
 def render_status_filter(current_filter=None):
     """
