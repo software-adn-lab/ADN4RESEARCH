@@ -106,6 +106,33 @@ def _get_team_progress(selection_phase, exclude_user, stage='SCREENING'):
     return team_progress
 
 
+def _get_pending_all_paper_ids(selection_phase):
+    """
+    Return paper_ids where all reviewers are still pending (no include/exclude yet).
+    """
+    assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.SCREENING,
+        is_third_reviewer=False
+    )
+    paper_ids = assignments.values_list('paper_id', flat=True).distinct()
+    pending_all = []
+
+    for paper_id in paper_ids:
+        reviews = PaperReview.objects.filter(
+            assignment__selection_phase=selection_phase,
+            assignment__paper_id=paper_id,
+            assignment__stage=AssignmentStageChoices.SCREENING,
+            assignment__is_third_reviewer=False,
+            stage='SCREENING'
+        )
+        has_decision = reviews.exclude(decision=SelectionDecisionChoices.PENDING).exists()
+        if not has_decision:
+            pending_all.append(paper_id)
+
+    return pending_all
+
+
 @login_required
 def screening_overview(request, project_id):
     """
@@ -150,6 +177,19 @@ def screening_overview(request, project_id):
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='SCREENING')
     conflicts_count = len(conflicts)
+
+    pending_all_paper_ids = _get_pending_all_paper_ids(selection_phase)
+    pending_all_count = len(pending_all_paper_ids)
+
+    if (
+        selection_phase.screening_status == SubPhaseStatusChoices.COMPLETED and
+        conflicts_count == 0 and
+        pending_all_count == 0 and
+        selection_phase.discussion_metadata_status != SubPhaseStatusChoices.COMPLETED
+    ):
+        selection_phase.discussion_metadata_status = SubPhaseStatusChoices.COMPLETED
+        selection_phase.current_stage = SelectionStageChoices.FULLTEXT_OVERVIEW
+        selection_phase.save(update_fields=['discussion_metadata_status', 'current_stage'])
     
     # Check if all reviews are complete (no pending)
     all_reviews_complete = True
@@ -179,7 +219,8 @@ def screening_overview(request, project_id):
         'phase_mode': phase_mode,
         'conflicts_count': conflicts_count,
         'all_reviews_complete': all_reviews_complete,
-        'can_finalize': all_reviews_complete and conflicts_count == 0,
+        'can_finalize': selection_phase.screening_distributed and selection_phase.screening_status != SubPhaseStatusChoices.COMPLETED,
+        'pending_all_count': pending_all_count,
     }
     
     return render(request, 'distribution/overview.html', context)
@@ -264,29 +305,28 @@ def screening_bulk_decision(request, project_id):
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     action = request.POST.get('action')
+
+    if selection_phase.screening_metadata_status != SubPhaseStatusChoices.COMPLETED:
+        messages.warning(request, 'Finalize screening before applying bulk decisions.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     if action not in ['include_all', 'exclude_all', 'send_to_discussion']:
         messages.error(request, 'Invalid action')
         return redirect('selection:screening_overview', project_id=project_id)
     
-    # Get all screening assignments with pending reviews
-    all_assignments = PaperAssignment.objects.filter(
+    pending_all_paper_ids = _get_pending_all_paper_ids(selection_phase)
+    if not pending_all_paper_ids:
+        messages.warning(request, 'No papers pending for all reviewers.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    pending_assignments = PaperAssignment.objects.filter(
         selection_phase=selection_phase,
         stage=AssignmentStageChoices.SCREENING,
-        is_third_reviewer=False
+        is_third_reviewer=False,
+        paper_id__in=pending_all_paper_ids
     )
-    
-    pending_assignments = []
-    for assignment in all_assignments:
-        review = PaperReview.objects.filter(
-            assignment=assignment,
-            stage='SCREENING'
-        ).first()
-        
-        if not review or review.decision == SelectionDecisionChoices.PENDING:
-            pending_assignments.append(assignment)
-    
-    count = 0
+
+    count = len(pending_all_paper_ids)
     if action == 'include_all':
         for assignment in pending_assignments:
             PaperReview.objects.update_or_create(
@@ -297,7 +337,6 @@ def screening_bulk_decision(request, project_id):
                     'notes': 'Bulk included by owner'
                 }
             )
-            count += 1
         messages.success(request, f'{count} pending papers marked as INCLUDED')
         
     elif action == 'exclude_all':
@@ -310,13 +349,27 @@ def screening_bulk_decision(request, project_id):
                     'notes': 'Bulk excluded by owner'
                 }
             )
-            count += 1
         messages.success(request, f'{count} pending papers marked as EXCLUDED')
         
     elif action == 'send_to_discussion':
         selection_phase.current_stage = SelectionStageChoices.SCREENING_DISCUSSION
         selection_phase.save()
-        messages.success(request, 'Moved to Screening Discussion phase')
+        messages.success(request, f'{count} pending papers sent to discussion')
+
+    if action in ['include_all', 'exclude_all']:
+        discrepancy_service = DiscrepancyResolutionService(selection_phase)
+        conflicts = discrepancy_service.get_conflicts(stage='SCREENING')
+        pending_all_remaining = _get_pending_all_paper_ids(selection_phase)
+        if (
+            selection_phase.screening_metadata_status == SubPhaseStatusChoices.COMPLETED and
+            not conflicts and
+            not pending_all_remaining
+        ):
+            selection_phase.discussion_metadata_status = SubPhaseStatusChoices.COMPLETED
+            selection_phase.current_stage = SelectionStageChoices.FULLTEXT_OVERVIEW
+            selection_phase.save(update_fields=['discussion_metadata_status', 'current_stage'])
+            messages.success(request, 'Screening ready. Full-text phase is now available.')
+            return redirect('selection:fulltext_overview', project_id=project_id)
     
     return redirect('selection:screening_overview', project_id=project_id)
 
@@ -368,7 +421,8 @@ def send_screening_reminder(request, project_id):
 def finalize_screening(request, project_id):
     """
     Finalize screening phase and enable fulltext phase.
-    Only possible when all reviews are complete and all conflicts are resolved.
+    Owner can finalize at any time. Full-text becomes available only when
+    pending-all papers are decided and discussions are resolved.
     """
     project = get_object_or_404(Project, id=project_id)
     
@@ -378,38 +432,26 @@ def finalize_screening(request, project_id):
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
-    # Check for unresolved conflicts
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='SCREENING')
-    
-    if conflicts:
-        messages.error(request, f'Cannot finalize: {len(conflicts)} unresolved conflicts remain. Go to Discussion to resolve them.')
-        return redirect('selection:screening_overview', project_id=project_id)
-    
-    # Check for pending reviews
-    all_assignments = PaperAssignment.objects.filter(
-        selection_phase=selection_phase,
-        stage=AssignmentStageChoices.SCREENING,
-        is_third_reviewer=False
-    )
-    
-    for assignment in all_assignments:
-        review = PaperReview.objects.filter(
-            assignment=assignment,
-            stage='SCREENING'
-        ).first()
-        if not review or review.decision == SelectionDecisionChoices.PENDING:
-            messages.error(request, 'Cannot finalize: Some reviews are still pending.')
-            return redirect('selection:screening_overview', project_id=project_id)
-    
-    # Finalize screening
+    pending_all_paper_ids = _get_pending_all_paper_ids(selection_phase)
+
+    # Finalize screening reviews
     selection_phase.screening_metadata_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.discussion_metadata_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.current_stage = SelectionStageChoices.FULLTEXT_OVERVIEW
     selection_phase.save()
-    
-    messages.success(request, 'Screening phase finalized! Full-text phase is now available.')
-    return redirect('selection:fulltext_overview', project_id=project_id)
+
+    if not conflicts and not pending_all_paper_ids:
+        selection_phase.discussion_metadata_status = SubPhaseStatusChoices.COMPLETED
+        selection_phase.current_stage = SelectionStageChoices.FULLTEXT_OVERVIEW
+        selection_phase.save(update_fields=['discussion_metadata_status', 'current_stage'])
+        messages.success(request, 'Screening finalized! Full-text phase is now available.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    messages.warning(
+        request,
+        'Screening finalized. Resolve discussions and decide pending papers before moving to full-text.'
+    )
+    return redirect('selection:screening_overview', project_id=project_id)
 
 
 @login_required

@@ -21,6 +21,35 @@
         </div>
     </div>
 
+    {% if is_owner and selection_phase.screening_status == 'COMPLETED' and pending_all_count > 0 %}
+    <div class="card bg-base-100 shadow-md border border-warning">
+        <div class="card-body">
+            <h2 class="card-title">Pending papers need a bulk decision</h2>
+            <p class="text-sm text-gray-600">
+                There are {{ pending_all_count }} papers pending for all reviewers.
+                Choose how to handle them.
+            </p>
+            <div class="flex flex-wrap gap-2 pt-2">
+                <form method="post" action="{% url 'selection:screening_bulk_decision' project.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="include_all">
+                    <button type="submit" class="btn btn-success btn-sm">Include all</button>
+                </form>
+                <form method="post" action="{% url 'selection:screening_bulk_decision' project.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="exclude_all">
+                    <button type="submit" class="btn btn-error btn-sm">Exclude all</button>
+                </form>
+                <form method="post" action="{% url 'selection:screening_bulk_decision' project.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="send_to_discussion">
+                    <button type="submit" class="btn btn-warning btn-sm">Send to discussion</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Overview Content -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Your Progress -->

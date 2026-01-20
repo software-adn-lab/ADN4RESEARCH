@@ -188,6 +188,16 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
         try:
             # Get or create extraction phase
             project = get_object_or_404(Project, id=project_id)
+            selection_adapter = get_selection_adapter()
+            if not selection_adapter.is_selection_complete(project_id):
+                messages.warning(
+                    request,
+                    'Selection phase is not complete yet. Resolve discussions and finalize full-text before extraction.'
+                )
+                return redirect(
+                    reverse('selection:fulltext_overview', kwargs={'project_id': project_id})
+                )
+
             phase, created = ExtractionPhase.objects.get_or_create(
                 project_id=project_id,
                 defaults={'status': ExtractionStatusChoices.CONFIG}
@@ -204,7 +214,6 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
                 logger.info(f"[INIT EXTRACTION] Phase already exists for project {project_id}")
             
             # Get approved papers from selection
-            selection_adapter = get_selection_adapter()
             approved_paper_ids = selection_adapter.get_approved_papers(project_id)
             
             if not approved_paper_ids:

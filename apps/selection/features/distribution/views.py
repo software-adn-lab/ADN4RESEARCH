@@ -12,6 +12,7 @@ from .fulltext_overview import (
     download_overview_pdfs,
     upload_overview_pdf,
     send_fulltext_reminder,
+    fulltext_bulk_decision,
     finalize_fulltext,
 )
 
@@ -27,5 +28,6 @@ __all__ = [
     'download_overview_pdfs',
     'upload_overview_pdf',
     'send_fulltext_reminder',
+    'fulltext_bulk_decision',
     'finalize_fulltext',
 ]

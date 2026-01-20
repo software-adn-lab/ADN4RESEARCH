@@ -19,6 +19,7 @@ from apps.selection.models.choices import (
     SelectionDecisionChoices,
     AssignmentStageChoices,
     SubPhaseStatusChoices,
+    SelectionStatusChoices,
     SelectionStageChoices,
 )
 from apps.selection.features.distribution.services import FulltextDistributionService
@@ -141,6 +142,33 @@ def _get_fulltext_team_progress(selection_phase, exclude_user):
         team_progress.append(progress)
     
     return team_progress
+
+
+def _get_pending_all_fulltext_paper_ids(selection_phase):
+    """
+    Return paper_ids where all reviewers are still pending (no include/exclude yet).
+    """
+    assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.FULLTEXT,
+        is_third_reviewer=False
+    )
+    paper_ids = assignments.values_list('paper_id', flat=True).distinct()
+    pending_all = []
+
+    for paper_id in paper_ids:
+        reviews = PaperReview.objects.filter(
+            assignment__selection_phase=selection_phase,
+            assignment__paper_id=paper_id,
+            assignment__stage=AssignmentStageChoices.FULLTEXT,
+            assignment__is_third_reviewer=False,
+            stage='FULL_TEXT'
+        )
+        has_decision = reviews.exclude(decision=SelectionDecisionChoices.PENDING).exists()
+        if not has_decision:
+            pending_all.append(paper_id)
+
+    return pending_all
 
 
 def _get_included_papers_from_screening(selection_phase):
@@ -319,6 +347,20 @@ def fulltext_overview(request, project_id):
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')
     conflicts_count = len(conflicts)
+
+    pending_all_paper_ids = _get_pending_all_fulltext_paper_ids(selection_phase)
+    pending_all_count = len(pending_all_paper_ids)
+
+    if (
+        selection_phase.fulltext_screening_status == SubPhaseStatusChoices.COMPLETED and
+        conflicts_count == 0 and
+        pending_all_count == 0 and
+        selection_phase.discussion_fulltext_status != SubPhaseStatusChoices.COMPLETED
+    ):
+        selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
+        selection_phase.status = SelectionStatusChoices.FINALIZED
+        selection_phase.is_active = False
+        selection_phase.save(update_fields=['discussion_fulltext_status', 'status', 'is_active'])
     
     # Check if all reviews are complete
     all_reviews_complete = True
@@ -355,7 +397,8 @@ def fulltext_overview(request, project_id):
         'phase_mode': phase_mode,
         'conflicts_count': conflicts_count,
         'all_reviews_complete': all_reviews_complete,
-        'can_finalize': all_reviews_complete and conflicts_count == 0 and selection_phase.fulltext_distributed,
+        'can_finalize': selection_phase.fulltext_distributed and selection_phase.fulltext_status != SubPhaseStatusChoices.COMPLETED,
+        'pending_all_count': pending_all_count,
     }
     
     return render(request, 'fulltext_overview/overview.html', context)
@@ -542,10 +585,95 @@ def send_fulltext_reminder(request, project_id):
 
 @login_required
 @require_http_methods(['POST'])
+def fulltext_bulk_decision(request, project_id):
+    """
+    Apply bulk decision to all pending full-text papers.
+    Actions: include_all, exclude_all, send_to_discussion
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can make bulk decisions')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    action = request.POST.get('action')
+
+    if selection_phase.fulltext_screening_status != SubPhaseStatusChoices.COMPLETED:
+        messages.warning(request, 'Finalize full-text before applying bulk decisions.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    if action not in ['include_all', 'exclude_all', 'send_to_discussion']:
+        messages.error(request, 'Invalid action')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    pending_all_paper_ids = _get_pending_all_fulltext_paper_ids(selection_phase)
+    if not pending_all_paper_ids:
+        messages.warning(request, 'No papers pending for all reviewers.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    pending_assignments = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        stage=AssignmentStageChoices.FULLTEXT,
+        is_third_reviewer=False,
+        paper_id__in=pending_all_paper_ids
+    )
+
+    count = len(pending_all_paper_ids)
+    if action == 'include_all':
+        for assignment in pending_assignments:
+            PaperReview.objects.update_or_create(
+                assignment=assignment,
+                stage='FULL_TEXT',
+                defaults={
+                    'decision': SelectionDecisionChoices.INCLUDED,
+                    'notes': 'Bulk included by owner'
+                }
+            )
+        messages.success(request, f'{count} pending papers marked as INCLUDED')
+
+    elif action == 'exclude_all':
+        for assignment in pending_assignments:
+            PaperReview.objects.update_or_create(
+                assignment=assignment,
+                stage='FULL_TEXT',
+                defaults={
+                    'decision': SelectionDecisionChoices.EXCLUDED,
+                    'notes': 'Bulk excluded by owner'
+                }
+            )
+        messages.success(request, f'{count} pending papers marked as EXCLUDED')
+
+    elif action == 'send_to_discussion':
+        selection_phase.current_stage = SelectionStageChoices.FULLTEXT_DISCUSSION
+        selection_phase.save(update_fields=['current_stage'])
+        messages.success(request, f'{count} pending papers sent to discussion')
+        return redirect('selection:fulltext_discussion', project_id=project_id)
+
+    discrepancy_service = DiscrepancyResolutionService(selection_phase)
+    conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')
+    pending_all_remaining = _get_pending_all_fulltext_paper_ids(selection_phase)
+    if (
+        selection_phase.fulltext_screening_status == SubPhaseStatusChoices.COMPLETED and
+        not conflicts and
+        not pending_all_remaining
+    ):
+        selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
+        selection_phase.status = SelectionStatusChoices.FINALIZED
+        selection_phase.is_active = False
+        selection_phase.save(update_fields=['discussion_fulltext_status', 'status', 'is_active'])
+        messages.success(request, 'Full-text ready. You can move to extraction.')
+
+    return redirect('selection:fulltext_overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
 def finalize_fulltext(request, project_id):
     """
     Finalize fulltext phase.
-    Only possible when all reviews are complete and all conflicts are resolved.
+    Owner can finalize at any time. Extraction becomes available only when
+    pending-all papers are decided and discussions are resolved.
     """
     project = get_object_or_404(Project, id=project_id)
     
@@ -555,41 +683,28 @@ def finalize_fulltext(request, project_id):
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
-    # Check for unresolved conflicts
+    selection_phase.fulltext_screening_status = SubPhaseStatusChoices.COMPLETED
+    selection_phase.save(update_fields=['fulltext_screening_status'])
+
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')
-    
-    if conflicts:
-        messages.error(request, f'Cannot finalize: {len(conflicts)} unresolved conflicts remain.')
+    pending_all_paper_ids = _get_pending_all_fulltext_paper_ids(selection_phase)
+
+    if not conflicts and not pending_all_paper_ids:
+        selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
+        selection_phase.status = SelectionStatusChoices.FINALIZED
+        selection_phase.is_active = False
+        selection_phase.save(update_fields=['discussion_fulltext_status', 'status', 'is_active'])
+
+        from apps.selection.services import get_selection_facade
+        facade = get_selection_facade()
+        approved_count = len(facade.get_approved_fulltext_papers(project_id))
+
+        messages.success(request, f'Selection phase completed! {approved_count} papers approved for extraction.')
         return redirect('selection:fulltext_overview', project_id=project_id)
-    
-    # Check for pending reviews
-    all_assignments = PaperAssignment.objects.filter(
-        selection_phase=selection_phase,
-        stage=AssignmentStageChoices.FULLTEXT,
-        is_third_reviewer=False
+
+    messages.warning(
+        request,
+        'Full-text finalized. Resolve discussions and decide pending papers before moving to extraction.'
     )
-    
-    for assignment in all_assignments:
-        review = PaperReview.objects.filter(
-            assignment=assignment,
-            stage='FULL_TEXT'
-        ).first()
-        if not review or review.decision == SelectionDecisionChoices.PENDING:
-            messages.error(request, 'Cannot finalize: Some reviews are still pending.')
-            return redirect('selection:fulltext_overview', project_id=project_id)
-    
-    # Finalize fulltext
-    selection_phase.fulltext_screening_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.discussion_fulltext_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.status = 'FINALIZED'
-    selection_phase.is_active = False
-    selection_phase.save()
-    
-    # Count approved papers
-    from apps.selection.services import get_selection_facade
-    facade = get_selection_facade()
-    approved_count = len(facade.get_approved_fulltext_papers(project_id))
-    
-    messages.success(request, f'Selection phase completed! {approved_count} papers approved for extraction.')
     return redirect('selection:fulltext_overview', project_id=project_id)
