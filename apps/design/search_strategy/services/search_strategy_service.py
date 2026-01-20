@@ -217,8 +217,7 @@ class SearchStrategyService:
 
         # Authorization Check (Review)
         if status in [SearchStrategy.Status.APPROVED, SearchStrategy.Status.REJECTED]:
-            # Reusing review permission from question/phase
-            if not DesignAccessPolicy.can_review_question(user, strategy.research_question.design_phase):
+            if not DesignAccessPolicy.can_review_strategy(user, strategy.research_question.design_phase):
                 raise ValidationError("You do not have permission to review strategies.")
 
         strategy.status = status
