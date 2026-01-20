@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('search-studies-btn');
     const emptyMsg = document.getElementById('empty-canvas-msg');
     const livePreview = document.getElementById('live-string-preview');
+    const sourceCheckboxes = document.querySelectorAll('input[name="search-sources"]');
 
     // Manual Exclusion Inputs
     const manualExclInput = document.getElementById('manual-exclusion-input');
@@ -393,6 +394,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return { main_terms: mainTerms, exclusions: exclusions };
     }
 
+    function collectSelectedSources() {
+        const selected = [];
+        sourceCheckboxes.forEach((checkbox) => {
+            if (checkbox.checked) {
+                selected.push(checkbox.value);
+            }
+        });
+        return selected;
+    }
+
     function loadFromJSON(data) {
         // Limpiar canvas primero
         strategyCanvas.innerHTML = '';
@@ -431,7 +442,15 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    window.location.href = data.redirect_url;
+                    const selectedSources = collectSelectedSources();
+                    let redirectUrl = data.redirect_url;
+                    if (selectedSources.length > 0) {
+                        const params = new URLSearchParams();
+                        selectedSources.forEach(source => params.append('sources', source));
+                        const joinChar = redirectUrl.includes('?') ? '&' : '?';
+                        redirectUrl = `${redirectUrl}${joinChar}${params.toString()}`;
+                    }
+                    window.location.href = redirectUrl;
                 } else {
                     showToast("Error: " + data.error, ToastType.ERROR);
                     if (loader) loader.classList.add('hidden');
