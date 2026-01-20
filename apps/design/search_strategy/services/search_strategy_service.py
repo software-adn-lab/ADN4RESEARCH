@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 
 from apps.design.search_strategy.services.search_string_builder import SearchStringBuilder
 from apps.design.research_question.models.research_question import ResearchQuestion
+from apps.design.design_phase_logic.models.design_phase import DesignPhase
 from django.core.exceptions import ValidationError
 from apps.design.access_control import DesignAccessPolicy
 from django.contrib.auth.models import User
@@ -186,6 +187,9 @@ class SearchStrategyService:
         if not DesignAccessPolicy.can_edit_strategy(user, strategy):
             raise ValidationError("You do not have permission to edit this strategy.")
 
+        # Check if need to notify before updating
+        should_notify = self._should_notify_owner_modification(strategy, user)
+
         new_search_string = self.string_builder.build_from_json(visual_data)
         if strategy.final_search_string == new_search_string and strategy.json_definition == visual_data:
             return strategy
@@ -197,6 +201,10 @@ class SearchStrategyService:
 
         count = self.preview_service.translate_and_preview(visual_data)
         self.create_version_snapshot(strategy.id, user_id, total_found=count)
+
+        # Notify after successful update
+        if should_notify:
+            self._notify_if_owner_action_in_closed_stage(strategy, user)
 
         return strategy
 
@@ -253,6 +261,61 @@ class SearchStrategyService:
             raise ValidationError("At least one search strategy must be approved to consolidate the stage.")
 
         return approved_ids
+
+    def _should_notify_owner_modification(self, strategy: SearchStrategy, user: User) -> bool:
+        """Check if we should notify about owner modification in closed stage."""
+        design_phase = strategy.research_question.design_phase
+        project = design_phase.project
+        
+        # Only notify if user is owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return False
+        
+        # Only notify if stage is closed
+        if design_phase.current_stage == design_phase.DesignStage.SEARCH_STRATEGY:
+            return False
+        
+        # Only notify if strategy is approved
+        if strategy.status != SearchStrategy.Status.APPROVED:
+            return False
+        
+        return True
+
+    def _notify_if_owner_action_in_closed_stage(self, strategy: SearchStrategy, user: User):
+        """Send notification if owner modifies strategy in closed stage."""
+        design_phase = strategy.research_question.design_phase
+        project = design_phase.project
+        
+        # Only notify if owner
+        if not DesignAccessPolicy.is_owner(user, project):
+            return
+        
+        # Only notify if stage is closed
+        if design_phase.current_stage == design_phase.DesignStage.SEARCH_STRATEGY:
+            return
+        
+        # Only notify if approved
+        if strategy.status != SearchStrategy.Status.APPROVED:
+            return
+        
+        try:
+            from apps.notification.models import Notification
+            from apps.project.api.providers import ProjectManagementProvider
+            
+            provider = ProjectManagementProvider()
+            members = provider.get_project_member_users(project.id)
+            
+            for member in members:
+                Notification.objects.create(
+                    recipient=member,
+                    sender=user,
+                    type='OWNER_MODIFIED_APPROVED_STRATEGY',
+                    title='Owner modified search strategy in closed stage',
+                    custom_message=f'The project owner has modified an approved search strategy in a closed stage. Please review the changes for audit purposes.',
+                    project=project
+                )
+        except Exception:
+            pass  # Silent fail on notification errors
 
     def _translate_text(self, text: str) -> str:
         """

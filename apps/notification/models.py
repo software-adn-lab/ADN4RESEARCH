@@ -12,6 +12,9 @@ class Notification(models.Model):
         ('STRATEGY_APPROVED', 'Search Strategy Approved'),
         ('STRATEGY_REJECTED', 'Search Strategy Rejected'),
         ('STAGE_CONSOLIDATED', 'Design Stage Finalized'),
+        ('OWNER_MODIFIED_APPROVED_QUESTION', 'Owner Modified Approved Question in Closed Stage'),
+        ('OWNER_MODIFIED_APPROVED_CRITERION', 'Owner Modified Approved Criterion in Closed Stage'),
+        ('OWNER_MODIFIED_APPROVED_STRATEGY', 'Owner Modified Approved Strategy in Closed Stage'),
         ('REMINDER', 'Review Reminder'),
     ]
     
@@ -65,6 +68,12 @@ class Notification(models.Model):
             return "Your search strategy has been rejected."
         elif self.type == 'STAGE_CONSOLIDATED':
             return "A design stage has been consolidated."
+        elif self.type == 'OWNER_MODIFIED_APPROVED_QUESTION':
+            return "The project owner has modified an approved research question in a closed stage."
+        elif self.type == 'OWNER_MODIFIED_APPROVED_CRITERION':
+            return "The project owner has modified an approved eligibility criterion in a closed stage."
+        elif self.type == 'OWNER_MODIFIED_APPROVED_STRATEGY':
+            return "The project owner has modified an approved search strategy in a closed stage."
         elif self.type == 'REMINDER':
             return "You have pending papers to review."
         else:
