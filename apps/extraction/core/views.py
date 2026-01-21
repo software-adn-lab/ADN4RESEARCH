@@ -139,6 +139,7 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         )
         context['paper_complete_url'] = reverse('extraction:core:paper_complete', kwargs={'project_id': project_id, 'pk': paper.pk})
         context['paper_reopen_url'] = reverse('extraction:core:paper_reopen', kwargs={'project_id': project_id, 'pk': paper.pk})
+        context['phase_is_closed'] = phase.status == ExtractionStatusChoices.CLOSED
 
         return context
     
@@ -294,6 +295,17 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
             pk=pk,
             extraction_phase__project_id=project_id
         )
+        
+        # Check if extraction phase is closed
+        if paper.extraction_phase.status == ExtractionStatusChoices.CLOSED:
+            logger.warning(
+                f"Cannot complete paper: extraction phase is closed, "
+                f"paper_id={paper.id}"
+            )
+            return JsonResponse(
+                {'error': 'Cannot complete paper: the extraction phase is closed. Reopen the phase to continue.'},
+                status=403
+            )
         
         # Validate permissions (view responsibility)
         if not self._can_complete_paper(request.user, paper):
