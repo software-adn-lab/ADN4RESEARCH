@@ -213,7 +213,16 @@ def search_results_view(request, project_id, strategy_id, project):
 
         # Filtro por motor de búsqueda (opcional)
         # Acepta: ?sources=Scopus o ?sources=IEEE o ?sources=Scopus&sources=IEEE
+        # Si no hay parámetros en URL, usar las fuentes guardadas en json_definition
         selected_sources = request.GET.getlist('sources') or None
+        
+        if selected_sources is None:
+            # Usar las fuentes guardadas en la estrategia si existen
+            from apps.design.search_strategy.models import SearchStrategy
+            strategy = SearchStrategy.objects.get(id=strategy_id)
+            saved_sources = strategy.json_definition.get('selected_sources', None)
+            if saved_sources:
+                selected_sources = saved_sources
         
         results_dto = search_strategy_service.get_search_results_dto(strategy_id, selected_sources=selected_sources)
         year_filter = request.GET.get('year')

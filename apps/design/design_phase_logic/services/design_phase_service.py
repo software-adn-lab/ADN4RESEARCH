@@ -99,7 +99,13 @@ class DesignPhaseService:
         # Nota: Esto podría ir en un evento/señal para desacoplar más, pero por ahora es válido aquí.
         for strategy_id in approved_strategy_ids:
             try:
-                preview_result = search_service.get_search_results_dto(strategy_id)
+                # Obtener las fuentes seleccionadas guardadas en json_definition
+                from apps.design.search_strategy.models.search_strategy import SearchStrategy
+                strategy = SearchStrategy.objects.get(id=strategy_id)
+                selected_sources = strategy.json_definition.get('selected_sources', None)
+                
+                # Pasar las fuentes guardadas al preview para que solo busque en esas
+                preview_result = search_service.get_search_results_dto(strategy_id, selected_sources=selected_sources)
                 acquisition_facade.finalize_search(
                     design_strategy_id=strategy_id,
                     preview_result=preview_result,
