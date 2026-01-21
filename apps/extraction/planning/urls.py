@@ -33,6 +33,11 @@ urlpatterns = [
     path('open/', 
          views.PhaseOpenView.as_view(), 
          name='phase_open'),
+    
+    # Phase reopen
+    path('reopen/', 
+         views.PhaseReopenView.as_view(), 
+         name='phase_reopen'),
 
     # Start Interpretation
     path('start-interpretation/',

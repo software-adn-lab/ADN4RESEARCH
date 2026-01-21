@@ -1,10 +1,10 @@
 """
 Views - Taxonomy Bounded Context
-Responsabilidad: Gestión del sistema de etiquetas (tags)
+Responsibility: Tag management system
 
-Vistas basadas en clases (CBV) siguiendo el patrón MVT de Django.
+Class-Based Views (CBV) following Django's MVT pattern.
 
-Referencia Django CBV:
+Reference Django CBV:
 https://docs.djangoproject.com/en/stable/topics/class-based-views/
 https://docs.djangoproject.com/en/stable/ref/class-based-views/
 """
@@ -22,34 +22,34 @@ from .forms import DeductiveTagForm, InductiveTagForm, TagApprovalForm, TagFilte
 from .services import TagDefinitionService, TagApprovalService, TagUsageService
 from .models import Tag, TagTypeChoices, ApprovalStatusChoices
 
-# Importar modelos de otros bounded contexts
+# Import models from other bounded contexts
 from apps.extraction.planning.models import ExtractionPhase, ExtractionStatusChoices
 from apps.extraction.shared.mixins import OwnerRequiredMixin, ProjectMemberRequiredMixin
 
 
 # =============================================================================
-# VISTAS DE CREACIÓN DE TAGS
+# TAG CREATION VIEWS
 # =============================================================================
 
 class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, CreateView):
     """
-    Crear un nuevo tag deductivo.
+    Create a new deductive tag.
     
-    Usa CreateView genérico de Django.
-    La phase se obtiene automáticamente basándose en project_id.
+    Uses Django's generic CreateView.
+    The phase is automatically obtained based on project_id.
     
-    Referencia: 
+    Reference: 
     https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-editing/#createview
     """
     
     form_class = DeductiveTagForm
-    template_name = None  # No necesitamos template porque redirigimos
+    template_name = None  # Template not needed because we redirect
     
     def get_form_kwargs(self):
         """
-        Pasar el proyecto al formulario.
+        Pass the project to the form.
         
-        Referencia: 
+        Reference: 
         https://docs.djangoproject.com/en/stable/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin.get_form_kwargs
         """
         kwargs = super().get_form_kwargs()
@@ -60,7 +60,7 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         if phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
                 self.request,
-                "No se pueden agregar tags en una fase cerrada."
+                "Cannot add tags in a closed phase."
             )
         
         kwargs['project'] = phase.project
@@ -70,15 +70,17 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
     
     def form_valid(self, form):
         """
-        Procesar formulario válido usando el servicio de dominio.
+        Process valid form using the domain service.
+        Then, evaluate if the protocol coverage is 100%.
+        If not fully covered, the phase returns to CONFIG.
         
-        Referencia: 
+        Reference: 
         https://docs.djangoproject.com/en/stable/ref/class-based-views/mixins-editing/#django.views.generic.edit.FormMixin.form_valid
         """
         if self.phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
                 self.request,
-                "No se pueden agregar tags en una fase cerrada."
+                "Cannot add tags in a closed phase."
             )
             return redirect(self.get_success_url())
         
@@ -99,13 +101,16 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
             
             messages.success(
                 self.request,
-                f'Tag deductivo "{tag.name}" creado exitosamente.'
+                f'Deductive tag "{tag.name}" created successfully.'
             )
+            
+            # Evaluate protocol coverage
+            self.phase.evaluate_protocol_coverage_and_update_status()
             
         except Exception as e:
             messages.error(
                 self.request,
-                f'Error creando tag: {str(e)}'
+                f'Error creating tag: {str(e)}'
             )
         
         return redirect(self.get_success_url())
@@ -121,7 +126,7 @@ class TagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
 
 class TagUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, UpdateView):
     """
-    Actualizar un tag existente.
+    Update an existing tag.
     """
 
     model = Tag
@@ -143,7 +148,7 @@ class TagUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         if self.phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
                 self.request,
-                "No se pueden editar tags en una fase cerrada."
+                "Cannot edit tags in a closed phase."
             )
             return redirect(self.get_success_url())
 
@@ -153,14 +158,18 @@ class TagUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
 
         messages.success(
             self.request,
-            f'Tag "{tag.name}" actualizado exitosamente.'
+            f'Tag "{tag.name}" updated successfully.'
         )
+        
+        # Evaluate protocol coverage
+        self.phase.evaluate_protocol_coverage_and_update_status()
+        
         return redirect(self.get_success_url())
 
     def form_invalid(self, form):
         messages.error(
             self.request,
-            'Error en los datos del formulario. Verifica e intenta de nuevo.'
+            'Form data error. Please check and try again.'
         )
         return redirect(self.get_success_url())
 
@@ -175,7 +184,7 @@ class TagUpdateView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
 
 class TagDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
-    Eliminar un tag existente.
+    Delete an existing tag.
     """
 
     http_method_names = ['post']
@@ -187,13 +196,17 @@ class TagDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         if phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
                 request,
-                "No se pueden eliminar tags en una fase cerrada."
+                "Cannot delete tags in a closed phase."
             )
             return redirect(self.get_success_url(phase))
 
         tag_name = tag.name
         tag.delete()
-        messages.success(request, f'Tag "{tag_name}" eliminado.')
+        messages.success(request, f'Tag "{tag_name}" deleted.')
+        
+        # Evaluate protocol coverage
+        phase.evaluate_protocol_coverage_and_update_status()
+        
         return redirect(self.get_success_url(phase))
 
     def get_success_url(self, phase):
@@ -207,20 +220,20 @@ class TagDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
 
 class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, CreateView):
     """
-    Crear un nuevo tag inductivo durante la extracción.
+    Create a new inductive tag during extraction.
     
-    Los tags inductivos:
-    - Se crean con estado PENDING
-    - Tienen visibilidad PRIVATE inicialmente
-    - Solo el creador puede usarlos hasta que sean aprobados
+    Inductive tags:
+    - Are created with PENDING status
+    - Have PRIVATE visibility initially
+    - Only the creator can use them until they are approved
     
-    La phase se obtiene automáticamente basándose en project_id.
+    The phase is automatically obtained based on project_id.
     
-    Esta vista puede ser usada desde:
-    1. El formulario de creación de Quote (inline)
-    2. Un modal/formulario independiente
+    This view can be used from:
+    1. The Quote creation form (inline)
+    2. An independent modal/form
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-editing/#createview
     """
     
@@ -229,10 +242,10 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
     
     def setup(self, request, *args, **kwargs):
         """
-        Configuración inicial de la vista.
-        Carga la fase de extracción antes de procesar.
+        Initial view setup.
+        Loads the extraction phase before processing.
         
-        Referencia:
+        Reference:
         https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#django.views.generic.base.View.setup
         """
         super().setup(request, *args, **kwargs)
@@ -244,7 +257,7 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
         )
     
     def get_form_kwargs(self):
-        """Pasar fase y usuario al formulario."""
+        """Pass phase and user to the form."""
         kwargs = super().get_form_kwargs()
         kwargs['phase'] = self.phase
         kwargs['user'] = self.request.user
@@ -252,9 +265,9 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
     
     def get_context_data(self, **kwargs):
         """
-        Agregar contexto adicional al template.
+        Add additional context to the template.
         
-        Referencia:
+        Reference:
         https://docs.djangoproject.com/en/stable/ref/class-based-views/mixins-simple/#django.views.generic.base.ContextMixin.get_context_data
         """
         context = super().get_context_data(**kwargs)
@@ -264,13 +277,13 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
     
     def form_valid(self, form):
         """
-        Procesar formulario válido usando el servicio de dominio.
+        Process valid form using the domain service.
         """
-        # Validar que la fase no esté cerrada
+        # Validate that the phase is not closed
         if self.phase.status == ExtractionStatusChoices.CLOSED:
             messages.error(
                 self.request,
-                "No se pueden crear tags en una fase cerrada."
+                "Cannot create tags in a closed phase."
             )
             return redirect(self.get_success_url())
         
@@ -286,11 +299,11 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
             
             messages.success(
                 self.request,
-                f'Tag inductivo "{tag.name}" creado. '
-                f'Está pendiente de aprobación pero puedes usarlo en tus extracciones.'
+                f'Inductive tag "{tag.name}" created. '
+                f'It is pending approval but you can use it in your extractions.'
             )
             
-            # Si es una petición AJAX, devolver JSON
+            # If it's an AJAX request, return JSON
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
@@ -301,7 +314,7 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
                         'type': tag.type,
                         'status': tag.status,
                     },
-                    'message': f'Tag "{tag.name}" creado exitosamente.'
+                    'message': f'Tag "{tag.name}" created successfully.'
                 })
             
         except Exception as e:
@@ -313,25 +326,25 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
             
             messages.error(
                 self.request,
-                f'Error creando tag inductivo: {str(e)}'
+                f'Error creating inductive tag: {str(e)}'
             )
         
         return redirect(self.get_success_url())
     
     def form_invalid(self, form):
-        """Manejar errores de validación."""
+        """Handle validation errors."""
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': False,
                 'errors': form.errors
             }, status=400)
         
-        # Para peticiones normales, re-renderizar el formulario
+        # For normal requests, re-render the form
         return super().form_invalid(form)
     
     def get_success_url(self):
-        """URL de redirección tras crear el tag."""
-        # Permitir URL personalizada via query param
+        """Redirection URL after creating the tag."""
+        # Allow custom URL via query param
         next_url = self.request.GET.get('next')
         if next_url:
             return next_url
@@ -346,17 +359,17 @@ class InductiveTagCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, Cre
 
 
 # =============================================================================
-# VISTAS DE LISTADO Y FILTRADO
+# LIST AND FILTER VIEWS
 # =============================================================================
 
 class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
     """
-    Listar todos los tags de una fase con filtros.
+    List all tags of a phase with filters.
     
-    La phase se obtiene automáticamente basándose en project_id.
-    Muestra tags agrupados por tipo y estado.
+    The phase is automatically obtained based on project_id.
+    Shows tags grouped by type and status.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-display/#listview
     """
     
@@ -366,7 +379,7 @@ class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
     paginate_by = 20
     
     def setup(self, request, *args, **kwargs):
-        """Cargar la fase de extracción."""
+        """Load the extraction phase."""
         super().setup(request, *args, **kwargs)
         
         project_id = self.kwargs.get('project_id')
@@ -377,9 +390,9 @@ class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
     
     def get_queryset(self):
         """
-        Filtrar tags según parámetros y permisos del usuario.
+        Filter tags according to parameters and user permissions.
         
-        Referencia:
+        Reference:
         https://docs.djangoproject.com/en/stable/ref/class-based-views/mixins-multiple-object/#django.views.generic.list.MultipleObjectMixin.get_queryset
         """
         queryset = (
@@ -389,21 +402,21 @@ class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
             .select_related('created_by', 'rq_related')
         )
         
-        # Aplicar filtros desde query params
+        # Apply filters from query params
         self.filter_form = TagFilterForm(self.request.GET)
         
         if self.filter_form.is_valid():
-            # Filtrar por tipo
+            # Filter by type
             tag_type = self.filter_form.cleaned_data.get('type')
             if tag_type:
                 queryset = queryset.filter(type=tag_type)
             
-            # Filtrar por estado
+            # Filter by status
             status = self.filter_form.cleaned_data.get('status')
             if status:
                 queryset = queryset.filter(status=status)
             
-            # Buscar por nombre
+            # Search by name
             search = self.filter_form.cleaned_data.get('search')
             if search:
                 queryset = queryset.filter(name__icontains=search)
@@ -411,13 +424,13 @@ class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
         return queryset.order_by('type', '-created_at')
     
     def get_context_data(self, **kwargs):
-        """Agregar contexto adicional."""
+        """Add additional context."""
         context = super().get_context_data(**kwargs)
         context['phase'] = self.phase
         context['project'] = self.phase.project
         context['filter_form'] = self.filter_form
         
-        # Contar tags por estado para badges
+        # Count tags by status for badges
         all_tags = Tag.objects.for_phase(self.phase.id)
         context['stats'] = {
             'total': all_tags.count(),
@@ -431,11 +444,11 @@ class TagListView(LoginRequiredMixin, ProjectMemberRequiredMixin, ListView):
 
 class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, ListView):
     """
-    Listar tags inductivos pendientes de aprobación.
+    List inductive tags pending approval.
     
-    Solo accesible por el líder/owner del proyecto.
+    Only accessible by the project leader/owner.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/generic-display/#listview
     """
     
@@ -444,7 +457,7 @@ class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerR
     context_object_name = 'pending_tags'
     
     def setup(self, request, *args, **kwargs):
-        """Cargar la fase de extracción."""
+        """Load the extraction phase."""
         super().setup(request, *args, **kwargs)
         
         project_id = self.kwargs.get('project_id')
@@ -454,12 +467,12 @@ class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerR
         )
     
     def get_queryset(self):
-        """Obtener solo tags inductivos pendientes."""
+        """Get only pending inductive tags."""
         service = TagApprovalService()
         return service.get_pending_tags_for_phase(self.phase.id)
     
     def get_context_data(self, **kwargs):
-        """Agregar contexto adicional."""
+        """Add additional context."""
         context = super().get_context_data(**kwargs)
         context['phase'] = self.phase
         context['project'] = self.phase.project
@@ -468,17 +481,17 @@ class PendingTagsListView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerR
 
 
 # =============================================================================
-# VISTAS DE APROBACIÓN/RECHAZO
+# APPROVAL/REJECTION VIEWS
 # =============================================================================
 
 class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
-    Aprobar un tag inductivo.
+    Approve an inductive tag.
     
-    Solo accesible por el líder/owner del proyecto.
-    Cambia el estado a APPROVED y visibilidad a PUBLIC.
+    Only accessible by the project leader/owner.
+    Changes status to APPROVED and visibility to PUBLIC.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
@@ -486,11 +499,11 @@ class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequir
     
     def post(self, request, project_id, pk):
         """
-        Procesar aprobación del tag.
+        Process tag approval.
         
         Args:
-            project_id: ID del proyecto
-            pk: ID del tag a aprobar
+            project_id: Project ID
+            pk: Tag ID to approve
         """
         phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
@@ -504,11 +517,11 @@ class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequir
             
             messages.success(
                 request,
-                f'Tag "{tag.name}" aprobado exitosamente. '
-                f'Ahora está disponible para todos los researchers.'
+                f'Tag "{tag.name}" approved successfully. '
+                f'It is now available to all researchers.'
             )
             
-            # Respuesta AJAX
+            # AJAX Response
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
@@ -518,16 +531,16 @@ class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequir
                         'status': tag.status,
                         'visibility': tag.visibility,
                     },
-                    'message': f'Tag "{tag.name}" aprobado.'
+                    'message': f'Tag "{tag.name}" approved.'
                 })
             
         except Tag.DoesNotExist:
-            messages.error(request, 'El tag no existe.')
+            messages.error(request, 'The tag does not exist.')
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
-                    'error': 'Tag no encontrado.'
+                    'error': 'Tag not found.'
                 }, status=404)
             
         except ValueError as e:
@@ -546,11 +559,11 @@ class TagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequir
 
 class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
-    Rechazar un tag inductivo.
+    Reject an inductive tag.
     
-    Solo accesible por el líder/owner del proyecto.
+    Only accessible by the project leader/owner.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
@@ -558,15 +571,15 @@ class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
     
     def post(self, request, project_id, pk):
         """
-        Procesar rechazo del tag.
+        Process tag rejection.
         
         Args:
-            project_id: ID del proyecto
-            pk: ID del tag a rechazar
+            project_id: Project ID
+            pk: Tag ID to reject
         """
         phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
-        # Obtener motivo del rechazo (opcional)
+        # Get rejection reason (optional)
         reason = request.POST.get('rejection_reason', '')
         
         service = TagApprovalService()
@@ -580,22 +593,22 @@ class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
             
             messages.success(
                 request,
-                f'Tag "{tag.name}" rechazado.'
+                f'Tag "{tag.name}" rejected.'
             )
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
-                    'message': f'Tag "{tag.name}" rechazado.'
+                    'message': f'Tag "{tag.name}" rejected.'
                 })
             
         except Tag.DoesNotExist:
-            messages.error(request, 'El tag no existe.')
+            messages.error(request, 'The tag does not exist.')
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
-                    'error': 'Tag no encontrado.'
+                    'error': 'Tag not found.'
                 }, status=404)
             
         except ValueError as e:
@@ -614,11 +627,11 @@ class TagRejectView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
 
 class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
     """
-    Aprobar múltiples tags inductivos de una vez.
+    Approve multiple inductive tags at once.
     
-    Útil para aprobar varios tags desde la lista de pendientes.
+    Useful for approving several tags from the pending list.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
@@ -626,19 +639,19 @@ class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRe
     
     def post(self, request, project_id):
         """
-        Aprobar múltiples tags.
+        Approve multiple tags.
         
-        Espera un parámetro 'tag_ids' con IDs separados por coma
-        o múltiples parámetros 'tag_ids[]'.
+        Expects a 'tag_ids' parameter with comma-separated IDs
+        or multiple 'tag_ids[]' parameters.
         """
         phase = get_object_or_404(ExtractionPhase, project_id=project_id)
         
-        # Obtener IDs de tags (soporta ambos formatos)
+        # Get tag IDs (supports both formats)
         tag_ids = request.POST.getlist('tag_ids[]') or request.POST.get('tag_ids', '').split(',')
         tag_ids = [int(id.strip()) for id in tag_ids if id.strip().isdigit()]
         
         if not tag_ids:
-            messages.warning(request, 'No se seleccionaron tags para aprobar.')
+            messages.warning(request, 'No tags selected for approval.')
             return redirect(
                 reverse('extraction:planning:taxonomy:pending_tags', kwargs={
                     'project_id': phase.project_id
@@ -652,12 +665,12 @@ class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRe
             names = ', '.join([t.name for t in approved_tags])
             messages.success(
                 request,
-                f'{len(approved_tags)} tag(s) aprobado(s): {names}'
+                f'{len(approved_tags)} tag(s) approved: {names}'
             )
         else:
             messages.warning(
                 request,
-                'No se pudo aprobar ningún tag. Verifica que estén pendientes.'
+                'No tags could be approved. Check that they are pending.'
             )
         
         return redirect(
@@ -666,17 +679,17 @@ class BulkTagApproveView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRe
 
 
 # =============================================================================
-# VISTAS AUXILIARES
+# AUXILIARY VIEWS
 # =============================================================================
 
 class UsableTagsAPIView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """
-    API para obtener tags disponibles para un usuario.
+    API to get available tags for a user.
     
-    Usada por JavaScript para cargar tags en el selector de Quote.
-    Devuelve JSON con tags agrupados por tipo.
+    Used by JavaScript to load tags in the Quote selector.
+    Returns JSON with tags grouped by type.
     
-    Referencia:
+    Reference:
     https://docs.djangoproject.com/en/stable/topics/class-based-views/intro/#handling-forms-with-class-based-views
     """
     
@@ -684,10 +697,10 @@ class UsableTagsAPIView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     
     def get(self, request, phase_id):
         """
-        Obtener tags usables en formato JSON.
+        Get usable tags in JSON format.
         
         Returns:
-            JSON con estructura:
+            JSON with structure:
             {
                 'tags': {
                     'deductive': [...],

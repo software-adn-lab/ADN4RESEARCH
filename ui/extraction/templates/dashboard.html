@@ -15,15 +15,15 @@
                 
                 {% if phase.status == 'OPEN' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                        {{ phase.get_status_display }}
+                        {{ phase.status }}
                     </span>
                 {% elif phase.status == 'CONFIG' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                        {{ phase.get_status_display }}
+                        {{ phase.status }}
                     </span>
                 {% else %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                        {{ phase.get_status_display }}
+                        {{ phase.status }}
                     </span>
                 {% endif %}
             </div>
@@ -52,6 +52,18 @@
                 </button>
             </form>
         {% endif %}
+        
+        {% if is_owner and phase.status == 'CLOSED' %}
+            <form action="{% url 'extraction:planning:phase_reopen' project_id=project.id %}" method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning bg-amber-600 hover:bg-amber-700 text-white border-none rounded-lg shadow-md px-6 flex gap-2 items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L3 9m0 0l6-6m-6 6h12a6 6 0 010 12h-3" />
+                    </svg>
+                    Reopen Phase
+                </button>
+            </form>
+        {% endif %}
 
         {% if is_owner and phase.status == 'CONFIG' and active_tab == 'tags' %}
             {% if can_open_phase %}
@@ -71,20 +83,6 @@
         {% endif %}
         </div>
     </div>
-
-    {% if messages %}
-        <div class="space-y-2">
-            {% for message in messages %}
-            <div role="alert" class="flex items-center p-4 text-sm text-blue-800 rounded-lg bg-blue-50 border border-blue-100" role="alert">
-                <svg class="flex-shrink-0 inline w-4 h-4 mr-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                </svg>
-                <span class="sr-only">Info</span>
-                <div>{{ message }}</div>
-            </div>
-            {% endfor %}
-        </div>
-    {% endif %}
 
     {% if is_restricted %}
         <div class="flex flex-col items-center justify-center min-h-[400px] bg-white border border-gray-200 rounded-2xl text-center p-12 shadow-sm">
@@ -115,6 +113,7 @@
                     Protocol & Tags
                 </a>
 
+                {% if phase.status != 'CONFIG' %}
                 <a href="?tab=pending" 
                    class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
                    {% if active_tab == 'pending' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
@@ -126,6 +125,7 @@
                    {% if active_tab == 'quotes' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
                     Extractions
                 </a>
+                {% endif %}
 
                 {% if is_owner %}
                 <div class="w-px h-5 bg-gray-300 mx-1 self-center"></div> <a href="?tab=config" 

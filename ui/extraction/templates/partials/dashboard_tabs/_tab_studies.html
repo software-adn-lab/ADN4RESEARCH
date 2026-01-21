@@ -50,8 +50,9 @@
         <div class="mt-4">
             <div class="flex justify-between text-[10px] text-gray-400 mb-1">
                 <span>Progress</span>
-                <span>40%</span> </div>
-            <progress class="progress progress-primary w-full h-1.5" value="40" max="100"></progress>
+                <span>{{ paper.get_coverage_percentage }}%</span>
+            </div>
+            <progress class="progress progress-primary w-full h-1.5" value="{{ paper.get_coverage_percentage }}" max="100"></progress>
         </div>
         {% endif %}
     </div>
@@ -85,7 +86,10 @@
                 {% endif %}
 
             {% else %}
-                <span class="text-xs text-gray-400 italic w-full text-center py-1">Phase Closed</span>
+                <a href="{% url 'extraction:core:paper_detail' project_id=phase.project_id pk=paper.pk %}" 
+                    class="btn btn-sm btn-outline border-gray-300 hover:bg-gray-100 hover:text-gray-900 text-gray-600 font-medium normal-case ml-auto">
+                    View Response
+                </a>
             {% endif %}
         </div>
 

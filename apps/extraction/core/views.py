@@ -21,6 +21,7 @@ from .forms import QuoteForm
 from .dtos import QuoteDTO, PaperCompletionSummaryDTO
 from .models import PaperExtraction, Quote, PaperExtractionStatusChoices
 from apps.extraction.core.services import PaperExtractionService
+from apps.extraction.planning.models import ExtractionStatusChoices
 from apps.extraction.shared.mixins import ProjectMemberRequiredMixin
 from apps.extraction.shared.exceptions import BusinessRuleViolation
 from apps.extraction.adapters.acquisition import get_acquisition_adapter
@@ -30,20 +31,20 @@ logger = logging.getLogger(__name__)
 
 class PaperAccessMixin(UserPassesTestMixin):
     """
-    Mixin para validar acceso a papers.
+    Mixin to validate access to papers.
     
-    Compatible tanto con DetailView (que tiene get_object())
-    como con View simple (que recibe pk en get()).
+    Compatible with both DetailView (which has get_object())
+    and simple View (which receives pk in get()).
     """
     
     def test_func(self):
         """
-        Reglas de acceso:
-        - Owner del proyecto
-        - Researcher asignado
+        Access rules:
+        - Project Owner
+        - Assigned Researcher
         - Staff/Superuser
         """
-        # ✅ Intentar obtener paper de diferentes formas
+        # ✅ Attempt to get paper in different ways
         paper = self._get_paper()
         
         if not paper:
@@ -61,24 +62,24 @@ class PaperAccessMixin(UserPassesTestMixin):
     
     def _get_paper(self):
         """
-        Obtener paper dependiendo del tipo de vista.
+        Get paper depending on the view type.
         """
-        # Si es DetailView, usar get_object()
+        # If it's DetailView, use get_object()
         if hasattr(self, 'get_object'):
             return self.get_object()
         
-        # Si es View simple, obtener pk de kwargs
+        # If it's a simple View, get pk from kwargs
         pk = self.kwargs.get('pk')
         if pk:
             return get_object_or_404(PaperExtraction, pk=pk)
         
-        # No se pudo obtener el paper
+        # Could not retrieve the paper
         return None
 
 
 class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, DetailView):
     """
-    Vista del workspace de extracción de un paper.
+    View for the paper extraction workspace.
     """
     
     model = PaperExtraction
@@ -96,27 +97,27 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
         paper = self.object
         phase = paper.extraction_phase
         
-        # Tags disponibles
+        # Available tags
         context['available_tags'] = phase.tags.usable_by(
             self.request.user
         ).order_by('name')
         
-        # Tags obligatorios
+        # Mandatory tags
         context['mandatory_tags'] = phase.tags.mandatory()
         
-        # Quotes ordenadas
+        # Sorted quotes
         quotes = paper.quotes.select_related('created_by').prefetch_related('tags').all()
         sorted_quotes = sorted(quotes, key=lambda q: q.location.get('page', 0))
         context['quotes'] = sorted_quotes
 
-        # Serializar para JavaScript
+        # Serialize for JavaScript
         quote_dtos = [QuoteDTO.from_model(q) for q in sorted_quotes]
         context['quotes_json'] = json.dumps(
             [dto.to_dict() for dto in quote_dtos],
             cls=DjangoJSONEncoder
         )
         
-        # URLs para JavaScript
+        # URLs for JavaScript
         project_id = paper.extraction_phase.project_id
         
         # ✅ Get PDF URL from Acquisition adapter (S3/filesystem compatible)
@@ -181,11 +182,11 @@ class PaperDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
 
 class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
-    Sirve archivos PDF de forma segura.
+    Serves PDF files securely.
     """
     
     def get(self, request, project_id, pk):
-        """Servir PDF."""
+        """Serve PDF."""
         paper = get_object_or_404(
             PaperExtraction,
             pk=pk,
@@ -198,20 +199,20 @@ class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMi
             f"path={paper.path}"
         )
         
-        # Validar permisos (ya validado por mixin, pero explícito para claridad)
+        # Validate permissions (already validated by mixin, but explicit for clarity)
         if not self.test_func():
             logger.warning(f"Permission denied: user={request.user.username}, paper={pk}")
-            raise PermissionDenied("No tienes permiso para ver este documento")
+            raise PermissionDenied("You do not have permission to view this document.")
         
-        # Obtener ruta segura
+        # Get secure path
         file_path = self._get_safe_path(paper.path)
         
         if not file_path.exists():
             logger.error(f"PDF not found: {file_path}")
-            raise Http404("El archivo PDF no existe")
+            raise Http404("The PDF file does not exist.")
         
         try:
-            # Servir archivo
+            # Serve file
             response = FileResponse(
                 file_path.open('rb'),
                 content_type='application/pdf'
@@ -230,11 +231,11 @@ class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMi
             
         except Exception as e:
             logger.exception(f"Error serving PDF: {e}")
-            raise Http404("Error al servir el archivo PDF")
+            raise Http404("Error serving the PDF file.")
     
     def _get_safe_path(self, relative_path):
         """
-        Validar ruta contra Path Traversal.
+        Validate path against Path Traversal.
         """
         media_root = Path(settings.MEDIA_ROOT).resolve()
         absolute_path = (media_root / relative_path).resolve()
@@ -245,12 +246,12 @@ class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMi
             logger.error(
                 f"Path traversal attempt: {relative_path} -> {absolute_path}"
             )
-            raise PermissionDenied("Ruta de archivo inválida")
+            raise PermissionDenied("Invalid file path.")
         
         return absolute_path
     
     def _sanitize_filename(self, filename):
-        """Sanitizar nombre de archivo."""
+        """Sanitize filename."""
         return (
             filename
             .replace('"', '')
@@ -261,32 +262,32 @@ class PaperPDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMi
 
 class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
-    Endpoint para marcar un paper como completado.
+    Endpoint to mark a paper as completed.
     
-    Business Rules (delegadas al Service):
-    - Solo owner o researcher asignado pueden completar
-    - Debe tener al menos una quote
-    - Todas las tags obligatorias deben estar cubiertas
+    Business Rules (delegated to Service):
+    - Only owner or assigned researcher can complete
+    - Must have at least one quote
+    - All mandatory tags must be covered
     
     Architecture:
-    - Vista: Validación de permisos y HTTP handling
-    - Service: Lógica de negocio y orquestación
-    - Model: Queries y persistencia
+    - View: Permission validation and HTTP handling
+    - Service: Business logic and orchestration
+    - Model: Queries and persistence
     
-    Referencia Django CBV:
+    Reference Django CBV:
     https://docs.djangoproject.com/en/stable/ref/class-based-views/base/#view
     """
     
     def post(self, request, project_id, pk):
         """
-        Procesar solicitud de completar paper.
+        Process paper completion request.
         
         Args:
             request: HTTP request
-            pk: ID del paper
+            pk: Paper ID
             
         Returns:
-            JsonResponse con resultado
+            JsonResponse with result
         """
         paper = get_object_or_404(
             PaperExtraction,
@@ -294,25 +295,25 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
             extraction_phase__project_id=project_id
         )
         
-        # Validar permisos (responsabilidad de la vista)
+        # Validate permissions (view responsibility)
         if not self._can_complete_paper(request.user, paper):
             logger.warning(
                 f"Permission denied: user={request.user.username}, "
                 f"paper_id={paper.id}, action=complete"
             )
             return JsonResponse(
-                {'error': 'No tienes permiso para completar este paper'},
+                {'error': 'You do not have permission to complete this paper.'},
                 status=403
             )
         
-        # Delegar lógica de negocio al servicio
+        # Delegate business logic to service
         service = PaperExtractionService()
         
         try:
-            # Service maneja validaciones y transiciones
+            # Service handles validations and transitions
             paper = service.attempt_complete_paper(paper, request.user)
             
-            # Obtener resumen para la respuesta
+            # Get summary for response
             summary = service.get_completion_summary(paper)
             
             paper_dto = PaperCompletionSummaryDTO(
@@ -324,12 +325,12 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
 
             return JsonResponse({
                 'success': True,
-                'message': '✅ Paper completado exitosamente',
+                'message': '✅ Paper completed successfully',
                 'paper': paper_dto.to_dict()
             })
             
         except BusinessRuleViolation as e:
-            # Service lanzó excepción de negocio
+            # Service raised business exception
             logger.info(
                 f"Paper completion rejected: paper_id={paper.id}, "
                 f"reason={str(e)}"
@@ -340,28 +341,28 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
             )
             
         except Exception as e:
-            # Error inesperado
+            # Unexpected error
             logger.exception(
                 f"Unexpected error completing paper: paper_id={paper.id}"
             )
             return JsonResponse(
-                {'error': 'Error interno del servidor'},
+                {'error': 'Internal Server Error'},
                 status=500
             )
     
     def _can_complete_paper(self, user, paper):
         """
-        Validar permisos para completar.
+        Validate completion permissions.
         
-        Nota: Esta es validación de permisos (infraestructura),
-        no lógica de negocio. Por eso está en la vista.
+        Note: This is permission validation (infrastructure),
+        not business logic. That's why it's in the view.
         
         Args:
-            user: Usuario solicitante
-            paper: Paper a completar
+            user: Requesting user
+            paper: Paper to complete
             
         Returns:
-            bool: Si tiene permisos
+            bool: If permitted
         """
         project = paper.extraction_phase.project
         return (
@@ -373,12 +374,12 @@ class PaperCompleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcc
 
 class PaperReopenView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAccessMixin, View):
     """
-    Endpoint para reabrir un paper completado.
+    Endpoint to reopen a completed paper.
     """
 
     def post(self, request, project_id, pk):
         """
-        Procesar solicitud de reabrir paper.
+        Process reopen request.
         """
         paper = get_object_or_404(
             PaperExtraction,
@@ -392,27 +393,27 @@ class PaperReopenView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
                 f"paper_id={paper.id}, action=reopen"
             )
             return JsonResponse(
-                {'error': 'No tienes permiso para reabrir este paper'},
+                {'error': 'You do not have permission to reopen this paper.'},
                 status=403
             )
 
         if paper.status == PaperExtractionStatusChoices.COMPLETED:
             paper.status = PaperExtractionStatusChoices.IN_PROGRESS
             paper.save(update_fields=['status', 'updated_at'])
-            logger.info(f"Paper reabierto: id={paper.id}, user={request.user.username}")
+            logger.info(f"Paper reopened: id={paper.id}, user={request.user.username}")
             return JsonResponse({
                 'success': True,
-                'message': 'Extracción reabierta. Ahora puedes editarla de nuevo.'
+                'message': 'Extraction reopened. You can now edit it again.'
             })
         
         return JsonResponse(
-            {'error': 'El paper no está completado.'},
+            {'error': 'The paper is not completed.'},
             status=400
         )
 
     def _can_reopen_paper(self, user, paper):
         """
-        Validar permisos para reabrir. Por ahora, los mismos que para completar.
+        Validate reopen permissions. For now, same as completion.
         """
         project = paper.extraction_phase.project
         return (
@@ -424,11 +425,11 @@ class PaperReopenView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAcces
 
 
 class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
-    """API endpoint para crear quotes (JSON)."""
+    """API endpoint to create quotes (JSON)."""
     
     def post(self, request, project_id):
         try:
-            # Parsear datos
+            # Parse data
             data = json.loads(request.body)
             
             # ✅ Debug logging
@@ -438,35 +439,43 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             logger.info(f"Request data: {data}")
             logger.info(f"User: {request.user.username}")
             
-            # Obtener paper
+            # Get paper
             paper_id = data.get('paper_extraction_id')
             logger.info(f"Paper ID from request: {paper_id}")
             
             if not paper_id:
                 logger.error("Missing paper_extraction_id")
                 return JsonResponse(
-                    {'error': 'paper_extraction_id es requerido'},
+                    {'error': 'paper_extraction_id is required'},
                     status=400
                 )
             
             paper = get_object_or_404(PaperExtraction, pk=paper_id)
             logger.info(f"Paper found: {paper.id}")
             
-            # Validar permisos
+            # Validate that phase is not CLOSED
+            if paper.extraction_phase.status == ExtractionStatusChoices.CLOSED:
+                logger.error("Extraction phase is closed, cannot create quotes")
+                return JsonResponse(
+                    {'error': 'The extraction phase is closed. Reopen the phase to continue.'},
+                    status=403
+                )
+            
+            # Validate permissions
             if not self._can_create_quote(request.user, paper):
                 if paper.status == PaperExtractionStatusChoices.COMPLETED:
                     logger.error("Paper is completed, cannot create quotes")
                     return JsonResponse(
-                        {'error': 'No se pueden agregar quotes a un paper completado'},
+                        {'error': 'Cannot add quotes to a completed paper.'},
                         status=403
                     )
                 logger.error("Permission denied")
                 return JsonResponse(
-                    {'error': 'No tienes permiso para crear quotes en este paper'},
+                    {'error': 'You do not have permission to create quotes in this paper.'},
                     status=403
                 )
             
-            # ✅ Preparar datos para el formulario
+            # ✅ Prepare form data
             form_data = {
                 'text_fragment': data.get('text_fragment', ''),
                 'paper_extraction': paper.id,
@@ -475,28 +484,28 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             
             logger.info(f"Form data: {form_data}")
             
-            # Crear formulario
+            # Create form
             form = QuoteForm(form_data, paper=paper, user=request.user)
             
-            # Validar
+            # Validate
             if not form.is_valid():
                 logger.error(f"Form validation failed: {form.errors}")
                 return JsonResponse(
                     {
-                        'error': 'Datos inválidos', 
+                        'error': 'Invalid data', 
                         'errors': form.errors.get_json_data()
                     },
                     status=400
                 )
             
-            # Guardar
+            # Save
             quote = form.save(commit=False)
             quote.created_by = request.user
             quote.location = data.get('location', {})
             quote.save()
             form.save_m2m()
             
-            # ✅ Actualizar estado del paper a IN_PROGRESS si está en PENDING
+            # ✅ Update paper status to IN_PROGRESS if it is PENDING
             if paper.status == PaperExtractionStatusChoices.PENDING:
                 paper.status = PaperExtractionStatusChoices.IN_PROGRESS
                 paper.save(update_fields=['status', 'updated_at'])
@@ -517,19 +526,19 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
             return JsonResponse(
-                {'error': 'JSON inválido', 'detail': str(e)},
+                {'error': 'Invalid JSON', 'detail': str(e)},
                 status=400
             )
         except Exception as e:
             logger.exception("Unexpected error creating quote")
             return JsonResponse(
-                {'error': 'Error interno del servidor', 'detail': str(e)},
+                {'error': 'Internal Server Error', 'detail': str(e)},
                 status=500
             )
     
     def _can_create_quote(self, user, paper):
-        """Validar permisos de creación."""
-        # No permitir crear quotes en papers completados
+        """Validate creation permissions."""
+        # Do not allow creating quotes in completed papers
         if paper.status == PaperExtractionStatusChoices.COMPLETED:
             return False
         
@@ -543,7 +552,7 @@ class QuoteCreateView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
 
 
 class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
-    """API endpoint para eliminar quotes."""
+    """API endpoint to delete quotes."""
     
     def post(self, request, project_id, pk):
         """Handle POST requests for quote deletion (from AJAX)."""
@@ -559,11 +568,11 @@ class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
         if not self._can_delete_quote(request.user, quote):
             if quote.paper_extraction.status == PaperExtractionStatusChoices.COMPLETED:
                 return JsonResponse(
-                    {'error': 'No se pueden eliminar quotes de un paper completado'},
+                    {'error': 'Cannot delete quotes from a completed paper.'},
                     status=403
                 )
             return JsonResponse(
-                {'error': 'No tienes permiso para eliminar esta quote'},
+                {'error': 'You do not have permission to delete this quote.'},
                 status=403
             )
         
@@ -575,17 +584,17 @@ class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Quote eliminada exitosamente',
+                'message': 'Quote deleted successfully',
                 'quote_id': quote_id
             })
             
         except Exception as e:
             logger.exception("Error deleting quote")
-            return JsonResponse({'error': 'Error al eliminar la quote'}, status=500)
+            return JsonResponse({'error': 'Error deleting the quote'}, status=500)
     
     def _can_delete_quote(self, user, quote):
-        """Validar permisos de eliminación."""
-        # No permitir eliminar quotes de papers completados
+        """Validate deletion permissions."""
+        # Do not allow deleting quotes from completed papers
         if quote.paper_extraction.status == PaperExtractionStatusChoices.COMPLETED:
             return False
         
@@ -600,9 +609,9 @@ class QuoteDeleteView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
 
 class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """
-    Vista para reasignar un paper a otro miembro del proyecto.
+    View to reassign a paper to another project member.
     
-    Solo el owner del proyecto puede reasignar papers.
+    Only the project owner can reassign papers.
     """
     
     def post(self, request, project_id, pk):
@@ -615,34 +624,34 @@ class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
         }
         """
         try:
-            # Obtener paper
+            # Get paper
             paper = get_object_or_404(PaperExtraction, pk=pk)
             phase = paper.extraction_phase
             project = phase.project
             
-            # Validar que el usuario sea owner
+            # Validate user is owner
             if request.user != project.owner and not request.user.is_staff:
                 return JsonResponse(
-                    {'error': 'Solo el owner puede reasignar papers'},
+                    {'error': 'Only the owner can reassign papers.'},
                     status=403
                 )
             
-            # Obtener datos
+            # Get data
             data = json.loads(request.body)
             assigned_to_id = data.get('assigned_to_id')
             
             if not assigned_to_id:
                 return JsonResponse(
-                    {'error': 'assigned_to_id es requerido'},
+                    {'error': 'assigned_to_id is required'},
                     status=400
                 )
             
-            # Obtener usuario a asignar
+            # Get user to assign
             from django.contrib.auth import get_user_model
             User = get_user_model()
             assigned_user = get_object_or_404(User, pk=assigned_to_id)
             
-            # Validar que sea miembro del proyecto
+            # Validate membership
             from apps.project.structure.models.project_models import Membership
             is_member = (
                 assigned_user == project.owner or
@@ -654,23 +663,23 @@ class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             
             if not is_member:
                 return JsonResponse(
-                    {'error': f'{assigned_user.username} no es miembro del proyecto'},
+                    {'error': f'{assigned_user.username} is not a project member.'},
                     status=400
                 )
             
-            # Reasignar
+            # Reassign
             old_assigned_to = paper.assigned_to
             paper.assigned_to = assigned_user
             paper.save(update_fields=['assigned_to', 'updated_at'])
             
             logger.info(
-                f"Paper {pk} reasignado de {old_assigned_to.username if old_assigned_to else 'nadie'} "
-                f"a {assigned_user.username} por {request.user.username}"
+                f"Paper {pk} reassigned from {old_assigned_to.username if old_assigned_to else 'nobody'} "
+                f"to {assigned_user.username} by {request.user.username}"
             )
             
             return JsonResponse({
                 'success': True,
-                'message': f'Paper reasignado a {assigned_user.username}',
+                'message': f'Paper reassigned to {assigned_user.username}',
                 'assigned_to': {
                     'id': assigned_user.id,
                     'username': assigned_user.username
@@ -679,13 +688,13 @@ class PaperReassignView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             
         except json.JSONDecodeError:
             return JsonResponse(
-                {'error': 'JSON inválido'},
+                {'error': 'Invalid JSON'},
                 status=400
             )
         except Exception as e:
-            logger.exception("Error reasignando paper")
+            logger.exception("Error reassigning paper")
             return JsonResponse(
-                {'error': f'Error al reasignar: {str(e)}'},
+                {'error': f'Error reassigning: {str(e)}'},
                 status=500
             )
 
@@ -695,6 +704,14 @@ class PaperUpdatePDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAc
     """
     def post(self, request, project_id, pk):
         paper = get_object_or_404(PaperExtraction, pk=pk, extraction_phase__project_id=project_id)
+
+        # Check if extraction phase is closed
+        if paper.extraction_phase.status == ExtractionStatusChoices.CLOSED:
+            messages.error(
+                request,
+                'Cannot update PDF: the extraction phase is closed. Reopen the phase to continue.'
+            )
+            return redirect(request.META.get('HTTP_REFERER', '/'))
 
         if 'pdf_file' not in request.FILES:
             messages.error(request, 'No PDF file was provided.')
@@ -742,24 +759,24 @@ class PaperUpdatePDFView(LoginRequiredMixin, ProjectMemberRequiredMixin, PaperAc
 
 class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
     """
-    Exporta todas las quotes a CSV con atributos completos.
+    Exports all quotes to CSV with full attributes.
     
-    Incluye:
-    - Atributos de la quote (id, text_fragment, location, created_at, updated_at)
-    - Usuario que realizó la extracción (created_by.username)
-    - UUID y título del estudio
-    - Path del paper_extraction
-    - Tags asociados a la quote
+    Includes:
+    - Quote attributes (id, text_fragment, location, created_at, updated_at)
+    - User who performed the extraction (created_by.username)
+    - UUID and title of the study
+    - Path of the paper_extraction
+    - Tags associated with the quote
     """
     
     def get(self, request, project_id):
-        """Exporta las quotes de la fase de extracción a CSV."""
+        """Exports extraction phase quotes to CSV."""
         try:
-            # Obtener la fase de extracción del proyecto
+            # Get project extraction phase
             from apps.extraction.planning.models import ExtractionPhase
             phase = get_object_or_404(ExtractionPhase, project_id=project_id)
             
-            # Obtener todas las quotes de la fase
+            # Get all phase quotes
             quotes = Quote.objects.filter(
                 paper_extraction__extraction_phase=phase
             ).select_related(
@@ -768,11 +785,11 @@ class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
                 'created_by'
             ).prefetch_related('tags')
             
-            # Crear archivo CSV en memoria
+            # Create in-memory CSV file
             output = StringIO()
             writer = csv.writer(output, quoting=csv.QUOTE_ALL)
             
-            # Escribir encabezados
+            # Write headers
             headers = [
                 'Quote ID',
                 'Text Fragment',
@@ -787,7 +804,7 @@ class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             ]
             writer.writerow(headers)
             
-            # Escribir datos de cada quote
+            # Write data for each quote
             for quote in quotes:
                 tags_str = ', '.join([tag.name for tag in quote.tags.all()]) or ''
                 location_str = json.dumps(quote.location, ensure_ascii=False) if quote.location else ''
@@ -806,7 +823,7 @@ class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
                 ]
                 writer.writerow(row)
             
-            # Crear respuesta HTTP con el CSV
+            # Create HTTP response with the CSV
             csv_content = output.getvalue()
             response = HttpResponse(
                 csv_content,
@@ -815,14 +832,14 @@ class ExportQuotesCSVView(LoginRequiredMixin, ProjectMemberRequiredMixin, View):
             response['Content-Disposition'] = 'attachment; filename="quotes_export.csv"'
             
             logger.info(
-                f"Usuario {request.user.username} exportó {quotes.count()} quotes del proyecto {project_id}"
+                f"User {request.user.username} exported {quotes.count()} quotes from project {project_id}"
             )
             
             return response
             
         except Exception as e:
-            logger.exception(f"Error exportando quotes: {str(e)}")
+            logger.exception(f"Error exporting quotes: {str(e)}")
             return JsonResponse(
-                {'error': f'Error al exportar: {str(e)}'},
+                {'error': f'Export error: {str(e)}'},
                 status=500
             )

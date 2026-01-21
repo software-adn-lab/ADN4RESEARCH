@@ -53,6 +53,48 @@ class ExtractionPhase(AuditModel):
             
         self.status = ExtractionStatusChoices.OPEN
         self.save()
+    
+    def evaluate_protocol_coverage_and_update_status(self):
+        """
+        Evalúa si la cobertura del protocolo es 100%.
+        Si NO está cubierto completamente, revierte el estado a CONFIG.
+        
+        Business Rule:
+        - Los tags deductivos aprobados deben cubrir todas las preguntas de investigación del protocolo
+        - Si la cobertura es < 100%, la fase regresa a CONFIG
+        
+        Returns:
+            bool: True si la cobertura es 100%, False en caso contrario
+        """
+        from apps.extraction.adapters.design import DesignAdapter
+        
+        # 1. Obtener RQs del proyecto vía Adapter
+        adapter = DesignAdapter()
+        protocol_rqs = adapter.get_protocol_questions(self.project_id)
+        
+        if not protocol_rqs:
+            # Si no hay preguntas en el protocolo, considerar como 100% cubierto
+            return True
+        
+        # 2. Extraer IDs de las preguntas del protocolo
+        protocol_rq_ids = {rq.id for rq in protocol_rqs}
+        
+        # 3. Obtener tags deductivos aprobados que cubren estas preguntas
+        covered_rq_ids = set(self.tags.filter(
+            type='DEDUCTIVE',
+            status='APPROVED',
+            rq_related_id__in=protocol_rq_ids
+        ).values_list('rq_related_id', flat=True))
+        
+        # 4. Calcular cobertura
+        is_fully_covered = (len(covered_rq_ids) == len(protocol_rq_ids))
+        
+        # 5. Si no está completamente cubierto y la fase NO está en CONFIG, revertir a CONFIG
+        if not is_fully_covered and self.status != ExtractionStatusChoices.CONFIG:
+            self.status = ExtractionStatusChoices.CONFIG
+            self.save()
+        
+        return is_fully_covered
 
     class Meta:
         verbose_name = "Fase de Extracción"

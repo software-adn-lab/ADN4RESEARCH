@@ -403,7 +403,7 @@ class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
             
             messages.success(
                 request,
-                "✅ ¡Fase Abierta! Los investigadores pueden comenzar la extracción."
+                "Open Extraction phase successfully. Researchers can now start extracting data."
             )
             
         except BusinessRuleViolation as e:
@@ -413,6 +413,48 @@ class PhaseOpenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequire
         # ✅ Redirigir al tab de tags para ver el estado
         return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")
 
+
+class PhaseReopenView(LoginRequiredMixin, ProjectMemberRequiredMixin, OwnerRequiredMixin, View):
+    """
+    Transición de estado: CLOSED -> OPEN
+    
+    Business Rules:
+    - Solo el owner puede reabrir una fase
+    - La fase debe estar en estado CLOSED
+    - La cobertura del protocolo debe mantener 100%
+    """
+    
+    def post(self, request, project_id):
+        """
+        Procesar solicitud de reapertura de fase.
+        """
+        phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        service = PhaseLifecycleService()
+        
+        try:
+            # Validar que la fase esté CLOSED
+            if phase.status != ExtractionStatusChoices.CLOSED:
+                raise BusinessRuleViolation(
+                    f"No se puede reabrir una fase en estado {phase.get_status_display()}. "
+                    f"Solo se pueden reabrir fases cerradas."
+                )
+            
+            # Reabrir la fase
+            phase.status = ExtractionStatusChoices.OPEN
+            phase.save()
+            
+            messages.success(
+                request,
+                "Extraction phase reopened successfully. Researchers can now continue extracting data."
+            )
+            logger.info(f"[PHASE REOPEN] Phase {phase.id} reopened by {request.user.username}")
+            
+        except BusinessRuleViolation as e:
+            messages.error(request, str(e))
+        
+        return redirect(f"{reverse('extraction:planning:phase_detail', kwargs={'project_id': project_id})}?tab=tags")
+
+
 class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
     """
     Transition from Extraction to Interpretation phase.
@@ -421,6 +463,9 @@ class StartInterpretationView(LoginRequiredMixin, OwnerRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         project_id = self.kwargs.get('project_id')
         extraction_phase = get_object_or_404(ExtractionPhase, project_id=project_id)
+        extraction_phase.status = ExtractionStatusChoices.CLOSED
+        extraction_phase.is_active = False
+        extraction_phase.save()
         
         # Get or Create Interpretation Phase
         interp_phase, created = InterpretationPhase.objects.get_or_create(

@@ -60,9 +60,4 @@ class QuoteForm(forms.ModelForm):
         """
         text = self.cleaned_data.get('text_fragment', '').strip()
         
-        if len(text) < 10:
-            raise ValidationError(
-                'El texto debe tener al menos 10 caracteres.'
-            )
-        
         return text
