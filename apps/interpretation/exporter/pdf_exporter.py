@@ -100,7 +100,7 @@ class BasePdfExporter:
                             study = quote.paper_extraction.study
                             paper_title = study.title
                             authors = ", ".join(study.authors) if study.authors else "Unknown Authors"
-                            year = study.publication_year or "n.d."
+                            year = study.year or "n.d."
                             citation_ref = f"{authors} ({year})"
                             
                             elements.append(Paragraph(f"\"{quote.text_fragment}\"", self.quote_style))
