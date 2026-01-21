@@ -1,9 +1,8 @@
-
 """
 Services - Core Bounded Context
 
-Servicios de aplicación que orquestan casos de uso relacionados
-con la extracción de papers y quotes.
+Application services that orchestrate use cases related
+to paper and quote extraction.
 """
 from typing import Dict
 import logging
@@ -16,50 +15,51 @@ logger = logging.getLogger(__name__)
 
 class PaperExtractionService:
     """
-    Servicio de aplicación para gestión de extracciones de papers.
+    Application service for paper extraction management.
     
-    Responsabilidades:
-    - Orquestar validaciones de negocio
-    - Gestionar transiciones de estado
-    - Coordinar operaciones entre múltiples entidades
+    Responsibilities:
+    - Orchestrate business validations
+    - Manage state transitions
+    - Coordinate operations between multiple entities
     """
     
     def validate_completion_rules(self, paper: PaperExtraction) -> Tuple[bool, str]:
         """
-        Valida las reglas de negocio para completar un paper.
+        Validates business rules for completing a paper.
         """
+        # 
         logger.debug(
-            "Iniciando validación de reglas de completitud",
+            "Starting completion rule validation",
             extra={
                 "paper_id": paper.id,
                 "paper_status": paper.status,
             }
         )
 
-        # Regla 1: Al menos una quote
+        # Rule 1: At least one quote
         if not paper.quotes.exists():
             logger.info(
-                "Validación fallida: paper sin quotes",
+                "Validation failed: paper without quotes",
                 extra={
                     "paper_id": paper.id,
                     "rule": "at_least_one_quote",
                 }
             )
             return False, (
-                "El paper debe tener al menos una extracción (quote). "
-                "Selecciona texto del PDF y crea quotes antes de finalizar."
+                "The paper must have at least one extraction (quote). "
+                "Select text from the PDF and create quotes before finishing."
             )
 
         logger.debug(
-            "Regla 1 OK: paper tiene al menos una quote",
+            "Rule 1 OK: paper has at least one quote",
             extra={"paper_id": paper.id}
         )
 
-        # Regla 2: Cobertura de tags obligatorios
+        # Rule 2: Mandatory tags coverage
         missing_tags = paper.get_missing_mandatory_tags()
         mandatory_tags = paper.extraction_phase.tags.mandatory()
         logger.info(
-            "Estado de tags obligatorios",
+            "Mandatory tags status",
             extra={
                 "paper_id": paper.id,
                 "mandatory_total": mandatory_tags.count(),
@@ -73,7 +73,7 @@ class PaperExtractionService:
             missing_count = missing_tags.count()
             tag_names = ", ".join(tag.name for tag in missing_tags[:3])
             logger.info(
-                "Detalle tags obligatorios faltantes",
+                "Missing mandatory tags detail",
                 extra={
                     "paper_id": paper.id,
                     "missing_tag_ids": list(missing_tags.values_list("id", flat=True)),
@@ -81,10 +81,10 @@ class PaperExtractionService:
             )
 
             if missing_count > 3:
-                tag_names += f" (+{missing_count - 3} más)"
+                tag_names += f" (+{missing_count - 3} more)"
 
             logger.info(
-                "Validación fallida: faltan tags obligatorios",
+                "Validation failed: missing mandatory tags",
                 extra={
                     "paper_id": paper.id,
                     "rule": "mandatory_tags",
@@ -94,16 +94,16 @@ class PaperExtractionService:
             )
 
             return False, (
-                f"Faltan tags obligatorios: {tag_names}. "
-                f"Agrega quotes con estos tags antes de finalizar."
+                f"Missing mandatory tags: {tag_names}. "
+                f"Add quotes with these tags before finishing."
             )
 
         logger.debug(
-            "Regla 2 OK: todos los tags obligatorios están cubiertos",
+            "Rule 2 OK: all mandatory tags are covered",
             extra={"paper_id": paper.id}
         )
 
-        # Regla 3: Estado válido
+        # Rule 3: Valid status
         valid_statuses = [
             PaperExtractionStatusChoices.PENDING,
             PaperExtractionStatusChoices.IN_PROGRESS,
@@ -111,7 +111,7 @@ class PaperExtractionService:
 
         if paper.status not in valid_statuses:
             logger.warning(
-                "Validación fallida: estado inválido para completar paper",
+                "Validation failed: invalid status for completing paper",
                 extra={
                     "paper_id": paper.id,
                     "rule": "valid_status",
@@ -120,12 +120,12 @@ class PaperExtractionService:
             )
 
             return False, (
-                f"No se puede completar un paper en estado '{paper.get_status_display()}'. "
-                f"Solo papers en progreso pueden ser completados."
+                f"Cannot complete a paper in status '{paper.get_status_display()}'. "
+                f"Only papers in progress can be completed."
             )
 
         logger.info(
-            "Validación de completitud exitosa",
+            "Completion validation successful",
             extra={
                 "paper_id": paper.id,
                 "final_status": paper.status,
@@ -136,22 +136,22 @@ class PaperExtractionService:
     
     def attempt_complete_paper(self, paper: PaperExtraction, user) -> PaperExtraction:
         """
-        Orquesta el proceso de completar un paper.
+        Orchestrates the process of completing a paper.
         
         Business Rules:
-        - Ejecuta todas las validaciones
-        - Registra la transición de estado
-        - Genera eventos de dominio (futuro)
+        - Execute all validations
+        - Register state transition
+        - Generate domain events (future)
         
         Args:
-            paper: PaperExtraction a completar
-            user: Usuario que solicita la completación
+            paper: PaperExtraction to complete
+            user: User requesting completion
             
         Returns:
-            PaperExtraction actualizado
+            Updated PaperExtraction
             
         Raises:
-            BusinessRuleViolation: Si no cumple las reglas de negocio
+            BusinessRuleViolation: If business rules are not met
             
         """
         logger.info(
@@ -160,7 +160,7 @@ class PaperExtractionService:
             f"current_status={paper.status}"
         )
         
-        # 1. Validar reglas de negocio
+        # 1. Validate business rules
         is_valid, error_message = self.validate_completion_rules(paper)
         logger.debug(
             f"Completion validation result: "
@@ -175,7 +175,7 @@ class PaperExtractionService:
             )
             raise BusinessRuleViolation(error_message)
         
-        # 2. Realizar transición de estado
+        # 2. Perform state transition
         previous_status = paper.status
         paper.status = PaperExtractionStatusChoices.COMPLETED
         paper.save(update_fields=['status', 'updated_at'])
@@ -189,20 +189,20 @@ class PaperExtractionService:
             f"completed_by={user.username}"
         )
         
-        # 3. (Futuro) Generar eventos de dominio
+        # 3. (Future) Generate domain events
         # self._emit_paper_completed_event(paper, user)
         
         return paper
     
     def get_completion_summary(self, paper: PaperExtraction) -> dict:
         """
-        Obtiene un resumen del estado de completitud del paper.
+        Retrieves a summary of the paper's completion status.
         
         Args:
-            paper: PaperExtraction a analizar
+            paper: PaperExtraction to analyze
             
         Returns:
-            dict con información de completitud
+            dict with completion information
         """
         logger.info(
             "Building completion summary: paper_id=%s, status=%s",
