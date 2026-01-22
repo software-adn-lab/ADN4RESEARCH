@@ -23,7 +23,7 @@
                 <option value="" disabled {% if not selected_question %}selected{% endif %}>Select a Research
                     Question...</option>
                 {% for q in questions_list %}
-                    <option value="{{ q.id }}" {% if selected_question.id == q.id %}selected{% endif %}>
+                <option value="{{ q.id }}" {% if selected_question and selected_question.id == q.id %}selected{% endif %}>
                     {{ q.question|truncatechars:60 }}
                 </option>
                 {% endfor %}
@@ -142,8 +142,10 @@
 
                     <div class="p-2 flex justify-center gap-2">
                         <button id="translate-btn" class="btn btn-secondary btn-outline shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                             </svg>
                             View Translation
                         </button>
@@ -189,16 +191,16 @@
         const SAVE_URL = "{% url 'design:strategies:save' strategy_id=strategy.id project_id=project.id %}";
         const INITIAL_DATA = {{ strategy.json_definition|default:"{}"|safe }};
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const translateBtn = document.getElementById('translate-btn');
-            translateBtn.addEventListener('click', async function() {
+            translateBtn.addEventListener('click', async function () {
                 // collectVisualData is exposed by search_strategy_builder.js
                 if (!window.collectVisualData) {
                     console.error("Function collectVisualData not found in window.");
                     alert("Error: Could not access strategy data.");
                     return;
                 }
-                
+
                 try {
                     const visualData = window.collectVisualData();
                     // La estructura es { main_terms: [...], exclusions: [...] }
@@ -206,10 +208,10 @@
                         alert("Please add at least one main term to the strategy.");
                         return;
                     }
-                    
+
                     translateBtn.disabled = true;
                     translateBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Translating...';
-                    
+
                     const response = await fetch(TRANSLATE_URL, {
                         method: 'POST',
                         headers: {
@@ -218,14 +220,14 @@
                         },
                         body: JSON.stringify({ visual_data: visualData })
                     });
-                    
+
                     const result = await response.json();
-                    
-                    if(result.status === 'success') {
+
+                    if (result.status === 'success') {
                         // Populate modal
                         const container = document.getElementById('translation-results-container');
                         container.innerHTML = '';
-                        
+
                         Object.entries(result.queries).forEach(([source, query]) => {
                             const html = `
                                 <div class="mb-4">
@@ -238,12 +240,31 @@
                             `;
                             container.innerHTML += html;
                         });
-                        
+
                         document.getElementById('translation_modal').showModal();
+
+                        // Add click handlers for copy buttons
+                        container.querySelectorAll('.copy-btn').forEach(btn => {
+                            btn.addEventListener('click', function () {
+                                const textToCopy = this.getAttribute('data-clipboard-text');
+                                navigator.clipboard.writeText(textToCopy).then(() => {
+                                    const originalText = this.textContent;
+                                    this.textContent = 'Copied!';
+                                    this.classList.add('btn-success');
+                                    setTimeout(() => {
+                                        this.textContent = originalText;
+                                        this.classList.remove('btn-success');
+                                    }, 2000);
+                                }).catch(err => {
+                                    console.error('Failed to copy:', err);
+                                    alert('Failed to copy to clipboard');
+                                });
+                            });
+                        });
                     } else {
                         alert('Error translating: ' + result.error);
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     alert('Network error');
                 } finally {
@@ -260,17 +281,17 @@
 
     <!-- Modal for Translation Results -->
     <dialog id="translation_modal" class="modal">
-      <div class="modal-box w-11/12 max-w-4xl">
-        <h3 class="font-bold text-lg mb-4">Translated Search Queries</h3>
-        <div id="translation-results-container">
-            <!-- Content injected via JS -->
+        <div class="modal-box w-11/12 max-w-4xl">
+            <h3 class="font-bold text-lg mb-4">Translated Search Queries</h3>
+            <div id="translation-results-container">
+                <!-- Content injected via JS -->
+            </div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">Close</button>
+                </form>
+            </div>
         </div>
-        <div class="modal-action">
-          <form method="dialog">
-            <button class="btn">Close</button>
-          </form>
-        </div>
-      </div>
     </dialog>
 
     {% endif %}
