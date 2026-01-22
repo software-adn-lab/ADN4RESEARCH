@@ -1,6 +1,36 @@
 version: '3.8'
 
 services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "false"
+    container_name: adn4research_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+      AWS_S3_ENDPOINT_URL: http://minio:9000
+      USE_S3: "false"
+    ports:
+      - "${DJANGO_PORT:-8000}:8000"
+    volumes:
+      - static_volume:/app/staticfiles
+      - ./media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - adn4research_network
+
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
@@ -57,6 +87,11 @@ services:
     container_name: adn4research_redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - adn4research_network
 volumes:
