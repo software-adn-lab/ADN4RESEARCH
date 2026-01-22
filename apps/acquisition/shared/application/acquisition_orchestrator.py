@@ -627,6 +627,20 @@ class AcquisitionOrchestrator:
         logger.info(f"Created new SearchStrategy in Design: {strategy.id}")
         return strategy
 
+    def translate_strategy_only(self, strategy_dict: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Traducir estrategia sin ejecutar búsqueda (puro cálculo).
+        
+        Args:
+            strategy_dict: Diccionario con la estrategia normalizada
+
+        Returns:
+            Dict[str, str]: Queries traducidas por fuente (Scopus, IEEE, etc.)
+        """
+        normalized_strategy = NormalizedStrategy.from_dict(strategy_dict)
+        translation_results = self._translate_strategy(normalized_strategy)
+        return translation_results["queries_by_source"]
+
     def _translate_strategy(self, normalized_strategy: NormalizedStrategy) -> Dict[str, Any]:
         """
         Traducir estrategia a queries por proveedor.

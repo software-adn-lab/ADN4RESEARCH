@@ -140,7 +140,13 @@
                         </p>
                     </div>
 
-                    <div class="p-2 flex justify-center">
+                    <div class="p-2 flex justify-center gap-2">
+                        <button id="translate-btn" class="btn btn-secondary btn-outline shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                            </svg>
+                            View Translation
+                        </button>
                         <button id="search-studies-btn" class="btn btn-primary btn-wide shadow-lg text-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -179,9 +185,93 @@
     {% if strategy %}
     <script>
         const PREVIEW_URL = "{% url 'design:strategies:preview' project_id=project.id %}";
+        const TRANSLATE_URL = "{% url 'design:strategies:translate' project_id=project.id %}";
         const SAVE_URL = "{% url 'design:strategies:save' strategy_id=strategy.id project_id=project.id %}";
         const INITIAL_DATA = {{ strategy.json_definition|default:"{}"|safe }};
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const translateBtn = document.getElementById('translate-btn');
+            translateBtn.addEventListener('click', async function() {
+                // collectVisualData is exposed by search_strategy_builder.js
+                if (!window.collectVisualData) {
+                    console.error("Function collectVisualData not found in window.");
+                    alert("Error: Could not access strategy data.");
+                    return;
+                }
+                
+                try {
+                    const visualData = window.collectVisualData();
+                    // La estructura es { main_terms: [...], exclusions: [...] }
+                    if (!visualData.main_terms || visualData.main_terms.length === 0) {
+                        alert("Please add at least one main term to the strategy.");
+                        return;
+                    }
+                    
+                    translateBtn.disabled = true;
+                    translateBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Translating...';
+                    
+                    const response = await fetch(TRANSLATE_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ visual_data: visualData })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if(result.status === 'success') {
+                        // Populate modal
+                        const container = document.getElementById('translation-results-container');
+                        container.innerHTML = '';
+                        
+                        Object.entries(result.queries).forEach(([source, query]) => {
+                            const html = `
+                                <div class="mb-4">
+                                    <h4 class="font-bold text-sm uppercase text-base-content/70 border-b border-base-200 mb-2">${source}</h4>
+                                    <div class="mockup-code bg-base-300 text-base-content p-4 text-xs max-h-40 overflow-y-auto">
+                                        <pre><code>${query}</code></pre>
+                                    </div>
+                                    <button class="btn btn-ghost btn-xs mt-1 copy-btn" data-clipboard-text="${query.replace(/"/g, '&quot;')}">Copy</button>
+                                </div>
+                            `;
+                            container.innerHTML += html;
+                        });
+                        
+                        document.getElementById('translation_modal').showModal();
+                    } else {
+                        alert('Error translating: ' + result.error);
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('Network error');
+                } finally {
+                    translateBtn.disabled = false;
+                    translateBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                        </svg>
+                        View Translation`;
+                }
+            });
+        });
     </script>
+
+    <!-- Modal for Translation Results -->
+    <dialog id="translation_modal" class="modal">
+      <div class="modal-box w-11/12 max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">Translated Search Queries</h3>
+        <div id="translation-results-container">
+            <!-- Content injected via JS -->
+        </div>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn">Close</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+
     {% endif %}
     {% endblock %}

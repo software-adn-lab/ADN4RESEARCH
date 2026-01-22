@@ -59,7 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Actualizar preview inicial
+        // Actualizar preview inicial
         updateStringPreview();
+
+        // Expose helper to window for external scripts (like the Translate button)
+        window.collectVisualData = collectData;
     }
 
     // ==========================================

@@ -213,6 +213,28 @@ class AcquisitionFacade:
             logger.error(f"[FACADE] Preview search failed: {e}", exc_info=True)
             raise
 
+    def get_translated_queries(
+        self,
+        strategy_dict: Dict[str, Any],
+    ) -> Dict[str, str]:
+        """
+        Obtener las queries traducidas para cada fuente académica, sin ejecutar la búsqueda.
+        
+        Usado por Design para mostrar al usuario cómo se ve su estrategia en Scopus/IEEE.
+        
+        Args:
+            strategy_dict: Estrategia visual/normalizada
+            
+        Returns:
+            Dict[str, str]: Diccionario {Fuente: QueryString}
+        """
+        logger.info("[FACADE] Getting translated queries only")
+        try:
+            return self._orchestrator.translate_strategy_only(strategy_dict)
+        except Exception as e:
+            logger.error(f"[FACADE] Translation failed: {e}", exc_info=True)
+            raise
+
     def finalize_search(
         self,
         design_strategy_id: int,

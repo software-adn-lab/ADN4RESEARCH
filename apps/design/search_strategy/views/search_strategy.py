@@ -339,3 +339,36 @@ def consolidate_search_strategy_stage_view(request, project_id, project):
     except Exception as e:
         messages.error(request, f"Error consolidating stage: {str(e)}", extra_tags='design')
         return redirect(build_design_url(project_id, 'strategies/'))
+
+
+@project_member_required
+@require_POST
+def get_translated_queries_view(request, project_id, project):
+    """
+    Endpoint para obtener las queries traducidas para Scopus/IEEE sin ejecutar búsqueda.
+    
+    Esta vista de Design delega la traducción a la Facade de Acquisition,
+    respetando la separación de responsabilidades (SOLID).
+    """
+    try:
+        data = json.loads(request.body)
+        visual_data = data.get('visual_data')
+
+        if not visual_data:
+            return JsonResponse({'status': 'error', 'error': 'No visual data provided'}, status=400)
+
+        # Delegar a Acquisition Facade (quien tiene la lógica de traducción)
+        from apps.acquisition.facade import AcquisitionFacade
+        facade = AcquisitionFacade()
+        
+        # Obtener queries traducidas (pura lógica, sin llamadas a red)
+        queries = facade.get_translated_queries(visual_data)
+
+        return JsonResponse({
+            'status': 'success',
+            'queries': queries
+        })
+
+    except Exception as e:
+        logging.error(f"Error translating queries: {e}", exc_info=True)
+        return JsonResponse({'status': 'error', 'error': str(e)}, status=500)

@@ -53,6 +53,7 @@ strategy_patterns = [
     path('', search_strategy.open_search_strategy_panel, name='panel'),
     path('builder/', search_strategy.search_strategy_builder_view, name='builder'),
     path('preview/', search_strategy.preview_search_string, name='preview'),
+    path('translate/', search_strategy.get_translated_queries_view, name='translate'),
     path('<int:strategy_id>/save/', search_strategy.save_visual_strategy, name='save'),
     path('<int:strategy_id>/results/', search_strategy.search_results_view, name='results'),
     path('<int:strategy_id>/approve/', search_strategy.approve_strategy, name='approve'),
