@@ -6,6 +6,9 @@ from apps.interpretation.conclusion_assistant.models import (
     ConversationTrace,
     InterpretativeProposition,
 )
+from apps.interpretation.conclusion_assistant.models.normalization_models import NormalizedCode
+from apps.extraction.core.models import Quote
+from apps.extraction.taxonomy.models import Tag
 from . import llm_clients as _llm_mod
 
 
@@ -116,6 +119,10 @@ class InterpretationService:
         """
         Crea un borrador de proposición interpretativa basado en la instrucción del investigador.
         """
+        # 1. Enriquecer el contexto con las extracciones (quotes) reales desde la base de datos
+        # Esto es crucial para que el LLM tenga el contexto completo de los códigos y sus evidencias
+        enriched_context_str = self._get_context_extractions(context.subtheme)
+        
         # Registrar la instrucción del investigador
         ConversationTrace.objects.create(
             context=context,
@@ -126,8 +133,45 @@ class InterpretationService:
             tags="",
         )
 
-        # Generar proposición borrador delegando a LLM client
-        draft_text = self.llm_client.generate_draft_proposition(context, instruction)
+        try:
+            # Generar proposición borrador delegando a LLM client
+            # Se pasa el contexto enriquecido (string) y la instrucción
+            draft_text = self.llm_client.generate_draft_proposition(
+                context=context, 
+                instruction=instruction,
+                extra_context=enriched_context_str
+            )
+        except ValueError as e:
+            # El LLM determinó que la instrucción no es relevante
+            error_msg = str(e)
+            ConversationTrace.objects.create(
+                context=context,
+                role=ConversationTrace.MessageRole.COPILOT,
+                message=error_msg,
+                title="Input No Relevante",
+                body=error_msg,
+                tags="error, irrelevant",
+            )
+            # No creamos proposición, solo notificamos
+            raise ValueError(error_msg)
+        except Exception as e:
+            # Manejo específico para errores de cuota o servicio
+            if "Quota exceeded" in str(e) or "429" in str(e):
+                friendly_msg = (
+                    "⚠️ **Servicio no disponible temporalmente**\n\n"
+                    "Se ha excedido la cuota de uso del modelo de IA (Gemini). "
+                    "Por favor intenta nuevamente en unos minutos o verifica los límites de tu plan."
+                )
+                ConversationTrace.objects.create(
+                    context=context,
+                    role=ConversationTrace.MessageRole.COPILOT,
+                    message=friendly_msg,
+                    title="Error de Cuota",
+                    body=friendly_msg,
+                    tags="error, quota",
+                )
+            # Propagamos el error para que la vista también notifique
+            raise e
 
         # Crear la proposición
         proposition = InterpretativeProposition.objects.create(
@@ -148,6 +192,75 @@ class InterpretationService:
         )
 
         return proposition
+
+    def _get_context_extractions(self, subtheme):
+        """
+        Recupera las citas (quotes) asociadas a los códigos centrales del subtema.
+        """
+        if not hasattr(subtheme, "central_codes") or not subtheme.central_codes:
+            return "No hay códigos centrales asignados a este subtema."
+
+        central_codes_names = subtheme.central_codes  # List of strings (NormalizedCode names)
+        
+        # 1. Encontrar los NormalizedCode para obtener los códigos originales
+        # Nota: Asumimos que central_codes contiene nombres de NormalizedCodes
+        normalized_codes = NormalizedCode.objects.filter(code__in=central_codes_names)
+        
+        if not normalized_codes.exists():
+            return f"No se encontraron datos de normalización para los códigos: {', '.join(central_codes_names)}"
+
+        # 2. Recopilar todos los códigos originales (Tags)
+        all_original_codes = []
+        code_mapping = {}  # normalized -> [original list]
+        
+        for nc in normalized_codes:
+            originals = nc.original_codes if isinstance(nc.original_codes, list) else []
+            all_original_codes.extend(originals)
+            code_mapping[nc.code] = originals
+
+        # 3. Buscar las Quotes que tengan tags con estos nombres
+        # Buscamos Tags por nombre
+        tags = Tag.objects.filter(name__in=all_original_codes)
+        
+        # Mapa de Original Tag Name -> Quote Texts
+        quotes_by_tag = {}
+        processed_quote_ids = set()
+
+        # Iteramos tags para buscar sus quotes
+        for tag in tags:
+            quotes = Quote.objects.filter(tags=tag).select_related('paper_extraction__study')
+            quote_list = []
+            for q in quotes:
+                if q.id in processed_quote_ids:
+                    continue
+                processed_quote_ids.add(q.id)
+                
+                source = "Desconocido"
+                if q.paper_extraction and q.paper_extraction.study:
+                    source = f"{q.paper_extraction.study.title} ({q.paper_extraction.study.year})"
+                
+                quote_list.append(f"\"{q.text_fragment}\" [{source}]")
+            
+            if quote_list:
+                quotes_by_tag[tag.name] = quote_list
+
+        # 4. Construir el string de contexto agrupado por Código Normalizado
+        context_parts = []
+        context_parts.append(f"Contexto de Evidencia para Subtema '{subtheme.name}':")
+        
+        for nc_name, originals in code_mapping.items():
+            context_parts.append(f"\nCódigo Central (Normalizado): {nc_name}")
+            has_evidence = False
+            for orig in originals:
+                if orig in quotes_by_tag:
+                    for qt in quotes_by_tag[orig]:
+                        context_parts.append(f"  - {qt}")
+                        has_evidence = True
+            
+            if not has_evidence:
+                context_parts.append("  (Sin evidencia directa extraída)")
+
+        return "\n".join(context_parts)
 
     def _generate_draft_proposition(self, context, instruction):
         """

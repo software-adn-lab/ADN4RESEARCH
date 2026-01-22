@@ -431,9 +431,13 @@
                 <label class="label">
                     <span class="label-text font-semibold">Research Question Focus <span class="text-error">*</span></span>
                 </label>
-                <input type="text" id="manual-theme-rq" 
-                       placeholder="e.g., RQ1, RQ2, etc." 
-                       class="input input-bordered w-full" required />
+                <select id="manual-theme-rq" class="select select-bordered w-full" required>
+                    <option value="" disabled selected>Select Research Question Focus...</option>
+                    {% for rq in research_questions %}
+                    <option value="{{ rq.label }}">{{ rq.label }}: {{ rq.question|truncatechars:60 }}</option>
+                    {% endfor %}
+                    <option value="Other">Other</option>
+                </select>
             </div>
 
             <!-- Selected Codes -->

@@ -24,7 +24,7 @@ class LLMClient:
     def generate_opening_message(self, subtheme) -> Dict[str, str]:
         raise NotImplementedError()
 
-    def generate_draft_proposition(self, context, instruction) -> str:
+    def generate_draft_proposition(self, context, instruction, extra_context=None) -> str:
         raise NotImplementedError()
 
     def generate_refined_proposition(
@@ -89,7 +89,7 @@ class DefaultLLMClient(LLMClient):
             "tags": tags,
         }
 
-    def generate_draft_proposition(self, context, instruction) -> str:
+    def generate_draft_proposition(self, context, instruction, extra_context=None) -> str:
         # Simple deterministic draft for testing/development
         return (
             "La principal barrera organizacional es la disrupción de la colaboración "
@@ -351,25 +351,54 @@ class GeminiLLMClient(LLMClient):
             "tags": tags,
         }
 
-    def generate_draft_proposition(self, context, instruction) -> str:
+    def generate_draft_proposition(self, context, instruction, extra_context=None) -> str:
         # Compose a prompt using context and the researcher's instruction
         sub = getattr(context, "subtheme", None)
         extractions = getattr(context, "extractions_context", {}) or {}
+        
+        full_evidence_context = extra_context if extra_context else ""
+        
         prompt = (
             "Eres un asistente para síntesis interpretativa en revisiones sistemáticas. "
-            "A partir del siguiente contexto (tema, subtema, códigos centrales y citas) y la instrucción del investigador, "
-            "genera una proposición interpretativa clara y concisa (1-3 oraciones) que responda a la pregunta de investigación.\n\n"
-            f"Contexto del tema: {getattr(sub, 'theme', '') if sub else ''}\n"
-            f"Subtema: {getattr(sub, 'name', '') if sub else ''}\n"
-            f"Códigos centrales: {', '.join(extractions.get('central_codes', []) or [])}\n"
-            f"Citas clave: {', '.join(extractions.get('key_citations', []) or [])}\n\n"
-            f"Instrucción del investigador: {instruction}\n\n"
-            "Devuelve solo la proposición, sin explicaciones adicionales."
+            "Tu tarea es ayudar al investigador a redactar una 'Proposición Interpretativa' (conclusión sintetizada) "
+            "basada en la evidencia extraída (citas y códigos).\n\n"
+            "PASO 1: EVALUACIÓN DE RELEVANCIA\n"
+            "Analiza si la 'Instrucción del investigador' tiene relación con el 'Contexto de Evidencia' proporcionado bajo el Subtema actual. "
+            "Si la instrucción pide hablar de temas NO presentes en la evidencia o no relacionados con el subtema, debes RECHAZAR la solicitud.\n"
+            "Si rechazas, responde EXCLUSIVAMENTE con el prefijo 'IRRELEVANT: ' seguido de una breve explicación de por qué.\n\n"
+            "PASO 2: GENERACIÓN (Solo si es relevante)\n"
+            "Si la instrucción es pertinente, genera una proposición interpretativa académica, clara y concisa (1-3 oraciones) "
+            "que sintetice los hallazgos mencionados en la evidencia y responda a la instrucción.\n\n"
+            "=== DATOS DEL PROYECTO ===\n"
+            f"Tema Principal: {getattr(sub, 'theme', '') if sub else ''}\n"
+            f"Subtema Actual: {getattr(sub, 'name', '') if sub else ''}\n\n"
+            "=== EVIDENCIA DE CÓDIGOS Y CITAS ===\n"
+            f"{full_evidence_context}\n\n"
+            "=== INSTRUCCIÓN DEL INVESTIGADOR ===\n"
+            f"\"{instruction}\"\n\n"
+            "Tu respuesta (Proposición o 'IRRELEVANT: ...'):"
         )
 
         try:
-            return self._generate(prompt, max_output_tokens=2048)
+            response = self._generate(prompt, max_output_tokens=2048).strip()
+            
+            if response.startswith("IRRELEVANT:"):
+                # Raise ValueError with the explanation
+                reason = response.replace("IRRELEVANT:", "").strip()
+                raise ValueError(f"Solicitud no relacionada con el contexto: {reason}")
+            
+            return response
+            
+        except ValueError:
+            raise # Re-raise known relevance errors
         except Exception as e:
+            # Si es un error de cuota, PROPAGARLO en lugar de usar fallback
+            # Esto permite al servicio superior notificar al usuario adecuadamente
+            error_str = str(e)
+            if "Quota exceeded" in error_str or "429" in error_str:
+                logger.error("Gemini Quota Exceeded: %s", error_str)
+                raise e
+
             logger.warning(
                 "Failed to generate draft proposition with Gemini, using fallback: %s",
                 e,
