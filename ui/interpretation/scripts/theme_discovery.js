@@ -17,12 +17,49 @@ document.addEventListener('DOMContentLoaded', function () {
     const manualNormalizeBtn = document.getElementById('manual-normalize-btn');
     const manualModal = document.getElementById('manual-normalization-modal');
     
+    async function performManualNormalization(normalizedCode, originalCodes, rationale) {
+        try {
+            const response = await fetch(URLS.createManualNormalization, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    normalized_code: normalizedCode,
+                    original_codes: originalCodes,
+                    rationale: rationale
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                if (manualModal && manualModal.open) manualModal.close();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to create normalization'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to create normalization');
+        }
+    }
+
     if (manualNormalizeBtn) {
         manualNormalizeBtn.addEventListener('click', function () {
             const selectedCheckboxes = document.querySelectorAll('.code-checkbox:checked');
             
             if (selectedCheckboxes.length === 0) {
                 alert('Please select at least one code to normalize');
+                return;
+            }
+
+            // AUTO-PASSTHROUGH for Single Selection
+            if (selectedCheckboxes.length === 1) {
+                const codeName = selectedCheckboxes[0].dataset.code;
+                if(confirm(`Create normalized code directly for "${codeName}"?`)) {
+                    performManualNormalization(codeName, [codeName], "Direct single-tag normalization.");
+                }
                 return;
             }
 
@@ -58,31 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            try {
-                const response = await fetch(URLS.createManualNormalization, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({
-                        normalized_code: normalizedCode,
-                        original_codes: originalCodes,
-                        rationale: rationale
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    manualModal.close();
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to create normalization'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to create normalization');
-            }
+            await performManualNormalization(normalizedCode, originalCodes, rationale);
         });
     }
 
