@@ -78,6 +78,24 @@
     <div class="card bg-base-100 border border-base-200 shadow-sm mb-8">
         <div class="card-body p-4">
             <h3 class="text-xs font-bold uppercase text-base-content/50 mb-3">Results by Source</h3>
+            <div role="alert" class="alert alert-info mb-4 p-3 text-xs shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <h3 class="font-bold">Limitaciones de Resultados</h3>
+                    <div class="text-xs">
+                        Trabajamos con una muestra limitada por fuente (ej. 200 de Scopus, 100 de IEEE) debido a
+                        restricciones de las APIs de los proveedores (como Elsevier), incluso si la búsqueda arroja
+                        muchos más resultados (ej. 4000).
+                        <br />
+                        <strong>Recomendación:</strong> Si el número de resultados es muy alto, refine su estrategia
+                        para asegurar que la muestra contenga los estudios más relevantes.
+                    </div>
+                </div>
+            </div>
             <div class="flex flex-wrap gap-4">
                 {% for source, count in results.total_por_fuente.items %}
                 <div class="stat bg-base-200/50 rounded-lg p-3 min-w-[150px]">
@@ -85,11 +103,11 @@
                     <div class="stat-value text-lg text-primary">
                         {{ count }}
                         {% with results.total_available_by_source|get_item:source as available %}
-                            {% if available is not None %}
-                                <span class="text-sm font-normal text-base-content/60">de {{ available|intcomma }}</span>
-                            {% else %}
-                                <span class="text-sm font-normal text-base-content/40">de N/D</span>
-                            {% endif %}
+                        {% if available is not None %}
+                        <span class="text-sm font-normal text-base-content/60">de {{ available|intcomma }}</span>
+                        {% else %}
+                        <span class="text-sm font-normal text-base-content/40">de N/D</span>
+                        {% endif %}
                         {% endwith %}
                     </div>
                     <div class="stat-desc text-xs">studies found</div>
@@ -99,6 +117,28 @@
         </div>
     </div>
     {% endif %}
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+        <div class="text-sm text-base-content/60">
+            Showing {{ studies|length }} of {{ total_filtered }} results (limit {{ display_limit }} per source)
+        </div>
+        <form method="get" class="flex items-center gap-2 text-sm">
+            <span class="text-base-content/60">Show</span>
+            <select name="limit" class="select select-bordered select-sm" onchange="this.form.submit()">
+                <option value="5" {% if display_limit == 5 %}selected{% endif %}>5</option>
+                <option value="10" {% if display_limit == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if display_limit == 25 %}selected{% endif %}>25</option>
+            </select>
+            {% if selected_sources %}
+            {% for source in selected_sources %}
+            <input type="hidden" name="sources" value="{{ source }}">
+            {% endfor %}
+            {% endif %}
+            {% if current_year_filter %}
+            <input type="hidden" name="year" value="{{ current_year_filter }}">
+            {% endif %}
+        </form>
+    </div>
 
     <div class="space-y-3">
         {% for study in studies %}

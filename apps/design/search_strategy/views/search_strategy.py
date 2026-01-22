@@ -226,16 +226,40 @@ def search_results_view(request, project_id, strategy_id, project):
         
         results_dto = search_strategy_service.get_search_results_dto(strategy_id, selected_sources=selected_sources)
         year_filter = request.GET.get('year')
+        limit_param = request.GET.get('limit')
         studies = getattr(results_dto, 'studies', []) if results_dto else []
 
         if year_filter and studies:
             studies = [s for s in studies if str(s.get('year')) == year_filter]
+
+        display_limit = 25
+        if limit_param:
+            try:
+                parsed_limit = int(limit_param)
+                if parsed_limit > 0:
+                    display_limit = parsed_limit
+            except (TypeError, ValueError):
+                pass
+
+        total_filtered = len(studies)
+        per_source_counts = {}
+        limited_studies = []
+        for study in studies:
+            source = study.get('source') or 'Unknown'
+            current_count = per_source_counts.get(source, 0)
+            if current_count >= display_limit:
+                continue
+            per_source_counts[source] = current_count + 1
+            limited_studies.append(study)
+        studies = limited_studies
 
         context = {
             'project': project,
             'strategy': strategy_dto,  # Passing DTO instead of Model
             'results': results_dto,
             'studies': studies,
+            'total_filtered': total_filtered,
+            'display_limit': display_limit,
             'years_range': range(2025, 2000, -1),
             'current_year_filter': year_filter,
             'selected_sources': selected_sources,  # Para mantener estado en UI
