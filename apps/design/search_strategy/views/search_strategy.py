@@ -218,7 +218,6 @@ def search_results_view(request, project_id, strategy_id, project):
         
         if selected_sources is None:
             # Usar las fuentes guardadas en la estrategia si existen
-            from apps.design.search_strategy.models import SearchStrategy
             strategy = SearchStrategy.objects.get(id=strategy_id)
             saved_sources = strategy.json_definition.get('selected_sources', None)
             if saved_sources:
