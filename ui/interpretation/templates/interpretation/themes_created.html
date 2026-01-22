@@ -5,29 +5,59 @@
 <div class="h-screen flex flex-col">
     <!-- Header Area -->
     <div class="bg-base-100 border-b border-base-300 px-8 py-4">
-        <!-- Step Indicator (Inserted) -->
-        <div class="flex items-center justify-center mb-4">
-            <div class="flex items-center space-x-4">
-                <a href="{% url 'interpretation:theme_discovery' project_id %}?step=1" class="flex items-center group">
-                    <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">1</div>
-                    <span class="ml-2 font-medium group-hover:text-primary transition-colors">Code Normalization</span>
-                </a>
-                <div class="w-16 h-1 bg-base-300"></div>
-                <a href="{% url 'interpretation:theme_discovery' project_id %}?step=2" class="flex items-center group">
-                    <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">2</div>
-                    <span class="ml-2 font-medium group-hover:text-primary transition-colors">Theme Generation</span>
-                </a>
-                <div class="w-16 h-1 bg-base-300"></div>
-                <a href="{% url 'interpretation:themes_created' %}?project_id={{ project_id }}" class="flex items-center group">
-                    <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-primary transition-all">3</div>
-                    <span class="ml-2 font-medium group-hover:text-primary transition-colors">Themes Dashboard</span>
-                </a>
-                <div class="w-16 h-1 bg-base-300"></div>
-                <a href="{% url 'interpretation:index' %}?project_id={{ project_id }}" class="flex items-center group">
-                    <div class="w-10 h-10 rounded-full bg-base-300 text-base-content/60 flex items-center justify-center font-bold group-hover:ring-2 ring-offset-2 ring-base-300 transition-all">4</div>
-                    <span class="ml-2 font-medium text-base-content/60 group-hover:text-base-content transition-colors">Inference</span>
-                </a>
-            </div>
+        <!-- Step Indicator (Timeline) -->
+        <div class="w-full flex justify-center bg-gray-50 rounded-lg py-2 mb-8">
+          <ul class="timeline timeline-vertical justify-center lg:timeline-horizontal w-full lg:max-w-5xl mx-auto">
+            
+            <!-- Step 1: Code Normalization (Completed) -->
+            <li class="h-20">
+                <div class="timeline-middle">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-primary">
+                        <circle cx="10" cy="10" r="10" />
+                        <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    </svg>
+                </div>
+                <a href="{% url 'interpretation:theme_discovery' project_id %}?step=1" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-primary hover:bg-gray-400 text-white">Code Normalization</a>
+                <hr class="bg-primary" />
+            </li>
+
+            <!-- Step 2: Theme Generation (Completed) -->
+            <li class="h-20">
+                <hr class="bg-primary" />
+                 <div class="timeline-middle">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-primary">
+                        <circle cx="10" cy="10" r="10" />
+                         <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    </svg>
+                </div>
+                <a href="{% url 'interpretation:theme_discovery' project_id %}?step=2" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-primary hover:bg-gray-400 text-white">Theme Generation</a>
+                <hr class="bg-primary" />
+            </li>
+            
+            <!-- Step 3: Themes Dashboard (Active) -->
+            <li class="h-20">
+                <hr class="bg-primary" />
+                <div class="timeline-middle">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-white border-4 border-primary rounded-full">
+                    <circle cx="10" cy="10" r="10" />
+                  </svg>
+                </div>
+                <a href="{% url 'interpretation:themes_created' %}?project_id={{ project_id }}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md">Themes Dashboard</a>
+                <hr class="bg-base-300" />
+            </li>
+
+            <!-- Step 4: Inference (Pending) -->
+            <li class="h-20">
+                <hr class="bg-base-300" />
+                <div class="timeline-middle">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-300">
+                    <circle cx="10" cy="10" r="8" />
+                  </svg>
+                </div>
+                <a href="{% url 'interpretation:index' %}?project_id={{ project_id }}" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm">Inference</a>
+            </li>
+
+          </ul>
         </div>
         
         <div class="flex justify-between items-center">
