@@ -14,6 +14,7 @@ Tasa de éxito esperada: 95-97%
 ⚠️ ZONA GRIS LEGAL - Deshabilitado por defecto.
 """
 import logging
+import os
 import requests
 import time
 import random
@@ -80,7 +81,14 @@ class SciHubDownloader:
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
-        self.delay_range = delay_range
+        env_min = os.getenv("SCIHUB_DELAY_MIN")
+        env_max = os.getenv("SCIHUB_DELAY_MAX")
+        if env_min or env_max:
+            min_delay = float(env_min) if env_min is not None else delay_range[0]
+            max_delay = float(env_max) if env_max is not None else delay_range[1]
+            self.delay_range = (min_delay, max_delay)
+        else:
+            self.delay_range = delay_range
 
         # Cache manager (sigue usando disco local para metadatos/sqlite)
         self.cache = DownloadCache(base_dir) if use_cache else None

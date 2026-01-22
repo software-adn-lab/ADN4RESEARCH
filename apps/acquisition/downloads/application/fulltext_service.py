@@ -8,6 +8,8 @@ Orquesta la estrategia de tres niveles para obtener textos completos:
 """
 
 import logging
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List, Dict, Any
 
 from apps.acquisition.shared.domain.entities.study import Study
@@ -100,12 +102,18 @@ class FullTextService:
 
         return saved_study
 
-    def download_batch(self, study_ids: List[str]) -> Dict[str, Any]:
+    def download_batch(self, study_ids: List[str], max_workers: Optional[int] = None) -> Dict[str, Any]:
         """
         Descargar textos completos de múltiples estudios (CON PERSISTENCIA).
 
+        Nota:
+            Este método usa concurrencia para I/O (ThreadPoolExecutor) para acelerar
+            descargas sin alterar la lógica de cascada por estudio.
+
         Args:
             study_ids: Lista de IDs de estudios
+            max_workers: Máximo de workers concurrentes (opcional).
+                         Si es None, usa FULLTEXT_MAX_WORKERS del entorno.
 
         Returns:
             Dict con estadísticas del proceso:
@@ -127,6 +135,12 @@ class FullTextService:
             logger.warning("download_batch llamado con lista vacía")
             return self._create_empty_stats()
 
+        if max_workers is None:
+            max_workers = int(os.getenv("FULLTEXT_MAX_WORKERS", "5"))
+        if max_workers < 1:
+            max_workers = 1
+        max_workers = min(max_workers, len(study_ids))
+
         stats = {
             "total": len(study_ids),
             "downloaded": 0,
@@ -137,36 +151,62 @@ class FullTextService:
 
         studies_to_save = []
 
-        for study_id in study_ids:
+        def _process_study(study_id: str):
             try:
-                # 1. Recuperar estudio
+                try:
+                    from django.db import close_old_connections
+                    close_old_connections()
+                except Exception:
+                    pass
+
                 study = self.repository.find_by_id(study_id)
                 if study is None:
-                    logger.warning(f"Estudio no encontrado: {study_id}")
+                    return ("missing", None)
+
+                if study.pdf_path:
+                    return ("already_available", None)
+
+                self._obtain_fulltext_in_place(study)
+                return ("processed", study)
+            except Exception as e:
+                logger.error(f"Error descargando estudio {study_id}: {e}", exc_info=True)
+                return ("error", None)
+            finally:
+                try:
+                    from django.db import close_old_connections
+                    close_old_connections()
+                except Exception:
+                    pass
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_id = {
+                executor.submit(_process_study, study_id): study_id
+                for study_id in study_ids
+            }
+
+            for future in as_completed(future_to_id):
+                study_id = future_to_id[future]
+                try:
+                    status, study = future.result()
+                except Exception as e:
+                    logger.error(f"Error en worker para {study_id}: {e}", exc_info=True)
                     stats["errors"] += 1
                     continue
 
-                # 2. Verificar si ya tiene PDF
-                if study.pdf_path:
-                    logger.info(f"Estudio {study_id} ya tiene PDF: {study.pdf_path}")
+                if status == "already_available":
+                    logger.info(f"Estudio {study_id} ya tiene PDF")
                     stats["already_available"] += 1
-                    continue
-
-                # 3. Intentar descarga (lógica pura)
-                self._obtain_fulltext_in_place(study)
-
-                # 4. Acumular para batch save
-                studies_to_save.append(study)
-
-                # 5. Actualizar estadísticas
-                if study.pdf_path:
-                    stats["downloaded"] += 1
+                elif status == "missing":
+                    logger.warning(f"Estudio no encontrado: {study_id}")
+                    stats["errors"] += 1
+                elif status == "processed" and study:
+                    studies_to_save.append(study)
+                    if study.pdf_path:
+                        stats["downloaded"] += 1
+                    else:
+                        stats["not_available"] += 1
                 else:
-                    stats["not_available"] += 1
-
-            except Exception as e:
-                logger.error(f"Error descargando estudio {study_id}: {e}", exc_info=True)
-                stats["errors"] += 1
+                    stats["errors"] += 1
 
         if studies_to_save:
             logger.info(f"Persistiendo {len(studies_to_save)} estudios actualizados...")
