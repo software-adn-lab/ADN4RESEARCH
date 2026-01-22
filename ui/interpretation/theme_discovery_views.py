@@ -20,6 +20,7 @@ from apps.interpretation.conclusion_assistant.models.theme_discovery_models impo
 )
 from apps.interpretation.conclusion_assistant.models.theme_models import Theme
 from apps.project.structure.models.project_models import Project
+from apps.design.research_question.models.research_question import ResearchQuestion
 
 
 theme_discovery_service = ThemeDiscoveryService()
@@ -63,11 +64,22 @@ def theme_discovery_view(request, project_id):
             "-created_at"
         )
 
+        research_questions = ResearchQuestion.objects.filter(
+            design_phase_id=project.id
+        ).order_by("id")
+        
+        # Prepare RQ data with labels (RQ1, RQ2, etc.) for the dropdown
+        research_questions_data = [
+            {"label": f"RQ{i}", "question": rq.question} 
+            for i, rq in enumerate(research_questions, 1)
+        ]
+
         context.update(
             {
                 "normalized_codes": normalized_codes,
                 "theme_proposals": theme_proposals,
                 "created_themes": created_themes,
+                "research_questions": research_questions_data,
             }
         )
 

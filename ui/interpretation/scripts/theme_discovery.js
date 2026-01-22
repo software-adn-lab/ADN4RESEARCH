@@ -486,36 +486,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // === Editable RQ Focus for Normalized Codes ===
     document.querySelectorAll('.rq-focus-input').forEach(input => {
-        let saveTimeout;
-
-        input.addEventListener('input', function () {
-            clearTimeout(saveTimeout);
+        input.addEventListener('change', async function () {
             const codeId = this.dataset.codeId;
-            const newValue = this.value.trim();
-
-            // Auto-save after 1 second of no typing
-            saveTimeout = setTimeout(async () => {
-                if (newValue) {
-                    await saveRQFocus(codeId, newValue);
-                }
-            }, 1000);
-        });
-
-        input.addEventListener('blur', async function () {
-            clearTimeout(saveTimeout);
-            const codeId = this.dataset.codeId;
-            const newValue = this.value.trim();
+            const newValue = this.value;
             
-            if (newValue) {
-                await saveRQFocus(codeId, newValue);
-            }
-        });
-
-        input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.blur();
-            }
+            await saveRQFocus(codeId, newValue);
         });
     });
 
