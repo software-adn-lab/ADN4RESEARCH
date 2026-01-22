@@ -125,6 +125,16 @@ def create_manual_normalization(request, project_id):
 def accept_normalization(request, proposal_id):
     proposal = get_object_or_404(CodeNormalizationProposal, id=proposal_id)
 
+    # Peer review enforcement: Users cannot accept their own manual proposals
+    if not proposal.created_by_ai and proposal.reviewed_by == request.user:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Propuesta Creada por ti: Debes esperar a que otro investigador la valide",
+            },
+            status=403,
+        )
+
     try:
         data = json.loads(request.body)
         action = data.get("action", "accept")
@@ -146,13 +156,21 @@ def accept_all_normalizations(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
     try:
-        proposals = CodeNormalizationProposal.objects.filter(
+        all_proposals = CodeNormalizationProposal.objects.filter(
             project=project, status__in=["ACCEPTED", "PENDING"]
         )
-        proposal_ids = list(proposals.values_list("id", flat=True))
 
-        # Mark pending proposals as accepted
-        proposals.filter(status="PENDING").update(status="ACCEPTED")
+        # Peer review enforcement: Exclude my own manual pending proposals from bulk acceptance
+        # If I created it (manual) and it is pending, I cannot accept it.
+        forbidden_ids = all_proposals.filter(
+            created_by_ai=False, reviewed_by=request.user, status="PENDING"
+        ).values_list("id", flat=True)
+
+        proposals_to_process = all_proposals.exclude(id__in=forbidden_ids)
+        proposal_ids = list(proposals_to_process.values_list("id", flat=True))
+
+        # Mark pending proposals as accepted (only those allowed)
+        proposals_to_process.filter(status="PENDING").update(status="ACCEPTED")
 
         normalized_codes = theme_discovery_service.accept_normalization_proposals(
             proposal_ids=proposal_ids, reviewer=request.user
