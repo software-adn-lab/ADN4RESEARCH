@@ -58,6 +58,27 @@ DiscoveryResultStatus = Literal["complete", "partial"]
 
 
 # ============================================================================
+# LÍMITES DE BÚSQUEDA (Configuración centralizada)
+# ============================================================================
+
+# Límite máximo seguro por fuente (compatible con Scopus e IEEE APIs)
+# - Scopus: máx 200 por request, 5000 total sin cursor
+# - IEEE: máx 200 por request
+# Este valor es el "safe max" para búsquedas síncronas interactivas
+DEFAULT_MAX_RESULTS_PER_SOURCE: int = 200
+
+# Tamaños de página por API (cuántos resultados pedir por request HTTP)
+# Scopus requiere 25 para obtener metadatos COMPLETOS (view=COMPLETE)
+SCOPUS_PAGE_SIZE: int = 25
+
+# IEEE soporta hasta 200 por página
+IEEE_PAGE_SIZE: int = 200
+
+# Límite absoluto de Scopus sin paginación por cursor (restricción de la API)
+SCOPUS_MAX_TOTAL_RESULTS: int = 5000
+
+
+# ============================================================================
 # ALIASES DE FUENTES (Solo para traducción UI → Dominio en Facade)
 # ============================================================================
 

@@ -27,7 +27,10 @@ from .shared.application.acquisition_orchestrator import (
 # Dominio
 from .shared.domain.entities.study import Study
 from .translation.domain.models import NormalizedStrategy
-from .shared.domain.constants import normalize_source_names
+from .shared.domain.constants import (
+    normalize_source_names,
+    DEFAULT_MAX_RESULTS_PER_SOURCE,
+)
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -145,7 +148,7 @@ class AcquisitionFacade:
         self,
         strategy_dict: Dict[str, Any],
         user: Optional[User] = None,
-        max_results_per_source: int = 25,
+        max_results_per_source: int = DEFAULT_MAX_RESULTS_PER_SOURCE,
         selected_sources: Optional[List[str]] = None,
     ) -> PreviewSearchResult:
         """

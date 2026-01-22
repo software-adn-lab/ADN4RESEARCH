@@ -28,6 +28,7 @@ from django.contrib.auth import get_user_model
 from apps.acquisition.translation.domain.models import NormalizedStrategy
 from apps.acquisition.shared.domain.entities.study import Study
 from apps.acquisition.shared.domain.repositories.i_study_repository import IStudyRepository
+from apps.acquisition.shared.domain.constants import DEFAULT_MAX_RESULTS_PER_SOURCE
 from apps.design.search_strategy.models.search_strategy import SearchStrategy
 
 # Application Services
@@ -142,7 +143,7 @@ class AcquisitionOrchestrator:
         self,
         strategy_dict: Dict[str, Any],
         user: Optional[User] = None,
-        max_results_per_source: int = 25,
+        max_results_per_source: int = None,  # None = usar DEFAULT_MAX_RESULTS_PER_SOURCE
         selected_sources: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
@@ -162,6 +163,10 @@ class AcquisitionOrchestrator:
             - total_found: int - Total de estudios únicos encontrados
             - studies: List[Dict] - Estudios como dicts (sin persistir)
         """
+        # Usar constante centralizada si no se especifica límite
+        if max_results_per_source is None:
+            max_results_per_source = DEFAULT_MAX_RESULTS_PER_SOURCE
+            
         logger.info(f"[PREVIEW] Executing preview search with sources: {selected_sources}")
 
         # Convertir a dominio
@@ -418,7 +423,7 @@ class AcquisitionOrchestrator:
         discovery_result = self.discovery_service.execute(
             translation_statuses=translation_statuses,
             supported_sources=list(queries_by_source.keys()),
-            max_results_per_source=25,
+            max_results_per_source=DEFAULT_MAX_RESULTS_PER_SOURCE,
             persist=True,
         )
 

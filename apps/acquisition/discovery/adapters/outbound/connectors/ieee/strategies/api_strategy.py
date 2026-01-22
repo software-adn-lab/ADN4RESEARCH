@@ -5,12 +5,12 @@ This module implements the search strategy that uses IEEE's REST API
 """
 
 import logging
-from typing import List, Dict, Any
-import requests
+import time
 
 from .search_strategy import SearchStrategy, SearchResult
 from apps.acquisition.discovery.infrastructure.http import HttpClient
 from apps.acquisition.discovery.infrastructure.normalization import IeeeResultNormalizer
+from apps.acquisition.shared.domain.constants import IEEE_PAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ class IeeeApiStrategy(SearchStrategy):
         self,
         http_client: HttpClient,
         normalizer: IeeeResultNormalizer,
-        api_url: str = None,
-        test_url: str = None
+        api_url: str | None = None,
+        test_url: str | None = None
     ):
         """Initialize IEEE API strategy.
         
@@ -57,9 +57,8 @@ class IeeeApiStrategy(SearchStrategy):
     def can_execute(self) -> bool:
         """Check if IEEE API is accessible.
         
-        Performs a quick test request to verify API availability.
-        This helps determine if we're on campus/VPN or if the API
-        is reachable.
+        Performs a quick check (10s timeout) to verify API accessibility.
+        No caching - each call verifies current availability.
         
         Returns:
             True if API is accessible, False otherwise
@@ -68,12 +67,14 @@ class IeeeApiStrategy(SearchStrategy):
             # Quick test with minimal payload
             response = self.http_client.get(
                 self.test_url,
-                timeout=5
+                timeout=10  # If API doesn't respond in 10s, it's not available
             )
             
             # API is accessible if we get any response (200, 400, 401)
             # 400/401 means API is there but we need proper auth/params
-            return response.status_code in [200, 400, 401]
+            result = response.status_code in [200, 400, 401]
+            logger.info(f"IEEE API availability check: {'available' if result else 'not available'}")
+            return result
             
         except Exception as e:
             logger.debug(f"IEEE API not accessible: {e}")
@@ -101,7 +102,7 @@ class IeeeApiStrategy(SearchStrategy):
         total_available: int | None = None
         
         results = []
-        page_size = min(max_results, 100)
+        page_size = min(max_results, IEEE_PAGE_SIZE)  # IEEE API max per request
         page_number = 1
         
         while len(results) < max_results:

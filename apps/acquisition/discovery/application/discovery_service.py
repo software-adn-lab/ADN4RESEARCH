@@ -12,7 +12,8 @@ from apps.acquisition.shared.domain.constants import (
     SUPPORTED_SOURCES,
     TRANSLATION_STATUS_READY,
     DISCOVERY_RESULT_COMPLETE,
-    DISCOVERY_RESULT_PARTIAL
+    DISCOVERY_RESULT_PARTIAL,
+    DEFAULT_MAX_RESULTS_PER_SOURCE,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class DiscoveryService:
         self,
         translation_statuses: dict,
         supported_sources: list[str],
-        max_results_per_source: int = 5,
+        max_results_per_source: int = None,  # None = usar DEFAULT_MAX_RESULTS_PER_SOURCE
         persist: bool = True
     ) -> DiscoveryResult:
         """
@@ -54,6 +55,10 @@ class DiscoveryService:
         Returns:
             DiscoveryResult with unique studies and summary
         """
+        # Usar constante centralizada si no se especifica límite
+        if max_results_per_source is None:
+            max_results_per_source = DEFAULT_MAX_RESULTS_PER_SOURCE
+            
         sane_statuses = self._sanitize_statuses(translation_statuses)
         executable_sources, no_ejecutadas = self._determine_execution_plan(
             supported_sources, sane_statuses

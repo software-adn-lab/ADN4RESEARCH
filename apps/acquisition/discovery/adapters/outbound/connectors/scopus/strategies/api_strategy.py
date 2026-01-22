@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from .search_strategy import SearchStrategy, SearchResult
 from apps.acquisition.discovery.infrastructure.http import HttpClient
 from apps.acquisition.discovery.infrastructure.normalization import ScopusResultNormalizer
+from apps.acquisition.shared.domain.constants import SCOPUS_PAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +61,13 @@ class ScopusApiStrategy(SearchStrategy):
             self.http_client.session.headers['X-ELS-APIKey'] = api_key
     
     def can_execute(self) -> bool:
-        """Check if Scopus API is accessible.
+        """Check if API strategy can be used.
         
-        Performs a quick test request to verify API availability.
+        Performs a quick check (10s timeout) to verify API accessibility.
+        No caching - each call verifies current availability.
         
         Returns:
-            True if API is accessible, False otherwise
+            True if API key is set and API is accessible
         """
         if not self.api_key:
             logger.debug("Scopus API cannot execute: missing API key")
@@ -77,11 +79,13 @@ class ScopusApiStrategy(SearchStrategy):
             response = self.http_client.get(
                 test_url,
                 params={'query': 'TITLE(test)', 'count': 1},
-                timeout=60
+                timeout=10  # If API doesn't respond in 10s, it's not available
             )
             
             # API is accessible if we get any response (200, 400, 401)
-            return response.status_code in [200, 400, 401]
+            result = response.status_code in [200, 400, 401]
+            logger.info(f"Scopus API availability check: {'available' if result else 'not available'}")
+            return result
             
         except Exception as e:
             logger.debug(f"Scopus API not accessible: {e}")
@@ -109,7 +113,7 @@ class ScopusApiStrategy(SearchStrategy):
         
         results = []
         start = 0
-        count = min(max_results, 25)  # Scopus API limit per request
+        count = min(max_results, SCOPUS_PAGE_SIZE)  # Scopus API limit per request (COMPLETE view)
         
         # Format query for Scopus
         if query.strip().startswith("TITLE-ABS-KEY"):
