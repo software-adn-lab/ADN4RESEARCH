@@ -33,6 +33,19 @@ document.addEventListener('DOMContentLoaded', () => {
             createNewGroup();
         }
 
+        // Restaurar checkboxes de fuentes seleccionadas guardadas
+        if (typeof INITIAL_DATA !== 'undefined' && INITIAL_DATA.selected_sources) {
+            INITIAL_DATA.selected_sources.forEach(source => {
+                // Normalizar: "IEEE Xplore" -> "IEEE" para coincidir con el value del checkbox
+                const normalizedSource = source === 'IEEE Xplore' ? 'IEEE' : source;
+                sourceCheckboxes.forEach(checkbox => {
+                    if (checkbox.value === normalizedSource) {
+                        checkbox.checked = true;
+                    }
+                });
+            });
+        }
+
         addGroupBtn.addEventListener('click', () => createNewGroup());
         searchBtn.addEventListener('click', saveAndSearch);
 
@@ -427,6 +440,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Please add at least one main term group.", ToastType.WARNING);
             return;
         }
+
+        // Incluir las fuentes seleccionadas en los datos visuales
+        const selectedSources = collectSelectedSources();
+        visualData.selected_sources = selectedSources;
 
         const loader = document.getElementById('full-screen-loader');
         if (loader) loader.classList.remove('hidden');

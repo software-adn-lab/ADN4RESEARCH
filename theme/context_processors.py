@@ -94,7 +94,7 @@ def sidebar_context(request):
             if interpretation_phase:
                 phases.append({
                     'name': 'Interpretation',
-                    'url': f'/interpretation/{project.id}/',
+                    'url': f'/interpretation/theme-discovery/{project.id}/',
                     'icon': 'interpretation',
                     'active': getattr(interpretation_phase, 'is_active', False),
                 })

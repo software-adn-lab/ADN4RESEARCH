@@ -199,7 +199,9 @@ class SearchStrategyService:
         strategy.last_modified_by_id = user_id
         strategy.save()
 
-        count = self.preview_service.translate_and_preview(visual_data)
+        # Extraer las fuentes seleccionadas del visual_data para pasarlas al preview
+        selected_sources = visual_data.get('selected_sources', None)
+        count = self.preview_service.translate_and_preview(visual_data, selected_sources=selected_sources)
         self.create_version_snapshot(strategy.id, user_id, total_found=count)
 
         # Notify after successful update

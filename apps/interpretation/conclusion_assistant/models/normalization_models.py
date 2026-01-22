@@ -106,3 +106,4 @@ class NormalizedCode(models.Model):
 
     def __str__(self):
         return f"{self.code} [{self.research_question_focus}]"
+

@@ -225,11 +225,16 @@
                                 <span class="font-medium">{{ code.code }}</span>
                             </td>
                             <td class="p-2">
-                                <input type="text" 
-                                       class="input input-bordered input-sm w-full rq-focus-input" 
-                                       data-code-id="{{ code.id }}"
-                                       value="{{ code.research_question_focus|default:'' }}" 
-                                       placeholder="e.g., RQ1, RQ2, etc." />
+                                <select class="select select-bordered select-sm w-full rq-focus-input" 
+                                        data-code-id="{{ code.id }}">
+                                    <option value="">Select RQ Focus...</option>
+                                    {% for rq in research_questions %}
+                                    <option value="{{ rq.label }}" {% if code.research_question_focus == rq.label %}selected{% endif %}>
+                                        {{ rq.label }}: {{ rq.question|truncatechars:40 }}
+                                    </option>
+                                    {% endfor %}
+                                    <option value="Other" {% if code.research_question_focus == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
                             </td>
                             <td class="p-2 text-center">
                                 <span class="badge badge-ghost">{{ code.frequency }}</span>
@@ -482,7 +487,7 @@
     const PROJECT_ID = {{ project.id }};
     const STEP = {{ step }};
 </script>
-<script src="{% static 'scripts/theme_discovery.js' %}"></script>
+<script src="{% static 'scripts/theme_discovery.js' %}?v=1.1"></script>
 
 <style>
     [contenteditable="true"] {
