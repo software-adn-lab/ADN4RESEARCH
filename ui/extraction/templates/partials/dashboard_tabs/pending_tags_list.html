@@ -3,6 +3,33 @@
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12">
     
+    <!-- Informative Messages -->
+    {% if is_owner %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+        <div class="flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-blue-900">Review Suggested Tags</h3>
+            <p class="text-sm text-blue-700 mt-1">Your research team has suggested new inductive tags during extraction. Review and approve them to add to your extraction protocol.</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 flex gap-3">
+        <div class="flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-purple-900">Suggest New Tags</h3>
+            <p class="text-sm text-purple-700 mt-1">You can suggest new inductive tags during extraction. Once suggested, your research coordinator will review and approve them to add to the extraction protocol.</p>
+        </div>
+    </div>
+    {% endif %}
+    
     <div class="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
             <div class="flex items-center gap-2 text-amber-600 mb-1">
@@ -11,8 +38,7 @@
                 </svg>
                 <span class="text-xs font-bold uppercase tracking-wider">Review Required</span>
             </div>
-            <h1 class="text-3xl font-bold tracking-tight text-gray-900">Pending Inductive Tags</h1>
-            <p class="text-base text-gray-500 mt-1">Review and standardize new codes created by your research team.</p>
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900">Suggested Tags</h1>
         </div>
         
         {% if pending_tags %}
@@ -135,7 +161,7 @@
             </div>
             <h2 class="text-xl font-bold text-gray-900">All Caught Up</h2>
             <p class="text-gray-500 max-w-sm mt-2 mb-6 text-sm">
-                There are no pending inductive tags to review. When your team creates new tags during extraction, they will appear here.
+                There are no suggested tags to review. When your team creates new tags during extraction, they will appear here.
             </p>
             <a href="{% url 'extraction:planning:phase_detail' project_id=phase.project_id %}?tab=tags" 
                class="btn btn-outline border-gray-300 text-gray-700 hover:bg-gray-50 font-medium normal-case">

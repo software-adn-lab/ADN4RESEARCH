@@ -81,10 +81,11 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
 </div>
 
 <script>
-(function() {
+// Esperar a que el DOM esté listo
+function initInductiveTagForm() {
     // DOM Elements
     const container = document.getElementById('inductive-tag-inline-container');
-    const showBtn = document.getElementById('show-inductive-tag-form-btn'); // Must exist in parent context
+    let showBtn = document.getElementById('show-inductive-tag-form-btn'); // Must exist in parent context
     const form = document.getElementById('inline-inductive-tag-form');
     const colorInput = document.getElementById('inline-tag-color');
     const colorPreview = document.getElementById('inline-color-preview');
@@ -93,13 +94,50 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
     const loadingSpinner = document.getElementById('inline-tag-loading');
     const nameInput = document.getElementById('inline-tag-name');
     
+    // Usar delegación de eventos en lugar de encontrar el botón directamente
+    // Esto permite que el botón se encuentre incluso si se carga dinámicamente
+    const attachShowBtnListener = () => {
+        const btn = document.getElementById('show-inductive-tag-form-btn');
+        
+        if (btn && !btn.__inductive_listener_attached) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleInductiveTagForm(true);
+            });
+            btn.__inductive_listener_attached = true;
+        }
+    };
+    
+    // Intentar attacher el listener inmediatamente
+    attachShowBtnListener();
+    
+    // Si el botón no existe aún, reintentar después de un corto tiempo
+    if (!showBtn) {
+        setTimeout(attachShowBtnListener, 100);
+    }
+    
     // Toggle Logic
     window.toggleInductiveTagForm = function(show) {
-        if (!container || !showBtn) return;
+        const container = document.getElementById('inductive-tag-inline-container');
+        const wrapper = document.getElementById('inductive-form-wrapper');
+        
+        if (!container) return;
         
         if (show) {
+            // Abrir el wrapper primero
+            if (wrapper) {
+                wrapper.classList.remove('hidden');
+            }
+            
+            // Luego abrir el container
             container.classList.remove('hidden');
-            showBtn.classList.add('hidden');
+            
+            const btn = document.getElementById('show-inductive-tag-form-btn');
+            if (btn) {
+                btn.classList.add('hidden');
+            }
+            
             // Scroll modal to bottom to show form
             const modalBox = container.closest('.modal-box');
             if(modalBox) {
@@ -111,8 +149,19 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
                 nameInput.focus();
             }
         } else {
+            // Cerrar el container primero
             container.classList.add('hidden');
-            showBtn.classList.remove('hidden');
+            
+            // Luego cerrar el wrapper
+            if (wrapper) {
+                wrapper.classList.add('hidden');
+            }
+            
+            const btn = document.getElementById('show-inductive-tag-form-btn');
+            if (btn) {
+                btn.classList.remove('hidden');
+            }
+            
             // Reset form state
             form.reset();
             colorInput.value = '#6366F1';
@@ -121,15 +170,6 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
             messageDiv.innerHTML = '';
         }
     };
-    
-    // Attach Listener to Trigger Button
-    if (showBtn) {
-        showBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleInductiveTagForm(true);
-        });
-    }
     
     // Color Preview Logic
     function updateColorPreview(color) {
@@ -197,7 +237,6 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
             }
             
         } catch (error) {
-            console.error('Error:', error);
             showMessage('Connection error. Please try again.', 'error');
         } finally {
             submitBtn.disabled = false;
@@ -259,5 +298,12 @@ Usage: {% include 'extraction/templates/partials/pdf_workspace/inductive_tag_for
             tagsContainer.dispatchEvent(event);
         }
     }
-})();
+}
+
+// Inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInductiveTagForm);
+} else {
+    initInductiveTagForm();
+}
 </script>

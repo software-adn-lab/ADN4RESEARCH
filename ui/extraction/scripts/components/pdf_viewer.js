@@ -10,7 +10,12 @@ class PDFViewer {
         this.pdf = null;
         this.container = document.getElementById('pdf-viewer-container');
         this.loader = document.getElementById('pdf-loader');
-        this.SCALE = 1.3;
+        this.baseScale = 1.3;
+        this.currentScale = this.baseScale;
+        this.minScale = 0.8;
+        this.maxScale = 2.5;
+        this.scaleStep = 0.1;
+        this.pagePlaceholders = {};
         
         console.log('📄 PDFViewer initialized');
     }
@@ -74,11 +79,12 @@ class PDFViewer {
         if (this.loader) this.loader.style.display = 'none';
 
         await this.renderPages();
+        this.setupZoomControls();
     }
 
     async renderPages() {
         const firstPage = await this.pdf.getPage(1);
-        const viewport = firstPage.getViewport({ scale: this.SCALE });
+        const viewport = firstPage.getViewport({ scale: this.currentScale });
         const pageWidth = viewport.width;
         const pageHeight = viewport.height;
 
@@ -152,6 +158,7 @@ class PDFViewer {
 
             this.container.appendChild(placeholder);
             placeholders[i] = placeholder;
+            this.pagePlaceholders[i] = placeholder;
         }
 
         return placeholders;
@@ -175,7 +182,7 @@ class PDFViewer {
     async renderPage(pageNum, container) {
         try {
             const page = await this.pdf.getPage(pageNum);
-            const viewport = page.getViewport({ scale: this.SCALE });
+            const viewport = page.getViewport({ scale: this.currentScale });
 
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page-container';
@@ -195,7 +202,7 @@ class PDFViewer {
                 overflow: hidden;
                 opacity: 1;
                 line-height: 1.0;
-                --scale-factor: ${this.SCALE};
+                --scale-factor: ${this.currentScale};
             `;
 
             pageDiv.appendChild(canvas);
@@ -391,6 +398,77 @@ class PDFViewer {
                     </button>
                 </div>
             `;
+        }
+    }
+
+    // Zoom Methods
+    setupZoomControls() {
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+        console.log('Setting up zoom controls:', { zoomInBtn, zoomOutBtn, zoomResetBtn });
+
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => {
+                console.log('Zoom in clicked');
+                this.zoomIn();
+            });
+        }
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => {
+                console.log('Zoom out clicked');
+                this.zoomOut();
+            });
+        }
+        if (zoomResetBtn) {
+            zoomResetBtn.addEventListener('click', () => {
+                console.log('Zoom reset clicked');
+                this.resetZoom();
+            });
+        }
+    }
+
+    zoomIn() {
+        console.log('zoomIn called, currentScale:', this.currentScale);
+        this.currentScale = Math.min(this.currentScale + this.scaleStep, this.maxScale);
+        console.log('New scale:', this.currentScale);
+        this.applyZoom();
+    }
+
+    zoomOut() {
+        console.log('zoomOut called, currentScale:', this.currentScale);
+        this.currentScale = Math.max(this.currentScale - this.scaleStep, this.minScale);
+        console.log('New scale:', this.currentScale);
+        this.applyZoom();
+    }
+
+    resetZoom() {
+        console.log('resetZoom called');
+        this.currentScale = this.baseScale;
+        console.log('Reset to:', this.currentScale);
+        this.applyZoom();
+    }
+
+    applyZoom() {
+        // Update zoom level display
+        const zoomLevelElement = document.getElementById('zoom-level');
+        if (zoomLevelElement) {
+            zoomLevelElement.textContent = Math.round(this.currentScale * 100) + '%';
+        }
+
+        // Calculate zoom ratio based on current vs base scale
+        // This allows us to use CSS transform without re-rendering
+        const zoomRatio = this.currentScale / this.baseScale;
+        
+        console.log(`Applying zoom with transform scale: ${zoomRatio}`);
+
+        // Apply CSS transform to the entire PDF container
+        // This is instant and doesn't require re-rendering
+        if (this.container) {
+            this.container.style.transform = `scale(${zoomRatio})`;
+            this.container.style.transformOrigin = 'top center';
+            this.container.style.transition = 'transform 0.2s ease-out';
         }
     }
 }

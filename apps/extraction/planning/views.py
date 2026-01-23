@@ -78,10 +78,16 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             'is_restricted': False,
         })
         
+        # Calcular cobertura del protocolo para TODOS (necesario para timeline)
+        service = PhaseLifecycleService()
+        coverage_report = service.get_protocol_coverage(phase)
+        context['coverage_report'] = coverage_report
+        
         # Formularios (solo owner)
         if is_owner:
             context['config_form'] = ExtractionPhaseConfigForm(instance=phase)
             context['tag_form'] = DeductiveTagForm(project=phase.project)
+            context['can_open_phase'] = coverage_report.is_fully_covered
         
         # Cargar datos según tab
         self._load_tab_data(context, phase, active_tab, is_owner, is_researcher)
@@ -108,11 +114,6 @@ class ExtractionPhaseDetailView(LoginRequiredMixin, ProjectMemberRequiredMixin, 
             # ✅ Calcular counts por tipo (solo deductivos y inductivos aprobados)
             context['deductive_tags_count'] = all_tags.filter(type='DEDUCTIVE').count()
             context['inductive_tags_count'] = all_tags.filter(type='INDUCTIVE', status='APPROVED').count()
-            
-            if is_owner:
-                coverage_report = service.get_protocol_coverage(phase)
-                context['coverage_report'] = coverage_report
-                context['can_open_phase'] = coverage_report.is_fully_covered
         
         elif tab == 'studies':
             papers_qs = PaperExtraction.objects.filter(extraction_phase=phase)

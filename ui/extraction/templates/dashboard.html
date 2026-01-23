@@ -5,14 +5,129 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6 animate-fade-in p-6">
+    {% if is_owner or phase.status != 'CONFIG' %}
+<div class="w-full flex justify-center bg-gray-50 m-0">
+    <ul class="timeline timeline-vertical justify-center lg:timeline-horizontal w-full lg:max-w-6xl mx-auto">
+        
+        {% if is_owner %}
+        <!-- Step 1: Date Configuration -->
+        <li class="h-20">
+            <div class="timeline-middle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                     class="h-5 w-5 {% if phase.start_date and phase.due_date %}text-primary{% elif active_tab == 'config' %}text-white border-3 border-primary rounded-3xl{% else %}text-base-300{% endif %}">
+                    {% if phase.start_date and phase.due_date %}
+                        <circle cx="10" cy="10" r="10" />
+                        <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    {% elif active_tab == 'config' %}
+                        <circle cx="10" cy="10" r="10" />
+                    {% else %}
+                        <circle cx="10" cy="10" r="8" />
+                    {% endif %}
+                </svg>
+            </div>
+            <a href="?tab=config" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm {% if active_tab == 'config' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% elif phase.start_date and phase.due_date %}bg-primary hover:bg-gray-400 text-white{% endif %}">
+                Date Configuration
+            </a>
+            <hr class="{% if phase.start_date and phase.due_date %}bg-primary{% else %}bg-base-300{% endif %}" />
+        </li>
+        {% endif %}
 
+        <!-- Step 2: Protocol & Tags -->
+        <li class="h-20">
+            {% if is_owner %}
+                <hr class="{% if phase.start_date and phase.due_date %}bg-primary{% else %}bg-base-300{% endif %}" />
+            {% endif %}
+            <div class="timeline-middle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                     class="h-5 w-5 {% if coverage_report.is_fully_covered %}text-primary{% elif active_tab == 'tags' %}text-white border-3 border-primary rounded-3xl{% else %}text-base-300{% endif %}">
+                    {% if coverage_report.is_fully_covered %}
+                        <circle cx="10" cy="10" r="10" />
+                        <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    {% elif active_tab == 'tags' %}
+                        <circle cx="10" cy="10" r="10" />
+                    {% else %}
+                        <circle cx="10" cy="10" r="8" />
+                    {% endif %}
+                </svg>
+            </div>
+            <a href="?tab=tags" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm {% if active_tab == 'tags' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% elif coverage_report.is_fully_covered %}bg-primary hover:bg-gray-400 text-white{% endif %}">
+                Protocol & Tags
+            </a>
+            <hr class="{% if coverage_report.is_fully_covered %}bg-primary{% else %}bg-base-300{% endif %}" />
+        </li>
+
+        {% if phase.status != 'CONFIG' %}
+        <!-- Step 3: Suggested Tags -->
+        <li class="h-20">
+            <hr class="{% if coverage_report.is_fully_covered %}bg-primary{% else %}bg-base-300{% endif %}" />
+            <div class="timeline-middle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                     class="h-5 w-5 {% if active_tab in 'pending,studies,quotes' %}text-white border-3 border-primary rounded-3xl{% else %}text-base-300{% endif %}">
+                    <circle cx="10" cy="10" r="10" />
+                </svg>
+            </div>
+            <a href="?tab=pending" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm {% if active_tab == 'pending' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% endif %}">
+                Suggested Tags
+            </a>
+            <hr class="{% if active_tab in 'pending,studies,quotes' %}bg-primary{% else %}bg-base-300{% endif %}" />
+        </li>
+        {% endif %}
+
+        <!-- Step 4: Assigned Papers -->
+        <li class="h-20">
+            {% if phase.status != 'CONFIG' %}
+                <hr class="{% if active_tab in 'pending,studies,quotes' %}bg-primary{% else %}bg-base-300{% endif %}" />
+            {% else %}
+                <hr class="{% if coverage_report.is_fully_covered %}bg-primary{% else %}bg-base-300{% endif %}" />
+            {% endif %}
+            <div class="timeline-middle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                     class="h-5 w-5 {% if papers_completed_count == papers|length and papers %}text-primary{% elif active_tab in 'studies,quotes' and phase.status != 'CONFIG' or active_tab == 'studies' %}text-white border-3 border-primary rounded-3xl{% else %}text-base-300{% endif %}">
+                    {% if papers_completed_count == papers|length and papers %}
+                        <circle cx="10" cy="10" r="10" />
+                        <path class="text-base-100" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    {% else %}
+                        <circle cx="10" cy="10" r="10" />
+                    {% endif %}
+                </svg>
+            </div>
+            <a href="?tab=studies" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm {% if active_tab == 'studies' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% elif papers_completed_count == papers|length and papers %}bg-primary hover:bg-gray-400 text-white{% endif %}">
+                Assigned Papers
+            </a>
+            {% if phase.status != 'CONFIG' %}
+                <hr class="{% if active_tab in 'studies,quotes' %}bg-primary{% else %}bg-base-300{% endif %}" />
+            {% endif %}
+        </li>
+
+        {% if phase.status != 'CONFIG' %}
+        <!-- Step 5: Extractions Applied -->
+        <li class="h-20">
+            <hr class="{% if active_tab in 'studies,quotes' %}bg-primary{% else %}bg-base-300{% endif %}" />
+            <div class="timeline-middle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
+                     class="h-5 w-5 {% if active_tab == 'quotes' %}text-white border-3 border-primary rounded-3xl{% else %}text-base-300{% endif %}">
+                    <circle cx="10" cy="10" r="10" />
+                </svg>
+            </div>
+            <a href="?tab=quotes" class="timeline-start md:timeline-end timeline-box shadow-sm cursor-pointer transition-colors text-xs sm:text-sm {% if active_tab == 'quotes' %}bg-white border-2 border-primary hover:bg-primary hover:text-white text-primary font-bold shadow-md{% endif %}">
+                Extractions Applied
+            </a>
+        </li>
+        {% endif %}
+
+    </ul>
+</div>
+{% endif %}
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
             <div class="flex items-center gap-3 mb-1">
                 <h1 class="text-3xl font-bold tracking-tight text-gray-900">
-                    {{ project.title }}
+                    Extraction Phase
                 </h1>
-                
+
                 {% if phase.status == 'OPEN' %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                         {{ phase.status }}
@@ -26,6 +141,11 @@
                         {{ phase.status }}
                     </span>
                 {% endif %}
+            </div>
+            <div class="flex items-center gap-3 mb-1">
+                <p class="text-gray-600">
+                    {{ project.title }}
+                </p>
             </div>
             
             <div class="flex items-center gap-4 text-xs text-gray-500 font-medium">
@@ -44,11 +164,11 @@
         {% if is_owner and phase.status != 'CONFIG' %}
              <form action="{% url 'extraction:planning:start_interpretation' project_id=project.id %}" method="POST">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-secondary bg-purple-600 hover:bg-purple-700 text-white border-none rounded-lg shadow-md px-6 flex gap-2 items-center">
+                <button type="submit" class="btn btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Interpret Results
+                    Finish Extraction Phase and Interpret Results
                 </button>
             </form>
         {% endif %}
@@ -65,7 +185,7 @@
             </form>
         {% endif %}
 
-        {% if is_owner and phase.status == 'CONFIG' and active_tab == 'tags' %}
+        {% if is_owner and phase.status == 'CONFIG' %}
             {% if can_open_phase %}
                 <form action="{% url 'extraction:planning:phase_open' project_id=project.id %}" method="POST">
                     {% csrf_token %}
@@ -74,9 +194,9 @@
                     </button>
                 </form>
             {% else %}
-                <div class="tooltip tooltip-left" data-tip="Complete the configuration protocol first">
+                <div class="tooltip tooltip-left" data-tip="Complete the configuration on Protocol & Tags to enable starting the phase.">
                     <button disabled class="btn btn-disabled bg-gray-100 text-gray-400 border-none rounded-lg">
-                        Waiting for Setup
+                        Waiting for Full Research Question Coverage
                     </button>
                 </div>
             {% endif %}
@@ -98,44 +218,7 @@
         </div>
     {% else %}
         
-        <div class="flex overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            <div class="bg-gray-100/80 backdrop-blur-sm p-1 rounded-xl inline-flex space-x-1">
-                
-                <a href="?tab=studies" 
-                   class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-                   {% if active_tab == 'studies' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
-                    Assigned Papers
-                </a>
-
-                <a href="?tab=tags" 
-                   class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-                   {% if active_tab == 'tags' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
-                    Protocol & Tags
-                </a>
-
-                {% if phase.status != 'CONFIG' %}
-                <a href="?tab=pending" 
-                   class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-                   {% if active_tab == 'pending' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
-                    Pending Tags
-                </a>
-
-                <a href="?tab=quotes" 
-                   class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-                   {% if active_tab == 'quotes' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
-                    Extractions
-                </a>
-                {% endif %}
-
-                {% if is_owner %}
-                <div class="w-px h-5 bg-gray-300 mx-1 self-center"></div> <a href="?tab=config" 
-                   class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-                   {% if active_tab == 'config' %}bg-white text-gray-900 shadow-sm ring-1 ring-black/5{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-200/50{% endif %}">
-                    Settings
-                </a>
-                {% endif %}
-            </div>
-        </div>
+        
 
         <div class="bg-white border border-gray-200 shadow-sm rounded-2xl min-h-[600px] p-6 relative">
             {% if active_tab == 'studies' %}
