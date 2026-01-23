@@ -2,104 +2,95 @@
 {% load static %}
 
 {% block content %}
-<div class="min-h-screen bg-base-100 p-6">
-    <div class="m-4">
+<div class="min-h-screen bg-gray-50 p-6">
+    <div class="max-w-7xl mx-auto">
 
-        <div class="flex flex-col mb-8">
-            <h1 class="text-3xl font-bold text-primary">
-                {{ action|default:"Create" }} Research Project
+        <div class="flex flex-col mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">
+                Create Research Project
             </h1>
-            <p class="text-base-content/60 mt-2">Define your research protocol, framework, and team configuration.</p>
+            <p class="text-gray-500 text-sm mt-1">Define your research protocol, framework, and team configuration.</p>
         </div>
 
         <form method="post" action="{% url 'project:save_project_action' %}"
-            class="grid grid-cols-1 gap-8">
+            class="space-y-6">
             {% csrf_token %}
 
             {# Top Row: General Information & Framework side by side #}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {# Card: Project Info #}
-                <div class="card bg-base-200/50 rounded-lg border border-base-300">
-                    <div class="card-body">
-                        <h2 class="card-title text-primary mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            General Information
-                        </h2>
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <div class="flex items-center gap-2 mb-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h2 class="text-base font-semibold text-gray-700">General Information</h2>
+                        
+                    </div>
 
-                        <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold">Project Title</span></label>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1.5">Project Title</label>
                             {{ project_form.title }}
                             {% if project_form.title.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.title.errors.0 }}</span>
+                            <span class="text-red-500 text-xs mt-1">{{ project_form.title.errors.0 }}</span>
                             {% endif %}
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            <div class="form-control">
-                                <label class="label"><span class="label-text">Start Date (Today)</span></label>
-                                <input type="text" value="{% now 'd M Y' %}" class="input input-bordered input-disabled"
-                                    disabled />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1.5">Start Date (Today)</label>
+                                {{ project_form.start_date }}
+                                {% if project_form.start_date.errors %}
+                                <span class="text-red-500 text-xs mt-1">{{ project_form.start_date.errors.0 }}</span>
+                                {% endif %}
                             </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text font-semibold">End Date</span></label>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1.5">End Date</label>
                                 {{ project_form.end_date }}
                                 {% if project_form.end_date.errors %}
-                                <span class="text-error text-xs mt-1">{{ project_form.end_date.errors.0 }}</span>
+                                <span class="text-red-500 text-xs mt-1">{{ project_form.end_date.errors.0 }}</span>
                                 {% endif %}
                             </div>
                         </div>
+                        <div id="date-error" class="text-red-500 text-xs mt-1 hidden"></div>
 
-                        <div class="form-control w-full mt-4">
-                            <label class="label"><span class="label-text font-semibold">Summary
-                                    (Abstract)</span></label>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1.5">Summary (Abstract)</label>
                             {{ project_form.summary }}
-                            <label class="label"><span class="label-text-alt opacity-50">Brief description of the
-                                    research topic.</span></label>
                             {% if project_form.summary.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.summary.errors.0 }}</span>
+                            <span class="text-red-500 text-xs mt-1">{{ project_form.summary.errors.0 }}</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
                 {# Framework Card #}
-                <div class="card bg-base-200/50 rounded-lg border border-base-300">
-                    <div class="card-body">
-                        <h2 class="card-title text-accent mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
-                            Framework
-                            <div class="tooltip tooltip-right" data-tip="Define the structural framework for your research questions (e.g., PICO, SPIDER).">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/50 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                        </h2>
+                <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <div class="flex items-center gap-2 mb-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                        <h2 class="text-base font-semibold text-gray-700">Framework</h2>
+                        
+                    </div>
 
-                        <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold">Framework Name</span></label>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1.5">Framework Name</label>
                             {{ project_form.framework_name }}
                             {% if project_form.framework_name.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.framework_name.errors.0 }}</span>
+                            <span class="text-red-500 text-xs mt-1">{{ project_form.framework_name.errors.0 }}</span>
                             {% endif %}
                         </div>
 
-                        <div class="form-control w-full mt-4">
-                            <label class="label"><span class="label-text font-semibold">Fields (Comma
-                                    Separated)</span></label>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1.5">Fields (Comma Separated)</label>
                             {{ project_form.framework_keys }}
-                            <label class="label"><span class="label-text-alt opacity-50">Example: Population,
-                                    Intervention, Comparison, Outcome</span></label>
+                            <p class="text-xs text-gray-400 mt-1">Example: Population, Intervention, Comparison, Outcome</p>
                             {% if project_form.framework_keys.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.framework_keys.errors.0 }}</span>
+                            <span class="text-red-500 text-xs mt-1">{{ project_form.framework_keys.errors.0 }}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -108,169 +99,145 @@
             </div>
 
             {# Middle Row: Team Members & Workload (full width) #}
-            <div class="card bg-base-200/50 rounded-lg border border-base-300">
-                <div class="card-body">
-                    <h2 class="card-title text-neutral mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        Team Members & Workload
-                        <div class="tooltip tooltip-right" data-tip="Add team members and set their workload hours">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/50 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </h2>
-
-                    <!-- Member Selection -->
-                    <div class="flex flex-col md:flex-row gap-4 mb-4">
-                        <div class="form-control flex-1">
-                            <label class="label"><span class="label-text font-semibold">Select Member</span></label>
-                            <select id="member-select" class="select select-bordered w-full">
-                                <option value=""> Select a member </option>
-                                {% for user in all_users %}
-                                <option value="{{ user.id }}" data-username="{{ user.username }}" data-fullname="{{ user.get_full_name }}">
-                                    {{ user.get_full_name|default:user.username }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="form-control w-full md:w-40">
-                            <label class="label"><span class="label-text font-semibold">Workload (hours)</span></label>
-                            <input type="number" id="workload-input" min="0" max="168" value="-" 
-                                   class="input input-bordered w-full" placeholder="-">
-                        </div>
-
-                        <div class="form-control flex items-end">
-                            <button type="button" id="add-member-btn" class="btn btn-outline btn-primary gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
-                                Add Member
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Members List -->
-                    <div id="members-list" class="mt-4 space-y-2">
-                        <!-- Dynamic member items will be added here -->
-                    </div>
-
-                    <!-- Hidden field to store members data -->
-                    {{ project_form.members_workload }}
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <div class="flex items-center gap-2 mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <h2 class="text-base font-semibold text-gray-700">Team Members & Workload</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
+
+                <!-- Member Selection -->
+                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-600 mb-1.5">Select Member</label>
+                        <select id="member-select" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select a member</option>
+                            {% for user in all_users %}
+                            <option value="{{ user.id }}" data-username="{{ user.username }}" data-fullname="{{ user.get_full_name }}">
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="w-full md:w-40">
+                        <label class="block text-xs text-gray-600 mb-1.5">Workload (hours)</label>
+                        <input type="number" id="workload-input" min="0" max="168" value="" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="-">
+                    </div>
+
+                    <div class="flex items-end">
+                        <button type="button" id="add-member-btn" class="px-4 py-2 bg-white border border-primary text-primary rounded-md text-sm hover:bg-blue-50 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Member
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Members List -->
+                <div id="members-list" class="mt-4 space-y-2">
+                    <!-- Dynamic member items will be added here -->
+                </div>
+
+                <!-- Hidden field to store members data -->
+                {{ project_form.members_workload }}
             </div>
 
             {# Bottom Row: Research Logic (full width) #}
-            <div class="card bg-base-200/50 rounded-lg border border-base-300">
-                <div class="card-body">
-                    <h2 class="card-title text-secondary mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        Purpose
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <div class="flex items-center gap-2 mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <h2 class="text-base font-semibold text-gray-700">Purpose</h2>
+                </div>
 
-                    {{ specific_objective_formset.management_form }}
-                    {{ expected_result_formset.management_form }}
+                {{ specific_objective_formset.management_form }}
+                {{ expected_result_formset.management_form }}
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <!-- Row 1 -->
-                        <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold text-base mb-1">General Objective</span></label>
-                            {{ project_form.general_objective }}
-                            {% if project_form.general_objective.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.general_objective.errors.0 }}</span>
-                            {% endif %}
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Row 1 -->
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1.5">General Objective</label>
+                        {{ project_form.general_objective }}
+                        {% if project_form.general_objective.errors %}
+                        <span class="text-red-500 text-xs mt-1">{{ project_form.general_objective.errors.0 }}</span>
+                        {% endif %}
+                    </div>
 
-                        <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold text-base mb-1">Motivation</span></label>
-                            {{ project_form.motivation }}
-                            {% if project_form.motivation.errors %}
-                            <span class="text-error text-xs mt-1">{{ project_form.motivation.errors.0 }}</span>
-                            {% endif %}
-                        </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1.5">Motivation</label>
+                        {{ project_form.motivation }}
+                        {% if project_form.motivation.errors %}
+                        <span class="text-red-500 text-xs mt-1">{{ project_form.motivation.errors.0 }}</span>
+                        {% endif %}
+                    </div>
 
-                        <!-- Row 2 -->
-                        <div>
-                            <label class="label"><span class="label-text font-semibold text-base mb-1">Specific Objectives</span></label>
-                            <div id="objectives-container" class="space-y-2">
-                                {% for form in specific_objective_formset %}
-                                <div class="form-row flex items-center gap-1">
-                                    {{ form.id }}
-                                    <div class="w-full">
-                                        {{ form.description }}
-                                    </div>
-                                    <button type="button"
-                                        class="btn btn-square btn-ghost btn-sm text-error delete-row-btn hover:bg-error/10">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-                                            fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
+                    <!-- Row 2 -->
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1.5">Specific Objectives</label>
+                        <div id="objectives-container" class="space-y-2">
+                            {% for form in specific_objective_formset %}
+                            <div class="form-row flex items-center gap-2">
+                                {{ form.id }}
+                                <div class="w-full">
+                                    {{ form.description }}
                                 </div>
-                                {% endfor %}
+                                <button type="button" class="p-1.5 text-red-500 hover:bg-red-50 rounded delete-row-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
                             </div>
-                            <button id="add-specific_objectives-btn" class="btn btn-sm btn-outline btn-primary mt-2 gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
-                                Add Objective
-                            </button>
+                            {% endfor %}
                         </div>
+                        <button id="add-specific_objectives-btn" class="mt-2 px-3 py-1.5 bg-white border border-primary text-primary rounded text-sm hover:bg-blue-50 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Objective
+                        </button>
+                    </div>
 
-                        <div>
-                            <label class="label"><span class="label-text font-semibold text-base mb-1">Expected Results</span></label>
-                            <div id="results-container" class="space-y-2">
-                                {% for form in expected_result_formset %}
-                                <div class="form-row flex items-center gap-1">
-                                    {{ form.id }}
-                                    <div class="w-full">
-                                        {{ form.description }}
-                                    </div>
-                                    <button type="button"
-                                        class="btn btn-square btn-ghost btn-sm text-error delete-row-btn hover:bg-error/10">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-                                            fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1.5">Expected Results</label>
+                        <div id="results-container" class="space-y-2">
+                            {% for form in expected_result_formset %}
+                            <div class="form-row flex items-center gap-2">
+                                {{ form.id }}
+                                <div class="w-full">
+                                    {{ form.description }}
                                 </div>
-                                {% endfor %}
+                                <button type="button" class="p-1.5 text-red-500 hover:bg-red-50 rounded delete-row-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
                             </div>
-                            <button id="add-expected_results-btn" class="btn btn-sm btn-outline btn-secondary mt-2 gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
-                                Add Result
-                            </button>
+                            {% endfor %}
                         </div>
+                        <button id="add-expected_results-btn" class="mt-2 px-3 py-1.5 bg-white border border-primary text-primary rounded text-sm hover:bg-blue-50 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Result
+                        </button>
                     </div>
                 </div>
             </div>
 
             {# Actions #}
-            <div class="flex flex-col md:flex-row gap-2 justify-center">
-                <button type="submit" class="btn btn-primary">
+            <div class="flex flex-col md:flex-row gap-3 justify-center mt-6">
+                <button type="submit" class="px-8 py-2.5 bg-primary text-white rounded-md hover:bg-indigo-600 font-medium hover:scale-110 transition-transform duration-150">
                     Create
                 </button>
-                <a href="javascript:history.back()" class="btn btn-outline btn-error">
+                <a href="javascript:history.back()" class="px-8 py-2.5 bg-white border border-red-500 text-red-500 rounded-md hover:bg-red-600 hover:text-fuchsia-50 font-medium text-center  hover:scale-110 transition-transform duration-150">
                     Cancel
                 </a>
             </div>
@@ -280,32 +247,28 @@
 
 {# Hidden Templates for JS Formset #}
 <div id="specific_objectives-empty-form" class="hidden">
-    <div class="form-row w-full flex items-center gap-1 animate-fade-in-down">
+    <div class="form-row w-full flex items-center gap-2 animate-fade-in-down">
         {{ specific_objective_formset.empty_form.id }}
         <div class="w-full">
             {{ specific_objective_formset.empty_form.description }}
         </div>
-        <button type="button" class="btn btn-square btn-ghost btn-sm text-error delete-row-btn hover:bg-error/10">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clip-rule="evenodd" />
+        <button type="button" class="p-1.5 text-red-500 hover:bg-red-50 rounded delete-row-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
         </button>
     </div>
 </div>
 
 <div id="expected_results-empty-form" class="hidden">
-    <div class="form-row w-full flex items-center gap-1 animate-fade-in-down">
+    <div class="form-row w-full flex items-center gap-2 animate-fade-in-down">
         {{ expected_result_formset.empty_form.id }}
         <div class="w-full">
             {{ expected_result_formset.empty_form.description }}
         </div>
-        <button type="button" class="btn btn-square btn-ghost btn-sm text-error delete-row-btn hover:bg-error/10">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clip-rule="evenodd" />
+        <button type="button" class="p-1.5 text-red-500 hover:bg-red-50 rounded delete-row-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
         </button>
     </div>

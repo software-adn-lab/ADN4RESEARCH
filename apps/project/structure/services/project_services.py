@@ -27,8 +27,6 @@ class ProjectService:
                 research_framework=framework
             )
 
-            # REFACTORED: Use Design API factory function (NOT direct provider import)
-            # This breaks circular import via lazy initialization
             from apps.design.api import get_design_management
             design_mgmt = get_design_management()  # Factory returns IDesignManagement
             design_mgmt.initialize_design_phase(project.id)

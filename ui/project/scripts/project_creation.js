@@ -5,6 +5,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const objectivesManager = new FormsetManager('specific_objectives', 'objectives-container');
     const resultsManager = new FormsetManager('expected_results', 'results-container');
     window.membersManagerInstance = new MembersManager();
+    
+    // Date validation
+    const startDateInput = document.getElementById('start-date-input');
+    const endDateInput = document.getElementById('end-date-input');
+    const dateError = document.getElementById('date-error');
+    
+    if (startDateInput && endDateInput && dateError) {
+        const validateDates = () => {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            
+            if (startDateInput.value && endDateInput.value) {
+                if (endDate < startDate) {
+                    dateError.textContent = 'End date must be greater than or equal to start date.';
+                    dateError.classList.remove('hidden');
+                    endDateInput.classList.add('input-error');
+                    return false;
+                } else {
+                    dateError.classList.add('hidden');
+                    endDateInput.classList.remove('input-error');
+                    return true;
+                }
+            }
+            return true;
+        };
+        
+        startDateInput.addEventListener('change', validateDates);
+        endDateInput.addEventListener('change', validateDates);
+        
+        // Prevent form submission if dates are invalid
+        const form = startDateInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                if (!validateDates()) {
+                    e.preventDefault();
+                    alert('Please correct the date range before submitting.');
+                }
+            });
+        }
+    }
 });
 
 class MembersManager {

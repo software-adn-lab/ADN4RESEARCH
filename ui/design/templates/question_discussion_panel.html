@@ -13,14 +13,14 @@
         </div>
 
         <div class="text-xs justify-end flex text-center items-center gap-4">
-            {% if current_stage_plan %}
+            {% if project.end_date %}
             <div class="flex flex-col items-end mr-2">
-                <span class="font-semibold text-primary">Current Stage: {{ current_stage_plan.get_stage_display }}</span>
+                <span class="font-semibold text-primary">Project Completion Date:</span>
                 <span class="text-base-content/70">
-                    {{ current_stage_plan.planned_start_date|date:"M d" }} - {{ current_stage_plan.planned_end_date|date:"M d, Y" }}
+                    {{ project.end_date|date:"M d, Y" }}
                 </span>
             </div>
-            {% else %}
+            {% elif not project.end_date %}
             <span class="pr-3 font-medium text-base-content/80">Dates not set</span>
             {% endif %}
             <form method="GET" action="">

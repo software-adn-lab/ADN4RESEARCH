@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from django import forms
 from django.contrib.auth.models import User
 from django.forms import inlineformset_factory
@@ -12,13 +13,13 @@ class ProjectForm(forms.ModelForm):
         label="Framework Name",
         help_text="E.g., PICO, SPIDER",
         required=True,
-        widget=forms.TextInput(attrs={'class': 'input input-bordered w-full', 'placeholder': 'PICO'})
+        widget=forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'placeholder': 'PICO'})
     )
     framework_keys = forms.CharField(
         label="Framework Fields",
         help_text="Enter the fields separated by commas (e.g., Population, Intervention, Comparison, Outcome)",
         required=True,
-        widget=forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 2, 'placeholder': 'Population, Intervention, Comparison, Outcome'})
+        widget=forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 2, 'placeholder': 'Population, Intervention, Comparison, Outcome'})
     )
     
     # Hidden field to store members with workload as JSON
@@ -29,14 +30,28 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Project
-        fields = ['title', 'summary', 'motivation', 'general_objective', 'end_date']
+        fields = ['title', 'summary', 'motivation', 'general_objective', 'start_date', 'end_date']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'input input-bordered w-full', 'placeholder': 'Project Title'}),
-            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'input input-bordered w-full'}),
-            'summary': forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 3, 'placeholder': 'Brief summary...'}),
-            'motivation': forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 3, 'placeholder': 'Why this research?'}),
-            'general_objective': forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 3, 'placeholder': 'Main objective...'}),
+            'title': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'placeholder': 'Project Title'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'id': 'start-date-input', 'min': date.today().isoformat()}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'id': 'end-date-input', 'min': date.today().isoformat()}),
+            'summary': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 3, 'placeholder': 'Brief summary...'}),
+            'motivation': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 3, 'placeholder': 'Why this research?'}),
+            'general_objective': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 3, 'placeholder': 'Main objective...'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date:
+            if end_date < start_date:
+                raise forms.ValidationError({
+                    'end_date': 'End date must be greater than or equal to start date.'
+                })
+
+        return cleaned_data
 
     def clean_framework_keys(self):
         data = self.cleaned_data['framework_keys']
@@ -70,7 +85,7 @@ class SpecificObjectiveForm(forms.ModelForm):
         model = SpecificObjective
         fields = ['description']
         widgets = {
-            'description': forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 2, 'placeholder': 'Describe a specific objective...'}),
+            'description': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 2, 'placeholder': 'Describe a specific objective...'}),
         }
 
 class ExpectedResultForm(forms.ModelForm):
@@ -78,7 +93,7 @@ class ExpectedResultForm(forms.ModelForm):
         model = ExpectedResult
         fields = ['description']
         widgets = {
-            'description': forms.Textarea(attrs={'class': 'textarea textarea-bordered w-full', 'rows': 2, 'placeholder': 'Describe an expected result...'}),
+            'description': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent', 'rows': 2, 'placeholder': 'Describe an expected result...'}),
         }
 
 # FormSets

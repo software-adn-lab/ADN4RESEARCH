@@ -25,15 +25,18 @@
         {% endif %}
 
         {# Project Title Section #}
-        <div class="mb-8 pt-4">
-            <p class="text-xs uppercase tracking-widest text-base-content/50 font-semibold mb-1">Current Project</p>
+        <div class="mb-6 pt-4">
+            <p class="text-s text-base-content/50 font-bold mb-1">Current Project</p>
             <h1 class="text-2xl md:text-3xl font-bold text-base-content">
                 {{ project_dto.title }}
             </h1>
+            <p class="text-xs text-base-content/50 font-semibold mt-2">Project Completion Date: 
+                {{ project_dto.end_date|date:"M d, Y"|default:"(Date is not specified)" }}
+            </p>
         </div>
 
         {# Objectives Section - Two Columns #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {# General Objective #}
             <div class="flex gap-3">
                 <div class="flex-shrink-0">
@@ -42,7 +45,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-xs uppercase tracking-widest text-primary font-semibold mb-2">General Objective</h2>
+                    <h2 class="text-s text-primary font-semibold mb-2">General Objective</h2>
                     <p class="text-sm text-base-content/70 leading-relaxed">
                         {{ project_dto.general_objective|default:"No general objective defined yet." }}
                     </p>
@@ -57,7 +60,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-xs uppercase tracking-widest text-secondary font-semibold mb-2">Specific Objectives</h2>
+                    <h2 class="text-s text-secondary font-semibold mb-2">Specific Objectives</h2>
                     {% if project_dto.specific_objectives %}
                     <ul class="space-y-1">
                         {% for objective in project_dto.specific_objectives %}
@@ -73,15 +76,18 @@
                 </div>
             </div>
         </div>
-        <hr class="text-base-content/20 mb-10" />
+        <hr class="text-base-content/20 mb-6" />
 
         {# Protocol Overview Title #}
         <div class="mb-6">
-            <h2 class="text-xl font-bold text-base-content">Design Phase Protocol Overview</h2>
+            <h1 class="text-3xl font-bold text-base-content">Design Phase Protocol Overview</h1>
+            {% if not all_stages_completed %}
             <p class="text-sm text-base-content/60 mt-1">
                 Complete each stage to generate the required artifacts for your systematic review protocol.
             </p>
+            {% endif %}
         </div>
+        
 
         {# Stage Cards Grid #}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">

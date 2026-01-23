@@ -37,6 +37,7 @@ class Project(models.Model):
     motivation = models.TextField()
     general_objective = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_projects')
+    start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
