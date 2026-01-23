@@ -97,3 +97,94 @@ def _update_schedule(request, project_id, project):
     messages.success(
         request, f"Schedule updated successfully! ({updated_count} changes)")
     return redirect('design:questions:workspace', project_id=project_id)
+
+
+@project_member_required
+@require_http_methods(["POST"])
+def configure_design_schedule_view(request, project_id, project_dto):
+    """
+    POST: Configure initial design schedule from dashboard modal
+    Only owner can configure schedule
+    """
+    # Get project for owner check
+    from apps.project.structure.models.project_models import Project
+    project = Project.objects.get(pk=project_id)
+    
+    # Validar que sea owner
+    if project.owner != request.user:
+        messages.error(request, "Only project owner can configure schedule.", extra_tags='design')
+        return redirect('design:dashboard', project_id=project_id)
+    
+    try:
+        from datetime import datetime
+        from django.db import transaction
+        from apps.design.design_phase_logic.services.design_phase_service import DesignPhaseService
+        
+        # Parse dates from form
+        schedule_data = []
+        stages_to_configure = [
+            ('RQ_CREATION', 'rq_creation'),
+            ('RQ_DISCUSSION', 'rq_discussion'),
+            ('CRITERIA_DEFINITION', 'criteria_definition'),
+            ('SEARCH_STRATEGY', 'search_strategy'),
+        ]
+        
+        project_start = project.created_at.date()
+        project_end = project.end_date.date() if project.end_date else None
+        
+        for stage_code, form_prefix in stages_to_configure:
+            start_str = request.POST.get(f'{form_prefix}_start')
+            end_str = request.POST.get(f'{form_prefix}_end')
+            
+            if not start_str or not end_str:
+                raise ValidationError(f"Missing dates for stage {stage_code}")
+            
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+            
+            # Validations
+            if start_date < project_start:
+                raise ValidationError(f"{stage_code}: Start date cannot be before project start ({project_start})")
+            
+            if project_end and end_date > project_end:
+                raise ValidationError(f"{stage_code}: End date cannot be after project end ({project_end})")
+            
+            if start_date >= end_date:
+                raise ValidationError(f"{stage_code}: Start date must be before end date")
+            
+            schedule_data.append({
+                'stage': stage_code,
+                'start': start_date,
+                'end': end_date
+            })
+        
+        # Validate chronological order
+        for i in range(len(schedule_data) - 1):
+            if schedule_data[i]['end'] > schedule_data[i+1]['start']:
+                raise ValidationError("Stages must be in chronological order without overlaps")
+        
+        # Save schedule using service
+        with transaction.atomic():
+            service = DesignPhaseService()
+            service.initialize_design_schedule(project_id, schedule_data)
+            
+            # Create initial log for RQ_CREATION stage
+            from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStageLog
+            design_phase = DesignPhase.objects.get(pk=project_id)
+            
+            # Create log if it doesn't exist
+            if not DesignStageLog.objects.filter(phase=design_phase, stage=DesignPhase.DesignStage.RQ_CREATION).exists():
+                DesignStageLog.objects.create(
+                    phase=design_phase,
+                    stage=DesignPhase.DesignStage.RQ_CREATION,
+                    start_date=timezone.now()
+                )
+        
+        messages.success(request, "Design schedule configured successfully!", extra_tags='design')
+        
+    except ValidationError as e:
+        messages.error(request, str(e), extra_tags='design')
+    except Exception as e:
+        messages.error(request, f"Error configuring schedule: {str(e)}", extra_tags='design')
+    
+    return redirect('design:dashboard', project_id=project_id)

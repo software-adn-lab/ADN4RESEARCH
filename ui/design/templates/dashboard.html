@@ -88,10 +88,87 @@
             {% endif %}
         </div>
         
+        {# Schedule Not Configured Alert for Researchers #}
+        {% if show_schedule_modal and not is_owner %}
+        <div class="alert alert-warning shadow-lg mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <h3 class="font-bold">Schedule Not Configured</h3>
+                <div class="text-sm">The stage dates have not been configured by the project owner yet. You will be able to continue once they are set up.</div>
+            </div>
+        </div>
+        {% endif %}
 
         {# Stage Cards Grid #}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
             {% for stage in stages %}
+            {% if show_schedule_modal and not is_owner %}
+            {# Disabled card for researchers when schedule not configured #}
+            <div class="card bg-base-100 border-2 border-base-200 opacity-50 cursor-not-allowed">
+                <div class="card-body p-5">
+                    {# Stage Header #}
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            {# Stage Number/Status Icon #}
+                            {% if stage.status == 'completed' %}
+                            <div class="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            {% elif stage.status == 'active' %}
+                            <div class="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-bold">
+                                {{ stage.id }}
+                            </div>
+                            {% else %}
+                            <div class="w-8 h-8 rounded-full bg-base-200 text-base-content/40 flex items-center justify-center text-sm font-medium">
+                                {{ stage.id }}
+                            </div>
+                            {% endif %}
+
+                            <div>
+                                <h3 class="font-semibold text-base-content
+                                   {% if stage.status == 'pending' %}text-base-content/50{% endif %}">
+                                    {{ stage.title }}
+                                </h3>
+                                {% if stage.status == 'active' %}
+                                <span class="text-xs text-primary flex items-center gap-1 mt-0.5">
+                                    <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                                    Active Stage
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {# Arrow Icon #}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+
+                    {# Artifacts Section #}
+                    <div class="mt-4">
+                        <p class="text-xs uppercase tracking-wider text-base-content/40 font-semibold mb-2">Approved Artifacts</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for artifact in stage.artifacts %}
+                            {% if artifact.static %}
+                            <span class="badge badge-ghost badge-sm {% if stage.status == 'pending' %}opacity-50{% endif %}">
+                                {{ artifact.label }}
+                            </span>
+                            {% else %}
+                            <span class="badge {% if stage.status == 'active' %}badge-primary{% elif stage.status == 'completed' %}badge-success{% else %}badge-ghost{% endif %} badge-sm">
+                                {{ artifact.label }} ({{ artifact.count }})
+                            </span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            {# Normal clickable card when schedule is configured or user is owner #}
             <a href="{{ stage.url }}"
                class="card bg-base-100 border-2 transition-all duration-200 hover:shadow-lg
                       {% if stage.status == 'active' %}border-primary shadow-md{% elif stage.status == 'completed' %}border-base-200 bg-base-100{% else %}border-base-200 opacity-60{% endif %}">
@@ -155,6 +232,7 @@
                     </div>
                 </div>
             </a>
+            {% endif %}
             {% endfor %}
         </div>
 
@@ -172,4 +250,176 @@
 
     </div>
 </div>
+
+{# Design Schedule Configuration Modal #}
+{% if is_owner %}
+<dialog id="design-schedule-modal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-xl mb-2">Configure Design Phase Schedule</h3>
+        <p class="text-sm text-gray-600 mb-4">Define start and end dates for each stage of the design phase. All stages must be within the project timeline.</p>
+
+        <form method="post" action="{% url 'design:configure_schedule' project_id=project_id %}" class="space-y-6" id="design-schedule-form">
+            {% csrf_token %}
+            
+            {# Research Question Creation Stage #}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                    <span class="badge badge-primary badge-sm">1</span>
+                    Research Question Creation
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">Start Date</span></label>
+                        <input type="date" name="rq_creation_start" id="rq_creation_start" class="input input-bordered w-full" 
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">End Date</span></label>
+                        <input type="date" name="rq_creation_end" id="rq_creation_end" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            {# Research Question Discussion Stage #}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                    <span class="badge badge-primary badge-sm">2</span>
+                    Research Question Discussion
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">Start Date</span></label>
+                        <input type="date" name="rq_discussion_start" id="rq_discussion_start" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">End Date</span></label>
+                        <input type="date" name="rq_discussion_end" id="rq_discussion_end" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            {# Eligibility Criteria Definition Stage #}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                    <span class="badge badge-secondary badge-sm">3</span>
+                    Eligibility Criteria Definition
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">Start Date</span></label>
+                        <input type="date" name="criteria_definition_start" id="criteria_definition_start" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">End Date</span></label>
+                        <input type="date" name="criteria_definition_end" id="criteria_definition_end" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            {# Search Strategy Stage #}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                    <span class="badge badge-accent badge-sm">4</span>
+                    Search Strategy Building
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">Start Date</span></label>
+                        <input type="date" name="search_strategy_start" id="search_strategy_start" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-semibold">End Date</span></label>
+                        <input type="date" name="search_strategy_end" id="search_strategy_end" class="input input-bordered w-full"
+                               min="{{ project_start_date|date:'Y-m-d' }}" 
+                               {% if project_end_date %}max="{{ project_end_date|date:'Y-m-d' }}"{% endif %}
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Stages must be in chronological order. Each stage end date must be before or equal to the next stage start date.</span>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Save Schedule</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endif %}
+
+{% if show_schedule_modal %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('design-schedule-modal');
+        if (modal) {
+            modal.showModal();
+        }
+
+        // Set up date validation
+        const stages = [
+            { start: 'rq_creation_start', end: 'rq_creation_end', next: 'rq_discussion_start' },
+            { start: 'rq_discussion_start', end: 'rq_discussion_end', next: 'criteria_definition_start' },
+            { start: 'criteria_definition_start', end: 'criteria_definition_end', next: 'search_strategy_start' },
+            { start: 'search_strategy_start', end: 'search_strategy_end', next: null }
+        ];
+
+        stages.forEach((stage, index) => {
+            const startInput = document.getElementById(stage.start);
+            const endInput = document.getElementById(stage.end);
+            
+            if (startInput && endInput) {
+                // Update end input min when start changes
+                startInput.addEventListener('change', () => {
+                    if (startInput.value) {
+                        endInput.min = startInput.value;
+                        
+                        // Update next stage start min
+                        if (stage.next) {
+                            const nextStart = document.getElementById(stage.next);
+                            if (nextStart && endInput.value) {
+                                nextStart.min = endInput.value;
+                            }
+                        }
+                    }
+                });
+                
+                // Update next stage min when end changes
+                endInput.addEventListener('change', () => {
+                    if (stage.next && endInput.value) {
+                        const nextStart = document.getElementById(stage.next);
+                        if (nextStart) {
+                            nextStart.min = endInput.value;
+                        }
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endif %}
 {% endblock %}

@@ -207,7 +207,7 @@ def get_project_active_phase(project):
             if design_phase.is_active:
                 return {
                     'phase_name': 'Design',
-                    'phase_url': f'/project/{project.id}/design/',
+                    'phase_url': f'/project/{project.id}/design/dashboard/',
                     'phase_key': 'design'
                 }
         except DesignPhase.DoesNotExist:

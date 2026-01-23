@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from apps.design.design_phase_logic.selectors import DesignPhaseSelector
-from apps.design.design_phase_logic.models.design_phase import DesignPhase
+from apps.design.design_phase_logic.models.design_phase import DesignPhase, DesignStagePlan
 from apps.design.research_question.selectors import ResearchQuestionSelector
 from apps.design.eligibility_criteria.selectors import EligibilityCriterionSelector
 from apps.design.search_strategy.selectors import SearchStrategySelector
@@ -135,6 +135,15 @@ def dashboard_view(request, project_id, project_dto):
     next_phase_url = f'/project/{project_id}/selection/?schedule=1'
     all_stages_completed = all(stage['status'] == 'completed' for stage in stages)
 
+    # Check if schedule is configured (for showing modal)
+    schedule_configured = DesignStagePlan.objects.filter(phase_id=project_id).exists()
+    show_schedule_modal = not schedule_configured
+    
+    # Get project for owner check
+    from apps.project.structure.models.project_models import Project
+    project = Project.objects.get(pk=project_id)
+    is_owner = project.owner_id == request.user.id
+
     context = {
         'project_dto': project_dto,
         'project_id': project_id,
@@ -148,5 +157,9 @@ def dashboard_view(request, project_id, project_dto):
         'metrics': metrics,
         'next_phase_url': next_phase_url,
         'all_stages_completed': all_stages_completed,
+        'show_schedule_modal': show_schedule_modal,
+        'is_owner': is_owner,
+        'project_start_date': project_dto.get('created_at').date() if project_dto.get('created_at') else None,
+        'project_end_date': project_dto.get('end_date'),
     }
     return render(request, 'dashboard.html', context)

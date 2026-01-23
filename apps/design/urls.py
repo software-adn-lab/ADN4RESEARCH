@@ -67,6 +67,7 @@ urlpatterns = [
     # Root paths
     path('', navigation.design_stages_router, name='design_stages'),
     path('dashboard/', dashboard.dashboard_view, name='dashboard'),
+    path('configure-schedule/', design_phase_views.configure_design_schedule_view, name='configure_schedule'),
 
     # Grouped resource paths with namespaces
     path('questions/', include((question_patterns, 'questions'))),
