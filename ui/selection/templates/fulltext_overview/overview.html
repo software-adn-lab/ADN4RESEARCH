@@ -10,10 +10,52 @@
     {% include '../_timeline.html' with active='fulltext_overview' %}
 
     {# Header #}
-    <div class="flex justify-between items-center my-6">
+    <div class="flex justify-between items-center my- mt-0 mb-6">
         <div>
             <h1 class="text-3xl font-bold">Full-text - Overview</h1>
-            <p class="text-gray-600">{{ project.title }}</p>
+            <div class="mt-1">
+                {% if is_owner %}
+                <button type="button" class="badge badge-outline gap-2 cursor-pointer bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200" onclick="document.getElementById('selection-schedule-modal').showModal()" aria-label="Editar fechas" title="Editar fechas">
+                    <span class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span>{{ fulltext_start_date|date:"d/m/Y" }}</span>
+                        <span class="px-1">>></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span>{{ fulltext_end_date|date:"d/m/Y" }}</span>
+                    </span>
+                </button>
+                {% else %}
+                <span class="badge badge-outline gap-2 bg-gray-100 text-gray-700 border-gray-300">
+                    <span class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span>{{ fulltext_start_date|date:"d/m/Y" }}</span>
+                        <span class="px-1">>></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span>{{ fulltext_end_date|date:"d/m/Y" }}</span>
+                    </span>
+                </span>
+                {% endif %}
+            </div>
         </div>
         <div class="flex flex-col items-end gap-1 text-sm text-gray-500">
             <div class="flex items-center space-x-2">
@@ -33,7 +75,6 @@
                     {{ selection_phase.get_fulltext_status_display }}
                 </span>
             </div>
-            <span>Full-text window: {{ fulltext_start_date|date:"d/m/Y" }} - {{ fulltext_end_date|date:"d/m/Y" }}</span>
         </div>
     </div>
 
@@ -452,6 +493,69 @@
         <button>close</button>
     </form>
 </dialog>
+<dialog id="selection-schedule-modal" class="modal">
+    <div class="modal-box max-w-3xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <h3 class="font-bold text-xl mb-2">Configure Selection Schedule</h3>
+        <p class="text-sm text-gray-600 mb-4">Define screening and full-text windows to enable the selection phase.</p>
+
+        {% if design_end_date %}
+        <div class="alert alert-info text-sm mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Design ends on {{ design_end_date|date:"d/m/Y" }}. Selection must start on or after that date.</span>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'selection:configure_selection_schedule' project.id %}" class="space-y-6">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Screening Start</span></label>
+                    <input type="date" name="screening_start_date" id="screening_start_date" class="input input-bordered w-full"
+                           min="{{ schedule_min_date|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ screening_start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Screening End</span></label>
+                    <input type="date" name="screening_end_date" id="screening_end_date" class="input input-bordered w-full"
+                           min="{{ schedule_min_date|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ screening_end_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Full-text Start</span></label>
+                    <input type="date" name="fulltext_start_date" id="fulltext_start_date" class="input input-bordered w-full"
+                           min="{{ schedule_min_date|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ fulltext_start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Full-text End</span></label>
+                    <input type="date" name="fulltext_end_date" id="fulltext_end_date" class="input input-bordered w-full"
+                           min="{{ schedule_min_date|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ fulltext_end_date|date:'Y-m-d' }}" required>
+                </div>
+            </div>
+
+            <div class="alert alert-info text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Full-text must start on or after the screening end date.</span>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('selection-schedule-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Schedule</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 {% endif %}
 
 {# Upload PDF Modal #}
@@ -497,6 +601,78 @@
         </div>
     </div>
 </dialog>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('selection-schedule-modal');
+    const shouldOpen = {{ show_schedule_modal|yesno:"true,false" }};
+    if (modal && shouldOpen) {
+        modal.showModal();
+    }
+
+    const screeningStart = document.getElementById('screening_start_date');
+    const screeningEnd = document.getElementById('screening_end_date');
+    const fulltextStart = document.getElementById('fulltext_start_date');
+    const fulltextEnd = document.getElementById('fulltext_end_date');
+
+    const baseMins = {
+        screeningEnd: screeningEnd ? screeningEnd.min : '',
+        fulltextStart: fulltextStart ? fulltextStart.min : '',
+        fulltextEnd: fulltextEnd ? fulltextEnd.min : '',
+    };
+
+    const maxDate = (a, b) => {
+        if (!a) return b;
+        if (!b) return a;
+        return a > b ? a : b;
+    };
+
+    const clampValue = (input, minValue) => {
+        if (!input || !minValue) return;
+        if (input.value && input.value < minValue) {
+            input.value = minValue;
+        }
+    };
+
+    const updateCascade = () => {
+        if (screeningStart && screeningEnd) {
+            const minEnd = maxDate(baseMins.screeningEnd, screeningStart.value);
+            if (minEnd) {
+                screeningEnd.min = minEnd;
+                clampValue(screeningEnd, minEnd);
+            }
+        }
+
+        if (screeningEnd && fulltextStart) {
+            const minFulltextStart = maxDate(baseMins.fulltextStart, screeningEnd.value);
+            if (minFulltextStart) {
+                fulltextStart.min = minFulltextStart;
+                clampValue(fulltextStart, minFulltextStart);
+            }
+        }
+
+        if (fulltextStart && fulltextEnd) {
+            const minFulltextEnd = maxDate(baseMins.fulltextEnd, fulltextStart.value);
+            if (minFulltextEnd) {
+                fulltextEnd.min = minFulltextEnd;
+                clampValue(fulltextEnd, minFulltextEnd);
+            }
+        }
+    };
+
+    if (screeningStart) {
+        screeningStart.addEventListener('change', updateCascade);
+    }
+    if (screeningEnd) {
+        screeningEnd.addEventListener('change', updateCascade);
+    }
+    if (fulltextStart) {
+        fulltextStart.addEventListener('change', updateCascade);
+    }
+
+    updateCascade();
+});
+</script>
 
 <script>
 const PROJECT_ID = {{ project.id }};

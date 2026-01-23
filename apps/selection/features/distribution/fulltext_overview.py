@@ -26,6 +26,7 @@ from apps.selection.models.choices import (
 )
 from apps.selection.features.distribution.services import FulltextDistributionService
 from apps.selection.features.discussion.services import DiscrepancyResolutionService
+from apps.selection.features.distribution.screening import _get_design_end_date
 
 logger = logging.getLogger(__name__)
 
@@ -268,6 +269,9 @@ def fulltext_overview(request, project_id):
         return redirect('selection:screening_overview', project_id=project_id)
     
     is_owner = request.user == project.owner
+
+    design_end_date = _get_design_end_date(project)
+    schedule_min_date = design_end_date or project.created_at.date()
     
     # Determine phase mode
     if selection_phase.fulltext_status == SubPhaseStatusChoices.COMPLETED:
@@ -423,6 +427,11 @@ def fulltext_overview(request, project_id):
         'pending_all_count': pending_all_count,
         'fulltext_start_date': selection_phase.fulltext_screening_start_date,
         'fulltext_end_date': selection_phase.fulltext_screening_end_date,
+        'screening_start_date': selection_phase.screening_metadata_start_date,
+        'screening_end_date': selection_phase.screening_metadata_end_date,
+        'design_end_date': design_end_date,
+        'schedule_min_date': schedule_min_date,
+        'show_schedule_modal': bool(request.GET.get('schedule')),
     }
     
     return render(request, 'fulltext_overview/overview.html', context)

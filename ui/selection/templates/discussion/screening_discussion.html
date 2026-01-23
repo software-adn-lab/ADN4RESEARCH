@@ -9,13 +9,56 @@
     <div class="flex-none flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-bold">Screening - Discussion & Resolution</h1>
-            <p class="text-gray-600">{{ project.title }}</p>
+            <div class="mt-1">
+                {% if is_owner %}
+                    <a href="{% url 'selection:screening_overview' project.id %}?schedule=1" class="badge badge-outline gap-2 cursor-pointer bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200" aria-label="Editar fechas" title="Editar fechas">
+                        <span class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>{{ selection_phase.screening_metadata_start_date|date:"d/m/Y" }}</span>
+                            <span class="px-1">>></span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>{{ selection_phase.screening_metadata_end_date|date:"d/m/Y" }}</span>
+                        </span>
+                    </a>
+                {% else %}
+                    <span class="badge badge-outline gap-2 bg-gray-100 text-gray-700 border-gray-300">
+                        <span class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>{{ selection_phase.screening_metadata_start_date|date:"d/m/Y" }}</span>
+                            <span class="px-1">>></span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>{{ selection_phase.screening_metadata_end_date|date:"d/m/Y" }}</span>
+                        </span>
+                    </span>
+                {% endif %}
+            </div>
         </div>
-        {% if is_owner %}
-        <span class="badge badge-primary badge-lg">Owner View</span>
-        {% else %}
-        <span class="badge badge-secondary badge-lg">Reviewer View</span>
-        {% endif %}
+        <div class="flex items-center gap-2">
+            <span class="badge uppercase font-bold text-white {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
+                  {% if selection_phase.screening_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.screening_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
+                {{ selection_phase.get_screening_status_display }}
+            </span>
+        </div>
     </div>
 
     {% if is_owner %}

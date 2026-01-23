@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db.models import Max
 from django.utils.dateparse import parse_date
 from datetime import datetime, time
 
@@ -135,6 +136,44 @@ def _get_pending_all_paper_ids(selection_phase):
     return pending_all
 
 
+def _get_design_end_date(project):
+    """
+    Return the last planned end date for the design phase.
+
+    Preference order:
+    1) Max planned_end_date from DesignStagePlan
+    2) DesignPhase.end_date
+    """
+    design_end_date = None
+
+    try:
+        from apps.design.design_phase_logic.models.design_phase import DesignStagePlan
+
+        plan_end = (
+            DesignStagePlan.objects.filter(phase_id=project.id)
+            .aggregate(max_end=Max('planned_end_date'))
+            .get('max_end')
+        )
+        if plan_end:
+            design_end_date = plan_end
+    except Exception:
+        # If design schedule isn't available, fall back to phase end date
+        pass
+
+    try:
+        from apps.design.design_phase_logic.models.design_phase import DesignPhase
+
+        phase = DesignPhase.objects.get(pk=project.id)
+        if phase.end_date:
+            phase_end = phase.end_date.date()
+            if not design_end_date or phase_end > design_end_date:
+                design_end_date = phase_end
+    except Exception:
+        pass
+
+    return design_end_date
+
+
 @login_required
 def screening_overview(request, project_id):
     """
@@ -164,6 +203,9 @@ def screening_overview(request, project_id):
 
     schedule_configured = selection_phase.is_selection_schedule_configured()
     screening_locked = not schedule_configured or not selection_phase.is_screening_window_open(now=now)
+
+    design_end_date = _get_design_end_date(project)
+    schedule_min_date = design_end_date or project.created_at.date()
     
     # Get user progress
     user_progress = _calculate_progress(selection_phase, request.user, 'SCREENING')
@@ -233,6 +275,8 @@ def screening_overview(request, project_id):
         'fulltext_start_date': selection_phase.fulltext_screening_start_date,
         'fulltext_end_date': selection_phase.fulltext_screening_end_date,
         'show_schedule_modal': bool(request.GET.get('schedule')) or (is_owner and not schedule_configured),
+        'design_end_date': design_end_date,
+        'schedule_min_date': schedule_min_date,
     }
     
     return render(request, 'distribution/overview.html', context)
@@ -359,6 +403,14 @@ def configure_selection_schedule(request, project_id):
 
     if fulltext_start < screening_end:
         messages.error(request, 'Full-text must start on or after screening end date.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    design_end_date = _get_design_end_date(project)
+    if design_end_date and screening_start < design_end_date:
+        messages.error(
+            request,
+            f'Selection cannot start before design ends ({design_end_date}).'
+        )
         return redirect('selection:screening_overview', project_id=project_id)
 
     project_start = project.created_at.date()
