@@ -257,7 +257,7 @@
     <div class="modal-box max-w-4xl">
         <h3 class="font-bold text-xl mb-2">Configure Design Phase Schedule</h3>
         <p class="text-sm text-gray-600 mb-4">Define start and end dates for each stage of the design phase. All stages must be within the project timeline.</p>
-
+        <p class="text-sm font-bold text-gray-400 mb-4">Project Timeline: from {{ project_start_date|date:'m-d-Y' }} to {{ project_end_date|date:'m-d-Y' }}</p>
         <form method="post" action="{% url 'design:configure_schedule' project_id=project_id %}" class="space-y-6" id="design-schedule-form">
             {% csrf_token %}
             
@@ -312,7 +312,7 @@
             {# Eligibility Criteria Definition Stage #}
             <div class="border border-gray-200 rounded-lg p-4">
                 <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
-                    <span class="badge badge-secondary badge-sm">3</span>
+                    <span class="badge badge-primary badge-sm">3</span>
                     Eligibility Criteria Definition
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -336,7 +336,7 @@
             {# Search Strategy Stage #}
             <div class="border border-gray-200 rounded-lg p-4">
                 <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
-                    <span class="badge badge-accent badge-sm">4</span>
+                    <span class="badge badge-primary badge-sm">4</span>
                     Search Strategy Building
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -365,7 +365,7 @@
             </div>
 
             <div class="modal-action">
-                <button type="submit" class="btn btn-primary">Save Schedule</button>
+                <button type="submit" class="px-8 py-2.5 bg-primary text-white rounded-md hover:bg-indigo-600 font-medium hover:scale-110 transition-transform duration-150">Save Schedule</button>
             </div>
         </form>
     </div>
