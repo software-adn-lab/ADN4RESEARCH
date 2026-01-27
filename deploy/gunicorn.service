@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn ADN4RESEARCH
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/adn4research
+EnvironmentFile=/srv/adn4research/.env
+ExecStart=/srv/adn4research/venv/bin/gunicorn -c /srv/adn4research/deploy/gunicorn.conf.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

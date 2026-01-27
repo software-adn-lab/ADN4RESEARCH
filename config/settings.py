@@ -23,11 +23,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
+def env_bool(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name: str) -> List[str]:
+    raw = os.environ.get(name, "")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 # Configuración automática para cualquier SO
 NPM_BIN_PATH = which("npm") or which("npm.cmd") or which("nodeenv")
 
-# Verificación obligatoria
-if not NPM_BIN_PATH:
+# Verificación obligatoria (solo cuando se requiera Node)
+REQUIRE_NODE = env_bool("REQUIRE_NODE", "true" if env_bool("DEBUG", "false") else "false")
+if REQUIRE_NODE and not NPM_BIN_PATH:
     raise RuntimeError(
         "Node.js/npm no está instalado o no está en el PATH. "
         "Descarga Node.js desde https://nodejs.org/es/"
@@ -36,13 +46,23 @@ if not NPM_BIN_PATH:
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-oxq-k)&z4v0ip6rtm)3c%44(-7q1@_ddfsk41+_)yg6zo9zo3i"
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DEBUG", "false")
 
-ALLOWED_HOSTS: List[str] = []
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-oxq-k)&z4v0ip6rtm)3c%44(-7q1@_ddfsk41+_)yg6zo9zo3i"
+    else:
+        raise RuntimeError("SECRET_KEY must be set when DEBUG=False")
+
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
+if not ALLOWED_HOSTS:
+    if DEBUG:
+        ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+    else:
+        raise RuntimeError("ALLOWED_HOSTS must be set when DEBUG=False")
 
 
 # Application definition
@@ -70,7 +90,8 @@ INSTALLED_APPS = [
     "tailwind",
     "theme",
 ]
-INSTALLED_APPS += ["django_browser_reload"]
+if DEBUG:
+    INSTALLED_APPS += ["django_browser_reload"]
 
 TAILWIND_APP_NAME = "theme"
 
@@ -83,12 +104,12 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_browser_reload.middleware.BrowserReloadMiddleware",
     # "config.middleware.dev_middleware.DevUserMiddleware",  # Disabled to test login
 ]
-MIDDLEWARE += [
-    "django_browser_reload.middleware.BrowserReloadMiddleware",
-]
+if DEBUG:
+    MIDDLEWARE += [
+        "django_browser_reload.middleware.BrowserReloadMiddleware",
+    ]
 
 ROOT_URLCONF = "config.urls"
 
@@ -220,6 +241,23 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Security (production defaults controlled by env)
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", "false")
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", "false")
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", "false")
+
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", "false")
+SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", "false")
+
+if env_bool("USE_X_FORWARDED_PROTO", "false"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SECURE_REFERRER_POLICY = os.environ.get("SECURE_REFERRER_POLICY", "same-origin")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -243,7 +281,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Storage configuration
 # S3-compatible storage (AWS S3, MinIO, etc.)
 USE_S3 = os.environ.get("USE_S3", "false").lower() == "true"
-print(f"DEBUG: USE_S3={USE_S3} (from env: {os.environ.get('USE_S3')})")
+if DEBUG:
+    print(f"DEBUG: USE_S3={USE_S3} (from env: {os.environ.get('USE_S3')})")
 
 if USE_S3:
     # S3 Storage Settings

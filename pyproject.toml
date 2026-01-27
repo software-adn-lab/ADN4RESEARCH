@@ -35,6 +35,9 @@ django-browser-reload = ">=1.12.1"
 # Environment Variables Management
 python-decouple = ">=3.8"
 
+# WSGI server
+gunicorn = ">=22.0.0"
+
 # Utilities
 pillow = ">=10.1.0"
 python-dateutil = ">=2.8.2"

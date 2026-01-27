@@ -23,7 +23,6 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('', RedirectView.as_view(url='project/', permanent=False), name='home'),
     path('admin/', admin.site.urls),
-    path("__reload__/", include("django_browser_reload.urls")),
     path('project/', include('apps.project.urls')),
     path('project/<int:project_id>/design/', include('apps.design.urls')),
     path('project/<int:project_id>/selection/', include('apps.selection.urls')),
@@ -34,6 +33,6 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+    urlpatterns += [path("__reload__/", include("django_browser_reload.urls"))]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
