@@ -132,7 +132,7 @@ def dashboard_view(request, project_id, project_dto):
     progress_percentage = ((current_stage_number - 1) / total_stages) * 100 + (25 if current_stage else 0)
 
     # URL for next phase (Selection)
-    next_phase_url = f'/project/{project_id}/selection/'
+    next_phase_url = f'/project/{project_id}/selection/?schedule=1'
     all_stages_completed = all(stage['status'] == 'completed' for stage in stages)
 
     context = {

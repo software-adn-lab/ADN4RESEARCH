@@ -1,6 +1,7 @@
 from .screening import (
     screening_overview,
     distribute_screening_papers,
+    configure_selection_schedule,
     screening_bulk_decision,
     send_screening_reminder,
     finalize_screening,
@@ -19,6 +20,7 @@ from .fulltext_overview import (
 __all__ = [
     'screening_overview',
     'distribute_screening_papers',
+    'configure_selection_schedule',
     'screening_bulk_decision',
     'send_screening_reminder',
     'finalize_screening',

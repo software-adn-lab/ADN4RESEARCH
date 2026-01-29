@@ -11,27 +11,45 @@
             <h1 class="text-3xl font-bold">Screening - Overview</h1>
             <p class="text-gray-600">{{ project.title }}</p>
         </div>
-        <div class="flex items-center space-x-2">
-            {% if is_owner and can_finalize %}
-            <form method="post" action="{% url 'selection:finalize_screening' project.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary btn-sm px-2 text-white font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Finalize Screening
-                </button>
-            </form>
-            {% endif %}
-            <span class="badge uppercase font-bold text-white {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
-                  {% if selection_phase.screening_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.screening_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
-                {{ selection_phase.get_screening_status_display }}
-            </span>
-            {% if selection_phase.end_date %}
-                <span class="text-sm text-gray-500">End date: {{ selection_phase.end_date|date:"d/m/Y" }}</span>
+        <div class="flex flex-col items-end gap-1 text-sm text-gray-500">
+            <div class="flex items-center space-x-2">
+            {% if is_owner and can_finalize and not screening_locked %}
+                <form method="post" action="{% url 'selection:finalize_screening' project.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm px-2 text-white font-semibold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Finalize Screening
+                    </button>
+                </form>
+                {% endif %}
+                <span class="badge uppercase font-bold text-white {% if selection_phase.screening_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
+                      {% if selection_phase.screening_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.screening_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
+                    {{ selection_phase.get_screening_status_display }}
+                </span>
+            </div>
+            {% if schedule_configured %}
+                <span>Screening window: {{ screening_start_date|date:"d/m/Y" }} - {{ screening_end_date|date:"d/m/Y" }}</span>
+                <span>Full-text window: {{ fulltext_start_date|date:"d/m/Y" }} - {{ fulltext_end_date|date:"d/m/Y" }}</span>
+            {% else %}
+                <span class="text-warning">Schedule not configured</span>
             {% endif %}
         </div>
     </div>
+
+    {% if screening_locked %}
+    <div class="alert alert-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        {% if schedule_configured %}
+            <span>Screening starts on {{ screening_start_date|date:"d/m/Y" }}. Access is locked until then.</span>
+        {% else %}
+            <span>Configure selection dates to start the screening phase.</span>
+        {% endif %}
+    </div>
+    {% endif %}
 
     {% if is_owner and selection_phase.screening_status == 'COMPLETED' and pending_all_count > 0 %}
     <div class="card bg-base-100 shadow-md border border-warning">
@@ -117,7 +135,7 @@
                         <div class="stat-value text-error">{{ user_progress.excluded }}</div>
                     </div>
                 </div>
-                <button class="btn btn-primary btn-block mt-4" onclick="window.location.href='{% url 'selection:screening' project.id %}'">
+                <button class="btn btn-primary btn-block mt-4{% if screening_locked %} btn-disabled{% endif %}" {% if screening_locked %}disabled{% endif %} onclick="window.location.href='{% url 'selection:screening' project.id %}'">
                     SCREENING
                 </button>
             </div>
@@ -142,7 +160,7 @@
                                     <p class="text-xs text-gray-500">{{ item.total }} articles assigned</p>
                                 </div>
                             </div>
-                            {% if is_owner and phase_mode == 'en_curso' and item.pending > 0 %}
+                            {% if is_owner and phase_mode == 'en_curso' and item.pending > 0 and not screening_locked %}
                             <form method="post" action="{% url 'selection:send_screening_reminder' project.id %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="researcher_id" value="{{ item.researcher.id }}">
@@ -197,7 +215,7 @@
                 {% if is_owner %}
                     {% if phase_mode == 'en_curso' %}
                     <!-- Mode: en_curso - Distribution and reminders -->
-                    <button type="button" class="btn btn-block mt-6 {% if selection_phase.screening_distributed %}btn-warning{% else %}btn-success{% endif %}" onclick="document.getElementById('distribute-modal').showModal()">
+                    <button type="button" class="btn btn-block mt-6 {% if selection_phase.screening_distributed %}btn-warning{% else %}btn-success{% endif %}{% if screening_locked %} btn-disabled{% endif %}" {% if screening_locked %}disabled{% endif %} onclick="document.getElementById('distribute-modal').showModal()">
                         {% if selection_phase.screening_distributed %}
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -269,5 +287,85 @@
         <button>close</button>
     </form>
 </dialog>
+{% endif %}
+
+{% if is_owner %}
+<dialog id="selection-schedule-modal" class="modal">
+    <div class="modal-box max-w-3xl">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <h3 class="font-bold text-xl mb-2">Configure Selection Schedule</h3>
+        <p class="text-sm text-gray-600 mb-4">Define screening and full-text windows to enable the selection phase.</p>
+
+        <form method="post" action="{% url 'selection:configure_selection_schedule' project.id %}" class="space-y-6">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Screening Start</span></label>
+                    <input type="date" name="screening_start_date" class="input input-bordered w-full"
+                           min="{{ project.created_at|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ screening_start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Screening End</span></label>
+                    <input type="date" name="screening_end_date" id="screening_end_date" class="input input-bordered w-full"
+                           min="{{ project.created_at|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ screening_end_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Full-text Start</span></label>
+                    <input type="date" name="fulltext_start_date" id="fulltext_start_date" class="input input-bordered w-full"
+                           min="{{ project.created_at|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ fulltext_start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-semibold">Full-text End</span></label>
+                    <input type="date" name="fulltext_end_date" class="input input-bordered w-full"
+                           min="{{ project.created_at|date:'Y-m-d' }}" max="{{ project.end_date|date:'Y-m-d' }}"
+                           value="{{ fulltext_end_date|date:'Y-m-d' }}" required>
+                </div>
+            </div>
+
+            <div class="alert alert-info text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Full-text must start on or after the screening end date.</span>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('selection-schedule-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Schedule</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+{% endif %}
+
+{% if show_schedule_modal %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('selection-schedule-modal');
+        if (modal) {
+            modal.showModal();
+        }
+
+        const screeningEnd = document.getElementById('screening_end_date');
+        const fulltextStart = document.getElementById('fulltext_start_date');
+        if (screeningEnd && fulltextStart) {
+            const updateMin = () => {
+                if (screeningEnd.value) {
+                    fulltextStart.min = screeningEnd.value;
+                }
+            };
+            screeningEnd.addEventListener('change', updateMin);
+            updateMin();
+        }
+    });
+</script>
 {% endif %}
 {% endblock %}

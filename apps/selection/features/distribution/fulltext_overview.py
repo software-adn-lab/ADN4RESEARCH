@@ -10,6 +10,8 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.contrib import messages
 from django.core.files.storage import default_storage
+from django.urls import reverse
+from django.utils import timezone
 
 from apps.project.structure.models.project_models import Project, Membership
 from apps.project.facade import get_project_facade
@@ -239,6 +241,26 @@ def fulltext_overview(request, project_id):
     """
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.error(request, 'Configure screening/full-text dates before distributing papers.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+    if not selection_phase.is_fulltext_window_open():
+        start_date = selection_phase.fulltext_screening_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.error(request, f'Full-text starts on {start_label}. You cannot distribute yet.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.warning(request, 'Selection schedule is not configured yet.')
+        url = f"{reverse('selection:screening_overview', args=[project_id])}?schedule=1"
+        return redirect(url)
+
+    if not selection_phase.is_fulltext_window_open():
+        start_date = selection_phase.fulltext_screening_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.warning(request, f'Full-text starts on {start_label}.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     # Check if fulltext phase is accessible
     if not selection_phase.can_access_fulltext():
@@ -399,6 +421,8 @@ def fulltext_overview(request, project_id):
         'all_reviews_complete': all_reviews_complete,
         'can_finalize': selection_phase.fulltext_distributed and selection_phase.fulltext_status != SubPhaseStatusChoices.COMPLETED,
         'pending_all_count': pending_all_count,
+        'fulltext_start_date': selection_phase.fulltext_screening_start_date,
+        'fulltext_end_date': selection_phase.fulltext_screening_end_date,
     }
     
     return render(request, 'fulltext_overview/overview.html', context)
@@ -597,6 +621,16 @@ def fulltext_bulk_decision(request, project_id):
         return redirect('selection:fulltext_overview', project_id=project_id)
 
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.warning(request, 'Configure screening/full-text dates before applying bulk decisions.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    if not selection_phase.is_fulltext_window_open():
+        start_date = selection_phase.fulltext_screening_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.warning(request, f'Full-text starts on {start_label}.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
     action = request.POST.get('action')
 
     if selection_phase.fulltext_screening_status != SubPhaseStatusChoices.COMPLETED:
@@ -682,9 +716,20 @@ def finalize_fulltext(request, project_id):
         return redirect('selection:fulltext_overview', project_id=project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.error(request, 'Configure screening/full-text dates before finalizing full-text.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
+
+    if not selection_phase.is_fulltext_window_open():
+        start_date = selection_phase.fulltext_screening_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.error(request, f'Full-text starts on {start_label}.')
+        return redirect('selection:fulltext_overview', project_id=project_id)
     
     selection_phase.fulltext_screening_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.save(update_fields=['fulltext_screening_status'])
+    selection_phase.fulltext_screening_end_date = timezone.now()
+    selection_phase.save(update_fields=['fulltext_screening_status', 'fulltext_screening_end_date'])
 
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='FULL_TEXT')

@@ -9,6 +9,8 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+from datetime import datetime, time
 
 from apps.project.structure.models.project_models import Project, Membership
 from apps.selection.features.distribution.models import SelectionPhase
@@ -155,10 +157,13 @@ def screening_overview(request, project_id):
     now = timezone.now()
     if selection_phase.screening_status == SubPhaseStatusChoices.COMPLETED:
         phase_mode = 'finalizado'
-    elif selection_phase.end_date and now > selection_phase.end_date:
+    elif selection_phase.screening_metadata_end_date and now > selection_phase.screening_metadata_end_date:
         phase_mode = 'finalizado'
     else:
         phase_mode = 'en_curso'
+
+    schedule_configured = selection_phase.is_selection_schedule_configured()
+    screening_locked = not schedule_configured or not selection_phase.is_screening_window_open(now=now)
     
     # Get user progress
     user_progress = _calculate_progress(selection_phase, request.user, 'SCREENING')
@@ -221,6 +226,13 @@ def screening_overview(request, project_id):
         'all_reviews_complete': all_reviews_complete,
         'can_finalize': selection_phase.screening_distributed and selection_phase.screening_status != SubPhaseStatusChoices.COMPLETED,
         'pending_all_count': pending_all_count,
+        'schedule_configured': schedule_configured,
+        'screening_locked': screening_locked,
+        'screening_start_date': selection_phase.screening_metadata_start_date,
+        'screening_end_date': selection_phase.screening_metadata_end_date,
+        'fulltext_start_date': selection_phase.fulltext_screening_start_date,
+        'fulltext_end_date': selection_phase.fulltext_screening_end_date,
+        'show_schedule_modal': bool(request.GET.get('schedule')) or (is_owner and not schedule_configured),
     }
     
     return render(request, 'distribution/overview.html', context)
@@ -239,6 +251,15 @@ def distribute_screening_papers(request, project_id):
         return redirect('selection:screening_overview', project_id=project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.error(request, 'Configure screening/full-text dates before distributing papers.')
+        return redirect('selection:screening_overview', project_id=project_id)
+    if not selection_phase.is_screening_window_open():
+        start_date = selection_phase.screening_metadata_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.error(request, f'Screening starts on {start_label}. You cannot distribute yet.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     try:
         reviews_per_paper = int(request.POST.get('reviews_per_paper', 2))
@@ -292,6 +313,93 @@ def distribute_screening_papers(request, project_id):
 
 @login_required
 @require_http_methods(['POST'])
+def configure_selection_schedule(request, project_id):
+    """
+    Configure screening and full-text schedule dates for selection phase.
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can configure selection dates')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    selection_phase, _ = SelectionPhase.objects.get_or_create(
+        project=project,
+        defaults={
+            'status': 'ON_GOING',
+            'current_stage': SelectionStageChoices.SCREENING_OVERVIEW
+        }
+    )
+
+    screening_start_str = request.POST.get('screening_start_date')
+    screening_end_str = request.POST.get('screening_end_date')
+    fulltext_start_str = request.POST.get('fulltext_start_date')
+    fulltext_end_str = request.POST.get('fulltext_end_date')
+
+    if not all([screening_start_str, screening_end_str, fulltext_start_str, fulltext_end_str]):
+        messages.error(request, 'All screening and full-text dates are required.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    screening_start = parse_date(screening_start_str)
+    screening_end = parse_date(screening_end_str)
+    fulltext_start = parse_date(fulltext_start_str)
+    fulltext_end = parse_date(fulltext_end_str)
+
+    if not all([screening_start, screening_end, fulltext_start, fulltext_end]):
+        messages.error(request, 'Invalid date format.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if screening_start >= screening_end:
+        messages.error(request, 'Screening start date must be before end date.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if fulltext_start >= fulltext_end:
+        messages.error(request, 'Full-text start date must be before end date.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if fulltext_start < screening_end:
+        messages.error(request, 'Full-text must start on or after screening end date.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    project_start = project.created_at.date()
+    project_end = project.end_date.date() if project.end_date else None
+
+    for label, date_value in [
+        ('Screening start', screening_start),
+        ('Screening end', screening_end),
+        ('Full-text start', fulltext_start),
+        ('Full-text end', fulltext_end),
+    ]:
+        if date_value < project_start:
+            messages.error(request, f'{label} cannot be before project start ({project_start}).')
+            return redirect('selection:screening_overview', project_id=project_id)
+        if project_end and date_value > project_end:
+            messages.error(request, f'{label} cannot be after project end ({project_end}).')
+            return redirect('selection:screening_overview', project_id=project_id)
+
+    tz = timezone.get_current_timezone()
+    screening_start_dt = timezone.make_aware(datetime.combine(screening_start, time.min), tz)
+    screening_end_dt = timezone.make_aware(datetime.combine(screening_end, time.max), tz)
+    fulltext_start_dt = timezone.make_aware(datetime.combine(fulltext_start, time.min), tz)
+    fulltext_end_dt = timezone.make_aware(datetime.combine(fulltext_end, time.max), tz)
+
+    selection_phase.screening_metadata_start_date = screening_start_dt
+    selection_phase.screening_metadata_end_date = screening_end_dt
+    selection_phase.fulltext_screening_start_date = fulltext_start_dt
+    selection_phase.fulltext_screening_end_date = fulltext_end_dt
+    selection_phase.save(update_fields=[
+        'screening_metadata_start_date',
+        'screening_metadata_end_date',
+        'fulltext_screening_start_date',
+        'fulltext_screening_end_date',
+    ])
+
+    messages.success(request, 'Selection schedule saved successfully.')
+    return redirect('selection:screening_overview', project_id=project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
 def screening_bulk_decision(request, project_id):
     """
     Apply bulk decision to all pending screening papers.
@@ -304,10 +412,19 @@ def screening_bulk_decision(request, project_id):
         return redirect('selection:screening_overview', project_id=project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+    if not selection_phase.is_selection_schedule_configured():
+        messages.warning(request, 'Configure screening/full-text dates before applying bulk decisions.')
+        return redirect('selection:screening_overview', project_id=project_id)
     action = request.POST.get('action')
 
     if selection_phase.screening_metadata_status != SubPhaseStatusChoices.COMPLETED:
         messages.warning(request, 'Finalize screening before applying bulk decisions.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if not selection_phase.is_screening_window_open():
+        start_date = selection_phase.screening_metadata_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.warning(request, f'Screening starts on {start_label}.')
         return redirect('selection:screening_overview', project_id=project_id)
     
     if action not in ['include_all', 'exclude_all', 'send_to_discussion']:
@@ -431,14 +548,31 @@ def finalize_screening(request, project_id):
         return redirect('selection:screening_overview', project_id=project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+    if not selection_phase.is_selection_schedule_configured():
+        messages.error(request, 'Configure screening/full-text dates before finalizing screening.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if not selection_phase.is_screening_window_open():
+        start_date = selection_phase.screening_metadata_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.error(request, f'Screening starts on {start_label}.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
     conflicts = discrepancy_service.get_conflicts(stage='SCREENING')
     pending_all_paper_ids = _get_pending_all_paper_ids(selection_phase)
 
     # Finalize screening reviews
+    now = timezone.now()
     selection_phase.screening_metadata_status = SubPhaseStatusChoices.COMPLETED
-    selection_phase.save()
+    selection_phase.screening_metadata_end_date = now
+    if selection_phase.fulltext_screening_status == SubPhaseStatusChoices.NOT_STARTED:
+        selection_phase.fulltext_screening_start_date = now
+    selection_phase.save(update_fields=[
+        'screening_metadata_status',
+        'screening_metadata_end_date',
+        'fulltext_screening_start_date',
+    ])
 
     if not conflicts and not pending_all_paper_ids:
         selection_phase.discussion_metadata_status = SubPhaseStatusChoices.COMPLETED

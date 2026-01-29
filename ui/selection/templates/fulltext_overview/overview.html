@@ -15,22 +15,25 @@
             <h1 class="text-3xl font-bold">Full-text - Overview</h1>
             <p class="text-gray-600">{{ project.title }}</p>
         </div>
-        <div class="flex items-center space-x-2">
-            {% if is_owner and can_finalize %}
-            <form method="post" action="{% url 'selection:finalize_fulltext' project.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary btn-sm px-2 text-white font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Finalize Full-text
-                </button>
-            </form>
-            {% endif %}
-            <span class="badge uppercase font-bold text-white {% if selection_phase.fulltext_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
-                  {% if selection_phase.fulltext_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.fulltext_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
-                {{ selection_phase.get_fulltext_status_display }}
-            </span>
+        <div class="flex flex-col items-end gap-1 text-sm text-gray-500">
+            <div class="flex items-center space-x-2">
+                {% if is_owner and can_finalize %}
+                <form method="post" action="{% url 'selection:finalize_fulltext' project.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm px-2 text-white font-semibold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Finalize Full-text
+                    </button>
+                </form>
+                {% endif %}
+                <span class="badge uppercase font-bold text-white {% if selection_phase.fulltext_status == 'IN_PROGRESS' %}badge-warning{% endif %}"
+                      {% if selection_phase.fulltext_status == 'COMPLETED' %}style="background-color: #00A30E; border-color: #00A30E;"{% elif selection_phase.fulltext_status == 'NOT_STARTED' %}style="background-color: #EE0000; border-color: #EE0000;"{% endif %}>
+                    {{ selection_phase.get_fulltext_status_display }}
+                </span>
+            </div>
+            <span>Full-text window: {{ fulltext_start_date|date:"d/m/Y" }} - {{ fulltext_end_date|date:"d/m/Y" }}</span>
         </div>
     </div>
 

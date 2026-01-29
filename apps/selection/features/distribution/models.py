@@ -151,3 +151,28 @@ class SelectionPhase(models.Model):
         from apps.selection.features.discussion.services import DiscrepancyResolutionService
         service = DiscrepancyResolutionService(self)
         return len(service.get_conflicts(stage='FULL_TEXT'))
+
+    def is_selection_schedule_configured(self):
+        """Check if screening and full-text schedule dates are configured."""
+        return all([
+            self.screening_metadata_start_date,
+            self.screening_metadata_end_date,
+            self.fulltext_screening_start_date,
+            self.fulltext_screening_end_date,
+        ])
+
+    def is_screening_window_open(self, now=None):
+        """Check if the screening window is open (started)."""
+        from django.utils import timezone
+        now = now or timezone.now()
+        if not self.screening_metadata_start_date:
+            return False
+        return now >= self.screening_metadata_start_date
+
+    def is_fulltext_window_open(self, now=None):
+        """Check if the full-text window is open (started)."""
+        from django.utils import timezone
+        now = now or timezone.now()
+        if not self.fulltext_screening_start_date:
+            return False
+        return now >= self.fulltext_screening_start_date

@@ -83,6 +83,16 @@ def screening_discussion_view(request, project_id):
     """
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.warning(request, 'Selection schedule is not configured yet.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if not selection_phase.is_screening_window_open():
+        start_date = selection_phase.screening_metadata_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.warning(request, f'Screening starts on {start_label}.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     is_owner = request.user == project.owner
     discrepancy_service = DiscrepancyResolutionService(selection_phase)
@@ -289,6 +299,16 @@ def fulltext_discussion_view(request, project_id):
     """
     project = get_object_or_404(Project, id=project_id)
     selection_phase = get_object_or_404(SelectionPhase, project=project)
+
+    if not selection_phase.is_selection_schedule_configured():
+        messages.warning(request, 'Selection schedule is not configured yet.')
+        return redirect('selection:screening_overview', project_id=project_id)
+
+    if not selection_phase.is_fulltext_window_open():
+        start_date = selection_phase.fulltext_screening_start_date
+        start_label = start_date.date() if start_date else 'scheduled date'
+        messages.warning(request, f'Full-text starts on {start_label}.')
+        return redirect('selection:screening_overview', project_id=project_id)
     
     # Check if fulltext phase is accessible
     if not selection_phase.can_access_fulltext():

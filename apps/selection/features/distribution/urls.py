@@ -10,6 +10,7 @@ urlpatterns = [
     # Screening Overview (distribution by abstract word count)
     path('', views.screening_overview, name='screening_overview'),
     path('', views.screening_overview, name='overview'),  # Alias for backward compatibility
+    path('schedule/', views.configure_selection_schedule, name='configure_selection_schedule'),
     path('screening/distribute/', views.distribute_screening_papers, name='distribute_screening'),
     path('screening/bulk-decision/', views.screening_bulk_decision, name='screening_bulk_decision'),
     path('screening/send-reminder/', views.send_screening_reminder, name='send_screening_reminder'),
