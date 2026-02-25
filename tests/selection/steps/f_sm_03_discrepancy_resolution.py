@@ -6,11 +6,9 @@ from behave import given, when, then
 from django.contrib.auth.models import User
 
 from apps.project.structure.models.project_models import Project, Membership
-from apps.selection.features.distribution.models import SelectionPhase
-from apps.selection.features.screening.models import PaperAssignment, PaperReview
-from apps.selection.features.discussion.models import ConflictResolution
-from apps.selection.features.discussion.services import DiscrepancyResolutionService
-from apps.selection.models.choices import (
+from apps.selection.domain.models import SelectionPhase, PaperAssignment, PaperReview, ConflictResolution
+from apps.selection.features.discussion.shared.services import DiscrepancyResolutionService
+from apps.selection.domain.choices import (
     AssignmentStageChoices,
     SelectionDecisionChoices,
     SelectionStageChoices,

@@ -13,9 +13,10 @@ El modulo se integra con:
 
 ## Estructura general
 - Backend (Django): `apps/selection/`
-  - `features/distribution/`: distribucion y overview.
-  - `features/screening/`: revisiones de metadata y fulltext.
-  - `features/discussion/`: conflictos y resolucion.
+  - `domain/`: modelos y choices compartidos del modulo.
+  - `features/distribution/{metadata,fulltext,shared}/`: distribucion y overview por etapa.
+  - `features/screening/{metadata,fulltext}/`: revisiones por etapa.
+  - `features/discussion/{metadata,fulltext,shared}/`: conflictos y resolucion por etapa.
   - `services/`: facade para uso externo.
 - UI: `ui/selection/templates/` y `ui/selection/scripts/`.
 - Tests BDD: `tests/selection/features/` y `tests/selection/steps/`.
@@ -33,7 +34,8 @@ de diseno y se normaliza el formato para su uso consistente:
 - Punto de integracion: `apps.design.api.get_design_protocol`.
 - Uso principal: `apps/selection/features/screening/metadata/views.py` y
   `apps/selection/features/screening/fulltext/views.py` (lista de criterios),
-  ademas de `apps/selection/features/discussion/views.py` (criterios para
+  ademas de `apps/selection/features/discussion/metadata/views.py` y
+  `apps/selection/features/discussion/fulltext/views.py` (criterios para
   tercer revisor en discusion).
 - Estrategia: normalizacion de identificador y etiqueta para tolerar cambios
   en el origen, con fallback a listas vacias si no hay disponibilidad.
@@ -45,8 +47,8 @@ Seleccion consume metadatos y PDFs desde adquisicion para dos propósitos:
 - Punto de integracion: `apps.project.facade.get_project_facade` para obtener
   estudios del proyecto (metadata), y `apps.acquisition.facade.get_acquisition_facade`
   para estado de PDFs y descargas.
-- Uso principal: `apps/selection/features/distribution/services.py`,
-  `apps/selection/features/distribution/fulltext_overview.py` y
+- Uso principal: `apps/selection/features/distribution/shared/services.py`,
+  `apps/selection/features/distribution/fulltext/views.py` y
   `apps/selection/features/screening/fulltext/views.py`.
 - Estrategia: tolerancia a datos incompletos (fallback de metadatos y
   conteo por defecto cuando el PDF no esta disponible).
@@ -55,7 +57,7 @@ Seleccion consume metadatos y PDFs desde adquisicion para dos propósitos:
 La salida de seleccion es la lista de estudios aprobados en fulltext, expuesta
 de forma estable para ser consumida por extraccion:
 - Punto de integracion: `apps/selection/services/facade.py`.
-- Endpoint de apoyo: `apps/selection/features/distribution/screening.py`
+- Endpoint de apoyo: `apps/selection/features/distribution/metadata/views.py`
   (API `approved_papers_api`).
 - Estrategia: la lista se calcula considerando decisiones finales y conflictos
   resueltos, garantizando consistencia antes de iniciar extraccion.
@@ -110,10 +112,10 @@ Se usa un algoritmo voraz (greedy) con capacidad proporcional:
 - La subfase cambia a `IN_PROGRESS` tras distribucion exitosa.
 
 ### Evidencia en codigo
-- Algoritmo: `apps/selection/features/distribution/services.py`.
-- Distribucion fulltext: `apps/selection/features/distribution/services.py`.
-- Vistas de distribucion: `apps/selection/features/distribution/screening.py`,
-  `apps/selection/features/distribution/fulltext_overview.py`.
+- Algoritmo: `apps/selection/features/distribution/shared/services.py`.
+- Distribucion fulltext: `apps/selection/features/distribution/shared/services.py`.
+- Vistas de distribucion: `apps/selection/features/distribution/metadata/views.py`,
+  `apps/selection/features/distribution/fulltext/views.py`.
 
 ### Pruebas
 BDD de distribucion: `tests/selection/features/f_sm_01_paper_distribution.feature`
@@ -154,7 +156,7 @@ Esto protege la transicion a fulltext y evita sesgos por decisiones inconclusas.
 ### Evidencia en codigo
 - Screening metadata: `apps/selection/features/screening/metadata/views.py`.
 - Fulltext review: `apps/selection/features/screening/fulltext/views.py`.
-- Control de avance: `apps/selection/features/distribution/screening.py`.
+- Control de avance: `apps/selection/features/distribution/metadata/views.py`.
 
 ### Pruebas
 BDD de modo/recordatorios: `tests/selection/features/f_sm_02_screening_reminder.feature`
@@ -195,7 +197,7 @@ La resolucion de conflictos es condicion necesaria para:
 
 ### Evidencia en codigo
 - Servicio: `apps/selection/features/discussion/services.py`.
-- Vistas: `apps/selection/features/discussion/views.py`.
+- Vistas: `apps/selection/features/discussion/metadata/views.py y apps/selection/features/discussion/fulltext/views.py`.
 - Templates: `ui/selection/templates/discussion/`.
 
 ### Pruebas

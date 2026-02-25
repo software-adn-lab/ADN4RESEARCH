@@ -1,4 +1,4 @@
-from apps.selection.domain.choices import (
+from .choices import (
     SelectionStatusChoices,
     SubPhaseStatusChoices,
     SelectionStageChoices,
@@ -6,7 +6,7 @@ from apps.selection.domain.choices import (
     ResolutionMethodChoices,
     SelectionDecisionChoices,
 )
-from apps.selection.domain.models import SelectionPhase, PaperAssignment, PaperReview, ConflictResolution
+from .models import SelectionPhase, PaperAssignment, PaperReview, ConflictResolution
 
 __all__ = [
     'SelectionStatusChoices',

@@ -1,12 +1,12 @@
 from apps.project.facade import get_project_facade
 
-from apps.selection.features.distribution.services import (
+from apps.selection.features.distribution.shared.services import (
     PaperDistributionService,
     PaperInfo,
     ResearcherCapacity,
     FulltextDistributionService,
 )
-from apps.selection.features.discussion.services import DiscrepancyResolutionService
+from apps.selection.features.discussion.shared.services import DiscrepancyResolutionService
 from .facade import SelectionFacade, get_selection_facade
 
 __all__ = [

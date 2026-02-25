@@ -48,7 +48,7 @@ def main():
             print('   3. Enrich the discovered studies')
         
         # Test distribution service
-        from apps.selection.features.distribution.services import PaperDistributionService
+        from apps.selection.features.distribution.metadata.services import PaperDistributionService
         
         if len(studies) > 0:
             print(f'\n🔄 Testing distribution service...')
