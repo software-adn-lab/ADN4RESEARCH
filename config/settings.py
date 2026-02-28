@@ -262,6 +262,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATICFILES_DIRS = [
+    BASE_DIR / "static",
     BASE_DIR / "ui" / "design",
     BASE_DIR / "ui" / "interpretation",
     BASE_DIR / "ui" / "project",
@@ -317,17 +318,17 @@ REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Cache Configuration with Redis
 # https://docs.djangoproject.com/en/5.2/topics/cache/
-#CACHES = {
-#    "default": {
-#        "BACKEND": "django_redis.cache.RedisCache",
-#        "LOCATION": REDIS_URL,
-#        "OPTIONS": {
-#            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#        },
-#        "KEY_PREFIX": "adn4research",
-#        "TIMEOUT": 300,  # 5 minutes default
-#    }
-#}
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "adn4research",
+        "TIMEOUT": 300,  # 5 minutes default
+    }
+}
 
 # Session backend using Redis
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
