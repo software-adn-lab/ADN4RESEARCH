@@ -230,7 +230,7 @@ class InitializeExtractionPhaseView(LoginRequiredMixin, OwnerRequiredMixin, View
 
             # Mark selection phase as inactive once extraction starts
             try:
-                from apps.selection.features.distribution.models import SelectionPhase
+                from apps.selection.domain.models import SelectionPhase
                 selection_phase = SelectionPhase.objects.filter(project_id=project_id).first()
                 if selection_phase and selection_phase.is_active:
                     selection_phase.is_active = False

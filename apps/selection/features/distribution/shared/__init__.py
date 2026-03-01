@@ -1,6 +1,4 @@
-"""Backward-compatible service exports for distribution feature."""
-
-from apps.selection.features.distribution.shared.services import (
+from .services import (
     PaperInfo,
     ResearcherCapacity,
     PaperDistributionService,

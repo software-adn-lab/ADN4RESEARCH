@@ -1,4 +1,4 @@
-from .screening import (
+from .metadata.views import (
     screening_overview,
     distribute_screening_papers,
     configure_selection_schedule,
@@ -7,7 +7,7 @@ from .screening import (
     finalize_screening,
     approved_papers_api,
 )
-from .fulltext_overview import (
+from .fulltext.views import (
     fulltext_overview,
     distribute_fulltext_papers,
     download_overview_pdfs,

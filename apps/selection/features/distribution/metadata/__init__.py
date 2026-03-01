@@ -1,10 +1,4 @@
-"""Backward-compatible metadata distribution view exports."""
-
-from apps.selection.features.distribution.metadata.views import (
-    _calculate_progress,
-    _get_team_progress,
-    _get_pending_all_paper_ids,
-    _get_design_end_date,
+from .views import (
     screening_overview,
     distribute_screening_papers,
     configure_selection_schedule,
@@ -13,12 +7,9 @@ from apps.selection.features.distribution.metadata.views import (
     finalize_screening,
     approved_papers_api,
 )
+from .services import PaperDistributionService, PaperInfo, ResearcherCapacity
 
 __all__ = [
-    '_calculate_progress',
-    '_get_team_progress',
-    '_get_pending_all_paper_ids',
-    '_get_design_end_date',
     'screening_overview',
     'distribute_screening_papers',
     'configure_selection_schedule',
@@ -26,4 +17,7 @@ __all__ = [
     'send_screening_reminder',
     'finalize_screening',
     'approved_papers_api',
+    'PaperDistributionService',
+    'PaperInfo',
+    'ResearcherCapacity',
 ]
