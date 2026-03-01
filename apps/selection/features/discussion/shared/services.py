@@ -20,12 +20,13 @@ class DiscrepancyResolutionService:
     def __init__(self, selection_phase):
         self.selection_phase = selection_phase
 
-    def get_conflicts(self, stage: str) -> List[dict]:
+    def get_conflicts(self, stage: str, include_resolved: bool = False) -> List[dict]:
         """
-        Get all unresolved conflicts for a given stage.
+        Get conflicts for a given stage.
 
         Args:
             stage: 'SCREENING' or 'FULL_TEXT'
+            include_resolved: If True, include resolved conflicts in result
 
         Returns:
             List of conflict dicts with paper info and reviews
@@ -40,48 +41,105 @@ class DiscrepancyResolutionService:
 
         conflicts = []
 
-        # Get all paper IDs for this stage
-        paper_ids = PaperAssignment.objects.filter(
+        # Base papers: regular reviewer assignments.
+        base_paper_ids = set(PaperAssignment.objects.filter(
             selection_phase=self.selection_phase,
             stage=assignment_stage,
             is_third_reviewer=False
-        ).values_list('paper_id', flat=True).distinct()
+        ).values_list('paper_id', flat=True).distinct())
+
+        # Also include papers that already have a conflict record.
+        conflict_paper_ids = set(ConflictResolution.objects.filter(
+            selection_phase=self.selection_phase,
+            stage=assignment_stage,
+        ).values_list('paper_id', flat=True))
+
+        paper_ids = sorted(base_paper_ids | conflict_paper_ids)
 
         for paper_id in paper_ids:
-            # Check if already resolved
+            # Existing conflict metadata (if any)
             existing_resolution = ConflictResolution.objects.filter(
                 selection_phase=self.selection_phase,
                 paper_id=paper_id,
                 stage=assignment_stage
-            ).first()
+            ).select_related('third_reviewer', 'resolved_by').first()
 
-            if existing_resolution and existing_resolution.is_resolved:
-                continue
-
-            # Get reviews for this paper (exclude pending)
+            # Reviews from initial reviewers (exclude pending).
             reviews = PaperReview.objects.filter(
                 assignment__selection_phase=self.selection_phase,
                 assignment__paper_id=paper_id,
                 assignment__stage=assignment_stage,
+                assignment__is_third_reviewer=False,
                 stage=review_stage
             ).exclude(decision=SelectionDecisionChoices.PENDING).select_related('assignment__researcher')
 
-            if not reviews.exists():
+            decisions = set(reviews.values_list('decision', flat=True))
+            has_disagreement = len(decisions) > 1
+            has_resolution_record = existing_resolution is not None
+
+            # Not a conflict candidate at all.
+            if not has_disagreement and not has_resolution_record:
                 continue
 
-            # Check for conflict (different decisions)
-            decisions = set(reviews.values_list('decision', flat=True))
+            is_resolved = bool(existing_resolution and existing_resolution.is_resolved)
+            if is_resolved and not include_resolved:
+                continue
 
-            if len(decisions) > 1:
-                # There's a conflict
-                conflict_data = {
-                    'paper_id': paper_id,
-                    'reviews': list(reviews),
-                    'decisions': list(decisions),
-                    'resolution': existing_resolution,
-                    'reviewers': [r.assignment.researcher for r in reviews]
-                }
-                conflicts.append(conflict_data)
+            # Third-reviewer assignment (if any).
+            third_assignment = PaperAssignment.objects.filter(
+                selection_phase=self.selection_phase,
+                paper_id=paper_id,
+                stage=assignment_stage,
+                is_third_reviewer=True,
+            ).select_related('researcher').order_by('-assigned_at', '-id').first()
+
+            third_review = None
+            if third_assignment:
+                third_review = PaperReview.objects.filter(
+                    assignment=third_assignment,
+                    stage=review_stage
+                ).order_by('-reviewed_at', '-id').first()
+
+            third_reviewer_pending = bool(
+                third_assignment and
+                (not third_review or third_review.decision == SelectionDecisionChoices.PENDING) and
+                not is_resolved
+            )
+
+            status = 'PENDING'
+            if is_resolved:
+                status = 'RESOLVED'
+            elif third_assignment:
+                status = 'ASSIGNED'
+
+            conflict_data = {
+                'paper_id': paper_id,
+                'reviews': list(reviews),
+                'decisions': list(decisions),
+                'resolution': existing_resolution,
+                'reviewers': [r.assignment.researcher for r in reviews],
+                'is_resolved': is_resolved,
+                'resolution_method': existing_resolution.resolution_method if existing_resolution else None,
+                'final_decision': existing_resolution.final_decision if existing_resolution else None,
+                'resolved_at': existing_resolution.resolved_at if existing_resolution else None,
+                'resolved_by': existing_resolution.resolved_by if existing_resolution else None,
+                'third_reviewer': (
+                    existing_resolution.third_reviewer
+                    if existing_resolution and existing_resolution.third_reviewer_id
+                    else (third_assignment.researcher if third_assignment else None)
+                ),
+                'third_assignment': third_assignment,
+                'third_review': third_review,
+                'has_third_assignment': bool(third_assignment),
+                'third_reviewer_pending': third_reviewer_pending,
+                'has_disagreement': has_disagreement,
+                'status': status,
+            }
+            conflicts.append(conflict_data)
+
+        # Show active items first, resolved at the bottom.
+        status_order = {'PENDING': 0, 'ASSIGNED': 1, 'RESOLVED': 2}
+        conflicts.sort(key=lambda c: (status_order.get(c['status'], 99), str(c['paper_id'])))
 
         return conflicts
 
@@ -177,6 +235,31 @@ class DiscrepancyResolutionService:
 
         assignment_stage = AssignmentStageChoices.SCREENING if stage == 'SCREENING' else AssignmentStageChoices.FULLTEXT
 
+        # Owner should resolve via final vote, not as third reviewer.
+        if reviewer.id == self.selection_phase.project.owner_id:
+            raise ValueError("Project owner cannot be assigned as third reviewer. Use owner final decision.")
+
+        # Prevent multiple simultaneous third-reviewer assignments.
+        existing_third_assignment = PaperAssignment.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=paper_id,
+            stage=assignment_stage,
+            is_third_reviewer=True
+        ).exists()
+        if existing_third_assignment:
+            raise ValueError(
+                "A third reviewer is already assigned to this paper. "
+                "Send a reminder, cancel assignment, or use owner final decision."
+            )
+
+        existing_conflict = ConflictResolution.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=paper_id,
+            stage=assignment_stage
+        ).first()
+        if existing_conflict and existing_conflict.is_resolved:
+            raise ValueError("This conflict is already resolved.")
+
         # Verify reviewer hasn't reviewed this paper already
         existing_assignment = PaperAssignment.objects.filter(
             selection_phase=self.selection_phase,
@@ -196,7 +279,10 @@ class DiscrepancyResolutionService:
             defaults={
                 'resolution_method': ResolutionMethodChoices.THIRD_REVIEWER,
                 'third_reviewer': reviewer,
-                'is_resolved': False
+                'is_resolved': False,
+                'final_decision': None,
+                'resolved_by': None,
+                'resolved_at': None,
             }
         )
 
@@ -215,6 +301,59 @@ class DiscrepancyResolutionService:
             'assignment': assignment,
             'conflict': conflict
         }
+
+    def cancel_third_reviewer_assignment(self, paper_id: str, stage: str):
+        """
+        Cancel current third-reviewer assignment for an unresolved conflict.
+        """
+        from apps.selection.domain.models import PaperAssignment, PaperReview, ConflictResolution
+        from apps.selection.domain.choices import AssignmentStageChoices, ResolutionMethodChoices
+
+        assignment_stage = AssignmentStageChoices.SCREENING if stage == 'SCREENING' else AssignmentStageChoices.FULLTEXT
+        review_stage = 'SCREENING' if stage == 'SCREENING' else 'FULL_TEXT'
+
+        conflict = ConflictResolution.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=paper_id,
+            stage=assignment_stage
+        ).first()
+        if not conflict:
+            raise ValueError("No conflict record found for this paper.")
+        if conflict.is_resolved:
+            raise ValueError("Conflict is already resolved; third reviewer assignment cannot be canceled.")
+
+        third_assignments = PaperAssignment.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=paper_id,
+            stage=assignment_stage,
+            is_third_reviewer=True
+        )
+        if not third_assignments.exists():
+            raise ValueError("No third reviewer assignment found for this paper.")
+
+        PaperReview.objects.filter(
+            assignment__in=third_assignments,
+            stage=review_stage
+        ).delete()
+        third_assignments.delete()
+
+        conflict.third_reviewer = None
+        if conflict.resolution_method == ResolutionMethodChoices.THIRD_REVIEWER:
+            conflict.resolution_method = None
+        conflict.final_decision = None
+        conflict.resolved_by = None
+        conflict.resolution_notes = ''
+        conflict.resolved_at = None
+        conflict.is_resolved = False
+        conflict.save(update_fields=[
+            'third_reviewer',
+            'resolution_method',
+            'final_decision',
+            'resolved_by',
+            'resolution_notes',
+            'resolved_at',
+            'is_resolved',
+        ])
 
     def resolve_with_owner_vote(
         self,
@@ -237,11 +376,26 @@ class DiscrepancyResolutionService:
         Returns:
             ConflictResolution object
         """
-        from apps.selection.domain.models import ConflictResolution
+        from apps.selection.domain.models import ConflictResolution, PaperAssignment, PaperReview
         from apps.selection.domain.choices import AssignmentStageChoices, ResolutionMethodChoices
         from django.utils import timezone
 
         assignment_stage = AssignmentStageChoices.SCREENING if stage == 'SCREENING' else AssignmentStageChoices.FULLTEXT
+        review_stage = 'SCREENING' if stage == 'SCREENING' else 'FULL_TEXT'
+
+        # If a third reviewer was previously assigned, clear that path before owner decision.
+        third_assignments = PaperAssignment.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=paper_id,
+            stage=assignment_stage,
+            is_third_reviewer=True
+        )
+        if third_assignments.exists():
+            PaperReview.objects.filter(
+                assignment__in=third_assignments,
+                stage=review_stage
+            ).delete()
+            third_assignments.delete()
 
         conflict, created = ConflictResolution.objects.update_or_create(
             selection_phase=self.selection_phase,
@@ -249,6 +403,7 @@ class DiscrepancyResolutionService:
             stage=assignment_stage,
             defaults={
                 'resolution_method': ResolutionMethodChoices.OWNER_VOTE,
+                'third_reviewer': None,
                 'final_decision': decision,
                 'resolved_by': owner,
                 'resolution_notes': notes,
@@ -274,6 +429,14 @@ class DiscrepancyResolutionService:
 
         review_stage = 'SCREENING' if assignment.stage == AssignmentStageChoices.SCREENING else 'FULL_TEXT'
 
+        conflict = ConflictResolution.objects.filter(
+            selection_phase=self.selection_phase,
+            paper_id=assignment.paper_id,
+            stage=assignment.stage
+        ).first()
+        if conflict and conflict.is_resolved and conflict.resolved_by_id != assignment.researcher_id:
+            raise ValueError("This conflict was already resolved.")
+
         # Create or update the review
         review, _ = PaperReview.objects.update_or_create(
             assignment=assignment,
@@ -285,13 +448,6 @@ class DiscrepancyResolutionService:
                 'criterion_label': criterion_label
             }
         )
-
-        # Update conflict resolution
-        conflict = ConflictResolution.objects.filter(
-            selection_phase=self.selection_phase,
-            paper_id=assignment.paper_id,
-            stage=assignment.stage
-        ).first()
 
         if conflict:
             conflict.final_decision = decision
@@ -309,7 +465,8 @@ class DiscrepancyResolutionService:
         """
         Get team members eligible to be third reviewers.
 
-        Excludes researchers who have already reviewed this paper.
+        Excludes researchers who have already reviewed this paper and the
+        project owner (owner should resolve via final vote).
         """
         from apps.selection.domain.models import PaperAssignment
         from apps.selection.domain.choices import AssignmentStageChoices
@@ -329,6 +486,8 @@ class DiscrepancyResolutionService:
             role__in=['OWNER', 'RESEARCHER']
         ).exclude(
             user_id__in=existing_reviewers
+        ).exclude(
+            user_id=self.selection_phase.project.owner_id
         ).select_related('user')
 
         return [m.user for m in eligible]

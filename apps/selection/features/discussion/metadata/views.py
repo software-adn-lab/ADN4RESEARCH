@@ -3,11 +3,14 @@ Vistas para resolución de discrepancias.
 Responsable de resolver conflictos entre revisores en screening y fulltext.
 """
 
+from urllib.parse import urlencode
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.contrib import messages
+from django.urls import reverse
 
 from apps.project.structure.models.project_models import Project
 from apps.project.facade import get_project_facade
@@ -21,6 +24,42 @@ from apps.selection.domain.choices import (
 )
 from apps.selection.features.discussion.shared.services import DiscrepancyResolutionService
 from apps.design.api import get_design_protocol
+
+
+def _parse_non_negative_int(value):
+    if value in (None, ''):
+        return None
+    try:
+        return max(int(float(value)), 0)
+    except (TypeError, ValueError):
+        return None
+
+
+def _screening_discussion_redirect(request, project_id):
+    """
+    Redirect to screening discussion preserving selected paper and scroll state.
+    """
+    params = {}
+
+    focus_paper_id = (
+        request.POST.get('focus_paper_id')
+        or request.POST.get('paper_id')
+        or ''
+    ).strip()
+    if focus_paper_id:
+        params['focus'] = focus_paper_id
+
+    list_scroll = _parse_non_negative_int(request.POST.get('conflict_list_scroll'))
+    detail_scroll = _parse_non_negative_int(request.POST.get('conflict_detail_scroll'))
+    if list_scroll is not None:
+        params['list_scroll'] = str(list_scroll)
+    if detail_scroll is not None:
+        params['detail_scroll'] = str(detail_scroll)
+
+    url = reverse('selection:screening_discussion', kwargs={'project_id': project_id})
+    if params:
+        url = f'{url}?{urlencode(params)}'
+    return redirect(url)
 
 
 def _get_paper_metadata(selection_phase, paper_ids):
@@ -99,8 +138,8 @@ def screening_discussion_view(request, project_id):
     
     # Get paper metadata
     if is_owner:
-        # Owner sees all conflicts
-        conflicts = discrepancy_service.get_conflicts(stage='SCREENING')
+        # Owner sees all tracked conflicts (pending, assigned, resolved).
+        conflicts = discrepancy_service.get_conflicts(stage='SCREENING', include_resolved=True)
         third_reviewer_papers = []
     else:
         # Researchers see only their third reviewer assignments
@@ -116,10 +155,22 @@ def screening_discussion_view(request, project_id):
         
         for conflict in conflicts:
             conflict['study'] = studies_by_id.get(conflict['paper_id'], {})
-            # Get eligible third reviewers
-            conflict['eligible_reviewers'] = discrepancy_service.get_eligible_third_reviewers(
-                conflict['paper_id'], stage='SCREENING'
-            )
+            if conflict.get('is_resolved') or conflict.get('has_third_assignment'):
+                conflict['eligible_reviewers'] = []
+            else:
+                conflict['eligible_reviewers'] = discrepancy_service.get_eligible_third_reviewers(
+                    conflict['paper_id'], stage='SCREENING'
+                )
+            conflict['can_assign_third_reviewer'] = bool(conflict['eligible_reviewers'])
+
+    conflict_summary = None
+    if is_owner:
+        conflict_summary = {
+            'total': len(conflicts),
+            'pending': sum(1 for c in conflicts if c.get('status') == 'PENDING'),
+            'assigned': sum(1 for c in conflicts if c.get('status') == 'ASSIGNED'),
+            'resolved': sum(1 for c in conflicts if c.get('status') == 'RESOLVED'),
+        }
     
     # Get criteria for third reviewer form
     inclusion_criteria, exclusion_criteria = _get_criteria(project_id)
@@ -133,6 +184,7 @@ def screening_discussion_view(request, project_id):
         'current_stage': 'screening_discussion',
         'inclusion_criteria': inclusion_criteria,
         'exclusion_criteria': exclusion_criteria,
+        'conflict_summary': conflict_summary,
     }
     
     return render(request, 'discussion/screening_discussion.html', context)
@@ -149,7 +201,7 @@ def assign_third_reviewer(request, project_id):
     
     if request.user != project.owner:
         messages.error(request, 'Only project owner can assign third reviewers')
-        return redirect('selection:screening_discussion', project_id=project_id)
+        return _screening_discussion_redirect(request, project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
@@ -158,7 +210,7 @@ def assign_third_reviewer(request, project_id):
     
     if not paper_id or not reviewer_id:
         messages.error(request, 'Paper and reviewer are required')
-        return redirect('selection:screening_discussion', project_id=project_id)
+        return _screening_discussion_redirect(request, project_id)
     
     from django.contrib.auth import get_user_model
     User = get_user_model()
@@ -196,7 +248,106 @@ def assign_third_reviewer(request, project_id):
     except Exception as e:
         messages.error(request, f'Failed to assign third reviewer: {str(e)}')
     
-    return redirect('selection:screening_discussion', project_id=project_id)
+    return _screening_discussion_redirect(request, project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def send_screening_third_reviewer_reminder(request, project_id):
+    """
+    Send reminder to currently assigned third reviewer (screening).
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can send reminders')
+        return _screening_discussion_redirect(request, project_id)
+
+    paper_id = request.POST.get('paper_id')
+    if not paper_id:
+        messages.error(request, 'Paper is required')
+        return _screening_discussion_redirect(request, project_id)
+
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    conflict = ConflictResolution.objects.filter(
+        selection_phase=selection_phase,
+        paper_id=paper_id,
+        stage=AssignmentStageChoices.SCREENING
+    ).select_related('third_reviewer').first()
+
+    if not conflict or not conflict.third_reviewer:
+        messages.error(request, 'No third reviewer assigned for this paper.')
+        return _screening_discussion_redirect(request, project_id)
+    if conflict.is_resolved:
+        messages.warning(request, 'This conflict is already resolved.')
+        return _screening_discussion_redirect(request, project_id)
+
+    has_assignment = PaperAssignment.objects.filter(
+        selection_phase=selection_phase,
+        paper_id=paper_id,
+        stage=AssignmentStageChoices.SCREENING,
+        researcher=conflict.third_reviewer,
+        is_third_reviewer=True
+    ).exists()
+    if not has_assignment:
+        messages.error(request, 'Third-reviewer assignment not found.')
+        return _screening_discussion_redirect(request, project_id)
+
+    try:
+        from apps.notification.models import Notification
+        Notification.objects.create(
+            recipient=conflict.third_reviewer,
+            sender=request.user,
+            type='REMINDER',
+            title='Third Reviewer Reminder',
+            custom_message=(
+                f'You have a pending third-reviewer decision in project '
+                f'"{project.title}". Please submit your conflict resolution review.'
+            ),
+            project=project
+        )
+        messages.success(
+            request,
+            f'Reminder sent to {conflict.third_reviewer.get_full_name() or conflict.third_reviewer.username}'
+        )
+    except Exception as e:
+        messages.error(request, f'Failed to send reminder: {str(e)}')
+
+    return _screening_discussion_redirect(request, project_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def cancel_screening_third_reviewer_assignment(request, project_id):
+    """
+    Cancel current third-reviewer assignment (screening).
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    if request.user != project.owner:
+        messages.error(request, 'Only project owner can cancel third-reviewer assignments')
+        return _screening_discussion_redirect(request, project_id)
+
+    paper_id = request.POST.get('paper_id')
+    if not paper_id:
+        messages.error(request, 'Paper is required')
+        return _screening_discussion_redirect(request, project_id)
+
+    selection_phase = get_object_or_404(SelectionPhase, project=project)
+    discrepancy_service = DiscrepancyResolutionService(selection_phase)
+
+    try:
+        discrepancy_service.cancel_third_reviewer_assignment(
+            paper_id=paper_id,
+            stage='SCREENING'
+        )
+        messages.success(request, 'Third-reviewer assignment canceled successfully.')
+    except ValueError as e:
+        messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, f'Failed to cancel assignment: {str(e)}')
+
+    return _screening_discussion_redirect(request, project_id)
 
 
 @login_required
@@ -209,7 +360,7 @@ def owner_vote(request, project_id):
     
     if request.user != project.owner:
         messages.error(request, 'Only project owner can make final vote')
-        return redirect('selection:screening_discussion', project_id=project_id)
+        return _screening_discussion_redirect(request, project_id)
     
     selection_phase = get_object_or_404(SelectionPhase, project=project)
     
@@ -219,7 +370,7 @@ def owner_vote(request, project_id):
     
     if not paper_id or decision not in ['INCLUDED', 'EXCLUDED']:
         messages.error(request, 'Paper and valid decision are required')
-        return redirect('selection:screening_discussion', project_id=project_id)
+        return _screening_discussion_redirect(request, project_id)
     
     try:
         discrepancy_service = DiscrepancyResolutionService(selection_phase)
@@ -236,7 +387,7 @@ def owner_vote(request, project_id):
     except Exception as e:
         messages.error(request, f'Failed to resolve conflict: {str(e)}')
     
-    return redirect('selection:screening_discussion', project_id=project_id)
+    return _screening_discussion_redirect(request, project_id)
 
 
 @login_required
@@ -256,7 +407,7 @@ def third_reviewer_submit(request, project_id):
     
     if not assignment_id or decision not in ['INCLUDED', 'EXCLUDED']:
         messages.error(request, 'Assignment and valid decision are required')
-        return redirect('selection:screening_discussion', project_id=project_id)
+        return _screening_discussion_redirect(request, project_id)
     
     try:
         assignment = PaperAssignment.objects.get(
@@ -279,9 +430,9 @@ def third_reviewer_submit(request, project_id):
         
     except PaperAssignment.DoesNotExist:
         messages.error(request, 'Assignment not found or you are not the third reviewer')
+    except ValueError as e:
+        messages.error(request, str(e))
     except Exception as e:
         messages.error(request, f'Failed to submit decision: {str(e)}')
     
-    return redirect('selection:screening_discussion', project_id=project_id)
-
-
+    return _screening_discussion_redirect(request, project_id)
